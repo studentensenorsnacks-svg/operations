@@ -580,8 +580,8 @@ function filterEvents(evList) {
     if (n.includes('tandarts')) return false;
     if (/\bverlof\b/.test(n) && !n.includes('bouwverlof')) return false;
     if (/\bdr\b/.test(n) || /\bdr\.\s/.test(n)) return false;  // "Greet Dr 8u30" etc
-    // Camionetten tab: ook verhuur/VH weg
-    if (currentMode === 'camions') {
+    // Camionetten & terminals tab: ook verhuur/VH weg
+    if (isDayMode()) {
       if (n.includes('verhuur')) return false;
       if (n.startsWith('vh ')) return false;
     }
@@ -1066,29 +1066,30 @@ function confirmPicker(){if(pkSel.size)addTrucks(pkEvId,[...pkSel],pkDate);close
 
 // ── WEEK PDF ───────────────────────────────────────────
 function openWeekPDF(){
-  // Context-aware: camionetten tab → camionetten PDF; wagens tab → wagens PDF
-  return currentMode === 'camions' ? openVehiclePDF('camions') : openVehiclePDF('wagens');
+  // Context-aware: PDF van de actieve tab
+  return openVehiclePDF(currentMode);
 }
 
-// ── UNIFIED PDF (wagens of camionetten) ───────────────
+// ── UNIFIED PDF (wagens / camionetten / terminals) ────
 function openVehiclePDF(mode){
-  // Verzamel relevante voertuig-namen voor de mode
-  const groups = mode === 'camions' ? GROUPS_CAMIONS : GROUPS_WAGENS;
+  // Verzamel relevante namen voor de mode
+  const groups = groupsFor(mode);
   const relevantTrucks = new Set();
   groups.forEach(g => g.trucks.forEach(t => relevantTrucks.add(t)));
 
   const days=Array.from({length:7},(_,i)=>addD(wkStart,i));
   const f=days[0],l=days[6];
   const wLbl=`Week ${wkNum(f)} — ${f.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})} t/m ${l.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}`;
-  const icon = mode === 'camions' ? '🚐' : '🚛';
-  const titleLabel = mode === 'camions' ? 'Camionetten' : 'Wagens';
+  const icon = mode === 'camions' ? '🚐' : mode === 'terminals' ? '💳' : '🚛';
+  const titleLabel = mode === 'camions' ? 'Camionetten' : mode === 'terminals' ? 'Betaal terminals' : 'Wagens';
 
-  // Helper: krijg trucks voor dit event op deze dag
+  // Helper: krijg toewijzingen voor dit event op deze dag
   function getTrucksOnDay(ev, ds) {
-    if (mode === 'camions' && ev.endDate > ev.startDate) {
-      return (ev.truckDays && ev.truckDays[ds]) || [];
+    if (mode !== 'wagens' && ev.endDate > ev.startDate) {
+      const dF = fDays(mode);
+      return (ev[dF] && ev[dF][ds]) || [];
     }
-    return ev.trucks || [];
+    return ev[fItems(mode)] || [];
   }
 
   // Per dag: events met minstens 1 relevant voertuig toegewezen op die specifieke dag
