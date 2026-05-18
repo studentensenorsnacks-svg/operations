@@ -141,12 +141,41 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   z-index:1000;pointer-events:none;}
 .toast.show{opacity:1;}
 
+/* Volle vettonnen teller */
+.tonnen-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:18px 20px;margin-bottom:24px;border-top:3px solid var(--orange);}
+.tonnen-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-bottom:16px;flex-wrap:wrap;}
+.tonnen-title{font-family:var(--font-cond);font-size:1.35rem;font-weight:800;color:var(--orange);}
+.tonnen-link{font-size:0.82rem;font-weight:700;color:var(--text2);text-decoration:none;
+  background:var(--surface2);border:1px solid var(--border2);border-radius:7px;
+  padding:8px 12px;transition:all 0.15s;white-space:nowrap;}
+.tonnen-link:hover{color:var(--text);border-color:var(--orange);}
+.tonnen-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ton-counter{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;
+  padding:14px;text-align:center;}
+.ton-lbl{font-size:0.78rem;font-weight:700;color:var(--text2);text-transform:uppercase;
+  letter-spacing:0.04em;margin-bottom:12px;}
+.ton-stepper{display:flex;align-items:center;justify-content:center;gap:8px;}
+.ton-btn{width:46px;height:46px;border-radius:10px;border:none;font-size:1.6rem;font-weight:800;
+  cursor:pointer;color:#fff;line-height:1;flex-shrink:0;transition:all 0.12s;}
+.ton-btn.minus{background:var(--surface);border:1px solid var(--border2);color:var(--text2);}
+.ton-btn.minus:hover{background:var(--border2);color:var(--text);}
+.ton-btn.plus{background:var(--orange);}
+.ton-btn.plus:hover{background:var(--orange-dark);}
+.ton-num{width:90px;height:58px;background:transparent;border:none;text-align:center;
+  font-family:var(--font-cond);font-size:2.7rem;font-weight:900;color:var(--text);outline:none;
+  font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield;}
+.ton-num::-webkit-outer-spin-button,.ton-num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.tonnen-foot{margin-top:14px;font-size:0.8rem;color:var(--text2);}
+
 @media(max-width:768px){
   .topbar{padding:0 14px;}
   .container{padding:20px 12px;}
   .page-title{font-size:1.7rem;}
   .stats-row{grid-template-columns:repeat(2,1fr);}
   .truck-grid{grid-template-columns:1fr;}
+  .tonnen-grid{grid-template-columns:1fr;}
 }
 @media(max-width:1100px) and (min-width:769px){
   .stats-row{grid-template-columns:repeat(3,1fr);}
@@ -216,6 +245,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
+  <div class="tonnen-panel">
+    <div class="tonnen-head">
+      <div class="tonnen-title">🛢️ Volle vettonnen — klaar voor ophaling</div>
+      <a class="tonnen-link" href="vet-tonnen.html" target="_blank" rel="noopener">📤 Ophaler-weergave openen ↗</a>
+    </div>
+    <div class="tonnen-grid">
+      <div class="ton-counter">
+        <div class="ton-lbl">Grote tonnen vol</div>
+        <div class="ton-stepper">
+          <button class="ton-btn minus" onclick="adjustTon('groot',-1)" aria-label="Min grote ton">−</button>
+          <input type="number" id="ton-groot" class="ton-num" min="0" inputmode="numeric" value="0" onchange="setTon('groot',this.value)">
+          <button class="ton-btn plus" onclick="adjustTon('groot',1)" aria-label="Plus grote ton">+</button>
+        </div>
+      </div>
+      <div class="ton-counter">
+        <div class="ton-lbl">Kleine tonnen vol</div>
+        <div class="ton-stepper">
+          <button class="ton-btn minus" onclick="adjustTon('klein',-1)" aria-label="Min kleine ton">−</button>
+          <input type="number" id="ton-klein" class="ton-num" min="0" inputmode="numeric" value="0" onchange="setTon('klein',this.value)">
+          <button class="ton-btn plus" onclick="adjustTon('klein',1)" aria-label="Plus kleine ton">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="tonnen-foot" id="tonnen-foot">—</div>
+  </div>
+
   <div id="content"></div>
 </div>
 
@@ -279,6 +334,42 @@ async function markBijgevuld(truckName) {
   updated.log.push(`${now.toLocaleDateString('nl-NL')} ${now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} — vet bijgevuld (proper) via Vet Dashboard`);
   await fbdb.ref('ft_ops_v2/' + updated.id).set(updated);
   showToast(`✨ ${truckName} gemarkeerd als bijgevuld`);
+}
+
+// ── Volle vettonnen teller ────────────────────────────────
+let tonnen = { groot: 0, klein: 0, updatedAt: 0 };
+
+function renderTonnen() {
+  const g = document.getElementById('ton-groot');
+  const k = document.getElementById('ton-klein');
+  if (g && document.activeElement !== g) g.value = tonnen.groot;
+  if (k && document.activeElement !== k) k.value = tonnen.klein;
+  const foot = document.getElementById('tonnen-foot');
+  if (foot) {
+    const total = (tonnen.groot || 0) + (tonnen.klein || 0);
+    foot.textContent = tonnen.updatedAt
+      ? `${total} ton${total!==1?'nen':''} in totaal · laatst bijgewerkt ${new Date(tonnen.updatedAt).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`
+      : 'Nog niet ingevuld';
+  }
+}
+
+function saveTonnen() {
+  tonnen.updatedAt = Date.now();
+  fbdb.ref('vet_tonnen').set({ groot: tonnen.groot, klein: tonnen.klein, updatedAt: tonnen.updatedAt });
+}
+
+function adjustTon(which, delta) {
+  tonnen[which] = Math.max(0, (tonnen[which] || 0) + delta);
+  renderTonnen();
+  saveTonnen();
+}
+
+function setTon(which, val) {
+  let n = parseInt(val, 10);
+  if (isNaN(n) || n < 0) n = 0;
+  tonnen[which] = n;
+  renderTonnen();
+  saveTonnen();
 }
 
 function clearSearch() {
@@ -445,6 +536,13 @@ fbdb.ref('ft_ops_v2').on('value', snap => {
     checkins = [];
   }
   render();
+});
+
+// Live luisteren naar vettonnen-teller
+fbdb.ref('vet_tonnen').on('value', snap => {
+  const d = snap.val() || {};
+  tonnen = { groot: d.groot || 0, klein: d.klein || 0, updatedAt: d.updatedAt || 0 };
+  renderTonnen();
 });
 
 // Klokje

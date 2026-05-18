@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Vettonnen Ophaling</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --bg:#0a0a0a;--surface:#161616;--surface2:#1f1f1f;--border:#2a2a2a;--border2:#333;
+  --text:#f5f5f5;--text2:#999;--red:#e8001d;--orange:#f97316;--green:#22c55e;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:24px;}
+.wrap{width:100%;max-width:600px;}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:30px;}
+.logo{height:36px;width:auto;filter:brightness(0) invert(1);}
+.brand-txt{font-family:var(--font-cond);font-size:1.9rem;font-weight:900;text-align:center;
+  letter-spacing:-0.01em;}
+.brand-sub{color:var(--text2);font-size:0.9rem;text-align:center;}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:34px 20px;text-align:center;border-top:4px solid var(--orange);}
+.card.klein{border-top-color:var(--green);}
+.card-num{font-family:var(--font-cond);font-size:5.5rem;font-weight:900;line-height:1;
+  font-variant-numeric:tabular-nums;color:var(--orange);}
+.card.klein .card-num{color:var(--green);}
+.card-lbl{color:var(--text2);font-size:0.92rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.05em;margin-top:14px;}
+
+.total{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;
+  justify-content:center;gap:12px;}
+.total-num{font-family:var(--font-cond);font-size:2.6rem;font-weight:900;line-height:1;
+  font-variant-numeric:tabular-nums;}
+.total-lbl{color:var(--text2);font-size:0.95rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.05em;}
+
+.updated{text-align:center;color:var(--text2);font-size:0.85rem;font-variant-numeric:tabular-nums;}
+.updated .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);
+  margin-right:6px;vertical-align:middle;}
+
+@media(max-width:520px){
+  .cards{grid-template-columns:1fr;}
+  .card{padding:28px 20px;}
+  .card-num{font-size:4.6rem;}
+  .brand-txt{font-size:1.55rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo">
+    <div class="brand-txt">🛢️ Vettonnen ophaling</div>
+    <div class="brand-sub">Volle tonnen klaar om opgehaald te worden</div>
+  </div>
+
+  <div class="cards">
+    <div class="card groot">
+      <div class="card-num" id="n-groot">—</div>
+      <div class="card-lbl">Grote tonnen vol</div>
+    </div>
+    <div class="card klein">
+      <div class="card-num" id="n-klein">—</div>
+      <div class="card-lbl">Kleine tonnen vol</div>
+    </div>
+  </div>
+
+  <div class="total">
+    <span class="total-num" id="n-total">—</span>
+    <span class="total-lbl">tonnen in totaal</span>
+  </div>
+
+  <div class="updated" id="updated"><span class="dot"></span>laden…</div>
+</div>
+
+<script>
+function renderTonnen(d) {
+  const groot = d.groot || 0;
+  const klein = d.klein || 0;
+  document.getElementById('n-groot').textContent = groot;
+  document.getElementById('n-klein').textContent = klein;
+  document.getElementById('n-total').textContent = groot + klein;
+  const up = document.getElementById('updated');
+  if (d.updatedAt) {
+    up.innerHTML = '<span class="dot"></span>Laatst bijgewerkt: ' +
+      new Date(d.updatedAt).toLocaleString('nl-NL',
+        {weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  } else {
+    up.innerHTML = '<span class="dot"></span>Nog niet ingevuld';
+  }
+}
+
+// Live luisteren — alleen lezen, geen navigatie naar andere pagina's
+fbdb.ref('vet_tonnen').on('value', snap => {
+  renderTonnen(snap.val() || {});
+});
+</script>
+</body>
+</html>
