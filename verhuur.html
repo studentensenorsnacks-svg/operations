@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FrietFleet — Verhuurmodule</title>
 <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<!-- Firebase — gedeelde database met dashboard / check-in / planning -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* =====================================================
@@ -438,7 +454,7 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
   <!-- ===== DASHBOARD ===== -->
   <div class="page active" id="page-dashboard">
     <div class="ph">
-      <div><h1>Dashboard</h1><p>Verhuurmodule — klaar voor integratie</p></div>
+      <div><h1>Dashboard</h1><p>Wagen-fiches: check-in vloot 101–901 · events live uit de Planning</p></div>
       <div class="ph-actions">
         <button class="btn btn-gold" onclick="openNewEvent()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -786,32 +802,111 @@ const CONFIG = {
 };
 
 /* ===== DATA ===== */
-let trucks  = JSON.parse(localStorage.getItem('ff2_trucks'))  || [];
-let events  = JSON.parse(localStorage.getItem('ff2_events'))  || [];
-let defects = JSON.parse(localStorage.getItem('ff2_defects')) || [];
+// Verhuur-wagens = check-in vloot met volgnummer 101–901.
+// C-nummers (containers), S-nummers en de nrs 1–99 worden bewust NIET opgenomen.
+const FLEET_101_901 = [
+  ['Bicky Burger Wagen 201',     'frituur'],
+  ['Friet Wagen 304',            'frituur'],
+  ['Food Wagen (Snackmuur) 305', 'frituur'],
+  ['Friet Wagen 402',            'frituur'],
+  ['Friet Wagen 403',            'frituur'],
+  ['Friet Container (Postel) 501','frituur'],
+  ['Friet Wagen (HR-ketel) 502', 'frituur'],
+  ['Friet Wagen 503',            'frituur'],
+  ['Friet Wagen 504',            'frituur'],
+  ['Friet Wagen 801',            'frituur'],
+  ['Friet Wagen 802',            'frituur'],
+  ['Friet Wagen 803',            'frituur'],
+  ['Friet Wagen 804',            'frituur'],
+  ['Friet Wagen 805',            'frituur'],
+  ['Friet Wagen 806',            'frituur'],
+  ['Friet Wagen 901',            'frituur'],
+  ['Hamburger Wagen 202',        'hamburger'],
+  ['Hamburger Wagen 306',        'hamburger'],
+  ['Jumper 302',                 'rijdend'],
+  ['Fiat 404',                   'rijdend'],
+];
+const TYPE_COLOR = { frituur:'#f6a821', hamburger:'#ef4444', rijdend:'#4d8fff' };
 
-// Seed
+let trucks  = JSON.parse(localStorage.getItem('ff3_trucks'))  || [];
+let events  = JSON.parse(localStorage.getItem('ff3_events'))  || [];
+let defects = JSON.parse(localStorage.getItem('ff3_defects')) || [];
+
+// Eerste keer: wagen-fiches seeden met de check-in vloot 101–901
 if (!trucks.length) {
-  trucks = [
-    { id:'t1', name:'De Gouden Friet', plate:'1-ABC-234', year:2019, color:'#f6a821', kmRate:0.40, notes:'2 frituurkuipen, volledig uitgerust' },
-    { id:'t2', name:'Friet Express',   plate:'2-XYZ-567', year:2021, color:'#ef4444', kmRate:0.40, notes:'Nieuw model, extra opbergruimte' },
-  ];
-  events = [
-    { id:'e1', truckId:'t1', client:'Jan Peeters', phone:'0470 12 34 56', email:'jan@example.be', btw:'', name:'Gentse Feesten', location:'Korenmarkt, Gent', startDate:'2026-05-01', endDate:'2026-05-03', kmDep:12450, kmRet:12680, kmRate:0.40, price:350, notes:'Vlot verloop', photos:[], status:'afgerond' },
-    { id:'e2', truckId:'t2', client:'Sofie Claes', phone:'0491 98 76 54', email:'sofie@example.be', btw:'', name:'Kerstmarkt Brugge', location:'Markt, Brugge', startDate:'2026-05-20', endDate:'2026-05-22', kmDep:8320, kmRet:null, kmRate:0.40, price:420, notes:'', photos:[], status:'actief' },
-  ];
-  defects = [
-    { id:'d1', truckId:'t1', eventId:'e1', type:'ophaling',   sev:'klein',  desc:'Kras op rechter zijpaneel', photos:[], ts:'2026-05-01T09:15:00', status:'hersteld', resolveNote:'Opgepoetst door chauffeur', resolveTs:'2026-05-04T10:00:00' },
-    { id:'d2', truckId:'t2', eventId:'e2', type:'terugkomst', sev:'middel', desc:'Deuk achter bumper',         photos:[], ts:'2026-05-22T17:30:00', status:'gemeld',   resolveNote:'',                       resolveTs:null },
-  ];
+  trucks = FLEET_101_901.map(([name, type]) => {
+    const nr = (name.match(/\s(\d+)$/) || [])[1] || '';
+    return { id:'t'+nr, name, plate:'', year:null, color:TYPE_COLOR[type]||'#f6a821',
+             kmRate:CONFIG.defaultKmRate, notes:'', fleetType:type };
+  });
   persist();
 }
 
 function persist() {
-  localStorage.setItem('ff2_trucks',  JSON.stringify(trucks));
-  localStorage.setItem('ff2_events',  JSON.stringify(events));
-  localStorage.setItem('ff2_defects', JSON.stringify(defects));
+  localStorage.setItem('ff3_trucks',  JSON.stringify(trucks));
+  localStorage.setItem('ff3_events',  JSON.stringify(events));
+  localStorage.setItem('ff3_defects', JSON.stringify(defects));
 }
+
+/* ===== PLANNING SYNC (Firebase) =====
+   Planning-events met 'VH' of 'verhuur' in de titel verschijnen automatisch
+   en live als event-fiche. KM, foto's, prijs en defecten vul je hier zelf aan. */
+function isVerhuurEvent(name){
+  const n = (name || '').toLowerCase();
+  return n.includes('verhuur') || /\bvh\b/.test(n);
+}
+
+function matchTruckId(planningTrucks){
+  if (!Array.isArray(planningTrucks)) return '';
+  const hit = trucks.find(t => planningTrucks.includes(t.name));
+  return hit ? hit.id : '';
+}
+
+// Heeft een geïmporteerd event al verhuur-data (dan niet automatisch opruimen)?
+function eventEnriched(e){
+  return !!(e.client || e.kmDep || e.kmRet || e.price || (e.photos && e.photos.length)
+            || defects.some(d => d.eventId === e.id));
+}
+
+function syncPlanningEvents(raw){
+  let arr = Array.isArray(raw) ? raw : Object.values(raw || {});
+  arr = arr.filter(e => e && e.id);
+  const vh    = arr.filter(e => isVerhuurEvent(e.name));
+  const vhIds = new Set(vh.map(e => 'pl' + e.id));
+
+  vh.forEach(pe => {
+    const id = 'pl' + pe.id;
+    const existing = events.find(e => e.id === id);
+    if (existing) {
+      existing.name      = pe.name || existing.name;
+      existing.location  = pe.location || existing.location;
+      existing.startDate = pe.startDate || existing.startDate;
+      existing.endDate   = pe.endDate || pe.startDate || existing.endDate;
+      existing.planningTrucks = Array.isArray(pe.trucks) ? pe.trucks : [];
+      if (!existing.truckId) existing.truckId = matchTruckId(pe.trucks);
+    } else {
+      events.push({
+        id, planningId: pe.id,
+        planningTrucks: Array.isArray(pe.trucks) ? pe.trucks : [],
+        truckId: matchTruckId(pe.trucks),
+        client:'', phone:'', email:'', btw:'',
+        name: pe.name || 'Verhuur', location: pe.location || '',
+        startDate: pe.startDate || '', endDate: pe.endDate || pe.startDate || '',
+        kmDep:null, kmRet:null, kmRate:CONFIG.defaultKmRate,
+        price:0, notes:'', photos:[], status:'actief',
+      });
+    }
+  });
+
+  // Geïmporteerde events die niet langer 'VH/verhuur' zijn én nog leeg → opruimen
+  events = events.filter(e => !e.planningId || vhIds.has(e.id) || eventEnriched(e));
+
+  persist();
+  refreshUI();
+}
+
+fbdb.ref('ft_planning_v1').on('value', snap => syncPlanningEvents(snap.val()),
+  err => console.warn('Planning-sync mislukt:', err));
 
 /* ===== NAVIGATION ===== */
 let currentTruckId = null;
@@ -840,6 +935,16 @@ const renders = {
   outlook:      renderOutlook,
 };
 
+// Herteken de actieve pagina (bv. na een live planning-update uit Firebase)
+function refreshUI(){
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const id = active.id.replace('page-','');
+  if (renders[id]) { renders[id](); return; }
+  if (id === 'event-detail' && currentEventId && event_(currentEventId).id) renderEventDetail();
+  if (id === 'truck-detail' && currentTruckId) openTruckDetail(currentTruckId);
+}
+
 /* ===== HELPERS ===== */
 const uid   = () => '_' + Math.random().toString(36).slice(2, 9);
 const fmtD  = d  => d ? new Date(d).toLocaleDateString('nl-BE') : '—';
@@ -847,6 +952,17 @@ const fmtDT = ts => ts ? new Date(ts).toLocaleString('nl-BE') : '—';
 const truck = id => trucks.find(t => t.id === id) || {};
 const event_ = id => events.find(e => e.id === id) || {};
 const esc   = s  => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// Label van de wagen op een event: gekoppelde fiche, of anders de planning-wagen(s)
+function eventTruckLabel(e){
+  const t = truck(e.truckId);
+  if (t.id) return esc(t.name);
+  if (e.planningTrucks && e.planningTrucks.length) return esc(e.planningTrucks.join(', '));
+  return '—';
+}
+function truckOptions(){
+  return trucks.map(t=>`<option value="${t.id}">${esc(t.name)}${t.plate?' ('+esc(t.plate)+')':''}</option>`).join('');
+}
 
 function kmCalc(dep, ret, rate) {
   if (!dep || !ret || ret <= dep) return null;
@@ -960,7 +1076,7 @@ function renderDashboard() {
         return `<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEventDetail('${e.id}')">
           <div style="font-weight:600;font-size:13px">${esc(e.name)}</div>
           <div style="font-size:11px;color:var(--sub);margin-top:2px">
-            <span style="color:${t.color||'#888'};margin-right:6px">●</span>${esc(t.name||'?')} · ${esc(e.location)}
+            <span style="color:${t.color||'#888'};margin-right:6px">●</span>${eventTruckLabel(e)} · ${esc(e.location)}
           </div>
           <div style="font-size:11px;color:var(--sub);margin-top:1px">${fmtD(e.startDate)} → ${fmtD(e.endDate)}</div>
         </div>`;
@@ -1000,7 +1116,7 @@ function renderTrucks() {
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div>
                 <div class="truck-name">${esc(t.name)}</div>
-                <div class="truck-plate">${esc(t.plate)} · ${t.year}</div>
+                <div class="truck-plate">${[esc(t.plate), t.year].filter(Boolean).join(' · ') || 'Nog in te vullen'}</div>
               </div>
               ${aev ? '<span class="badge b-active">Actief</span>' : '<span class="badge b-avail">Beschikbaar</span>'}
             </div>
@@ -1020,7 +1136,7 @@ function openTruckDetail(id) {
   currentTruckId = id;
   const t = truck(id);
   document.getElementById('tdf-title').textContent = t.name || 'Wagenfiche';
-  document.getElementById('tdf-sub').textContent   = `${t.plate} · ${t.year} · €${t.kmRate||0.40}/km`;
+  document.getElementById('tdf-sub').textContent   = [t.plate, t.year, '€'+(t.kmRate||0.40)+'/km'].filter(Boolean).join(' · ');
 
   const tevents = events.filter(e => e.truckId === id).sort((a,b)=>new Date(b.startDate)-new Date(a.startDate));
   const tDef    = defects.filter(d => d.truckId === id).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
@@ -1035,7 +1151,7 @@ function openTruckDetail(id) {
       <div>
         <div class="fiche-title">🚚 ${esc(t.name)}</div>
         <div class="fiche-meta">
-          <span>🪪 ${esc(t.plate)}</span><span>📅 ${t.year}</span>
+          ${t.plate?`<span>🪪 ${esc(t.plate)}</span>`:''}${t.year?`<span>📅 ${t.year}</span>`:''}
           <span>⛽ €${t.kmRate||0.40}/km</span>
         </div>
         ${t.notes?`<div style="font-size:13px;color:var(--sub);margin-top:10px">${esc(t.notes)}</div>`:''}
@@ -1096,10 +1212,10 @@ function renderEvents() {
         const dCount = defects.filter(d=>d.eventId===e.id).length;
         return `<tr>
           <td>
-            <div class="td-main">${esc(e.name)}</div>
-            <div class="td-sub">${esc(e.client)} ${e.phone?'· '+esc(e.phone):''}${dCount?` · <span style="color:var(--red)">⚠ ${dCount} defect${dCount>1?'en':''}</span>`:''}</div>
+            <div class="td-main">${esc(e.name)}${e.planningId?' <span class="badge b-progress" style="font-size:9px;padding:1px 7px;vertical-align:middle">PLANNING</span>':''}</div>
+            <div class="td-sub">${esc(e.client)||'—'} ${e.phone?'· '+esc(e.phone):''}${dCount?` · <span style="color:var(--red)">⚠ ${dCount} defect${dCount>1?'en':''}</span>`:''}</div>
           </td>
-          <td><span style="color:${t.color};margin-right:5px">●</span><span style="font-size:13px">${esc(t.name||'?')}</span></td>
+          <td><span style="color:${t.color||'var(--faint)'};margin-right:5px">●</span><span style="font-size:13px">${eventTruckLabel(e)}</span></td>
           <td style="font-size:12px;color:var(--sub);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.location)}</td>
           <td style="font-size:12px;color:var(--sub)">${fmtD(e.startDate)}<br>${fmtD(e.endDate)}</td>
           <td style="font-family:var(--font-h);font-weight:700;color:var(--gold)">${km?km.km+' km':'—'}</td>
@@ -1136,6 +1252,7 @@ function renderEventDetail() {
   `;
 
   document.getElementById('edf-content').innerHTML = `
+    ${e.planningId?`<div class="alert alert-info" style="margin-bottom:14px">🔗 Automatisch geïmporteerd uit de Planning-agenda. Naam, locatie en datums worden daar beheerd.</div>`:''}
     <!-- Header fiche -->
     <div class="fiche-header" style="margin-bottom:16px">
       <div>
@@ -1143,7 +1260,7 @@ function renderEventDetail() {
         <div class="fiche-meta">
           <span>📍 ${esc(e.location)}</span>
           <span>📅 ${fmtD(e.startDate)} → ${fmtD(e.endDate)}</span>
-          <span style="color:${t.color}">● ${esc(t.name||'?')}</span>
+          <span style="color:${t.color||'var(--faint)'}">● ${eventTruckLabel(e)}</span>
         </div>
       </div>
       <div class="fiche-stat">
@@ -1282,7 +1399,8 @@ function deleteTruck(id) {
 /* ===== EVENT MODAL ===== */
 function openNewEvent(prefill={}) {
   const sel = document.getElementById('ev-truck');
-  sel.innerHTML = trucks.map(t=>`<option value="${t.id}">${t.name} (${t.plate})</option>`).join('');
+  sel.innerHTML = truckOptions();
+  ['ev-name','ev-location','ev-start','ev-end'].forEach(i=>document.getElementById(i).disabled=false);
   document.getElementById('ev-modal-title').textContent = 'Nieuwe eventfiche';
   document.getElementById('ev-id').value       = '';
   document.getElementById('ev-client').value   = prefill.client || '';
@@ -1306,9 +1424,9 @@ function openNewEvent(prefill={}) {
 function openEventModal(id) {
   const e = event_(id);
   const sel = document.getElementById('ev-truck');
-  sel.innerHTML = trucks.map(t=>`<option value="${t.id}">${t.name} (${t.plate})</option>`).join('');
+  sel.innerHTML = truckOptions();
   sel.value = e.truckId;
-  document.getElementById('ev-modal-title').textContent = 'Eventfiche bewerken';
+  document.getElementById('ev-modal-title').textContent = e.planningId ? 'Eventfiche bewerken — uit Planning' : 'Eventfiche bewerken';
   document.getElementById('ev-id').value       = id;
   document.getElementById('ev-client').value   = e.client   || '';
   document.getElementById('ev-phone').value    = e.phone    || '';
@@ -1323,6 +1441,8 @@ function openEventModal(id) {
   document.getElementById('ev-km-ret').value   = e.kmRet    || '';
   document.getElementById('ev-kmrate').value   = e.kmRate   || CONFIG.defaultKmRate;
   document.getElementById('ev-notes').value    = e.notes    || '';
+  // Naam/locatie/datums van planning-events worden in de Planning beheerd → vergrendeld
+  ['ev-name','ev-location','ev-start','ev-end'].forEach(i=>document.getElementById(i).disabled=!!e.planningId);
   calcKm();
   openModal('modal-event');
 }
@@ -1630,7 +1750,7 @@ document.querySelectorAll('.overlay').forEach(el=>{
 
 /* ===== EXPORT / IMPORT ===== */
 function exportData(){
-  const data={trucks,events,defects,exportedAt:new Date().toISOString(),version:'2.0'};
+  const data={trucks,events,defects,exportedAt:new Date().toISOString(),version:'3.0'};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`frietfleet-export-${new Date().toISOString().split('T')[0]}.json`; a.click();
