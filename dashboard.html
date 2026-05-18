@@ -96,6 +96,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   border-color: rgba(249,115,22,0.6);
   color: #fb923c;
 }
+.nav-link.nav-verhuur {
+  background: rgba(246,168,33,0.12);
+  border-color: rgba(246,168,33,0.35);
+  color: #f6a821;
+}
+.nav-link.nav-verhuur:hover {
+  background: rgba(246,168,33,0.2);
+  border-color: rgba(246,168,33,0.6);
+  color: #f6a821;
+}
 .clock { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); margin-left: 8px; }
 
 /* LAYOUT */
@@ -780,6 +790,7 @@ textarea { resize: vertical; min-height: 72px; }
     <a class="nav-link" href="checkin.html" target="_blank">🚚 Check-in</a>
     <a class="nav-link nav-poets" href="poets.html" target="_blank">🧼 Poets Dashboard</a>
     <a class="nav-link nav-vet" href="vet.html" target="_blank">🛢️ Vet Status</a>
+    <a class="nav-link nav-verhuur" href="verhuur.html" target="_blank">🚐 Verhuur</a>
     <a class="nav-link" href="planning.html" target="_blank">📅 Planning</a>
     <a class="nav-link" href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
     <button class="nav-link" id="backup-btn" onclick="downloadBackup()" style="background:transparent;border:1px solid var(--border2);cursor:pointer;font-family:var(--font);font-size:0.85rem;font-weight:600;color:var(--text);">📥 Backup</button>
@@ -803,6 +814,7 @@ textarea { resize: vertical; min-height: 72px; }
     <div class="nav-label">Navigeer</div>
     <a class="nav-item" href="checkin.html" target="_blank"><span class="nav-icon">🚚</span>Check-in pagina</a>
     <a class="nav-item" href="poets.html" target="_blank"><span class="nav-icon">🧼</span>Poets dashboard</a>
+    <a class="nav-item" href="verhuur.html" target="_blank"><span class="nav-icon">🚐</span>Verhuur</a>
     <a class="nav-item" href="planning.html" target="_blank"><span class="nav-icon">📅</span>Planning</a>
     <a class="nav-item" href="https://senorkeuringqr.web.app/index.html" target="_blank"><span class="nav-icon">📋</span>QR Keuringen</a>
 
