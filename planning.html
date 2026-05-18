@@ -77,8 +77,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .tp-empty-grp{padding:3px 12px 5px;font-size:0.68rem;color:#3a3a3a;font-style:italic;}
 
 /* PLANNING TABS */
-.plan-tabs{flex-shrink:0;display:flex;background:#f0f0f0;border-bottom:1px solid var(--border);padding:0 16px;gap:0;}
-.plan-tab{padding:9px 20px;font-family:var(--font-cond);font-size:0.88rem;font-weight:800;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--muted);transition:all 0.15s;letter-spacing:0.02em;}
+.plan-tabs{flex-shrink:0;display:flex;background:#f0f0f0;border-bottom:1px solid var(--border);padding:0 16px;gap:0;overflow-x:auto;}
+.plan-tab{padding:9px 20px;font-family:var(--font-cond);font-size:0.88rem;font-weight:800;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--muted);transition:all 0.15s;letter-spacing:0.02em;white-space:nowrap;flex-shrink:0;}
 .plan-tab:hover{color:var(--text);}
 .plan-tab.active{color:var(--red);border-bottom-color:var(--red);}
 
@@ -390,6 +390,7 @@ textarea{resize:vertical;min-height:70px;}
       <button class="plan-tab active" id="tab-wagens" onclick="switchMode('wagens')">🚛 Wagens</button>
       <button class="plan-tab" id="tab-camions" onclick="switchMode('camions')">🚐 Camionetten</button>
       <button class="plan-tab" id="tab-terminals" onclick="switchMode('terminals')">💳 Betaal terminals</button>
+      <button class="plan-tab" id="tab-logistiek" onclick="switchMode('logistiek')">📦 Logistiek</button>
     </div>
     <div class="week-nav">
       <button class="wnav-btn" onclick="shiftWeek(-1)">◀ Vorige</button>
@@ -518,19 +519,29 @@ const GROUPS_CAMIONS=[
 const GROUPS_TERMINALS=[
   {label:'💳 Betaal terminals',color:'#0d9488',bg:'#ccfbf1',trucks:Array.from({length:30},(_,i)=>'Terminal '+(i+1))}
 ];
+// ── LOGISTIEK DATA ─────────────────────────────────────
+// Foldtables: 60 st, te verdelen per 10 → 6 blokken
+// Vloer: 3000 m², te verdelen per 50 m² → 60 blokken
+// Kassa units: 7 st, te verdelen per 1 → 7 blokken
+const GROUPS_LOGISTIEK=[
+  {label:'🪑 Foldtables (60 st · per 10)',color:'#b45309',bg:'#fef3c7',trucks:Array.from({length:6},(_,i)=>`Foldtables ${i*10+1}–${i*10+10}`)},
+  {label:'🟦 Vloer (3000 m² · per 50 m²)',color:'#0e7490',bg:'#ecfeff',trucks:Array.from({length:60},(_,i)=>`Vloer blok ${i+1} (50 m²)`)},
+  {label:'🛒 Kassa units (7 st · per 1)',color:'#7c3aed',bg:'#ede9fe',trucks:Array.from({length:7},(_,i)=>'Kassa unit '+(i+1))}
+];
 // ── MODE STATE ─────────────────────────────────────────
-let currentMode = 'wagens'; // 'wagens' | 'camions' | 'terminals'
-let selectedDay = null; // geselecteerde dag voor per-dag planning (camionetten/terminals)
+let currentMode = 'wagens'; // 'wagens' | 'camions' | 'terminals' | 'logistiek'
+let selectedDay = null; // geselecteerde dag voor per-dag planning (camionetten/terminals/logistiek)
 let GROUPS = GROUPS_WAGENS;
 
 // ── MODE HELPERS ───────────────────────────────────────
-// Camionetten en terminals gebruiken beide per-dag planning + fading.
-function isDayMode(){ return currentMode === 'camions' || currentMode === 'terminals'; }
-// Terminals bewaren hun toewijzingen apart van voertuigen (terminals/terminalDays),
-// zodat ze niet vermengen met de wagens/camionetten tabs.
-function groupsFor(m){ return m === 'camions' ? GROUPS_CAMIONS : m === 'terminals' ? GROUPS_TERMINALS : GROUPS_WAGENS; }
-function fItems(m){ return (m||currentMode) === 'terminals' ? 'terminals' : 'trucks'; }
-function fDays(m){ return (m||currentMode) === 'terminals' ? 'terminalDays' : 'truckDays'; }
+// Alle tabs behalve wagens gebruiken per-dag planning + fading.
+function isDayMode(){ return currentMode !== 'wagens'; }
+// Elke mode bewaart toewijzingen in eigen event-velden, zodat tabs niet vermengen.
+const FIELD      = {wagens:'trucks', camions:'trucks', terminals:'terminals',    logistiek:'logistiek'};
+const FIELD_DAYS = {wagens:'truckDays', camions:'truckDays', terminals:'terminalDays', logistiek:'logistiekDays'};
+function groupsFor(m){ return m === 'camions' ? GROUPS_CAMIONS : m === 'terminals' ? GROUPS_TERMINALS : m === 'logistiek' ? GROUPS_LOGISTIEK : GROUPS_WAGENS; }
+function fItems(m){ return FIELD[m||currentMode]; }
+function fDays(m){ return FIELD_DAYS[m||currentMode]; }
 const TC = {};
 function rebuildTC(){
   Object.keys(TC).forEach(k=>delete TC[k]);
@@ -580,7 +591,7 @@ function filterEvents(evList) {
     if (n.includes('tandarts')) return false;
     if (/\bverlof\b/.test(n) && !n.includes('bouwverlof')) return false;
     if (/\bdr\b/.test(n) || /\bdr\.\s/.test(n)) return false;  // "Greet Dr 8u30" etc
-    // Camionetten & terminals tab: ook verhuur/VH weg
+    // Camionetten/terminals/logistiek tab: ook verhuur/VH weg
     if (isDayMode()) {
       if (n.includes('verhuur')) return false;
       if (n.startsWith('vh ')) return false;
@@ -617,6 +628,8 @@ function sanitizeEvents(arr){
     truckDays:(e.truckDays && typeof e.truckDays === 'object' && !Array.isArray(e.truckDays))?e.truckDays:{},
     terminals:Array.isArray(e.terminals)?e.terminals:[],
     terminalDays:(e.terminalDays && typeof e.terminalDays === 'object' && !Array.isArray(e.terminalDays))?e.terminalDays:{},
+    logistiek:Array.isArray(e.logistiek)?e.logistiek:[],
+    logistiekDays:(e.logistiekDays && typeof e.logistiekDays === 'object' && !Array.isArray(e.logistiekDays))?e.logistiekDays:{},
     color:e.color||'#0078D4'
   }));
 }
@@ -646,6 +659,7 @@ function switchMode(mode) {
   document.getElementById('tab-wagens').classList.toggle('active', mode==='wagens');
   document.getElementById('tab-camions').classList.toggle('active', mode==='camions');
   document.getElementById('tab-terminals').classList.toggle('active', mode==='terminals');
+  document.getElementById('tab-logistiek').classList.toggle('active', mode==='logistiek');
   // Reset showPl
   Object.keys(showPl).forEach(k=>delete showPl[k]);
   renderWeek();
@@ -665,7 +679,7 @@ const DAYS_FULL=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'
 
 // ── TRUCK PANEL ────────────────────────────────────────
 function selectDayForPlanning(date){
-  if (!isDayMode()) return; // Only in camionetten/terminals mode
+  if (!isDayMode()) return; // Only in per-dag modes (camionetten/terminals/logistiek)
   if (selectedDay === date) {
     // Toggle: deselect
     selectedDay = null;
@@ -1080,8 +1094,8 @@ function openVehiclePDF(mode){
   const days=Array.from({length:7},(_,i)=>addD(wkStart,i));
   const f=days[0],l=days[6];
   const wLbl=`Week ${wkNum(f)} — ${f.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})} t/m ${l.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}`;
-  const icon = mode === 'camions' ? '🚐' : mode === 'terminals' ? '💳' : '🚛';
-  const titleLabel = mode === 'camions' ? 'Camionetten' : mode === 'terminals' ? 'Betaal terminals' : 'Wagens';
+  const icon = mode === 'camions' ? '🚐' : mode === 'terminals' ? '💳' : mode === 'logistiek' ? '📦' : '🚛';
+  const titleLabel = mode === 'camions' ? 'Camionetten' : mode === 'terminals' ? 'Betaal terminals' : mode === 'logistiek' ? 'Logistiek' : 'Wagens';
 
   // Helper: krijg toewijzingen voor dit event op deze dag
   function getTrucksOnDay(ev, ds) {
