@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FrietFleet — Verhuurmodule</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<!-- Firebase — gedeelde database met dashboard / check-in / planning -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =====================================================
+   CONFIG & TOKENS
+===================================================== */
+:root {
+  --bg:        #07080f;
+  --s1:        #0e1018;
+  --s2:        #141720;
+  --s3:        #1b1f2e;
+  --border:    #252a3d;
+  --border2:   #2e3450;
+  --gold:      #f6a821;
+  --gold-s:    rgba(246,168,33,.12);
+  --blue:      #4d8fff;
+  --blue-s:    rgba(77,143,255,.12);
+  --red:       #f05050;
+  --red-s:     rgba(240,80,80,.12);
+  --green:     #34d27b;
+  --green-s:   rgba(52,210,123,.12);
+  --amber:     #f59e0b;
+  --purple:    #9d74f7;
+  --text:      #e8ecf7;
+  --sub:       #7b87a8;
+  --faint:     #323858;
+  --radius:    12px;
+  --font-h:    'Syne', sans-serif;
+  --font-b:    'IBM Plex Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: var(--font-b); background: var(--bg); color: var(--text); display: flex; overflow: hidden; }
+input, select, textarea, button { font-family: var(--font-b); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 3px; }
+
+/* ===== SIDEBAR ===== */
+#sidebar {
+  width: 210px; min-width: 210px;
+  background: var(--s1);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto;
+}
+.logo {
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 11px;
+}
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--gold); display: flex;
+  align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0;
+}
+.logo-name { font-family: var(--font-h); font-size: 15px; font-weight: 800; line-height: 1.1; }
+.logo-tag  { font-size: 10px; color: var(--sub); margin-top: 1px; text-transform: uppercase; letter-spacing: .05em; }
+
+nav { padding: 12px 8px; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 8px;
+  border: none; background: transparent;
+  color: var(--sub); cursor: pointer;
+  font-size: 13px; font-weight: 500; width: 100%; text-align: left;
+  transition: background .12s, color .12s;
+}
+.nav-item:hover  { background: var(--s3); color: var(--text); }
+.nav-item.active { background: var(--blue-s); color: var(--blue); font-weight: 600; }
+.nav-item svg    { flex-shrink: 0; opacity: .85; }
+.nav-section {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--faint); font-weight: 700; padding: 14px 11px 5px;
+}
+.sidebar-bottom {
+  padding: 12px 8px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 6px;
+}
+#ms-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border2);
+  background: transparent; color: var(--sub); cursor: pointer; font-size: 12px; font-weight: 500;
+  width: 100%; transition: all .15s;
+}
+#ms-btn:hover { border-color: var(--blue); color: var(--blue); }
+#ms-btn.connected { border-color: var(--green); color: var(--green); }
+.ms-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sub); flex-shrink: 0; }
+#ms-btn.connected .ms-dot { background: var(--green); }
+
+/* ===== MAIN ===== */
+#main { flex: 1; overflow-y: auto; padding: 30px 36px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== PAGE HEADER ===== */
+.ph { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 26px; }
+.ph h1 { font-family: var(--font-h); font-size: 23px; font-weight: 800; }
+.ph p  { color: var(--sub); font-size: 13px; margin-top: 3px; }
+.ph-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ===== STATS ===== */
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 24px; }
+.stat {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.stat-l { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--sub); font-weight: 700; }
+.stat-v { font-family: var(--font-h); font-size: 26px; font-weight: 800; line-height: 1; }
+.stat-s { font-size: 12px; color: var(--sub); }
+
+/* ===== GRID ===== */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* ===== CARD ===== */
+.card {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.card-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.card-title { font-family: var(--font-h); font-size: 14px; font-weight: 700; }
+.card-body  { padding: 16px 18px; }
+
+/* ===== TABLE ===== */
+.tbl-wrap { background: var(--s2); border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 600px; }
+thead th {
+  padding: 11px 16px; text-align: left;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--sub); font-weight: 700; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--s3); }
+tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
+.td-main { font-weight: 600; color: var(--text); }
+.td-sub  { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+/* ===== BADGE ===== */
+.badge {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
+}
+.b-active    { background: var(--green-s); color: var(--green); border: 1px solid rgba(52,210,123,.3); }
+.b-done      { background: var(--s3); color: var(--sub); border: 1px solid var(--border); }
+.b-avail     { background: var(--blue-s); color: var(--blue); border: 1px solid rgba(77,143,255,.3); }
+.b-minor     { background: var(--gold-s); color: var(--gold); border: 1px solid rgba(246,168,33,.3); }
+.b-medium    { background: rgba(245,158,11,.12); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+.b-serious   { background: var(--red-s); color: var(--red); border: 1px solid rgba(240,80,80,.3); }
+.b-fixed     { background: var(--green-s); color: var(--green); border: 1px solid rgba(52,210,123,.3); }
+.b-pending   { background: var(--gold-s); color: var(--gold); border: 1px solid rgba(246,168,33,.3); }
+.b-progress  { background: var(--blue-s); color: var(--blue); border: 1px solid rgba(77,143,255,.3); }
+
+/* ===== BUTTONS ===== */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 15px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: filter .12s, opacity .12s;
+  text-decoration: none;
+}
+.btn:hover { filter: brightness(1.12); }
+.btn:active { filter: brightness(.95); }
+.btn-gold   { background: var(--gold); color: #0a0b0f; }
+.btn-blue   { background: var(--blue-s); color: var(--blue); border: 1px solid rgba(77,143,255,.3); }
+.btn-red    { background: var(--red-s); color: var(--red); border: 1px solid rgba(240,80,80,.3); }
+.btn-ghost  { background: transparent; color: var(--sub); border: 1px solid var(--border); }
+.btn-green  { background: var(--green-s); color: var(--green); border: 1px solid rgba(52,210,123,.3); }
+.btn-sm     { padding: 5px 11px; font-size: 12px; }
+.btn-xs     { padding: 3px 9px; font-size: 11px; }
+.btn-icon   { padding: 7px; border-radius: 7px; }
+
+/* ===== FORMS ===== */
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 13px; }
+.field label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; color: var(--sub); }
+.field input, .field select, .field textarea {
+  background: var(--s1); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 9px 12px;
+  color: var(--text); font-size: 13px; outline: none; width: 100%;
+  transition: border-color .15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+.field textarea { resize: vertical; min-height: 65px; }
+.field select option { background: var(--s1); }
+.fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fg3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.form-actions { display: flex; gap: 8px; margin-top: 16px; }
+.form-actions .btn { flex: 1; justify-content: center; }
+.form-section {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+  font-weight: 700; color: var(--faint); margin: 18px 0 10px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+
+/* ===== MODAL ===== */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.8); z-index: 300;
+  align-items: flex-start; justify-content: center;
+  padding: 30px 16px; overflow-y: auto;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: 16px; width: 100%; max-width: 620px;
+  padding: 24px; flex-shrink: 0;
+}
+.modal-lg { max-width: 860px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h2 { font-family: var(--font-h); font-size: 17px; font-weight: 700; }
+.modal-close { background: none; border: none; color: var(--sub); cursor: pointer; font-size: 22px; line-height: 1; padding: 2px 6px; }
+.modal-close:hover { color: var(--text); }
+
+/* ===== PHOTOS ===== */
+.photo-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo-cell {
+  position: relative; width: 100px; height: 80px; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border2); flex-shrink: 0;
+  cursor: pointer;
+}
+.photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-cell .photo-ts {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,.75); font-size: 9px; color: #fff;
+  padding: 2px 4px; text-align: center; line-height: 1.3;
+}
+.photo-del {
+  position: absolute; top: -5px; right: -5px;
+  background: var(--red); color: #fff; border: none; border-radius: 50%;
+  width: 19px; height: 19px; font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.photo-add-btn {
+  width: 100px; height: 80px; border: 2px dashed var(--border2);
+  border-radius: 8px; background: var(--s1); color: var(--faint);
+  cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px; font-size: 10px;
+  transition: border-color .15s, color .15s; flex-shrink: 0;
+}
+.photo-add-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* ===== DEFECT ITEMS ===== */
+.defect-row {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 13px; background: var(--s1); border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: 8px;
+}
+.defect-sev { width: 6px; border-radius: 3px; flex-shrink: 0; align-self: stretch; min-height: 40px; }
+.defect-body { flex: 1; }
+.defect-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.defect-desc { font-size: 13px; color: var(--text); }
+.defect-info { font-size: 11px; color: var(--sub); margin-top: 4px; }
+.defect-actions { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ===== FICHE ===== */
+.fiche-header {
+  background: linear-gradient(135deg, var(--s2) 0%, var(--s3) 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 24px; margin-bottom: 20px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.fiche-title { font-family: var(--font-h); font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.fiche-meta  { font-size: 13px; color: var(--sub); display: flex; gap: 16px; flex-wrap: wrap; }
+.fiche-stat  { text-align: right; }
+.fiche-stat .v { font-family: var(--font-h); font-size: 28px; font-weight: 800; color: var(--gold); }
+.fiche-stat .l { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; margin-bottom: 16px; }
+.info-box { background: var(--s1); border: 1px solid var(--border); border-radius: 9px; padding: 13px; }
+.info-label { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--sub); font-weight: 700; margin-bottom: 4px; }
+.info-val   { font-size: 13px; font-weight: 600; color: var(--text); }
+.info-val2  { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+/* ===== ALERT STRIP ===== */
+.alert { border-radius: 9px; padding: 11px 14px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.alert-warn  { background: var(--gold-s); border: 1px solid rgba(246,168,33,.3); color: var(--gold); }
+.alert-error { background: var(--red-s);  border: 1px solid rgba(240,80,80,.3);  color: var(--red); }
+.alert-ok    { background: var(--green-s);border: 1px solid rgba(52,210,123,.3); color: var(--green); }
+.alert-info  { background: var(--blue-s); border: 1px solid rgba(77,143,255,.3); color: var(--blue); }
+
+/* ===== KM BOX ===== */
+.km-box {
+  background: var(--s1); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 16px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 14px;
+}
+.km-field { display: flex; flex-direction: column; gap: 4px; }
+.km-field label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--sub); font-weight: 700; }
+.km-field input {
+  background: var(--s2); border: 1px solid var(--border2); border-radius: 7px;
+  padding: 8px 11px; color: var(--text); font-size: 14px; font-weight: 600; outline: none;
+  width: 130px; font-family: var(--font-h);
+}
+.km-arrow { color: var(--faint); font-size: 22px; margin-top: 18px; }
+.km-result {
+  background: var(--gold-s); border: 1px solid rgba(246,168,33,.25); border-radius: 8px;
+  padding: 10px 16px; margin-left: auto; text-align: center;
+}
+.km-result .v { font-family: var(--font-h); font-size: 22px; font-weight: 800; color: var(--gold); }
+.km-result .l { font-size: 10px; color: var(--sub); margin-top: 2px; }
+
+/* ===== OUTLOOK PANEL ===== */
+.ol-event {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 14px; background: var(--s1); border: 1px solid var(--border);
+  border-radius: 9px; margin-bottom: 7px; cursor: pointer; transition: border-color .15s;
+}
+.ol-event:hover { border-color: var(--blue); }
+.ol-event-title { font-weight: 600; font-size: 13px; }
+.ol-event-meta  { font-size: 11px; color: var(--sub); margin-top: 2px; }
+
+/* ===== TRUCK CARD ===== */
+.truck-card {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; cursor: pointer;
+  transition: border-color .15s, transform .12s;
+}
+.truck-card:hover { border-color: var(--blue); transform: translateY(-1px); }
+.truck-bar { height: 5px; }
+.truck-body { padding: 16px; }
+.truck-name { font-family: var(--font-h); font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+.truck-plate{ font-size: 12px; color: var(--sub); }
+.truck-stats{ display: flex; gap: 14px; margin-top: 13px; flex-wrap: wrap; }
+.truck-stat { font-size: 11px; color: var(--sub); }
+.truck-stat span { color: var(--text); font-weight: 600; margin-right: 3px; }
+
+/* ===== EMPTY ===== */
+.empty { padding: 40px; text-align: center; color: var(--sub); font-size: 13px; }
+.empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+/* ===== TABS ===== */
+.tabs { display: flex; gap: 2px; background: var(--s1); border-radius: 9px; padding: 3px; width: fit-content; margin-bottom: 16px; }
+.tab {
+  padding: 6px 14px; border-radius: 7px; border: none;
+  background: transparent; color: var(--sub); cursor: pointer;
+  font-size: 12px; font-weight: 600; transition: all .12s;
+  font-family: var(--font-b);
+}
+.tab.active { background: var(--s2); color: var(--text); }
+
+/* ===== SECTION TITLE ===== */
+.sec-title {
+  font-family: var(--font-h); font-size: 13px; font-weight: 700;
+  margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+}
+.sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ===== LIGHTBOX ===== */
+#lightbox {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.93); z-index: 500;
+  align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+}
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 90vw; max-height: 80vh; border-radius: 10px; }
+#lightbox-info { color: var(--sub); font-size: 12px; text-align: center; }
+#lightbox-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+  #main { padding: 16px; }
+  .fg2, .fg3, .two-col, .three-col { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- =====================================================
+     SIDEBAR
+===================================================== -->
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🍟</div>
+    <div>
+      <div class="logo-name">FrietFleet</div>
+      <div class="logo-tag">Verhuurmodule</div>
+    </div>
+  </div>
+
+  <nav>
+    <div class="nav-section">Overzicht</div>
+    <button class="nav-item active" data-page="dashboard">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+
+    <div class="nav-section">Fiches</div>
+    <button class="nav-item" data-page="trucks">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Wagen-fiches
+    </button>
+    <button class="nav-item" data-page="events">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Event-fiches
+    </button>
+
+    <div class="nav-section">Tools</div>
+    <button class="nav-item" data-page="outlook">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Outlook Import
+    </button>
+    <button class="nav-item" data-page="defects-all">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Defecten log
+    </button>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <button id="ms-btn" onclick="toggleOutlook()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+      <span class="ms-dot"></span>
+      <span id="ms-label">Verbinden met M365</span>
+    </button>
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px" onclick="exportData()">⬇ Export JSON</button>
+    <button class="btn btn-ghost" style="width:100%;justify-content:center;font-size:12px" onclick="document.getElementById('import-file').click()">⬆ Import JSON</button>
+    <input type="file" id="import-file" accept=".json" hidden onchange="importData(event)">
+  </div>
+</div>
+
+<!-- =====================================================
+     MAIN CONTENT
+===================================================== -->
+<div id="main">
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="page active" id="page-dashboard">
+    <div class="ph">
+      <div><h1>Dashboard</h1><p>Wagen-fiches: check-in vloot 101–901 · events live uit de Planning</p></div>
+      <div class="ph-actions">
+        <button class="btn btn-gold" onclick="openNewEvent()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nieuw event
+        </button>
+      </div>
+    </div>
+    <div class="stat-row" id="dash-stats"></div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header"><span class="card-title">🟢 Actieve events</span><button class="btn btn-ghost btn-sm" onclick="nav('events')">Alle →</button></div>
+        <div class="card-body" id="dash-active"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚠️ Open defecten</span><button class="btn btn-ghost btn-sm" onclick="nav('defects-all')">Alle →</button></div>
+        <div class="card-body" id="dash-defects"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WAGEN-FICHES ===== -->
+  <div class="page" id="page-trucks">
+    <div class="ph">
+      <div><h1>Wagen-fiches</h1><p id="trucks-sub">0 wagens</p></div>
+      <div class="ph-actions">
+        <button class="btn btn-gold" onclick="openTruckModal()">+ Wagen toevoegen</button>
+      </div>
+    </div>
+    <div class="three-col" id="truck-cards"></div>
+  </div>
+
+  <!-- ===== WAGEN DETAIL FICHE ===== -->
+  <div class="page" id="page-truck-detail">
+    <div class="ph">
+      <div>
+        <button class="btn btn-ghost btn-sm" style="margin-bottom:10px" onclick="nav('trucks')">← Terug</button>
+        <h1 id="tdf-title">Wagenfiche</h1>
+        <p id="tdf-sub"></p>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-blue" onclick="openTruckModal(currentTruckId)">✏ Bewerken</button>
+      </div>
+    </div>
+    <div id="tdf-content"></div>
+  </div>
+
+  <!-- ===== EVENT-FICHES (lijst) ===== -->
+  <div class="page" id="page-events">
+    <div class="ph">
+      <div><h1>Event-fiches</h1><p id="events-sub">0 events</p></div>
+      <div class="ph-actions">
+        <button class="btn btn-blue btn-sm" onclick="nav('outlook')">📥 Import Outlook</button>
+        <button class="btn btn-gold" onclick="openNewEvent()">+ Nieuw event</button>
+      </div>
+    </div>
+    <div class="tabs" id="event-tabs">
+      <button class="tab active" onclick="setEventFilter('alle',this)">Alle</button>
+      <button class="tab" onclick="setEventFilter('actief',this)">Actief</button>
+      <button class="tab" onclick="setEventFilter('afgerond',this)">Afgerond</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Event / Klant</th><th>Wagen</th><th>Locatie</th>
+          <th>Periode</th><th>KM gereden</th><th>Vergoeding</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="events-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== EVENT DETAIL FICHE ===== -->
+  <div class="page" id="page-event-detail">
+    <div class="ph">
+      <div>
+        <button class="btn btn-ghost btn-sm" style="margin-bottom:10px" onclick="nav('events')">← Terug</button>
+        <h1 id="edf-title">Eventfiche</h1>
+        <p id="edf-sub"></p>
+      </div>
+      <div class="ph-actions" id="edf-actions"></div>
+    </div>
+    <div id="edf-content"></div>
+  </div>
+
+  <!-- ===== OUTLOOK IMPORT ===== -->
+  <div class="page" id="page-outlook">
+    <div class="ph">
+      <div><h1>Outlook Import</h1><p>Haal events op uit uw M365 agenda</p></div>
+    </div>
+    <div id="outlook-status" class="alert alert-info" style="margin-bottom:18px">
+      🔗 Verbind met Microsoft 365 om agenda-events te importeren.
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="card-title" style="margin-bottom:12px">Agenda-events (komende 30 dagen)</div>
+        <div id="ol-events-list"><div class="empty"><div class="empty-icon">📅</div>Nog niet verbonden met M365</div></div>
+      </div>
+      <div>
+        <div class="card-title" style="margin-bottom:12px">ICS bestand importeren</div>
+        <div class="card" style="padding:20px">
+          <p style="font-size:13px;color:var(--sub);margin-bottom:14px">Exporteer een event uit Outlook als .ics bestand en laad het hier in:</p>
+          <label style="display:block;border:2px dashed var(--border2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;color:var(--sub);font-size:13px" id="ics-drop">
+            📁 Klik of sleep een .ics bestand hier
+            <input type="file" accept=".ics" hidden id="ics-input" onchange="parseICS(event)">
+          </label>
+          <div id="ics-result" style="margin-top:14px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DEFECTEN LOG ===== -->
+  <div class="page" id="page-defects-all">
+    <div class="ph">
+      <div><h1>Defecten logboek</h1><p id="defects-sub">0 defecten</p></div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="setDefectFilter('alle',this)">Alle</button>
+      <button class="tab" onclick="setDefectFilter('gemeld',this)">Gemeld</button>
+      <button class="tab" onclick="setDefectFilter('in behandeling',this)">In behandeling</button>
+      <button class="tab" onclick="setDefectFilter('hersteld',this)">Hersteld</button>
+    </div>
+    <div id="defects-all-list"></div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- =====================================================
+     MODALS
+===================================================== -->
+
+<!-- Wagen modal -->
+<div class="overlay" id="modal-truck">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="truck-modal-title">Nieuwe wagen</h2>
+      <button class="modal-close" onclick="closeModal('modal-truck')">✕</button>
+    </div>
+    <input type="hidden" id="t-id">
+    <div class="fg2">
+      <div class="field"><label>Naam wagen</label><input id="t-name" placeholder="De Gouden Friet"></div>
+      <div class="field"><label>Nummerplaat</label><input id="t-plate" placeholder="1-ABC-234"></div>
+    </div>
+    <div class="fg3">
+      <div class="field"><label>Bouwjaar</label><input type="number" id="t-year" value="2022"></div>
+      <div class="field"><label>Kleur</label><input type="color" id="t-color" value="#f6a821" style="height:38px;padding:3px;cursor:pointer"></div>
+      <div class="field"><label>KM-tarief (€/km)</label><input type="number" id="t-kmrate" value="0.40" step="0.01" placeholder="0.40"></div>
+    </div>
+    <div class="field"><label>Notities / uitrusting</label><textarea id="t-notes" placeholder="Extra info over de wagen..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="saveTruck()">✓ Opslaan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-truck')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Event modal (aanmaken / bewerken) -->
+<div class="overlay" id="modal-event">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2 id="ev-modal-title">Nieuwe eventfiche</h2>
+      <button class="modal-close" onclick="closeModal('modal-event')">✕</button>
+    </div>
+    <input type="hidden" id="ev-id">
+
+    <div class="form-section">KLANT</div>
+    <div class="fg2">
+      <div class="field"><label>Naam klant / organisatie</label><input id="ev-client" placeholder="Jan Peeters / Evenementen BV"></div>
+      <div class="field"><label>Telefoon</label><input id="ev-phone" placeholder="0470 12 34 56"></div>
+    </div>
+    <div class="fg2">
+      <div class="field"><label>E-mail</label><input type="email" id="ev-email" placeholder="jan@example.be"></div>
+      <div class="field"><label>BTW-nummer</label><input id="ev-btw" placeholder="BE0123.456.789"></div>
+    </div>
+
+    <div class="form-section">EVENT</div>
+    <div class="fg2">
+      <div class="field"><label>Evenementnaam</label><input id="ev-name" placeholder="Gentse Feesten 2026"></div>
+      <div class="field"><label>Locatie</label><input id="ev-location" placeholder="Korenmarkt, Gent"></div>
+    </div>
+    <div class="fg2">
+      <div class="field"><label>Startdatum</label><input type="date" id="ev-start"></div>
+      <div class="field"><label>Einddatum</label><input type="date" id="ev-end"></div>
+    </div>
+    <div class="fg2">
+      <div class="field"><label>Wagen</label><select id="ev-truck"></select></div>
+      <div class="field"><label>Huurprijs event (€)</label><input type="number" id="ev-price" placeholder="450"></div>
+    </div>
+
+    <div class="form-section">KILOMETER</div>
+    <div class="fg3">
+      <div class="field"><label>KM bij vertrek</label><input type="number" id="ev-km-dep" placeholder="12450" oninput="calcKm()"></div>
+      <div class="field"><label>KM bij terugkomst</label><input type="number" id="ev-km-ret" placeholder="12780" oninput="calcKm()"></div>
+      <div class="field"><label>KM-tarief (€/km)</label><input type="number" id="ev-kmrate" step="0.01" placeholder="0.40" oninput="calcKm()"></div>
+    </div>
+    <div id="ev-km-calc" style="margin-top:-6px;margin-bottom:14px;font-size:13px;color:var(--sub)"></div>
+
+    <div class="form-section">NOTITIES</div>
+    <div class="field"><label>Interne notities</label><textarea id="ev-notes" placeholder="Extra info..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="saveEvent()">✓ Eventfiche opslaan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-event')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Defect modal -->
+<div class="overlay" id="modal-defect">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Defect toevoegen</h2>
+      <button class="modal-close" onclick="closeModal('modal-defect')">✕</button>
+    </div>
+    <input type="hidden" id="def-event-id">
+    <input type="hidden" id="def-truck-id">
+    <div class="fg2">
+      <div class="field">
+        <label>Moment</label>
+        <select id="def-type">
+          <option value="ophaling">Bij ophaling</option>
+          <option value="tijdens">Tijdens event</option>
+          <option value="terugkomst">Bij terugkomst</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Ernst</label>
+        <select id="def-sev">
+          <option value="klein">Klein (cosmetisch)</option>
+          <option value="middel">Middel (functioneel)</option>
+          <option value="ernstig">Ernstig (buiten gebruik)</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Beschrijving</label><textarea id="def-desc" placeholder="Kras op rechter zijpaneel, deuk bumper..."></textarea></div>
+    <div class="field">
+      <label>Foto's van defect</label>
+      <div class="photo-grid" id="def-photos-preview"></div>
+      <input type="file" id="def-photos-input" accept="image/*" multiple hidden onchange="addDefectPhotos()">
+      <button type="button" class="photo-add-btn" style="width:100%;height:38px;border-radius:8px;flex-direction:row;gap:6px;margin-top:6px" onclick="document.getElementById('def-photos-input').click()">📷 Foto's toevoegen</button>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-red" onclick="saveDefect()">⚠ Defect opslaan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-defect')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Defect status modal -->
+<div class="overlay" id="modal-defect-status">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Defect bijwerken</h2>
+      <button class="modal-close" onclick="closeModal('modal-defect-status')">✕</button>
+    </div>
+    <input type="hidden" id="ds-id">
+    <div class="field">
+      <label>Status</label>
+      <select id="ds-status">
+        <option value="gemeld">Gemeld</option>
+        <option value="in behandeling">In behandeling</option>
+        <option value="hersteld">Hersteld</option>
+      </select>
+    </div>
+    <div class="field"><label>Notitie herstel</label><textarea id="ds-note" placeholder="Wat is er gedaan, door wie, wanneer..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="saveDefectStatus()">✓ Opslaan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-defect-status')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Return modal -->
+<div class="overlay" id="modal-return">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Wagen terugname registreren</h2>
+      <button class="modal-close" onclick="closeModal('modal-return')">✕</button>
+    </div>
+    <div id="return-info" class="alert alert-ok" style="margin-bottom:16px"></div>
+    <div class="fg2">
+      <div class="field"><label>KM bij terugkomst</label><input type="number" id="ret-km" placeholder="12780" oninput="calcReturnKm()"></div>
+      <div class="field"><label>KM-tarief (€/km)</label><input type="number" id="ret-rate" step="0.01" oninput="calcReturnKm()"></div>
+    </div>
+    <div id="ret-calc" style="margin-bottom:14px;font-size:13px;color:var(--sub)"></div>
+    <div class="field"><label>Notities terugname</label><textarea id="ret-notes" placeholder="Opmerkingen bij terugname..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="confirmReturn()">✓ Terugname bevestigen</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-return')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photo modal voor toevoegen aan event -->
+<div class="overlay" id="modal-addphotos">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Foto's toevoegen</h2>
+      <button class="modal-close" onclick="closeModal('modal-addphotos')">✕</button>
+    </div>
+    <div class="alert alert-info" style="margin-bottom:14px">Tijdstempel wordt automatisch uitgelezen uit de EXIF-data van de foto (wanneer de foto genomen werd). Als er geen EXIF is, wordt het uploadtijdstip gebruikt.</div>
+    <div class="field">
+      <label>Categorie</label>
+      <select id="ap-category">
+        <option value="ophaling">Bij ophaling</option>
+        <option value="event">Tijdens event</option>
+        <option value="terugkomst">Bij terugkomst</option>
+        <option value="algemeen">Algemeen</option>
+      </select>
+    </div>
+    <div class="field"><label>Foto's selecteren</label>
+      <div class="photo-grid" id="ap-preview"></div>
+      <input type="file" id="ap-input" accept="image/*" multiple hidden onchange="handleAddPhotos(event)">
+      <button type="button" class="photo-add-btn" style="width:100%;height:40px;flex-direction:row;gap:6px;border-radius:8px;margin-top:8px" onclick="document.getElementById('ap-input').click()">📷 Foto's selecteren</button>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-gold" onclick="savePhotos()">✓ Foto's opslaan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-addphotos')">Annuleren</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-info"></div>
+</div>
+
+<!-- =====================================================
+     SCRIPT
+===================================================== -->
+<script>
+/* =====================================================
+   CONFIGURATIE — pas hier uw M365 App ID aan
+===================================================== */
+const CONFIG = {
+  // Registreer een Azure App op: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps
+  // Platform: SPA. Redirect URI: file:///pad/naar/dit/bestand.html (of uw webserverURL)
+  // Scopes: Calendars.Read, User.Read
+  msalClientId: 'UW-AZURE-APP-ID-HIER',   // <- vervang dit
+  msalAuthority: 'https://login.microsoftonline.com/common',
+  msalScopes: ['Calendars.Read', 'User.Read'],
+  defaultKmRate: 0.40,   // €/km standaard
+  outlookDays: 30,       // agenda: X dagen vooruit ophalen
+};
+
+/* ===== DATA ===== */
+// Verhuur-wagens = check-in vloot met volgnummer 101–901.
+// C-nummers (containers), S-nummers en de nrs 1–99 worden bewust NIET opgenomen.
+const FLEET_101_901 = [
+  ['Bicky Burger Wagen 201',     'frituur'],
+  ['Friet Wagen 304',            'frituur'],
+  ['Food Wagen (Snackmuur) 305', 'frituur'],
+  ['Friet Wagen 402',            'frituur'],
+  ['Friet Wagen 403',            'frituur'],
+  ['Friet Container (Postel) 501','frituur'],
+  ['Friet Wagen (HR-ketel) 502', 'frituur'],
+  ['Friet Wagen 503',            'frituur'],
+  ['Friet Wagen 504',            'frituur'],
+  ['Friet Wagen 801',            'frituur'],
+  ['Friet Wagen 802',            'frituur'],
+  ['Friet Wagen 803',            'frituur'],
+  ['Friet Wagen 804',            'frituur'],
+  ['Friet Wagen 805',            'frituur'],
+  ['Friet Wagen 806',            'frituur'],
+  ['Friet Wagen 901',            'frituur'],
+  ['Hamburger Wagen 202',        'hamburger'],
+  ['Hamburger Wagen 306',        'hamburger'],
+  ['Jumper 302',                 'rijdend'],
+  ['Fiat 404',                   'rijdend'],
+];
+const TYPE_COLOR = { frituur:'#f6a821', hamburger:'#ef4444', rijdend:'#4d8fff' };
+
+let trucks  = JSON.parse(localStorage.getItem('ff3_trucks'))  || [];
+let events  = JSON.parse(localStorage.getItem('ff3_events'))  || [];
+let defects = JSON.parse(localStorage.getItem('ff3_defects')) || [];
+
+// Eerste keer: wagen-fiches seeden met de check-in vloot 101–901
+if (!trucks.length) {
+  trucks = FLEET_101_901.map(([name, type]) => {
+    const nr = (name.match(/\s(\d+)$/) || [])[1] || '';
+    return { id:'t'+nr, name, plate:'', year:null, color:TYPE_COLOR[type]||'#f6a821',
+             kmRate:CONFIG.defaultKmRate, notes:'', fleetType:type };
+  });
+  persist();
+}
+
+function persist() {
+  localStorage.setItem('ff3_trucks',  JSON.stringify(trucks));
+  localStorage.setItem('ff3_events',  JSON.stringify(events));
+  localStorage.setItem('ff3_defects', JSON.stringify(defects));
+}
+
+/* ===== PLANNING SYNC (Firebase) =====
+   Planning-events met 'VH' of 'verhuur' in de titel verschijnen automatisch
+   en live als event-fiche. KM, foto's, prijs en defecten vul je hier zelf aan. */
+function isVerhuurEvent(name){
+  const n = (name || '').toLowerCase();
+  return n.includes('verhuur') || /\bvh\b/.test(n);
+}
+
+function matchTruckId(planningTrucks){
+  if (!Array.isArray(planningTrucks)) return '';
+  const hit = trucks.find(t => planningTrucks.includes(t.name));
+  return hit ? hit.id : '';
+}
+
+// Heeft een geïmporteerd event al verhuur-data (dan niet automatisch opruimen)?
+function eventEnriched(e){
+  return !!(e.client || e.kmDep || e.kmRet || e.price || (e.photos && e.photos.length)
+            || defects.some(d => d.eventId === e.id));
+}
+
+function syncPlanningEvents(raw){
+  let arr = Array.isArray(raw) ? raw : Object.values(raw || {});
+  arr = arr.filter(e => e && e.id);
+  const vh    = arr.filter(e => isVerhuurEvent(e.name));
+  const vhIds = new Set(vh.map(e => 'pl' + e.id));
+
+  vh.forEach(pe => {
+    const id = 'pl' + pe.id;
+    const existing = events.find(e => e.id === id);
+    if (existing) {
+      existing.name      = pe.name || existing.name;
+      existing.location  = pe.location || existing.location;
+      existing.startDate = pe.startDate || existing.startDate;
+      existing.endDate   = pe.endDate || pe.startDate || existing.endDate;
+      existing.planningTrucks = Array.isArray(pe.trucks) ? pe.trucks : [];
+      if (!existing.truckId) existing.truckId = matchTruckId(pe.trucks);
+    } else {
+      events.push({
+        id, planningId: pe.id,
+        planningTrucks: Array.isArray(pe.trucks) ? pe.trucks : [],
+        truckId: matchTruckId(pe.trucks),
+        client:'', phone:'', email:'', btw:'',
+        name: pe.name || 'Verhuur', location: pe.location || '',
+        startDate: pe.startDate || '', endDate: pe.endDate || pe.startDate || '',
+        kmDep:null, kmRet:null, kmRate:CONFIG.defaultKmRate,
+        price:0, notes:'', photos:[], status:'actief',
+      });
+    }
+  });
+
+  // Geïmporteerde events die niet langer 'VH/verhuur' zijn én nog leeg → opruimen
+  events = events.filter(e => !e.planningId || vhIds.has(e.id) || eventEnriched(e));
+
+  persist();
+  refreshUI();
+}
+
+fbdb.ref('ft_planning_v1').on('value', snap => syncPlanningEvents(snap.val()),
+  err => console.warn('Planning-sync mislukt:', err));
+
+/* ===== NAVIGATION ===== */
+let currentTruckId = null;
+let currentEventId = null;
+let eventFilter    = 'alle';
+let defectFilter   = 'alle';
+
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  const nb = document.querySelector(`[data-page="${page}"]`);
+  if (nb) nb.classList.add('active');
+  renders[page]?.();
+}
+
+document.querySelectorAll('[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => nav(btn.dataset.page));
+});
+
+const renders = {
+  dashboard:    renderDashboard,
+  trucks:       renderTrucks,
+  events:       renderEvents,
+  'defects-all':renderDefectsAll,
+  outlook:      renderOutlook,
+};
+
+// Herteken de actieve pagina (bv. na een live planning-update uit Firebase)
+function refreshUI(){
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const id = active.id.replace('page-','');
+  if (renders[id]) { renders[id](); return; }
+  if (id === 'event-detail' && currentEventId && event_(currentEventId).id) renderEventDetail();
+  if (id === 'truck-detail' && currentTruckId) openTruckDetail(currentTruckId);
+}
+
+/* ===== HELPERS ===== */
+const uid   = () => '_' + Math.random().toString(36).slice(2, 9);
+const fmtD  = d  => d ? new Date(d).toLocaleDateString('nl-BE') : '—';
+const fmtDT = ts => ts ? new Date(ts).toLocaleString('nl-BE') : '—';
+const truck = id => trucks.find(t => t.id === id) || {};
+const event_ = id => events.find(e => e.id === id) || {};
+const esc   = s  => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+// Label van de wagen op een event: gekoppelde fiche, of anders de planning-wagen(s)
+function eventTruckLabel(e){
+  const t = truck(e.truckId);
+  if (t.id) return esc(t.name);
+  if (e.planningTrucks && e.planningTrucks.length) return esc(e.planningTrucks.join(', '));
+  return '—';
+}
+function truckOptions(){
+  return trucks.map(t=>`<option value="${t.id}">${esc(t.name)}${t.plate?' ('+esc(t.plate)+')':''}</option>`).join('');
+}
+
+function kmCalc(dep, ret, rate) {
+  if (!dep || !ret || ret <= dep) return null;
+  const km   = ret - dep;
+  const cost = (km * (rate || CONFIG.defaultKmRate)).toFixed(2);
+  return { km, cost };
+}
+
+function badgeSev(sev) {
+  const m = { klein:'b-minor', middel:'b-medium', ernstig:'b-serious' };
+  const l = { klein:'Klein', middel:'Middel', ernstig:'Ernstig' };
+  return `<span class="badge ${m[sev]||'b-minor'}">${l[sev]||sev}</span>`;
+}
+function badgeStat(stat) {
+  const m = { gemeld:'b-pending', 'in behandeling':'b-progress', hersteld:'b-fixed' };
+  const l = { gemeld:'Gemeld', 'in behandeling':'In behandeling', hersteld:'Hersteld' };
+  return `<span class="badge ${m[stat]||'b-pending'}">${l[stat]||stat}</span>`;
+}
+function sevColor(sev) {
+  return { klein:'var(--gold)', middel:'var(--amber)', ernstig:'var(--red)' }[sev] || 'var(--faint)';
+}
+
+function mailtoLink(to, subject, body) {
+  return `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/* ===== EXIF TIMESTAMP ===== */
+function readExifDate(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const buf  = ev.target.result;
+        const view = new DataView(buf);
+        if (view.getUint16(0) !== 0xFFD8) { resolve(null); return; }
+        let offset = 2;
+        while (offset < view.byteLength - 4) {
+          const marker = view.getUint16(offset);
+          const len    = view.getUint16(offset + 2);
+          if (marker === 0xFFE1) { // APP1 / EXIF
+            const exif = new Uint8Array(buf, offset + 4, len - 2);
+            const str  = String.fromCharCode(...exif.slice(0, 6));
+            if (str.startsWith('Exif')) {
+              // simple search for DateTimeOriginal tag (0x9003)
+              const raw = String.fromCharCode(...exif);
+              const m = raw.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+              if (m) {
+                const [, Y, M, D, h, mi, s] = m;
+                resolve(new Date(`${Y}-${M}-${D}T${h}:${mi}:${s}`));
+                return;
+              }
+            }
+          }
+          offset += 2 + len;
+        }
+        resolve(null);
+      } catch { resolve(null); }
+    };
+    reader.readAsArrayBuffer(file.slice(0, 65536));
+  });
+}
+
+async function readPhotoWithMeta(file) {
+  const uploadTs = new Date();
+  const exifDate = await readExifDate(file);
+  const src = await new Promise(res => {
+    const r = new FileReader(); r.onload = ev => res(ev.target.result); r.readAsDataURL(file);
+  });
+  return {
+    id:       uid(),
+    name:     file.name,
+    src,
+    uploadTs: uploadTs.toISOString(),
+    exifTs:   exifDate ? exifDate.toISOString() : null,
+    category: 'algemeen',
+  };
+}
+
+function fmtPhotoTs(photo) {
+  if (photo.exifTs) return 'Genomen: ' + fmtDT(photo.exifTs);
+  return 'Geüpload: ' + fmtDT(photo.uploadTs);
+}
+
+/* ===== DASHBOARD ===== */
+function renderDashboard() {
+  const active = events.filter(e => e.status === 'actief');
+  const done   = events.filter(e => e.status === 'afgerond');
+  const openD  = defects.filter(d => d.status !== 'hersteld');
+  const totalKm = done.reduce((s, e) => s + (e.kmRet && e.kmDep ? e.kmRet - e.kmDep : 0), 0);
+  const totalRev = done.reduce((s, e) => {
+    const km = kmCalc(e.kmDep, e.kmRet, e.kmRate);
+    return s + (e.price||0) + (km ? parseFloat(km.cost) : 0);
+  }, 0);
+
+  document.getElementById('dash-stats').innerHTML = [
+    { l:'Wagens',         v:trucks.length,   s:'in vloot',          c:'var(--blue)',   i:'🚚' },
+    { l:'Actieve events', v:active.length,   s:'huidig onderweg',   c:'var(--green)',  i:'📅' },
+    { l:'Totale km',      v:totalKm+' km',   s:'alle events',       c:'var(--gold)',   i:'🛣️' },
+    { l:'Totale omzet',   v:'€'+totalRev.toFixed(0), s:'incl. km',  c:'var(--purple)', i:'💶' },
+    { l:'Open defecten',  v:openD.length,    s:'niet hersteld',     c:'var(--red)',    i:'⚠️' },
+  ].map(s => `
+    <div class="stat">
+      <div class="stat-l">${s.l}</div>
+      <div class="stat-v" style="color:${s.c}">${s.v} <span style="font-size:22px">${s.i}</span></div>
+      <div class="stat-s">${s.s}</div>
+    </div>`).join('');
+
+  document.getElementById('dash-active').innerHTML = active.length
+    ? active.map(e => {
+        const t = truck(e.truckId);
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEventDetail('${e.id}')">
+          <div style="font-weight:600;font-size:13px">${esc(e.name)}</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">
+            <span style="color:${t.color||'#888'};margin-right:6px">●</span>${eventTruckLabel(e)} · ${esc(e.location)}
+          </div>
+          <div style="font-size:11px;color:var(--sub);margin-top:1px">${fmtD(e.startDate)} → ${fmtD(e.endDate)}</div>
+        </div>`;
+      }).join('')
+    : '<div class="empty" style="padding:16px">Geen actieve events</div>';
+
+  const openDef = defects.filter(d => d.status !== 'hersteld').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,4);
+  document.getElementById('dash-defects').innerHTML = openDef.length
+    ? openDef.map(d => {
+        const t = truck(d.truckId);
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:600;font-size:13px">${esc(t.name||'?')}</span>
+            ${badgeSev(d.sev)}
+          </div>
+          <div style="font-size:11px;color:var(--sub);margin-top:2px">${esc(d.desc)}</div>
+          <div style="font-size:11px;color:var(--faint);margin-top:1px">${fmtDT(d.ts)}</div>
+        </div>`;
+      }).join('')
+    : '<div class="empty" style="padding:16px">Geen open defecten 🎉</div>';
+}
+
+/* ===== TRUCKS ===== */
+function renderTrucks() {
+  document.getElementById('trucks-sub').textContent = trucks.length + ' wagen(s)';
+  document.getElementById('truck-cards').innerHTML = trucks.length
+    ? trucks.map(t => {
+        const tevents = events.filter(e => e.truckId === t.id);
+        const aev     = tevents.find(e => e.status === 'actief');
+        const kmTotal = tevents.filter(e=>e.kmRet&&e.kmDep).reduce((s,e)=>s+(e.kmRet-e.kmDep),0);
+        const tDef    = defects.filter(d=>d.truckId===t.id);
+        const openDef = tDef.filter(d=>d.status!=='hersteld').length;
+        return `
+        <div class="truck-card" onclick="openTruckDetail('${t.id}')">
+          <div class="truck-bar" style="background:${t.color}"></div>
+          <div class="truck-body">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="truck-name">${esc(t.name)}</div>
+                <div class="truck-plate">${[esc(t.plate), t.year].filter(Boolean).join(' · ') || 'Nog in te vullen'}</div>
+              </div>
+              ${aev ? '<span class="badge b-active">Actief</span>' : '<span class="badge b-avail">Beschikbaar</span>'}
+            </div>
+            ${aev ? `<div style="background:var(--green-s);border:1px solid rgba(52,210,123,.2);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--green);margin-top:10px">📍 ${esc(aev.location)} — ${esc(aev.client)}</div>` : ''}
+            <div class="truck-stats">
+              <div class="truck-stat"><span>${tevents.length}</span>events</div>
+              <div class="truck-stat"><span>${kmTotal.toLocaleString('nl')} km</span>totaal</div>
+              <div class="truck-stat" style="${openDef?'color:var(--red)':''}"><span>${tDef.length}</span>defecten ${openDef?`(${openDef} open)`:''}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty"><div class="empty-icon">🚚</div>Nog geen wagens toegevoegd</div>';
+}
+
+function openTruckDetail(id) {
+  currentTruckId = id;
+  const t = truck(id);
+  document.getElementById('tdf-title').textContent = t.name || 'Wagenfiche';
+  document.getElementById('tdf-sub').textContent   = [t.plate, t.year, '€'+(t.kmRate||0.40)+'/km'].filter(Boolean).join(' · ');
+
+  const tevents = events.filter(e => e.truckId === id).sort((a,b)=>new Date(b.startDate)-new Date(a.startDate));
+  const tDef    = defects.filter(d => d.truckId === id).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const kmTotal = tevents.filter(e=>e.kmRet&&e.kmDep).reduce((s,e)=>s+(e.kmRet-e.kmDep),0);
+  const revTotal= tevents.reduce((s,e)=>{
+    const km=kmCalc(e.kmDep,e.kmRet,e.kmRate);
+    return s+(e.price||0)+(km?parseFloat(km.cost):0);
+  },0);
+
+  document.getElementById('tdf-content').innerHTML = `
+    <div class="fiche-header">
+      <div>
+        <div class="fiche-title">🚚 ${esc(t.name)}</div>
+        <div class="fiche-meta">
+          ${t.plate?`<span>🪪 ${esc(t.plate)}</span>`:''}${t.year?`<span>📅 ${t.year}</span>`:''}
+          <span>⛽ €${t.kmRate||0.40}/km</span>
+        </div>
+        ${t.notes?`<div style="font-size:13px;color:var(--sub);margin-top:10px">${esc(t.notes)}</div>`:''}
+      </div>
+      <div class="fiche-stat">
+        <div class="v">${kmTotal.toLocaleString('nl')} km</div>
+        <div class="l">totaal gereden</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:8px">€${revTotal.toFixed(0)} omzet</div>
+      </div>
+    </div>
+
+    <div class="sec-title">Events (${tevents.length})</div>
+    <div class="tbl-wrap" style="margin-bottom:24px">
+      <table>
+        <thead><tr><th>Event</th><th>Locatie</th><th>Periode</th><th>KM gereden</th><th>Km-kost</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          ${tevents.length ? tevents.map(e=>{
+            const km=kmCalc(e.kmDep,e.kmRet,e.kmRate);
+            return `<tr>
+              <td><div class="td-main">${esc(e.name)}</div><div class="td-sub">${esc(e.client)}</div></td>
+              <td style="color:var(--sub);font-size:12px">${esc(e.location)}</td>
+              <td style="font-size:12px;color:var(--sub)">${fmtD(e.startDate)}<br>${fmtD(e.endDate)}</td>
+              <td style="font-family:var(--font-h);font-weight:700;color:var(--gold)">${km?km.km+' km':'—'}</td>
+              <td style="color:var(--sub);font-size:12px">${km?'€'+km.cost:'—'}</td>
+              <td>${e.status==='actief'?'<span class="badge b-active">Actief</span>':'<span class="badge b-done">Afgerond</span>'}</td>
+              <td><button class="btn btn-ghost btn-xs" onclick="openEventDetail('${e.id}')">Fiche →</button></td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="7" class="empty">Geen events</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sec-title">Defecten (${tDef.length})</div>
+    <div id="tdf-defects">
+      ${tDef.length ? tDef.map(d => renderDefectRow(d, false)).join('') : '<div class="empty">Geen defecten geregistreerd</div>'}
+    </div>`;
+
+  nav('truck-detail');
+  document.querySelector('[data-page="trucks"]').classList.add('active');
+}
+
+/* ===== EVENTS ===== */
+function setEventFilter(f, el) {
+  eventFilter = f;
+  document.querySelectorAll('#event-tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderEvents();
+}
+
+function renderEvents() {
+  const filtered = events.filter(e => eventFilter==='alle' || e.status===eventFilter)
+                         .sort((a,b)=>new Date(b.startDate)-new Date(a.startDate));
+  document.getElementById('events-sub').textContent = events.length + ' event(s)';
+  document.getElementById('events-body').innerHTML = filtered.length
+    ? filtered.map(e => {
+        const t  = truck(e.truckId);
+        const km = kmCalc(e.kmDep, e.kmRet, e.kmRate);
+        const dCount = defects.filter(d=>d.eventId===e.id).length;
+        return `<tr>
+          <td>
+            <div class="td-main">${esc(e.name)}${e.planningId?' <span class="badge b-progress" style="font-size:9px;padding:1px 7px;vertical-align:middle">PLANNING</span>':''}</div>
+            <div class="td-sub">${esc(e.client)||'—'} ${e.phone?'· '+esc(e.phone):''}${dCount?` · <span style="color:var(--red)">⚠ ${dCount} defect${dCount>1?'en':''}</span>`:''}</div>
+          </td>
+          <td><span style="color:${t.color||'var(--faint)'};margin-right:5px">●</span><span style="font-size:13px">${eventTruckLabel(e)}</span></td>
+          <td style="font-size:12px;color:var(--sub);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.location)}</td>
+          <td style="font-size:12px;color:var(--sub)">${fmtD(e.startDate)}<br>${fmtD(e.endDate)}</td>
+          <td style="font-family:var(--font-h);font-weight:700;color:var(--gold)">${km?km.km+' km':'—'}</td>
+          <td style="font-size:13px;color:var(--sub)">${km?'€'+km.cost:'—'}</td>
+          <td>${e.status==='actief'?'<span class="badge b-active">Actief</span>':'<span class="badge b-done">Afgerond</span>'}</td>
+          <td><button class="btn btn-ghost btn-xs" onclick="openEventDetail('${e.id}')">Fiche →</button></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="8" class="empty">Geen events gevonden</td></tr>';
+}
+
+/* ===== EVENT DETAIL ===== */
+function openEventDetail(id) {
+  currentEventId = id;
+  renderEventDetail();
+  nav('event-detail');
+  document.querySelector('[data-page="events"]').classList.add('active');
+}
+
+function renderEventDetail() {
+  const e  = event_(currentEventId); if (!e.id) return;
+  const t  = truck(e.truckId);
+  const km = kmCalc(e.kmDep, e.kmRet, e.kmRate);
+  const evDef  = defects.filter(d => d.eventId === e.id).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const evPh   = e.photos || [];
+  const totalPrice = (e.price||0) + (km?parseFloat(km.cost):0);
+
+  document.getElementById('edf-title').textContent = e.name || 'Eventfiche';
+  document.getElementById('edf-sub').textContent   = `${e.client} · ${e.location}`;
+  document.getElementById('edf-actions').innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="sendEventMail('${e.id}')">✉ Email</button>
+    <button class="btn btn-blue btn-sm" onclick="openEventModal('${e.id}')">✏ Bewerken</button>
+    ${e.status==='actief'?`<button class="btn btn-gold btn-sm" onclick="openReturnModal('${e.id}')">📥 Terugname</button>`:''}
+  `;
+
+  document.getElementById('edf-content').innerHTML = `
+    ${e.planningId?`<div class="alert alert-info" style="margin-bottom:14px">🔗 Automatisch geïmporteerd uit de Planning-agenda. Naam, locatie en datums worden daar beheerd.</div>`:''}
+    <!-- Header fiche -->
+    <div class="fiche-header" style="margin-bottom:16px">
+      <div>
+        <div class="fiche-title">📅 ${esc(e.name)}</div>
+        <div class="fiche-meta">
+          <span>📍 ${esc(e.location)}</span>
+          <span>📅 ${fmtD(e.startDate)} → ${fmtD(e.endDate)}</span>
+          <span style="color:${t.color||'var(--faint)'}">● ${eventTruckLabel(e)}</span>
+        </div>
+      </div>
+      <div class="fiche-stat">
+        <div class="v">€${totalPrice.toFixed(0)}</div>
+        <div class="l">totale kost</div>
+        <div style="margin-top:6px">${e.status==='actief'?'<span class="badge b-active">Actief</span>':'<span class="badge b-done">Afgerond</span>'}</div>
+      </div>
+    </div>
+
+    <!-- Info grid -->
+    <div class="info-grid">
+      <div class="info-box"><div class="info-label">Klant</div><div class="info-val">${esc(e.client)}</div><div class="info-val2">${e.phone||'—'}</div></div>
+      <div class="info-box"><div class="info-label">E-mail</div><div class="info-val" style="font-size:12px">${e.email?`<a href="mailto:${esc(e.email)}" style="color:var(--blue)">${esc(e.email)}</a>`:'—'}</div></div>
+      <div class="info-box"><div class="info-label">BTW</div><div class="info-val">${e.btw||'—'}</div></div>
+      <div class="info-box"><div class="info-label">Huurprijs</div><div class="info-val" style="color:var(--gold)">€${e.price||0}</div></div>
+    </div>
+
+    <!-- KM box -->
+    <div class="sec-title">Kilometerregistratie</div>
+    <div class="km-box">
+      <div class="km-field"><label>Vertrek</label><div style="font-family:var(--font-h);font-size:20px;font-weight:700;color:var(--text);padding:8px 0">${e.kmDep||'—'}</div></div>
+      <div class="km-arrow">→</div>
+      <div class="km-field"><label>Terugkomst</label><div style="font-family:var(--font-h);font-size:20px;font-weight:700;color:var(--text);padding:8px 0">${e.kmRet||'<span style="color:var(--faint)">Nog niet</span>'}</div></div>
+      ${km?`
+      <div class="km-result">
+        <div class="v">${km.km} km</div>
+        <div class="l">€${e.kmRate||0.40}/km = <strong style="color:var(--gold)">€${km.cost}</strong></div>
+      </div>`:e.status==='actief'?`<div style="color:var(--sub);font-size:13px;margin-left:auto">Terugname nog te registreren</div>`:''}
+    </div>
+
+    <!-- Foto's -->
+    <div class="sec-title" style="display:flex;justify-content:space-between">
+      <span>Foto's (${evPh.length}) <button class="btn btn-blue btn-xs" onclick="openAddPhotos('${e.id}')">+ Foto's toevoegen</button></span>
+    </div>
+    ${['ophaling','event','terugkomst','algemeen'].map(cat=>{
+      const catPh = evPh.filter(p=>p.category===cat);
+      if(!catPh.length) return '';
+      return `<div style="margin-bottom:16px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);font-weight:700;margin-bottom:8px">${cat}</div>
+        <div class="photo-grid">
+          ${catPh.map(p=>`
+            <div class="photo-cell" onclick="openLightbox('${p.src}','${fmtPhotoTs(p)}')">
+              <img src="${p.src}" alt="${esc(p.name)}">
+              <div class="photo-ts">${p.exifTs?'📷 '+fmtDT(p.exifTs):'⬆ '+fmtDT(p.uploadTs)}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    ${!evPh.length?'<div class="empty" style="margin-bottom:16px">Nog geen foto\'s</div>':''}
+
+    <!-- Defecten -->
+    <div class="sec-title" style="display:flex;justify-content:space-between">
+      <span>Defecten (${evDef.length}) <button class="btn btn-red btn-xs" onclick="openDefectModal('${e.id}','${e.truckId}')">+ Defect loggen</button></span>
+    </div>
+    <div id="edf-defects">
+      ${evDef.length ? evDef.map(d=>renderDefectRow(d,true)).join('') : '<div class="empty">Geen defecten gelogd voor dit event</div>'}
+    </div>
+
+    ${e.notes?`<div class="sec-title">Notities</div><div style="background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:14px;font-size:13px;color:var(--sub)">${esc(e.notes)}</div>`:''}
+  `;
+}
+
+/* ===== DEFECT ROW ===== */
+function renderDefectRow(d, showEventLink) {
+  const t = truck(d.truckId);
+  const e = event_(d.eventId);
+  return `<div class="defect-row">
+    <div class="defect-sev" style="background:${sevColor(d.sev)}"></div>
+    <div class="defect-body">
+      <div class="defect-meta">
+        ${badgeSev(d.sev)} ${badgeStat(d.status)}
+        <span style="font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em">${d.type}</span>
+        <span style="font-size:11px;color:var(--faint)">${fmtDT(d.ts)}</span>
+      </div>
+      <div class="defect-desc">${esc(d.desc)}</div>
+      ${d.resolveNote?`<div style="font-size:11px;color:var(--green);margin-top:4px">✓ ${esc(d.resolveNote)} — ${fmtDT(d.resolveTs)}</div>`:''}
+      ${showEventLink && e.id?`<div class="defect-info">Event: ${esc(e.name)} · ${esc(e.location)}</div>`:''}
+      ${d.photos&&d.photos.length?`<div class="photo-grid" style="margin-top:8px">${d.photos.map(p=>`<div class="photo-cell" onclick="openLightbox('${p.src}','${fmtPhotoTs(p)}')"><img src="${p.src}" alt=""><div class="photo-ts">${p.exifTs?fmtDT(p.exifTs):fmtDT(p.uploadTs)}</div></div>`).join('')}</div>`:''}
+      <div class="defect-actions">
+        ${d.status!=='hersteld'?`<button class="btn btn-green btn-xs" onclick="openDefectStatus('${d.id}')">Status bijwerken</button>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="deleteDefect('${d.id}')">Verwijderen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===== DEFECTS ALL ===== */
+function setDefectFilter(f,el){
+  defectFilter=f;
+  document.querySelectorAll('#page-defects-all .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderDefectsAll();
+}
+
+function renderDefectsAll(){
+  const filtered = defects
+    .filter(d=>defectFilter==='alle'||d.status===defectFilter)
+    .sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  document.getElementById('defects-sub').textContent = defects.length + ' defecten';
+  document.getElementById('defects-all-list').innerHTML = filtered.length
+    ? filtered.map(d=>renderDefectRow(d,true)).join('')
+    : '<div class="empty"><div class="empty-icon">✓</div>Geen defecten gevonden</div>';
+}
+
+/* ===== TRUCK MODAL ===== */
+function openTruckModal(id) {
+  const t = id ? truck(id) : {};
+  document.getElementById('truck-modal-title').textContent = id ? 'Wagen bewerken' : 'Nieuwe wagen';
+  document.getElementById('t-id').value     = id || '';
+  document.getElementById('t-name').value   = t.name || '';
+  document.getElementById('t-plate').value  = t.plate || '';
+  document.getElementById('t-year').value   = t.year || new Date().getFullYear();
+  document.getElementById('t-color').value  = t.color || '#f6a821';
+  document.getElementById('t-kmrate').value = t.kmRate || CONFIG.defaultKmRate;
+  document.getElementById('t-notes').value  = t.notes || '';
+  openModal('modal-truck');
+}
+
+function saveTruck() {
+  const id   = document.getElementById('t-id').value;
+  const name = document.getElementById('t-name').value.trim();
+  const plate= document.getElementById('t-plate').value.trim();
+  if (!name || !plate) { alert('Naam en nummerplaat zijn verplicht.'); return; }
+  const data = { name, plate, year:+document.getElementById('t-year').value, color:document.getElementById('t-color').value, kmRate:+document.getElementById('t-kmrate').value||0.40, notes:document.getElementById('t-notes').value };
+  if (id) trucks = trucks.map(t=>t.id===id?{...t,...data}:t);
+  else    trucks.push({ id:'t'+uid(), ...data });
+  persist(); closeModal('modal-truck');
+  renderTrucks();
+}
+
+function deleteTruck(id) {
+  if (!confirm('Wagen verwijderen?')) return;
+  trucks = trucks.filter(t=>t.id!==id); persist(); renderTrucks();
+}
+
+/* ===== EVENT MODAL ===== */
+function openNewEvent(prefill={}) {
+  const sel = document.getElementById('ev-truck');
+  sel.innerHTML = truckOptions();
+  ['ev-name','ev-location','ev-start','ev-end'].forEach(i=>document.getElementById(i).disabled=false);
+  document.getElementById('ev-modal-title').textContent = 'Nieuwe eventfiche';
+  document.getElementById('ev-id').value       = '';
+  document.getElementById('ev-client').value   = prefill.client || '';
+  document.getElementById('ev-phone').value    = prefill.phone  || '';
+  document.getElementById('ev-email').value    = prefill.email  || '';
+  document.getElementById('ev-btw').value      = prefill.btw    || '';
+  document.getElementById('ev-name').value     = prefill.name   || '';
+  document.getElementById('ev-location').value = prefill.location || '';
+  document.getElementById('ev-start').value    = prefill.startDate || new Date().toISOString().split('T')[0];
+  document.getElementById('ev-end').value      = prefill.endDate || '';
+  document.getElementById('ev-price').value    = prefill.price || '';
+  document.getElementById('ev-km-dep').value   = '';
+  document.getElementById('ev-km-ret').value   = '';
+  document.getElementById('ev-kmrate').value   = trucks[0]?.kmRate || CONFIG.defaultKmRate;
+  document.getElementById('ev-notes').value    = prefill.notes || '';
+  document.getElementById('ev-km-calc').textContent = '';
+  if (prefill.truckId) sel.value = prefill.truckId;
+  openModal('modal-event');
+}
+
+function openEventModal(id) {
+  const e = event_(id);
+  const sel = document.getElementById('ev-truck');
+  sel.innerHTML = truckOptions();
+  sel.value = e.truckId;
+  document.getElementById('ev-modal-title').textContent = e.planningId ? 'Eventfiche bewerken — uit Planning' : 'Eventfiche bewerken';
+  document.getElementById('ev-id').value       = id;
+  document.getElementById('ev-client').value   = e.client   || '';
+  document.getElementById('ev-phone').value    = e.phone    || '';
+  document.getElementById('ev-email').value    = e.email    || '';
+  document.getElementById('ev-btw').value      = e.btw      || '';
+  document.getElementById('ev-name').value     = e.name     || '';
+  document.getElementById('ev-location').value = e.location || '';
+  document.getElementById('ev-start').value    = e.startDate|| '';
+  document.getElementById('ev-end').value      = e.endDate  || '';
+  document.getElementById('ev-price').value    = e.price    || '';
+  document.getElementById('ev-km-dep').value   = e.kmDep    || '';
+  document.getElementById('ev-km-ret').value   = e.kmRet    || '';
+  document.getElementById('ev-kmrate').value   = e.kmRate   || CONFIG.defaultKmRate;
+  document.getElementById('ev-notes').value    = e.notes    || '';
+  // Naam/locatie/datums van planning-events worden in de Planning beheerd → vergrendeld
+  ['ev-name','ev-location','ev-start','ev-end'].forEach(i=>document.getElementById(i).disabled=!!e.planningId);
+  calcKm();
+  openModal('modal-event');
+}
+
+function calcKm(){
+  const dep  = +document.getElementById('ev-km-dep').value;
+  const ret  = +document.getElementById('ev-km-ret').value;
+  const rate = +document.getElementById('ev-kmrate').value || CONFIG.defaultKmRate;
+  const el   = document.getElementById('ev-km-calc');
+  const km   = kmCalc(dep, ret, rate);
+  el.textContent = km ? `→ ${km.km} km gereden · €${rate}/km = €${km.cost} km-vergoeding` : (dep&&ret&&ret<=dep)?'⚠ Terugkomst-km moet hoger zijn dan vertrek':'';
+  el.style.color = km?'var(--green)':'var(--red)';
+}
+
+function saveEvent(){
+  const id      = document.getElementById('ev-id').value;
+  const client  = document.getElementById('ev-client').value.trim();
+  const truckId = document.getElementById('ev-truck').value;
+  if(!client||!truckId){alert('Klant en wagen zijn verplicht.');return;}
+  const data = {
+    truckId, client,
+    phone:    document.getElementById('ev-phone').value,
+    email:    document.getElementById('ev-email').value,
+    btw:      document.getElementById('ev-btw').value,
+    name:     document.getElementById('ev-name').value,
+    location: document.getElementById('ev-location').value,
+    startDate:document.getElementById('ev-start').value,
+    endDate:  document.getElementById('ev-end').value,
+    price:    +document.getElementById('ev-price').value||0,
+    kmDep:    +document.getElementById('ev-km-dep').value||null,
+    kmRet:    +document.getElementById('ev-km-ret').value||null,
+    kmRate:   +document.getElementById('ev-kmrate').value||CONFIG.defaultKmRate,
+    notes:    document.getElementById('ev-notes').value,
+    status:   'actief',
+  };
+  if(id){
+    const old=event_(id);
+    events=events.map(e=>e.id===id?{...e,...data,photos:old.photos||[]}:e);
+  } else {
+    events.push({id:'e'+uid(),...data,photos:[]});
+  }
+  persist(); closeModal('modal-event');
+  renderEvents();
+  if(currentEventId===id) renderEventDetail();
+}
+
+/* ===== RETURN ===== */
+let returnEventId = null;
+
+function openReturnModal(id){
+  returnEventId=id;
+  const e=event_(id); const t=truck(e.truckId);
+  document.getElementById('return-info').innerHTML=`<strong>${esc(e.client)}</strong> · ${esc(t.name)}<br><small>${esc(e.location)} · Start KM: ${e.kmDep||'—'}</small>`;
+  document.getElementById('ret-km').value='';
+  document.getElementById('ret-rate').value=e.kmRate||CONFIG.defaultKmRate;
+  document.getElementById('ret-notes').value='';
+  document.getElementById('ret-calc').textContent='';
+  openModal('modal-return');
+}
+
+function calcReturnKm(){
+  const e=event_(returnEventId);
+  const ret=+document.getElementById('ret-km').value;
+  const rate=+document.getElementById('ret-rate').value||CONFIG.defaultKmRate;
+  const km=kmCalc(e.kmDep,ret,rate);
+  const el=document.getElementById('ret-calc');
+  el.textContent=km?`→ ${km.km} km gereden · €${km.cost} vergoeding`:'';
+  el.style.color='var(--green)';
+}
+
+function confirmReturn(){
+  const ret=+document.getElementById('ret-km').value;
+  if(!ret){alert('Voer de kilometerstand in.');return;}
+  const rate=+document.getElementById('ret-rate').value||CONFIG.defaultKmRate;
+  const e=event_(returnEventId);
+  events=events.map(ev=>ev.id===returnEventId?{...ev,kmRet:ret,kmRate:rate,returnNotes:document.getElementById('ret-notes').value,status:'afgerond'}:ev);
+  persist(); closeModal('modal-return');
+  renderEventDetail(); renderEvents();
+}
+
+/* ===== PHOTOS ===== */
+let addPhotosEventId = null;
+let pendingPhotos    = [];
+
+function openAddPhotos(eventId){
+  addPhotosEventId=eventId;
+  pendingPhotos=[];
+  document.getElementById('ap-preview').innerHTML='';
+  document.getElementById('ap-category').value='ophaling';
+  openModal('modal-addphotos');
+}
+
+async function handleAddPhotos(ev){
+  const files=[...ev.target.files];
+  for(const f of files){
+    const p=await readPhotoWithMeta(f);
+    pendingPhotos.push(p);
+  }
+  document.getElementById('ap-preview').innerHTML=pendingPhotos.map(p=>`
+    <div class="photo-cell"><img src="${p.src}" alt="${esc(p.name)}"><div class="photo-ts">${p.exifTs?'📷'+fmtDT(p.exifTs):'⬆'+fmtDT(p.uploadTs)}</div></div>
+  `).join('');
+  ev.target.value='';
+}
+
+function savePhotos(){
+  const cat=document.getElementById('ap-category').value;
+  const withCat=pendingPhotos.map(p=>({...p,category:cat}));
+  events=events.map(e=>e.id===addPhotosEventId?{...e,photos:[...(e.photos||[]),...withCat]}:e);
+  persist(); closeModal('modal-addphotos');
+  renderEventDetail();
+}
+
+/* ===== DEFECT MODAL ===== */
+let defPhotos=[];
+
+function openDefectModal(eventId, truckId){
+  document.getElementById('def-event-id').value=eventId;
+  document.getElementById('def-truck-id').value=truckId;
+  document.getElementById('def-desc').value='';
+  document.getElementById('def-type').value='ophaling';
+  document.getElementById('def-sev').value='klein';
+  defPhotos=[];
+  document.getElementById('def-photos-preview').innerHTML='';
+  openModal('modal-defect');
+}
+
+async function addDefectPhotos(){
+  const files=[...document.getElementById('def-photos-input').files];
+  for(const f of files){ const p=await readPhotoWithMeta(f); defPhotos.push(p); }
+  document.getElementById('def-photos-preview').innerHTML=defPhotos.map(p=>`
+    <div class="photo-cell"><img src="${p.src}" alt=""><div class="photo-ts">${p.exifTs?fmtDT(p.exifTs):fmtDT(p.uploadTs)}</div></div>
+  `).join('');
+  document.getElementById('def-photos-input').value='';
+}
+
+function saveDefect(){
+  const desc=document.getElementById('def-desc').value.trim();
+  if(!desc){alert('Beschrijving is verplicht.');return;}
+  defects.push({
+    id:'d'+uid(),
+    eventId:  document.getElementById('def-event-id').value,
+    truckId:  document.getElementById('def-truck-id').value,
+    type:     document.getElementById('def-type').value,
+    sev:      document.getElementById('def-sev').value,
+    desc, photos:[...defPhotos],
+    ts:       new Date().toISOString(),
+    status:   'gemeld', resolveNote:'', resolveTs:null,
+  });
+  persist(); closeModal('modal-defect');
+  renderEventDetail(); renderDefectsAll();
+}
+
+function openDefectStatus(id){
+  const d=defects.find(x=>x.id===id)||{};
+  document.getElementById('ds-id').value=id;
+  document.getElementById('ds-status').value=d.status||'gemeld';
+  document.getElementById('ds-note').value=d.resolveNote||'';
+  openModal('modal-defect-status');
+}
+
+function saveDefectStatus(){
+  const id=document.getElementById('ds-id').value;
+  const status=document.getElementById('ds-status').value;
+  const note=document.getElementById('ds-note').value;
+  defects=defects.map(d=>d.id===id?{...d,status,resolveNote:note,resolveTs:status==='hersteld'?new Date().toISOString():d.resolveTs}:d);
+  persist(); closeModal('modal-defect-status');
+  // re-render whichever page is active
+  renderDefectsAll();
+  if(currentEventId) renderEventDetail();
+  if(currentTruckId) openTruckDetail(currentTruckId);
+}
+
+function deleteDefect(id){
+  if(!confirm('Defect verwijderen?'))return;
+  defects=defects.filter(d=>d.id!==id);
+  persist(); renderDefectsAll();
+  if(currentEventId) renderEventDetail();
+  if(currentTruckId) openTruckDetail(currentTruckId);
+}
+
+/* ===== EMAIL ===== */
+function sendEventMail(id){
+  const e=event_(id);
+  const t=truck(e.truckId);
+  const km=kmCalc(e.kmDep,e.kmRet,e.kmRate);
+  const subject=`Eventbevestiging — ${e.name} — ${t.name}`;
+  const body=`Geachte ${e.client},\n\nHierbij de bevestiging van uw verhuur:\n\nEvenement: ${e.name}\nLocatie: ${e.location}\nPeriode: ${fmtD(e.startDate)} — ${fmtD(e.endDate)}\nWagen: ${t.name} (${t.plate})\n\nFinancieel overzicht:\n• Huurprijs: €${e.price||0}\n${km?`• Km-vergoeding: ${km.km} km × €${e.kmRate||0.40} = €${km.cost}\n`:''}• Totaal: €${((e.price||0)+(km?+km.cost:0)).toFixed(2)}\n\nMet vriendelijke groeten,\nFrietFleet`;
+  window.location.href=mailtoLink(e.email||'',subject,body);
+}
+
+/* ===== OUTLOOK / M365 ===== */
+let msalInstance = null;
+let msAccount    = null;
+
+async function toggleOutlook(){
+  if(msAccount){ msAccount=null; updateMsBtn(); return; }
+  if(CONFIG.msalClientId==='UW-AZURE-APP-ID-HIER'){
+    alert('Configureer eerst uw Azure App ID bovenaan in het script (CONFIG.msalClientId).\n\nRegistreer een app op portal.azure.com → Azure Active Directory → App registrations → New registration.\nPlatform: Single Page Application. Redirect URI: URL van dit bestand.\nScopes: Calendars.Read, User.Read');
+    return;
+  }
+  try {
+    if(!msalInstance){
+      msalInstance=new msal.PublicClientApplication({ auth:{ clientId:CONFIG.msalClientId, authority:CONFIG.msalAuthority, redirectUri:window.location.href }, cache:{ cacheLocation:'sessionStorage' }});
+      await msalInstance.initialize();
+    }
+    const resp=await msalInstance.loginPopup({ scopes:CONFIG.msalScopes });
+    msAccount=resp.account;
+    updateMsBtn();
+    await fetchOutlookEvents();
+  } catch(e){ console.error(e); alert('M365 login mislukt: '+e.message); }
+}
+
+function updateMsBtn(){
+  const btn=document.getElementById('ms-btn');
+  const lbl=document.getElementById('ms-label');
+  if(msAccount){ btn.classList.add('connected'); lbl.textContent=msAccount.name||'Verbonden'; }
+  else          { btn.classList.remove('connected'); lbl.textContent='Verbinden met M365'; }
+  document.getElementById('outlook-status').innerHTML = msAccount
+    ? `<span style="color:var(--green)">✓ Verbonden als ${msAccount.username}</span>`
+    : '🔗 Verbind met Microsoft 365 om agenda-events te importeren.';
+  document.getElementById('outlook-status').className = msAccount?'alert alert-ok':'alert alert-info';
+}
+
+async function fetchOutlookEvents(){
+  if(!msAccount||!msalInstance)return;
+  try{
+    const token=await msalInstance.acquireTokenSilent({ scopes:CONFIG.msalScopes, account:msAccount });
+    const now=new Date(); const end=new Date(now); end.setDate(end.getDate()+CONFIG.outlookDays);
+    const url=`https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${now.toISOString()}&endDateTime=${end.toISOString()}&$select=subject,start,end,location,organizer,bodyPreview&$top=20&$orderby=start/dateTime`;
+    const res=await fetch(url,{headers:{Authorization:'Bearer '+token.accessToken}});
+    const data=await res.json();
+    renderOutlookEvents(data.value||[]);
+  }catch(e){ console.error(e); }
+}
+
+function renderOutlookEvents(olEvents){
+  const container=document.getElementById('ol-events-list');
+  container.innerHTML=olEvents.length
+    ?olEvents.map(ev=>`
+      <div class="ol-event" onclick="importOutlookEvent(${JSON.stringify(ev).replace(/"/g,'&quot;')})">
+        <div>
+          <div class="ol-event-title">${esc(ev.subject)}</div>
+          <div class="ol-event-meta">${new Date(ev.start.dateTime).toLocaleString('nl-BE')} · ${esc(ev.location?.displayName||'')}</div>
+        </div>
+        <button class="btn btn-blue btn-xs">+ Fiche</button>
+      </div>`).join('')
+    :'<div class="empty">Geen agenda-events gevonden</div>';
+}
+
+function importOutlookEvent(ev){
+  openNewEvent({
+    name:     ev.subject,
+    location: ev.location?.displayName||'',
+    startDate:ev.start.dateTime.split('T')[0],
+    endDate:  ev.end.dateTime.split('T')[0],
+    email:    ev.organizer?.emailAddress?.address||'',
+    client:   ev.organizer?.emailAddress?.name||'',
+  });
+  closeModal('modal-event'); // already opened
+}
+
+/* ===== ICS PARSER ===== */
+function parseICS(ev){
+  const file=ev.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const txt=e.target.result;
+    const get=key=>(txt.match(new RegExp(key+'[^:]*:([^\r\n]+)'))||[])[1]?.trim()||'';
+    const parseIcsDate=s=>{
+      if(!s)return'';
+      const m=s.match(/(\d{4})(\d{2})(\d{2})/);
+      return m?`${m[1]}-${m[2]}-${m[3]}`:'';
+    };
+    const prefill={
+      name:     get('SUMMARY'),
+      location: get('LOCATION'),
+      startDate:parseIcsDate(get('DTSTART')),
+      endDate:  parseIcsDate(get('DTEND')),
+      notes:    get('DESCRIPTION').replace(/\\n/g,'\n').replace(/\\,/g,','),
+    };
+    document.getElementById('ics-result').innerHTML=`
+      <div class="alert alert-ok" style="margin-bottom:10px">✓ Event gevonden: <strong>${esc(prefill.name)}</strong></div>
+      <button class="btn btn-gold" onclick='openNewEvent(${JSON.stringify(prefill)})'>+ Eventfiche aanmaken</button>`;
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+function renderOutlook(){ if(msAccount) fetchOutlookEvents(); }
+
+/* ===== LIGHTBOX ===== */
+function openLightbox(src,info){
+  document.getElementById('lightbox-img').src=src;
+  document.getElementById('lightbox-info').textContent=info||'';
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+/* ===== MODAL HELPERS ===== */
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('open'); });
+});
+
+/* ===== EXPORT / IMPORT ===== */
+function exportData(){
+  const data={trucks,events,defects,exportedAt:new Date().toISOString(),version:'3.0'};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`frietfleet-export-${new Date().toISOString().split('T')[0]}.json`; a.click();
+}
+function importData(ev){
+  const file=ev.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const d=JSON.parse(e.target.result);
+      if(!confirm(`Import bevestigen? Dit vervangt alle huidige data.\n\nBevat: ${d.trucks?.length||0} wagens, ${d.events?.length||0} events, ${d.defects?.length||0} defecten`))return;
+      trucks=d.trucks||[]; events=d.events||[]; defects=d.defects||[];
+      persist(); renderDashboard(); alert('✓ Import succesvol');
+    }catch{ alert('Ongeldig JSON bestand'); }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+/* ===== INIT ===== */
+renderDashboard();
+</script>
+</body>
+</html>
