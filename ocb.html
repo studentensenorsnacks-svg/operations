@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — OCB Keuringsregistratie</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --bg:#0a0a0a;--surface:#161616;--surface2:#1f1f1f;--border:#2a2a2a;--border2:#333;
+  --text:#f5f5f5;--text2:#999;--text3:#666;--red:#e8001d;--green:#22c55e;
+  --orange:#f97316;--yellow:#eab308;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo-area{display:flex;align-items:center;gap:14px;cursor:pointer;text-decoration:none;color:inherit;transition:opacity 0.15s;}
+.logo-area:hover{opacity:0.75;}
+.logo-img{height:30px;width:auto;display:block;filter:brightness(0) invert(1);}
+.topbar-section{font-size:0.92rem;font-weight:600;color:var(--text2);padding-left:14px;border-left:1px solid var(--border2);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.ocb-badge{background:var(--red);color:#fff;font-size:0.66rem;font-weight:800;padding:3px 9px;border-radius:5px;
+  letter-spacing:0.04em;}
+
+.container{max-width:1400px;margin:0 auto;padding:32px 24px;}
+.page-header{margin-bottom:24px;}
+.page-title{font-family:var(--font-cond);font-size:2.2rem;font-weight:900;letter-spacing:-0.01em;margin-bottom:6px;}
+.page-subtitle{color:var(--text2);font-size:0.92rem;}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+  border-top:3px solid var(--border2);}
+.stat-num{font-family:var(--font-cond);font-size:1.7rem;font-weight:900;line-height:1;}
+.stat-lbl{color:var(--text2);font-size:0.66rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-top:4px;}
+.stat-pill.done{border-top-color:var(--green);}.stat-pill.done .stat-num{color:#4ade80;}
+.stat-pill.partial{border-top-color:var(--yellow);}.stat-pill.partial .stat-num{color:#facc15;}
+.stat-pill.open{border-top-color:var(--orange);}.stat-pill.open .stat-num{color:#fb923c;}
+.stat-pill.none{border-top-color:#6b7280;}.stat-pill.none .stat-num{color:#9ca3af;}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.filter-btn{padding:7px 16px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);
+  font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer;color:var(--text2);transition:all 0.15s;}
+.filter-btn:hover{color:var(--text);border-color:#444;}
+.filter-btn.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;padding:10px 16px;margin-bottom:20px;transition:border-color 0.15s;}
+.search-bar:focus-within{border-color:var(--red);}
+.search-icon{color:var(--text2);font-size:1rem;}
+.search-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:0.95rem;}
+.search-bar input::placeholder{color:var(--text2);}
+.search-clear{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;font-size:1rem;border-radius:4px;}
+.search-clear:hover{background:var(--border2);color:var(--text);}
+
+.grid{display:flex;flex-direction:column;gap:10px;}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.tc-head{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;transition:background 0.12s;}
+.tc-head:hover{background:var(--surface2);}
+.tc-info{flex:1;min-width:0;}
+.tc-name{font-weight:700;font-size:0.98rem;line-height:1.25;}
+.tc-sub{color:var(--text3);font-size:0.74rem;margin-top:2px;font-family:var(--font);}
+.tc-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.chev{color:var(--text3);font-size:0.8rem;transition:transform 0.2s;}
+.chev.open{transform:rotate(180deg);}
+
+.badge{font-size:0.68rem;font-weight:800;padding:4px 10px;border-radius:14px;text-transform:uppercase;
+  letter-spacing:0.03em;white-space:nowrap;}
+.badge.done{background:rgba(34,197,94,0.14);color:#4ade80;}
+.badge.partial{background:rgba(234,179,8,0.16);color:#facc15;}
+.badge.open{background:rgba(249,115,22,0.14);color:#fb923c;}
+.badge.none{background:rgba(107,114,128,0.20);color:#cbd5e1;}
+
+.tc-body{display:none;padding:18px 16px;border-top:1px solid var(--border);background:#121212;}
+.tc-body.open{display:block;}
+
+.check-row{display:flex;align-items:center;gap:11px;padding:11px 14px;background:var(--surface2);
+  border:1px solid var(--border2);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color 0.12s;}
+.check-row:hover{border-color:#444;}
+.check-row .cb{width:20px;height:20px;border-radius:5px;border:2px solid #555;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#fff;transition:all 0.12s;}
+.check-row.checked .cb{background:var(--green);border-color:var(--green);}
+.check-lbl{font-size:0.9rem;font-weight:700;}
+.check-row.checked .check-lbl{color:#4ade80;}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.field-label{font-size:0.64rem;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;}
+.field-input,.field-textarea{background:var(--surface);border:1px solid var(--border2);border-radius:7px;
+  color:var(--text);font-family:var(--font);font-size:0.9rem;padding:9px 11px;outline:none;width:100%;}
+.field-input:focus,.field-textarea:focus{border-color:var(--red);}
+.field-textarea{resize:vertical;min-height:54px;}
+.divider{border:none;border-top:1px solid var(--border2);margin:14px 0;}
+.no-keuring{color:var(--text2);font-size:0.88rem;padding:6px 2px;}
+
+.save-btn{background:var(--red);color:#fff;border:none;border-radius:8px;padding:11px;width:100%;
+  font-family:var(--font-cond);font-size:0.95rem;font-weight:800;letter-spacing:0.02em;cursor:pointer;
+  margin-top:4px;transition:background 0.15s;}
+.save-btn:hover{background:#b8001a;}
+.saved-msg{display:none;align-items:center;justify-content:center;gap:6px;background:rgba(34,197,94,0.12);
+  color:#4ade80;border:1px solid rgba(34,197,94,0.3);border-radius:7px;padding:8px;font-size:0.82rem;
+  font-weight:700;margin-top:8px;}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text2);}
+.empty-icon{font-size:3rem;margin-bottom:10px;}
+
+@media(max-width:768px){
+  .topbar{padding:0 14px;}
+  .container{padding:20px 12px;}
+  .page-title{font-size:1.7rem;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .field-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html" title="Terug naar dashboard">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-section">Keuringsregistratie <span class="ocb-badge">OCB</span></div>
+  </a>
+  <div class="topbar-right">
+    <div id="clock" style="color:var(--text2);font-size:0.85rem;font-weight:500;font-variant-numeric:tabular-nums;"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">✅ OCB Keuringsregistratie</h1>
+    <div class="page-subtitle" id="page-subtitle">laden…</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-pill done"><div class="stat-num" id="st-done">0</div><div class="stat-lbl">Volledig gekeurd</div></div>
+    <div class="stat-pill partial"><div class="stat-num" id="st-partial">0</div><div class="stat-lbl">Deels gekeurd</div></div>
+    <div class="stat-pill open"><div class="stat-num" id="st-open">0</div><div class="stat-lbl">Nog te keuren</div></div>
+    <div class="stat-pill none"><div class="stat-num" id="st-none">0</div><div class="stat-lbl">Geen keuring nodig</div></div>
+  </div>
+
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" data-filter="all">Alle voertuigen</button>
+    <button class="filter-btn" data-filter="open">Nog te keuren</button>
+    <button class="filter-btn" data-filter="partial">Deels gekeurd</button>
+    <button class="filter-btn" data-filter="done">Volledig gekeurd</button>
+  </div>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Zoek voertuig (bv. 503, friet, container…)" oninput="renderOcb()">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+  </div>
+
+  <div class="grid" id="ocb-grid"></div>
+</div>
+
+<script>
+// ── Voertuigenlijst (foodtruck-vloot) ───────────────────────────────
+// elek / gas = true wanneer dat type keuring vereist is voor het voertuig.
+const TRUCKS = [
+  {id:"ft001",name:"Bicky Burger Wagen 201",plate:"QIT-623",type:"Wagen - Bicky Burger",elek:true,gas:true},
+  {id:"ft002",name:"Brascheria 1",plate:"",type:"Voertuig - Algemeen / te bepalen",elek:true,gas:false},
+  {id:"ft003",name:"Bureau container 71",plate:"",type:"Container - Bureau / support",elek:true,gas:false},
+  {id:"ft004",name:"Bureau container 72",plate:"",type:"Container - Bureau / support",elek:true,gas:false},
+  {id:"ft005",name:"Fiat 404",plate:"2-FAC-730",type:"Voertuig - Algemeen / te bepalen",elek:true,gas:true},
+  {id:"ft006",name:"Food Wagen (Snackmuur) 305",plate:"QFV-161",type:"Wagen - Algemeen / te bepalen",elek:true,gas:true},
+  {id:"ft007",name:"Food container (4 Pot) C206",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:true},
+  {id:"ft008",name:"Food container (Berging en Dampkap) C209",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:false},
+  {id:"ft009",name:"Food container (Dampkap) C205",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:false},
+  {id:"ft010",name:"Food container (Friet) C201",plate:"",type:"Container - Friet",elek:true,gas:true},
+  {id:"ft011",name:"Food container (Friet-2_Vallen) C203",plate:"",type:"Container - Friet",elek:true,gas:true},
+  {id:"ft012",name:"Food container (Hamburger) C202",plate:"",type:"Container - Hamburger",elek:true,gas:false},
+  {id:"ft013",name:"Food container (Met koeling) C103",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft014",name:"Food container (Met koeling) C107",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft015",name:"Food container (Met koeling) C108",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft016",name:"Food container (Met koeling en Dampkap) C207",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft017",name:"Food container (Met koeling en Dampkap) C208",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft018",name:"Food container (Pasta) C105",plate:"",type:"Container - Pasta",elek:true,gas:false},
+  {id:"ft019",name:"Food container (Snackmuur) C110",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:true},
+  {id:"ft020",name:"Food container (Zonder koeling) C101",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft021",name:"Food container (Zonder koeling) C102",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft022",name:"Food container (Zonder koeling) C104",plate:"",type:"Container - Koeling",elek:true,gas:false},
+  {id:"ft023",name:"Food container C106",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:false},
+  {id:"ft024",name:"Food container C109",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:false},
+  {id:"ft025",name:"Food container C204",plate:"",type:"Container - Algemeen / te bepalen",elek:true,gas:false},
+  {id:"ft026",name:"Friet Container (Postel) 501",plate:"",type:"Container - Friet",elek:false,gas:false},
+  {id:"ft028",name:"Friet Wagen (HR-ketel) 502",plate:"QKM-160",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft029",name:"Friet Wagen 304",plate:"1-QDO-725",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft030",name:"Friet Wagen 402",plate:"Q-AQD-079",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft031",name:"Friet Wagen 403",plate:"Q-AGL-524",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft032",name:"Friet Wagen 503",plate:"",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft033",name:"Friet Wagen 504",plate:"",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft034",name:"Friet Wagen 801",plate:"QHU-600",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft035",name:"Friet Wagen 802",plate:"QHU-549",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft036",name:"Friet Wagen 803",plate:"QKH-910",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft037",name:"Friet Wagen 804",plate:"1-QBV-106",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft038",name:"Friet Wagen 805",plate:"1-QDX-376",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft039",name:"Friet Wagen 806",plate:"QJV-990",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft040",name:"Friet Wagen 901",plate:"QEF-280",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft041",name:"Hamburger Container 12",plate:"",type:"Container - Hamburger",elek:true,gas:false},
+  {id:"ft042",name:"Hamburger Container 13",plate:"",type:"Container - Hamburger",elek:true,gas:false},
+  {id:"ft044",name:"Hamburger Wagen (Kiosk) 14",plate:"",type:"Wagen - Hamburger",elek:true,gas:false},
+  {id:"ft045",name:"Hamburger Wagen 202",plate:"QCF-476",type:"Wagen - Hamburger",elek:true,gas:true},
+  {id:"ft046",name:"Hamburger Wagen 306",plate:"1-QAG-166",type:"Wagen - Hamburger",elek:true,gas:true},
+  {id:"ft047",name:"Ijs Wagen (Humbaur Ola) 51",plate:"QEM-672",type:"Wagen - Ijs",elek:true,gas:true},
+  {id:"ft048",name:"Ijs Wagen (Kermis Ola) 52",plate:"",type:"Wagen - Ijs",elek:true,gas:false},
+  {id:"ft049",name:"Jumper 302",plate:"XRI-303",type:"Wagen - Friet",elek:true,gas:true},
+  {id:"ft050",name:"Kassa units",plate:"",type:"Unit - Kassa",elek:true,gas:false},
+  {id:"ft051",name:"Koelaanhangwagen 61",plate:"",type:"Aanhangwagen - Koeling (geen keuring)",elek:false,gas:false},
+  {id:"ft053",name:"Koelcontainer 63",plate:"",type:"Container - Koeling (geen keuring)",elek:false,gas:false},
+  {id:"ft054",name:"Pasta Wagen 11",plate:"",type:"Wagen - Pasta",elek:true,gas:false},
+  {id:"ft055",name:"Pizza en Broodjes Wagen 21",plate:"",type:"Wagen - Pizza & Broodjes",elek:true,gas:false},
+  {id:"ft056",name:"Pizza en Broodjes Wagen 22",plate:"",type:"Wagen - Pizza & Broodjes",elek:true,gas:false},
+  {id:"ft057",name:"Pizza en Pasta Container 23",plate:"",type:"Container - Pizza & Pasta",elek:true,gas:false},
+  {id:"ft059",name:"Stockage container S101",plate:"",type:"Container - Stockage (geen keuring)",elek:false,gas:false},
+  {id:"ft060",name:"Stockage container S102",plate:"",type:"Container - Stockage (geen keuring)",elek:false,gas:false},
+  {id:"ft061",name:"Sweet corner Container 55",plate:"",type:"Container - Sweet corner",elek:true,gas:false},
+  {id:"ft062",name:"Sweet corner Wagen (Humbaur) 54",plate:"",type:"Wagen - Sweet corner",elek:true,gas:false},
+  {id:"ft063",name:"Sweetcorner Wagen (Kiosk) 53",plate:"",type:"Wagen - Sweet corner",elek:true,gas:false},
+  {id:"ft065",name:"Tap Wagen (Dubble-as) 42",plate:"",type:"Wagen - Tap / dranken",elek:false,gas:false},
+  {id:"ft066",name:"Tap Wagen (Klein) 44",plate:"",type:"Wagen - Tap / dranken",elek:true,gas:false},
+  {id:"ft067",name:"Tap Wagen 43",plate:"",type:"Wagen - Tap / dranken",elek:true,gas:false},
+];
+
+// ── State ───────────────────────────────────────────────────────────
+// keuringen wordt centraal bewaard in Firebase Realtime Database onder
+// /ocb_keuringen — niet lokaal. Elke registratie is meteen zichtbaar op
+// elk toestel.
+let keuringen = {};
+let filter = 'all';
+let dirty = false;   // Firebase-update gemist tijdens openstaande kaart
+
+const FB_REF = fbdb.ref('ocb_keuringen');
+
+// ── Helpers ─────────────────────────────────────────────────────────
+function truckById(id){ return TRUCKS.find(t => t.id === id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function today(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// open / partial / done / none
+function getStatus(tid){
+  const t = truckById(tid);
+  if (!t) return 'open';
+  if (!t.elek && !t.gas) return 'none';
+  const r = keuringen[tid] || {};
+  const elekDone = !t.elek || !!r.elek_done;
+  const gasDone  = !t.gas  || !!r.gas_done;
+  if (elekDone && gasDone) return 'done';
+  if (r.elek_done || r.gas_done) return 'partial';
+  return 'open';
+}
+
+// Sorteer op het cijfer in de naam, containers (C…) en stockage (S…) achteraan.
+function sortByNum(list){
+  const grp = n => /\bC\d+/.test(n) ? 2 : /\bS\d+/.test(n) ? 3 : 1;
+  const num = n => { const m = n.match(/\d+/g); return m ? parseInt(m[m.length-1]) : 0; };
+  return list.sort((a,b) => {
+    const ga = grp(a.name), gb = grp(b.name);
+    if (ga !== gb) return ga - gb;
+    const na = num(a.name), nb = num(b.name);
+    if (na !== nb) return na - nb;
+    return a.name.localeCompare(b.name, 'nl');
+  });
+}
+
+const STATUS_LABEL = { done:'Volledig gekeurd', partial:'Deels gekeurd', open:'Nog te keuren', none:'Geen keuring nodig' };
+
+// ── Statistieken + subtitel ─────────────────────────────────────────
+function updateStats(){
+  const c = { done:0, partial:0, open:0, none:0 };
+  TRUCKS.forEach(t => { c[getStatus(t.id)]++; });
+  document.getElementById('st-done').textContent = c.done;
+  document.getElementById('st-partial').textContent = c.partial;
+  document.getElementById('st-open').textContent = c.open;
+  document.getElementById('st-none').textContent = c.none;
+  document.getElementById('page-subtitle').textContent =
+    `${c.open} nog te keuren · ${c.partial} deels · ${c.done} volledig gekeurd`
+    + ` · bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+}
+
+// Werk enkel de status-badges bij (zonder de kaarten te hertekenen).
+function refreshPills(){
+  TRUCKS.forEach(t => {
+    const pill = document.getElementById('pill_' + t.id);
+    if (pill){
+      const s = getStatus(t.id);
+      pill.className = 'badge ' + s;
+      pill.textContent = STATUS_LABEL[s];
+    }
+  });
+}
+
+// ── Rendering ───────────────────────────────────────────────────────
+function renderOcb(){
+  const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+  document.getElementById('search-clear').style.display = q ? 'inline-block' : 'none';
+
+  let list = TRUCKS.filter(t => {
+    if (q && !t.name.toLowerCase().includes(q) && !(t.plate||'').toLowerCase().includes(q)) return false;
+    if (filter === 'all') return true;
+    return getStatus(t.id) === filter;
+  });
+  sortByNum(list);
+
+  const grid = document.getElementById('ocb-grid');
+  if (!list.length){
+    grid.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>Geen voertuigen gevonden.</div></div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(t => {
+    const r = keuringen[t.id] || {};
+    const s = getStatus(t.id);
+
+    let body = '';
+    if (t.elek){
+      body += checkBlock('elek', t.id, 'Elektriciteitskeuring uitgevoerd', r.elek_done,
+        r.keurder_elek, r.datum_elek);
+    }
+    if (t.gas){
+      if (t.elek) body += '<hr class="divider">';
+      body += checkBlock('gas', t.id, 'Gaskeuring uitgevoerd', r.gas_done,
+        r.keurder_gas, r.datum_gas);
+    }
+    if (!t.elek && !t.gas){
+      body += '<div class="no-keuring">Geen elektriciteits- of gaskeuring vereist voor dit voertuig.</div>';
+    } else {
+      body += `<div class="fg" style="margin-bottom:4px">
+        <label class="field-label">Opmerkingen</label>
+        <textarea class="field-textarea" id="opm_${t.id}" rows="2" placeholder="Eventuele opmerkingen…">${esc(r.opmerking)}</textarea>
+      </div>
+      <button class="save-btn" data-act="save">Opslaan</button>
+      <div class="saved-msg" id="saved_${t.id}">✓ Opgeslagen — centraal bewaard</div>`;
+    }
+
+    const sub = (t.plate ? t.plate + ' · ' : '') + t.type;
+    return `<div class="tc" data-id="${t.id}">
+      <div class="tc-head" data-act="toggle">
+        <div class="tc-info">
+          <div class="tc-name">${esc(t.name)}</div>
+          <div class="tc-sub">${esc(sub)}</div>
+        </div>
+        <div class="tc-right">
+          <span class="badge ${s}" id="pill_${t.id}">${STATUS_LABEL[s]}</span>
+          <span class="chev" id="chev_${t.id}">▾</span>
+        </div>
+      </div>
+      <div class="tc-body" id="body_${t.id}">${body}</div>
+    </div>`;
+  }).join('');
+}
+
+function checkBlock(kind, tid, label, done, keurder, datum){
+  const k = kind + '_' + tid;
+  return `<div class="check-row${done ? ' checked' : ''}" data-act="check" data-kind="${kind}">
+      <div class="cb">✓</div>
+      <span class="check-lbl">${label}</span>
+      <input type="hidden" id="${k}" value="${done ? '1' : ''}">
+    </div>
+    <div class="field-row">
+      <div class="fg">
+        <label class="field-label">Naam keurder</label>
+        <input class="field-input" id="k${kind[0]}_${tid}" value="${esc(keurder)}" placeholder="bv. Bram">
+      </div>
+      <div class="fg">
+        <label class="field-label">Datum keuring</label>
+        <input type="date" class="field-input" id="d${kind[0]}_${tid}" value="${esc(datum)}">
+      </div>
+    </div>`;
+}
+
+// ── Interactie (event-delegatie op de grid) ─────────────────────────
+function toggleCard(tid){
+  const body = document.getElementById('body_' + tid);
+  const chev = document.getElementById('chev_' + tid);
+  if (!body) return;
+  const opening = !body.classList.contains('open');
+  body.classList.toggle('open', opening);
+  if (chev) chev.classList.toggle('open', opening);
+  // Alle kaarten dicht én er kwam intussen verse data binnen → hertekenen.
+  if (!opening && dirty && !document.querySelector('.tc-body.open')){
+    dirty = false;
+    renderOcb();
+  }
+}
+
+function toggleCheck(tid, row){
+  const checked = !row.classList.contains('checked');
+  row.classList.toggle('checked', checked);
+  const kind = row.dataset.kind;
+  const hidden = document.getElementById(kind + '_' + tid);
+  if (hidden) hidden.value = checked ? '1' : '';
+  // Datum automatisch op vandaag zetten zodra een keuring aangevinkt wordt.
+  if (checked){
+    const dEl = document.getElementById('d' + kind[0] + '_' + tid);
+    if (dEl && !dEl.value) dEl.value = today();
+  }
+}
+
+function saveRec(tid){
+  const t = truckById(tid);
+  if (!t) return;
+  const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  const rec = { tid: tid, updatedAt: new Date().toISOString() };
+
+  if (t.elek){
+    rec.elek_done    = val('elek_' + tid) === '1';
+    rec.keurder_elek = val('ke_' + tid);
+    rec.datum_elek   = val('de_' + tid);
+  }
+  if (t.gas){
+    rec.gas_done    = val('gas_' + tid) === '1';
+    rec.keurder_gas = val('kg_' + tid);
+    rec.datum_gas   = val('dg_' + tid);
+  }
+  rec.opmerking = val('opm_' + tid);
+
+  FB_REF.child(tid).set(rec).then(() => {
+    const msg = document.getElementById('saved_' + tid);
+    if (msg){ msg.style.display = 'flex'; setTimeout(() => { msg.style.display = 'none'; }, 2500); }
+  }).catch(err => {
+    alert('Opslaan mislukt: ' + err.message);
+  });
+}
+
+document.getElementById('ocb-grid').addEventListener('click', e => {
+  const card = e.target.closest('.tc');
+  if (!card) return;
+  const tid = card.dataset.id;
+  if (e.target.closest('[data-act="save"]')){ saveRec(tid); return; }
+  const checkRow = e.target.closest('[data-act="check"]');
+  if (checkRow){ toggleCheck(tid, checkRow); return; }
+  if (e.target.closest('[data-act="toggle"]')){ toggleCard(tid); }
+});
+
+document.getElementById('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  filter = btn.dataset.filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+  renderOcb();
+});
+
+function clearSearch(){
+  document.getElementById('search-input').value = '';
+  renderOcb();
+}
+
+// ── Live synchronisatie met Firebase ────────────────────────────────
+FB_REF.on('value', snap => {
+  keuringen = snap.val() || {};
+  updateStats();
+  // Hertekenen zou tekst die iemand net intypt wissen → enkel doen als
+  // er geen kaart openstaat. Anders wachten tot alle kaarten dicht zijn.
+  if (document.querySelector('.tc-body.open')){
+    dirty = true;
+    refreshPills();
+  } else {
+    renderOcb();
+  }
+}, err => {
+  document.getElementById('page-subtitle').textContent = 'Kan niet verbinden met de centrale database: ' + err.message;
+});
+
+// ── Klok ────────────────────────────────────────────────────────────
+function updateClock(){
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleDateString('nl-NL') + '  '
+    + new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+// Eerste render (vóór de eerste Firebase-respons).
+renderOcb();
+updateStats();
+</script>
+</body>
+</html>
