@@ -90,9 +90,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
 
 /* NOTE CARD */
 .note{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:7px;padding:13px 15px;margin-bottom:9px;}
-.note-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.note-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;flex-wrap:wrap;}
 .note-name{background:#fde8ea;color:var(--red-dark);font-weight:800;font-size:0.78rem;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.03em;}
 .note-time{font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);}
+.note-event{background:#e3edff;color:#1d4ed8;font-weight:700;font-size:0.76rem;padding:3px 10px;border-radius:5px;}
 .note-del{margin-left:auto;background:none;border:none;color:#bbb;font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
 .note-del:hover{color:var(--red);background:#fde8ea;}
 .note-text{font-size:0.95rem;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
@@ -139,11 +140,16 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
   <div class="view active" id="view-new">
     <div class="card">
       <h2>Nieuwe notitie</h2>
-      <div class="sub">Vul je naam en notitie in. Datum en uur worden automatisch bewaard.</div>
+      <div class="sub">Vul je naam, het event en je notitie in. Datum en uur worden automatisch bewaard.</div>
       <div class="fg">
         <label class="flbl" for="in-name">Jouw naam</label>
         <input type="text" id="in-name" list="names-list" placeholder="bijv. Jelle" autocomplete="off">
         <datalist id="names-list"></datalist>
+      </div>
+      <div class="fg">
+        <label class="flbl" for="in-event">Welk event</label>
+        <input type="text" id="in-event" list="events-list" placeholder="Kies een event uit de planning of typ zelf — mag leeg blijven" autocomplete="off">
+        <datalist id="events-list"></datalist>
       </div>
       <div class="fg">
         <label class="flbl" for="in-text">Notitie</label>
@@ -165,6 +171,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
     </div>
     <div class="filters">
       <select id="f-name" onchange="renderBoard()"><option value="">Alle personen</option></select>
+      <select id="f-event" onchange="renderBoard()"><option value="">Alle events</option></select>
       <input type="text" id="f-search" placeholder="🔍 Zoek in notities..." oninput="renderBoard()">
     </div>
     <div id="board"></div>
@@ -207,6 +214,17 @@ fbdb.ref(FB_PATH).on('value', snap => {
   refreshAll();
 }, err => console.warn('Firebase lezen mislukt:', err));
 
+// Events uit de planning ophalen als suggesties voor het Event-veld
+fbdb.ref('ft_planning_v1').on('value', snap => {
+  const data = snap.val();
+  let arr = [];
+  if(data) arr = Array.isArray(data) ? data : Object.values(data);
+  const evNames = [...new Set(arr.filter(e=>e&&e.name).map(e=>String(e.name).trim()).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b));
+  const dl = document.getElementById('events-list');
+  if(dl) dl.innerHTML = evNames.map(e=>'<option value="'+esc(e)+'">').join('');
+}, err => console.warn('Planning lezen mislukt:', err));
+
 // ── TAB SWITCH ─────────────────────────────────
 function switchTab(tab){
   document.getElementById('tab-new').classList.toggle('active', tab==='new');
@@ -219,6 +237,7 @@ function switchTab(tab){
 // ── NOTITIE OPSLAAN ────────────────────────────
 function saveNote(){
   const name = document.getElementById('in-name').value.trim();
+  const event = document.getElementById('in-event').value.trim();
   const text = document.getElementById('in-text').value.trim();
   if(!name){ toast('Vul eerst je naam in', 'var(--red)'); document.getElementById('in-name').focus(); return; }
   if(!text){ toast('De notitie is leeg', 'var(--red)'); document.getElementById('in-text').focus(); return; }
@@ -228,6 +247,7 @@ function saveNote(){
   const note = {
     id: ref.key,
     name: name,
+    event: event,
     text: text,
     date: now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()),
     hour: now.getHours(),
@@ -240,6 +260,7 @@ function saveNote(){
   ref.set(note)
     .then(()=>{
       localStorage.setItem('ft_notitie_name', name);   // naam onthouden
+      document.getElementById('in-event').value='';
       document.getElementById('in-text').value='';
       toast('✓ Notitie opgeslagen');
     })
@@ -275,6 +296,14 @@ function refreshAll(){
     names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
   if(names.includes(cur)) fName.value = cur;
 
+  // Events-filter (op basis van events die in de notities voorkomen)
+  const events = [...new Set(notes.map(n=>n.event).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const fEvent = document.getElementById('f-event');
+  const curE = fEvent.value;
+  fEvent.innerHTML = '<option value="">Alle events</option>' +
+    events.map(e=>'<option value="'+esc(e)+'">'+esc(e)+'</option>').join('');
+  if(events.includes(curE)) fEvent.value = curE;
+
   // Stats
   const today = todayStr();
   document.getElementById('st-total').textContent  = notes.length;
@@ -288,11 +317,13 @@ function refreshAll(){
 function renderBoard(){
   const board = document.getElementById('board');
   const nameF   = document.getElementById('f-name').value;
+  const eventF  = document.getElementById('f-event').value;
   const searchF = document.getElementById('f-search').value.toLowerCase().trim();
 
   let list = notes.slice();
   if(nameF)   list = list.filter(n=>n.name===nameF);
-  if(searchF) list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF));
+  if(eventF)  list = list.filter(n=>n.event===eventF);
+  if(searchF) list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF) || (n.event||'').toLowerCase().includes(searchF));
   list.sort((a,b)=>(b.ts||0)-(a.ts||0));
 
   if(!list.length){
@@ -328,6 +359,7 @@ function renderBoard(){
         html += '<div class="note">';
         html += '<div class="note-top">';
         html += '<span class="note-name">'+esc(n.name||'?')+'</span>';
+        if(n.event) html += '<span class="note-event">📌 '+esc(n.event)+'</span>';
         html += '<span class="note-time">🕒 '+esc(n.time||'')+'</span>';
         html += '<button class="note-del" title="Verwijderen" onclick="deleteNote(\''+esc(n.id)+'\')">✕</button>';
         html += '</div>';
