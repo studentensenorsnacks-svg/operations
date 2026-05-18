@@ -106,6 +106,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .truck-card.s-vlees-leeg{border-left:3px solid var(--red);}
 .truck-card .truck-name{font-weight:700;font-size:0.96rem;line-height:1.3;}
 .truck-card .truck-meta{color:var(--text2);font-size:0.78rem;}
+.truck-card .truck-other{margin-top:6px;font-size:0.74rem;color:var(--text2);opacity:0.85;}
 
 .type-badge{display:inline-block;font-size:0.66rem;font-weight:800;padding:2px 7px;border-radius:8px;
   margin-left:6px;text-transform:uppercase;letter-spacing:0.04em;vertical-align:middle;}
@@ -223,7 +224,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <script>
 let checkins = [];
 
-// Bepaal de vet-status van een truck op basis van laatste check-in met vet-info
+// Bepaal alle vet-statussen van een truck op basis van laatste check-in met vet-info
 function getVetStatus(truck) {
   // Vind laatste check-in van deze truck die een vet-status heeft
   const truckCheckins = checkins
@@ -231,19 +232,22 @@ function getVetStatus(truck) {
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
   if (!truckCheckins.length) return null;
 
-  // Loop door de check-ins en vind de meest recente met een vet-status
+  // Loop door de check-ins en vind de meest recente met minstens één vet-status
   for (const c of truckCheckins) {
     const statuses = c.statuses || [];
-    const vetStatus = statuses.find(s => s.startsWith('vet-'));
-    if (vetStatus) {
-      let kind = vetStatus.replace('vet-', '');  // 'aflaten' | 'proper' | 'niet-voldoende' | 'leeg' | 'friet-vol' | 'friet-leeg' | 'vlees-vol' | 'vlees-leeg'
-      // Splits 'niet-voldoende' op basis van truckType (frituur / hamburger)
-      if (kind === 'niet-voldoende') {
-        if (c.truckType === 'frituur') kind = 'friet-niet-voldoende';
-        else if (c.truckType === 'hamburger') kind = 'vlees-niet-voldoende';
-        else kind = 'friet-niet-voldoende';  // fallback
-      }
-      return { kind, latest: c };
+    const vetStatuses = statuses.filter(s => s.startsWith('vet-'));
+    if (vetStatuses.length) {
+      const kinds = vetStatuses.map(vs => {
+        let kind = vs.replace('vet-', '');  // 'aflaten' | 'proper' | 'niet-voldoende' | 'leeg' | 'friet-vol' | ...
+        // Splits 'niet-voldoende' op basis van truckType (frituur / hamburger)
+        if (kind === 'niet-voldoende') {
+          if (c.truckType === 'frituur') kind = 'friet-niet-voldoende';
+          else if (c.truckType === 'hamburger') kind = 'vlees-niet-voldoende';
+          else kind = 'friet-niet-voldoende';  // fallback
+        }
+        return kind;
+      });
+      return { kinds: [...new Set(kinds)], latest: c };  // ontdubbeld
     }
   }
   return null;
@@ -295,7 +299,7 @@ function render() {
   const trucksWithStatus = allTrucks
     .map(t => {
       const s = getVetStatus(t);
-      return s ? { truck: t, kind: s.kind, latest: s.latest } : null;
+      return s ? { truck: t, kinds: s.kinds, latest: s.latest } : null;
     })
     .filter(Boolean);
 
@@ -311,7 +315,7 @@ function render() {
     'vlees-vol': 0,
     'vlees-leeg': 0
   };
-  trucksWithStatus.forEach(t => { counts[t.kind] = (counts[t.kind]||0) + 1; });
+  trucksWithStatus.forEach(t => t.kinds.forEach(k => { counts[k] = (counts[k]||0) + 1; }));
   document.getElementById('st-aflaten').textContent = counts['aflaten'];
   document.getElementById('st-friet').textContent = counts['friet-niet-voldoende'];
   document.getElementById('st-vlees').textContent = counts['vlees-niet-voldoende'];
@@ -323,9 +327,9 @@ function render() {
   document.getElementById('st-vlees-leeg').textContent = counts['vlees-leeg'];
 
   // Subtitle
-  const actieNodig = counts['aflaten'] + counts['friet-niet-voldoende'] + counts['vlees-niet-voldoende']
-                   + counts['leeg'] + counts['friet-leeg'] + counts['vlees-leeg'];
-  const ok = counts['proper'] + counts['friet-vol'] + counts['vlees-vol'];
+  const ACTION_KINDS = ['aflaten','friet-niet-voldoende','vlees-niet-voldoende','leeg','friet-leeg','vlees-leeg'];
+  const actieNodig = trucksWithStatus.filter(t => t.kinds.some(k => ACTION_KINDS.includes(k))).length;
+  const ok = trucksWithStatus.length - actieNodig;
   document.getElementById('page-subtitle').textContent =
     `${actieNodig} truck${actieNodig!==1?'s':''} actie nodig · ${ok} OK · bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
 
@@ -352,13 +356,13 @@ function render() {
   let html = '';
 
   ORDER.forEach(group => {
-    const items = visible.filter(t => t.kind === group.key);
+    const items = visible.filter(t => t.kinds.includes(group.key));
     if (!items.length) return;
     // Sorteer alfabetisch op truck-naam
     items.sort((a,b) => a.truck.localeCompare(b.truck, 'nl'));
     html += `<div class="section ${group.cssCls}">
       <div class="section-header">${group.icon} ${group.title} <span class="section-count">${items.length}</span></div>
-      <div class="truck-grid">${items.map(renderCard).join('')}</div>
+      <div class="truck-grid">${items.map(t => renderCard(t, group.key)).join('')}</div>
     </div>`;
   });
 
@@ -373,7 +377,7 @@ function render() {
   content.innerHTML = html;
 }
 
-function renderCard(t) {
+function renderCard(t, kind) {
   const labels = {
     'aflaten': '🛢️ Aflaten',
     'friet-niet-voldoende': '⚠️ Friet vet niet voldoende',
@@ -395,25 +399,32 @@ function renderCard(t) {
     : 'nog geen check-in';
   const truckEsc = t.truck.replace(/'/g, "\\'");
 
-  // Actie-knop afhankelijk van status
+  // Actie-knop afhankelijk van de status van deze sectie
   const needsAflaten = ['aflaten'];
   const needsBijvullen = ['friet-niet-voldoende', 'vlees-niet-voldoende', 'leeg', 'friet-leeg', 'vlees-leeg'];
 
   let btn = '';
-  if (needsAflaten.includes(t.kind)) {
+  if (needsAflaten.includes(kind)) {
     btn = `<button class="btn-action btn-afgelaten" onclick="markAfgelaten('${truckEsc}')">🛢️ Markeer als afgelaten</button>`;
-  } else if (needsBijvullen.includes(t.kind)) {
+  } else if (needsBijvullen.includes(kind)) {
     btn = `<button class="btn-action btn-bijgevuld" onclick="markBijgevuld('${truckEsc}')">✨ Markeer als bijgevuld</button>`;
   } else {
     btn = `<button class="btn-action" disabled>✓ Vet OK</button>`;
   }
 
-  return `<div class="truck-card s-${t.kind}">
+  // Andere vet-statussen van deze truck (buiten de huidige sectie)
+  const others = (t.kinds || []).filter(k => k !== kind);
+  const otherLine = others.length
+    ? `<div class="truck-other">Ook: ${others.map(k => labels[k] || k).join('  ·  ')}</div>`
+    : '';
+
+  return `<div class="truck-card s-${kind}">
     <div>
       <div class="truck-name">${t.truck}${typeBadge}</div>
       <div class="truck-meta">${meta}</div>
+      ${otherLine}
     </div>
-    <span class="status-badge ${t.kind}">${labels[t.kind] || t.kind}</span>
+    <span class="status-badge ${kind}">${labels[kind] || kind}</span>
     ${btn}
   </div>`;
 }
