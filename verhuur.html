@@ -1,26 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FrietFleet — Verhuurmodule</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
-<!-- Firebase — gedeelde database met dashboard / check-in / planning -->
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
-  authDomain: "operationssenorsnacks.firebaseapp.com",
-  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "operationssenorsnacks",
-  storageBucket: "operationssenorsnacks.firebasestorage.app",
-  messagingSenderId: "526032166243",
-  appId: "1:526032166243:web:5af01c6d17aecd56114756",
-};
-firebase.initializeApp(firebaseConfig);
-const fbdb = firebase.database();
-</script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* =====================================================
@@ -432,6 +416,12 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       Defecten log
     </button>
+
+    <div class="nav-section">Koppeling</div>
+    <a class="nav-item" href="planning.html" target="_blank" style="text-decoration:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Planning-agenda
+    </a>
   </nav>
 
   <div class="sidebar-bottom">
@@ -784,8 +774,30 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
 </div>
 
 <!-- =====================================================
-     SCRIPT
+     SCRIPTS — onderaan geladen zodat de pagina altijd eerst rendert,
+     ook als een externe CDN traag of onbereikbaar is
 ===================================================== -->
+<script async src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+let fbdb = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  fbdb = firebase.database();
+} catch (e) {
+  console.warn('Firebase-init mislukt — verhuurmodule draait verder zonder planning-sync:', e);
+}
+</script>
 <script>
 /* =====================================================
    CONFIGURATIE — pas hier uw M365 App ID aan
@@ -849,11 +861,18 @@ function persist() {
 }
 
 /* ===== PLANNING SYNC (Firebase) =====
-   Planning-events met 'VH' of 'verhuur' in de titel verschijnen automatisch
-   en live als event-fiche. KM, foto's, prijs en defecten vul je hier zelf aan. */
+   Zodra er in de Planning een foodtruck wordt gekoppeld aan een event met
+   'VH' of 'verhuur' in de titel, verschijnt hier automatisch én live een
+   aparte event-fiche PER WAGEN. Plan je 3 wagens op één verhuur-event, dan
+   krijg je 3 fiches. KM, foto's, prijs en defecten vul je per fiche zelf aan. */
 function isVerhuurEvent(name){
   const n = (name || '').toLowerCase();
   return n.includes('verhuur') || /\bvh\b/.test(n);
+}
+
+// Fiche-id = planning-event-id + wagennaam → één unieke fiche per wagen
+function ficheId(planningId, truckName){
+  return 'pl' + planningId + '::' + truckName;
 }
 
 function matchTruckId(planningTrucks){
@@ -862,7 +881,7 @@ function matchTruckId(planningTrucks){
   return hit ? hit.id : '';
 }
 
-// Heeft een geïmporteerd event al verhuur-data (dan niet automatisch opruimen)?
+// Heeft een geïmporteerde fiche al verhuur-data (dan niet automatisch opruimen)?
 function eventEnriched(e){
   return !!(e.client || e.kmDep || e.kmRet || e.price || (e.photos && e.photos.length)
             || defects.some(d => d.eventId === e.id));
@@ -871,42 +890,62 @@ function eventEnriched(e){
 function syncPlanningEvents(raw){
   let arr = Array.isArray(raw) ? raw : Object.values(raw || {});
   arr = arr.filter(e => e && e.id);
-  const vh    = arr.filter(e => isVerhuurEvent(e.name));
-  const vhIds = new Set(vh.map(e => 'pl' + e.id));
+  const vh = arr.filter(e => isVerhuurEvent(e.name));
+
+  // Alle fiche-id's die volgens de huidige planning nog horen te bestaan
+  const liveIds = new Set();
 
   vh.forEach(pe => {
-    const id = 'pl' + pe.id;
-    const existing = events.find(e => e.id === id);
-    if (existing) {
-      existing.name      = pe.name || existing.name;
-      existing.location  = pe.location || existing.location;
-      existing.startDate = pe.startDate || existing.startDate;
-      existing.endDate   = pe.endDate || pe.startDate || existing.endDate;
-      existing.planningTrucks = Array.isArray(pe.trucks) ? pe.trucks : [];
-      if (!existing.truckId) existing.truckId = matchTruckId(pe.trucks);
-    } else {
-      events.push({
-        id, planningId: pe.id,
-        planningTrucks: Array.isArray(pe.trucks) ? pe.trucks : [],
-        truckId: matchTruckId(pe.trucks),
-        client:'', phone:'', email:'', btw:'',
-        name: pe.name || 'Verhuur', location: pe.location || '',
-        startDate: pe.startDate || '', endDate: pe.endDate || pe.startDate || '',
-        kmDep:null, kmRet:null, kmRate:CONFIG.defaultKmRate,
-        price:0, notes:'', photos:[], status:'actief',
-      });
-    }
+    // Elke wagen die in de planning op dit verhuur-event staat → eigen fiche
+    const ptrucks = [...new Set((Array.isArray(pe.trucks) ? pe.trucks : []).filter(Boolean))];
+
+    ptrucks.forEach(tName => {
+      const id = ficheId(pe.id, tName);
+      liveIds.add(id);
+      const existing = events.find(e => e.id === id);
+      if (existing) {
+        existing.name      = pe.name || existing.name;
+        existing.location  = pe.location || existing.location;
+        existing.startDate = pe.startDate || existing.startDate;
+        existing.endDate   = pe.endDate || pe.startDate || existing.endDate;
+        existing.planningTrucks = [tName];
+        if (!existing.truckId) existing.truckId = matchTruckId([tName]);
+      } else {
+        events.push({
+          id, planningId: pe.id,
+          planningTrucks: [tName],
+          truckId: matchTruckId([tName]),
+          client:'', phone:'', email:'', btw:'',
+          name: pe.name || 'Verhuur', location: pe.location || '',
+          startDate: pe.startDate || '', endDate: pe.endDate || pe.startDate || '',
+          kmDep:null, kmRet:null, kmRate:CONFIG.defaultKmRate,
+          price:0, notes:'', photos:[], status:'actief',
+        });
+      }
+    });
   });
 
-  // Geïmporteerde events die niet langer 'VH/verhuur' zijn én nog leeg → opruimen
-  events = events.filter(e => !e.planningId || vhIds.has(e.id) || eventEnriched(e));
+  // Fiches uit de planning die niet meer geldig zijn (event weg, titel niet
+  // langer 'VH/verhuur', of wagen losgekoppeld) én nog leeg → automatisch
+  // opruimen. Fiches die je hier al hebt aangevuld, blijven altijd bewaard.
+  events = events.filter(e => !e.planningId || liveIds.has(e.id) || eventEnriched(e));
 
   persist();
   refreshUI();
 }
 
-fbdb.ref('ft_planning_v1').on('value', snap => syncPlanningEvents(snap.val()),
-  err => console.warn('Planning-sync mislukt:', err));
+// Fail-safe: een Firebase-probleem mag de rest van de module nooit blokkeren
+if (fbdb) {
+  try {
+    fbdb.ref('ft_planning_v1').on('value',
+      snap => syncPlanningEvents(snap.val()),
+      err => console.warn('Planning-sync mislukt:', err));
+  } catch (e) {
+    console.warn('Planning-listener kon niet starten:', e);
+  }
+} else {
+  console.warn('Geen Firebase-verbinding — planning-events worden niet geladen.');
+}
 
 /* ===== NAVIGATION ===== */
 let currentTruckId = null;
