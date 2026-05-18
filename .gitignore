@@ -1,6 +1,9 @@
 # Firebase
 .firebase/
 
+# Claude Code (local tooling state)
+.claude/
+
 # Dependencies
 node_modules/
 

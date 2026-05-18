@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Señor Snacks — Planning</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<!-- Microsoft Authentication Library v2 (via jsDelivr) -->
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -391,6 +389,7 @@ textarea{resize:vertical;min-height:70px;}
     <div class="plan-tabs">
       <button class="plan-tab active" id="tab-wagens" onclick="switchMode('wagens')">🚛 Wagens</button>
       <button class="plan-tab" id="tab-camions" onclick="switchMode('camions')">🚐 Camionetten</button>
+      <button class="plan-tab" id="tab-terminals" onclick="switchMode('terminals')">💳 Betaal terminals</button>
     </div>
     <div class="week-nav">
       <button class="wnav-btn" onclick="shiftWeek(-1)">◀ Vorige</button>
@@ -515,10 +514,23 @@ const GROUPS_CAMIONS=[
   {label:'🚗 Voertuigen',color:'#374151',bg:'#f3f4f6',trucks:['Voertuig Brascheria 2-ASA-025','Voertuig Citroen XRI-303','Voertuig Fiat 2-FAC-730','Vito']},
   {label:'🔑 Kurt',color:'#15803d',bg:'#f0fdf4',trucks:['Peugeot Kurt']}
 ];
+// ── TERMINAL DATA — BETAAL TERMINALS ───────────────────
+const GROUPS_TERMINALS=[
+  {label:'💳 Betaal terminals',color:'#0d9488',bg:'#ccfbf1',trucks:Array.from({length:30},(_,i)=>'Terminal '+(i+1))}
+];
 // ── MODE STATE ─────────────────────────────────────────
-let currentMode = 'wagens'; // 'wagens' | 'camions'
-let selectedDay = null; // geselecteerde dag voor per-dag planning (camionetten)
+let currentMode = 'wagens'; // 'wagens' | 'camions' | 'terminals'
+let selectedDay = null; // geselecteerde dag voor per-dag planning (camionetten/terminals)
 let GROUPS = GROUPS_WAGENS;
+
+// ── MODE HELPERS ───────────────────────────────────────
+// Camionetten en terminals gebruiken beide per-dag planning + fading.
+function isDayMode(){ return currentMode === 'camions' || currentMode === 'terminals'; }
+// Terminals bewaren hun toewijzingen apart van voertuigen (terminals/terminalDays),
+// zodat ze niet vermengen met de wagens/camionetten tabs.
+function groupsFor(m){ return m === 'camions' ? GROUPS_CAMIONS : m === 'terminals' ? GROUPS_TERMINALS : GROUPS_WAGENS; }
+function fItems(m){ return (m||currentMode) === 'terminals' ? 'terminals' : 'trucks'; }
+function fDays(m){ return (m||currentMode) === 'terminals' ? 'terminalDays' : 'truckDays'; }
 const TC = {};
 function rebuildTC(){
   Object.keys(TC).forEach(k=>delete TC[k]);
@@ -603,17 +615,20 @@ function sanitizeEvents(arr){
     startDate:e.startDate||'',endDate:e.endDate||e.startDate||'',
     trucks:Array.isArray(e.trucks)?e.trucks:[],
     truckDays:(e.truckDays && typeof e.truckDays === 'object' && !Array.isArray(e.truckDays))?e.truckDays:{},
+    terminals:Array.isArray(e.terminals)?e.terminals:[],
+    terminalDays:(e.terminalDays && typeof e.terminalDays === 'object' && !Array.isArray(e.terminalDays))?e.terminalDays:{},
     color:e.color||'#0078D4'
   }));
 }
 
 // Helper: welke trucks staan er op event op een specifieke dag?
 function getTrucksForDay(ev, date) {
-  if (currentMode === 'camions' && ev.endDate > ev.startDate) {
-    // Per-dag toewijzingen voor multi-dag camionetten
-    return (ev.truckDays && ev.truckDays[date]) || [];
+  if (isDayMode() && ev.endDate > ev.startDate) {
+    // Per-dag toewijzingen voor multi-dag camionetten/terminals
+    const dF = fDays();
+    return (ev[dF] && ev[dF][date]) || [];
   }
-  return ev.trucks || [];
+  return ev[fItems()] || [];
 }
 
 // Start initieel met wagens listener
@@ -625,11 +640,12 @@ function switchMode(mode) {
   if (mode === currentMode) return;
   currentMode = mode;
   selectedDay = null; // Reset day selection when switching modes
-  GROUPS = mode === 'camions' ? GROUPS_CAMIONS : GROUPS_WAGENS;
+  GROUPS = groupsFor(mode);
   rebuildTC();
   // Update tabs
   document.getElementById('tab-wagens').classList.toggle('active', mode==='wagens');
   document.getElementById('tab-camions').classList.toggle('active', mode==='camions');
+  document.getElementById('tab-terminals').classList.toggle('active', mode==='terminals');
   // Reset showPl
   Object.keys(showPl).forEach(k=>delete showPl[k]);
   renderWeek();
@@ -649,7 +665,7 @@ const DAYS_FULL=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'
 
 // ── TRUCK PANEL ────────────────────────────────────────
 function selectDayForPlanning(date){
-  if (currentMode !== 'camions') return; // Only in camions mode
+  if (!isDayMode()) return; // Only in camionetten/terminals mode
   if (selectedDay === date) {
     // Toggle: deselect
     selectedDay = null;
@@ -676,19 +692,20 @@ function updateDayHeadersUI(){
   });
 }
 function plannedPerDay(date){
-  // Welke camionetten staan al op deze dag ingepland?
-  if (currentMode !== 'camions' || !date) return new Set();
+  // Welke camionetten/terminals staan al op deze dag ingepland?
+  if (!isDayMode() || !date) return new Set();
+  const itemsF = fItems(), daysF = fDays();
   const pl = new Set();
   filterEvents(events).forEach(ev => {
     if (ev.startDate <= date && ev.endDate >= date) {
       // Single-dag of multi-dag event dat deze dag raakt
       if (ev.startDate === ev.endDate && ev.startDate === date) {
-        // Single-dag: check trucks
-        (ev.trucks || []).forEach(t => pl.add(t));
+        // Single-dag: check toewijzingen
+        (ev[itemsF] || []).forEach(t => pl.add(t));
       } else if (ev.endDate > ev.startDate) {
-        // Multi-dag: check truckDays[date]
-        if (ev.truckDays && ev.truckDays[date]) {
-          ev.truckDays[date].forEach(t => pl.add(t));
+        // Multi-dag: check per-dag toewijzingen
+        if (ev[daysF] && ev[daysF][date]) {
+          ev[daysF][date].forEach(t => pl.add(t));
         }
       }
     }
@@ -696,10 +713,10 @@ function plannedPerDay(date){
   return pl;
 }
 function plannedW(){
-  // In camionetten mode met geselecteerde dag: toon per-day fading
-  if (currentMode === 'camions' && selectedDay) return plannedPerDay(selectedDay);
-  // Standaard wagens mode: nooit faden camionetten
-  if (currentMode === 'camions') return new Set();
+  // In camionetten/terminals mode met geselecteerde dag: toon per-day fading
+  if (isDayMode() && selectedDay) return plannedPerDay(selectedDay);
+  // Zonder geselecteerde dag: niets faden in per-dag modes
+  if (isDayMode()) return new Set();
   const ws=toStr(wkStart),we=toStr(addD(wkStart,6));
   const pl=new Set();
   filterEvents(events).forEach(ev=>{if(ev.startDate<=we&&ev.endDate>=ws)ev.trucks.forEach(t=>pl.add(t));});
@@ -761,36 +778,38 @@ function onDrp(e,id,date){
 
 function addTrucks(evId,trucks,date){
   const ev=events.find(e=>e.id===evId);if(!ev)return;
-  const isMultiDayCamion = currentMode === 'camions' && ev.endDate > ev.startDate;
+  const itemsF = fItems(), daysF = fDays();
+  const isMultiDayPerDay = isDayMode() && ev.endDate > ev.startDate;
   trucks.forEach(t=>{
-    if (isMultiDayCamion) {
-      // Per-dag voor camionetten op multi-dag events
+    if (isMultiDayPerDay) {
+      // Per-dag voor camionetten/terminals op multi-dag events
       const targetDate = date || ev.startDate;
-      if (!ev.truckDays) ev.truckDays = {};
-      if (!ev.truckDays[targetDate]) ev.truckDays[targetDate] = [];
-      if (ev.truckDays[targetDate].includes(t)) return;
-      // Check conflict: staat deze camionet al op een ANDER event op dezelfde dag?
+      if (!ev[daysF]) ev[daysF] = {};
+      if (!ev[daysF][targetDate]) ev[daysF][targetDate] = [];
+      if (ev[daysF][targetDate].includes(t)) return;
+      // Check conflict: staat deze camionet/terminal al op een ANDER event op dezelfde dag?
       const conflict = events.find(o => {
         if (o.id === evId) return false;
-        // Check in trucks (single-dag of wagen-toewijzing) op deze dag
-        if (o.startDate <= targetDate && o.endDate >= targetDate && (o.trucks||[]).includes(t)) return true;
-        // Check in truckDays op deze dag
-        if (o.truckDays && o.truckDays[targetDate] && o.truckDays[targetDate].includes(t)) return true;
+        // Check in single-dag toewijzingen op deze dag
+        if (o.startDate <= targetDate && o.endDate >= targetDate && (o[itemsF]||[]).includes(t)) return true;
+        // Check in per-dag toewijzingen op deze dag
+        if (o[daysF] && o[daysF][targetDate] && o[daysF][targetDate].includes(t)) return true;
         return false;
       });
       if (conflict) showToast(`⚠️ ${t} staat al op "${conflict.name}" op ${fmtS(targetDate)}`);
-      ev.truckDays[targetDate].push(t);
-    } else if (currentMode === 'camions') {
-      // Camionet op single-dag event
-      if(ev.trucks.includes(t))return;
+      ev[daysF][targetDate].push(t);
+    } else if (isDayMode()) {
+      // Camionet/terminal op single-dag event
+      if(!ev[itemsF]) ev[itemsF]=[];
+      if(ev[itemsF].includes(t))return;
       const conflict = events.find(o => {
         if (o.id === evId) return false;
-        if (o.startDate <= ev.startDate && o.endDate >= ev.startDate && (o.trucks||[]).includes(t)) return true;
-        if (o.truckDays && o.truckDays[ev.startDate] && o.truckDays[ev.startDate].includes(t)) return true;
+        if (o.startDate <= ev.startDate && o.endDate >= ev.startDate && (o[itemsF]||[]).includes(t)) return true;
+        if (o[daysF] && o[daysF][ev.startDate] && o[daysF][ev.startDate].includes(t)) return true;
         return false;
       });
       if (conflict) showToast(`⚠️ ${t} staat al op "${conflict.name}" op ${fmtS(ev.startDate)}`);
-      ev.trucks.push(t);
+      ev[itemsF].push(t);
     } else {
       // Wagens: gehele event
       if(ev.trucks.includes(t))return;
@@ -803,12 +822,13 @@ function addTrucks(evId,trucks,date){
 }
 function rmTruck(evId,truck,date){
   const ev=events.find(e=>e.id===evId);if(!ev)return;
-  if (date && ev.truckDays && ev.truckDays[date]) {
+  const itemsF = fItems(), daysF = fDays();
+  if (date && ev[daysF] && ev[daysF][date]) {
     // Per-dag verwijderen
-    ev.truckDays[date] = ev.truckDays[date].filter(t=>t!==truck);
-    if (ev.truckDays[date].length === 0) delete ev.truckDays[date];
+    ev[daysF][date] = ev[daysF][date].filter(t=>t!==truck);
+    if (ev[daysF][date].length === 0) delete ev[daysF][date];
   } else {
-    ev.trucks=ev.trucks.filter(t=>t!==truck);
+    ev[itemsF]=(ev[itemsF]||[]).filter(t=>t!==truck);
   }
   save();renderWeek();
 }
@@ -827,18 +847,18 @@ function renderWeek(){
 
   const allVis=filterEvents(events).filter(ev=>ev.startDate<=wkE&&ev.endDate>=wkS);
 
-  // CAMIONETTEN mode: multi-dag events worden per dag in dag-kolommen getoond, geen multi-dag strip
+  // CAMIONETTEN/TERMINALS mode: multi-dag events worden per dag in dag-kolommen getoond, geen multi-dag strip
   // WAGENS mode: multi-dag in strip, single-dag in dag-kolommen
-  const isCamions = currentMode === 'camions';
-  const multiDay = isCamions ? [] : allVis.filter(ev=>ev.endDate>ev.startDate);
-  const singleDay = isCamions ? allVis : allVis.filter(ev=>ev.endDate===ev.startDate);
+  const isPerDay = isDayMode();
+  const multiDay = isPerDay ? [] : allVis.filter(ev=>ev.endDate>ev.startDate);
+  const singleDay = isPerDay ? allVis : allVis.filter(ev=>ev.endDate===ev.startDate);
 
   // ── DAG HEADERS ────────────────────────────────────────
   const headsHtml=`<div class="week-dayheads">${days.map((day,di)=>{
     const ds=toStr(day);
-    const isSelected = currentMode === 'camions' && selectedDay === ds;
-    const clickClass = currentMode === 'camions' ? ' clickable-day' : '';
-    const clickHandler = currentMode === 'camions' ? ` onclick="selectDayForPlanning('${ds}')"` : '';
+    const isSelected = isPerDay && selectedDay === ds;
+    const clickClass = isPerDay ? ' clickable-day' : '';
+    const clickHandler = isPerDay ? ` onclick="selectDayForPlanning('${ds}')"` : '';
     return `<div class="week-dayhead${isToday(ds)?' today-hd':''}${isSelected?' selected-day':''}">
       <div class="day-info${clickClass}"${clickHandler}><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
       <button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
@@ -847,7 +867,7 @@ function renderWeek(){
 
   // ── MULTI-DAG BALK (alleen in wagens mode) ─────────────
   let multiHtml = '';
-  if (!isCamions) {
+  if (!isPerDay) {
     const rows=[];
     const placed=multiDay.map(ev=>{
       const si=days.findIndex(d=>toStr(d)>=ev.startDate);
@@ -905,7 +925,7 @@ function renderWeek(){
   // Camionetten: ALLE events (incl. multi-dag) op elke dag dat ze vallen
   const bodyHtml=`<div class="week-body">${days.map((day,di)=>{
     const ds=toStr(day);
-    const dayEvs = isCamions
+    const dayEvs = isPerDay
       ? singleDay.filter(ev=>ev.startDate<=ds && ev.endDate>=ds)
       : singleDay.filter(ev=>ev.startDate===ds);
     const te=t=>t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -914,13 +934,13 @@ function renderWeek(){
       const trucksForDay = getTrucksForDay(ev, ds);
       const tHtml=trucksForDay.map(t=>{
         const c=TC[t]||{color:'#555',bg:'#eee'};
-        const rmCall = isCamions && isMultiDay ? `rmTruck(${ev.id},'${te(t)}','${ds}')` : `rmTruck(${ev.id},'${te(t)}')`;
+        const rmCall = isPerDay && isMultiDay ? `rmTruck(${ev.id},'${te(t)}','${ds}')` : `rmTruck(${ev.id},'${te(t)}')`;
         return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
       }).join('');
       // Voor camionetten op multi-dag events: unique ID per dag, en datum doorgeven aan handlers
-      const cardId = isCamions && isMultiDay ? `ec-${ev.id}-${ds}` : `ec-${ev.id}`;
-      const dragArgs = isCamions && isMultiDay ? `,'${ds}'` : '';
-      const pickerCall = isCamions && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
+      const cardId = isPerDay && isMultiDay ? `ec-${ev.id}-${ds}` : `ec-${ev.id}`;
+      const dragArgs = isPerDay && isMultiDay ? `,'${ds}'` : '';
+      const pickerCall = isPerDay && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
       const dayBadge = isMultiDay
         ? `<span class="ev-multi-tag" title="Multi-dag event">↔ ${fmtS(ev.startDate)}–${fmtS(ev.endDate)}</span>`
         : '';
@@ -1018,8 +1038,8 @@ function closePicker(){document.getElementById('picker-overlay').classList.add('
 function renderPicker(){
   const q=document.getElementById('tpk-search').value.toLowerCase();
   const ev=events.find(e=>e.id===pkEvId);
-  // Bij per-dag picker (camionetten op multi-dag): check truckDays[date]
-  const already=new Set(pkDate && ev?.truckDays?.[pkDate] ? ev.truckDays[pkDate] : (ev?.trucks||[]));
+  // Bij per-dag picker (camionetten/terminals op multi-dag): check per-dag toewijzingen
+  const already=new Set(pkDate && ev?.[fDays()]?.[pkDate] ? ev[fDays()][pkDate] : (ev?.[fItems()]||[]));
   let h='';
   GROUPS.forEach(g=>{
     const rows=g.trucks.filter(t=>!q||t.toLowerCase().includes(q));
@@ -1518,87 +1538,16 @@ const SEED_EVENTS = [
 renderWeek();
 
 // ── MICROSOFT 365 SYNC ────────────────────────────────
-// Outlook categorie-kleuren (preset0 t/m preset24 → hex)
-const OUTLOOK_COLORS = {
-  none:'#374151',
-  preset0:'#C50F1F',  // Rood
-  preset1:'#CA5010',  // Oranje
-  preset2:'#C19C00',  // Geel
-  preset3:'#498205',  // Groen
-  preset4:'#0078D4',  // Blauw
-  preset5:'#038387',  // Cyaan/Teal
-  preset6:'#8764B8',  // Paars
-  preset7:'#C239B3',  // Roze
-  preset8:'#B45309',  // Donkerbruin/Amber
-  preset9:'#00B294',  // Zeegroen
-  preset10:'#0099BC', // Hemelblauw
-  preset11:'#7A7574', // Grijs
-  preset12:'#69797E', // Staalgrijs
-  preset13:'#750B1C', // Wijnrood/Bordeaux
-  preset14:'#BE185D', // Fuchsia
-  preset15:'#15803D', // Donkergroen
-  preset16:'#0E7490', // Donkercyaan
-  preset17:'#1D4ED8', // Donkerblauw
-  preset18:'#7C3AED', // Violet
-  preset19:'#6B7280', // Koel grijs
-  preset20:'#92400E', // Bruin
-  preset21:'#065F46', // Emerald
-  preset22:'#1E40AF', // Kobaltblauw
-  preset23:'#5B21B6', // Indigo
-  preset24:'#831843', // Donkerpaars
-};
-
-const MSAL_CFG = {
-  auth: {
-    clientId: '40a7956b-44eb-46fc-a9f1-cd6aa83407d2',
-    authority: 'https://login.microsoftonline.com/d613124d-7d7b-4fe5-be9f-04e9bab00da8',
-    redirectUri: 'https://operationssenorsnacks.web.app/planning.html'
-  },
-  cache: { cacheLocation: 'sessionStorage' }
-};
-const MS_SCOPES = ['User.Read', 'Calendars.Read'];
-let msalInst = null;
-let msAcc = null;
-
-async function initMsal() {
-  if (msalInst) return;
-  msalInst = new msal.PublicClientApplication(MSAL_CFG);
-  await msalInst.initialize();
-  try { await msalInst.handleRedirectPromise(); } catch(e){}
-  const accs = msalInst.getAllAccounts();
-  if (accs.length > 0) {
-    msAcc = accs[0];
-    // Terugkeer van Microsoft login redirect → hervat sync automatisch
-    if (sessionStorage.getItem('ms365_sync_pending') === '1') {
-      sessionStorage.removeItem('ms365_sync_pending');
-      sync365();
-    }
-  }
-}
-
-async function getMsToken() {
-  await initMsal();
-  try {
-    const r = await msalInst.acquireTokenSilent({ scopes: MS_SCOPES, account: msAcc });
-    msAcc = r.account;
-    return r.accessToken;
-  } catch(e) {
-    // Geen token → redirect naar Microsoft login
-    sessionStorage.setItem('ms365_sync_pending', '1');
-    await msalInst.loginRedirect({ scopes: MS_SCOPES });
-    return null;
-  }
-}
+// De centrale Outlook-agenda wordt server-side opgehaald door een Firebase
+// Cloud Function (app-only Graph auth) en gespiegeld naar /ms365_events.
+// Deze pagina leest dat node — geen Microsoft-login per gebruiker meer nodig.
+// Cloud Function: zie functions/index.js
+const MS365_REFRESH_URL = '/api/refresh-outlook';
 
 async function sync365() {
-  // Controleer of MSAL geladen is
-  if (typeof msal === 'undefined') {
-    alert('Microsoft login library niet geladen. Controleer je internetverbinding en herlaad de pagina.');
-    return;
-  }
   document.getElementById('import-overlay').classList.remove('hidden');
   document.getElementById('import-modal-title').textContent = '📅 Sync met Microsoft 365';
-  document.getElementById('import-modal-sub').textContent = 'Events worden opgehaald uit je centrale Señor Snacks agenda...';
+  document.getElementById('import-modal-sub').textContent = 'Events worden opgehaald uit de centrale Señor Snacks agenda...';
   document.getElementById('drop-zone').style.display = 'none';
   document.getElementById('img-preview').style.display = 'none';
   document.getElementById('img-preview').src = '';
@@ -1609,85 +1558,51 @@ async function sync365() {
   const status = document.getElementById('ai-status');
   status.style.display = 'block';
   status.className = 'ai-status loading';
-  status.textContent = '⏳ Verbinden met Microsoft 365...';
+  status.textContent = '⏳ Centrale agenda ophalen...';
 
   try {
-    const token = await getMsToken();
-    if (!token) return; // redirect bezig
+    let payload = null;
 
-    // Stap 1: Haal categorie-kleurmapping op uit Outlook
-    status.textContent = '⏳ Categorieën ophalen...';
-    const catResp = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const catMap = {}; // naam → hex kleur
-    if (catResp.ok) {
-      const catData = await catResp.json();
-      (catData.value || []).forEach(c => {
-        catMap[c.displayName] = OUTLOOK_COLORS[c.color] || OUTLOOK_COLORS.none;
-      });
+    // Verse pull via de Cloud Function (app-only Graph auth, server-side).
+    try {
+      const resp = await fetch(MS365_REFRESH_URL, { cache: 'no-store' });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.ok && Array.isArray(data.events)) payload = data;
+      }
+    } catch (e) { /* function onbereikbaar → val terug op Firebase-spiegel */ }
+
+    // Fallback: lees de laatst gespiegelde versie uit Firebase.
+    if (!payload) {
+      const snap = await fbdb.ref('ms365_events').once('value');
+      const mirror = snap.val();
+      if (mirror && Array.isArray(mirror.events)) payload = mirror;
     }
 
-    // Stap 2: Haal agenda-events op
-    status.textContent = '⏳ Agenda events ophalen...';
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 8, 0);
-
-    let url = `https://graph.microsoft.com/v1.0/me/calendarView`
-      + `?startDateTime=${start.toISOString()}`
-      + `&endDateTime=${end.toISOString()}`
-      + `&$top=500`
-      + `&$select=subject,start,end,location,isAllDay,categories`
-      + `&$orderby=start/dateTime`;
-
-    let allEvts = [];
-    while (url) {
-      const resp = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Prefer: 'outlook.timezone="Europe/Brussels"'
-        }
-      });
-      if (!resp.ok) throw new Error(`Graph API fout: ${resp.status}`);
-      const data = await resp.json();
-      allEvts = allEvts.concat(data.value || []);
-      url = data['@odata.nextLink'] || null;
+    if (!payload || !Array.isArray(payload.events)) {
+      throw new Error('Geen agenda-data gevonden. Is de Microsoft 365-sync al ingesteld? (zie MS365-SETUP.md)');
     }
 
-    // Stap 3: Converteer naar planning-formaat (inclusief kleur uit categorie)
-    const converted = allEvts
-      .filter(e => e.subject && !e.subject.startsWith('Geannuleerd:') && !e.subject.startsWith('Cancelled:'))
-      .map(e => {
-        const s = new Date(e.start.dateTime || (e.start.date + 'T00:00:00'));
-        const en = new Date(e.end.dateTime || (e.end.date + 'T00:00:00'));
-        if (e.isAllDay) en.setDate(en.getDate() - 1); // Graph all-day einddatum is exclusief
-        const endClamped = en < s ? s : en;
+    const converted = payload.events;
 
-        // Kleur: eerste categorie → kleur uit catMap, anders rndColor
-        const cats = e.categories || [];
-        const color = cats.length > 0 && catMap[cats[0]]
-          ? catMap[cats[0]]
-          : rndColor();
-
-        return {
-          name: e.subject.trim(),
-          startDate: toStr(s),
-          endDate: toStr(endClamped),
-          location: (e.location?.displayName || '').trim(),
-          color: color
-        };
-      });
-
-    // Stap 4: Filter duplicaten (zelfde naam + startdatum al in Firebase)
+    // Filter duplicaten (zelfde naam + startdatum staat al in de planning)
     const existingKeys = new Set(events.map(e => e.name + '|' + e.startDate));
     const nieuws = converted.filter(e => !existingKeys.has(e.name + '|' + e.startDate));
     const dupes = converted.length - nieuws.length;
 
+    // Hoe vers is de data?
+    let leeftijd = '';
+    if (payload.updatedAt) {
+      const mins = Math.round((Date.now() - new Date(payload.updatedAt).getTime()) / 60000);
+      leeftijd = mins < 1 ? ' · zonet bijgewerkt'
+        : mins < 60 ? ` · ${mins} min geleden bijgewerkt`
+        : ` · ${Math.round(mins / 60)} u geleden bijgewerkt`;
+    }
+
     status.className = 'ai-status success';
-    status.textContent = `✓ ${converted.length} events gevonden uit 365`
+    status.textContent = `✓ ${converted.length} events uit 365`
       + (dupes > 0 ? ` · ${dupes} staan al in de planning` : '')
-      + `. Selecteer wat je wil importeren.`;
+      + leeftijd + '. Selecteer wat je wil importeren.';
 
     document.getElementById('import-modal-sub').textContent =
       `${nieuws.length} nieuwe events — inclusief kleuren uit Outlook. `
@@ -1719,9 +1634,6 @@ function openScreenshotImport() {
   document.getElementById('btn-import-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 }
-
-// Init MSAL bij laden (vangt redirect terug van Microsoft login op)
-initMsal().catch(console.error);
 
 </script>
 </body>

@@ -1,0 +1,7 @@
+node_modules/
+# Local config — do NOT commit (contains the central mailbox address)
+.env
+.env.*
+!.env.example
+# Firebase emulator/runtime artifacts
+.runtimeconfig.json

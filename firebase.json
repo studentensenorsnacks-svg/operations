@@ -8,14 +8,25 @@
       ".firebase/**",
       ".github/**",
       "**/node_modules/**",
+      "functions/**",
       "**/*.md",
       "*.json"
     ],
     "rewrites": [
       {
+        "source": "/api/refresh-outlook",
+        "function": {
+          "functionId": "refreshOutlook",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions"
   }
 }

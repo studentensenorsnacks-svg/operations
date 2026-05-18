@@ -1,0 +1,13 @@
+{
+  "name": "operations-functions",
+  "description": "Microsoft 365 calendar sync for the Señor Snacks planning tool",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.3.0"
+  },
+  "private": true
+}
