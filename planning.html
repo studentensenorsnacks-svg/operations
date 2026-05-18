@@ -717,6 +717,98 @@ function logiBump(evId, key, dir, date){
     if (tot > it.max) showToast(`⚠️ ${it.label}: ${tot} ${it.unit} ingepland op ${fmtS(d)} — slechts ${it.max} ${it.unit} beschikbaar`);
   }
   save(); renderWeek();
+  if (dir > 0 && key === 'foldtables') checkFoldtableWeekend(d);
+}
+
+// ── FOLDTABLES — AUTOMATISCHE AANVRAAG BIJ WEEKEND-TEKORT ─
+// Plant iemand op een zaterdag/zondag méér foldtables in dan onze eigen
+// voorraad (LOGI_BY.foldtables.max), dan mag — na bevestiging — automatisch
+// een mail naar Jan vertrekken voor extra foldtables.
+// De controle gebeurt per wéék: zaterdag + zondag tellen samen als één
+// weekend en er wordt maar één keer per week gevraagd (tenzij het tekort
+// nog groter wordt). De bevestiging zorgt dat een misklik geen mail stuurt.
+const FOLDTABLE_REQ_URL = '/api/request-foldtables';
+// weekStart -> hoogste piek waarvoor deze sessie al gevraagd is (race-guard).
+const foldtableHandled = {};
+
+// Zaterdag/zondag van de week die op weekStartStr (maandag) begint, plus de
+// hoogste foldtables-bezetting van die twee dagen. Foldtables worden per dag
+// (her)gebruikt, dus de piekdag bepaalt hoeveel er nodig zijn.
+function weekendFoldtablePeak(weekStartStr){
+  const sat = toStr(addD(parseD(weekStartStr), 5));
+  const sun = toStr(addD(parseD(weekStartStr), 6));
+  return { sat, sun, peak: Math.max(logiUsedOnDay(sat).foldtables, logiUsedOnDay(sun).foldtables) };
+}
+
+// Events met foldtables op de zaterdag/zondag van dat weekend.
+function weekendFoldtableEvents(sat, sun){
+  const out = [];
+  filterEvents(events).forEach(ev=>{
+    [sat, sun].forEach(d=>{
+      if (ev.startDate <= d && ev.endDate >= d){
+        const q = logiGet(ev, d, 'foldtables');
+        if (q > 0) out.push({ name:ev.name, location:ev.location||'', date:d, foldtables:q });
+      }
+    });
+  });
+  return out;
+}
+
+function checkFoldtableWeekend(date){
+  const dow = parseD(date).getDay();            // 0=zo … 6=za
+  if (dow !== 0 && dow !== 6) return;            // enkel bij een weekenddag
+  const weekStart = toStr(monday(parseD(date)));
+  const cap = LOGI_BY.foldtables.max;            // eigen voorraad (60)
+  const { sat, sun, peak } = weekendFoldtablePeak(weekStart);
+  if (peak <= cap) return;                       // binnen voorraad — niets doen
+  if ((foldtableHandled[weekStart] || 0) >= peak) return; // deze sessie al gevraagd
+  foldtableHandled[weekStart] = peak;            // meteen claimen tegen dubbele clicks
+  // Per week in Firebase onthouden: niet opnieuw vragen tenzij het tekort groeit.
+  fbdb.ref('foldtable_requests/' + weekStart).once('value').then(snap=>{
+    const prev = snap.val() || {};
+    if ((prev.qty || 0) >= peak) return;         // andere planner deed dit al
+    promptFoldtableRequest(weekStart, sat, sun, peak, cap);
+  }).catch(()=>{});
+}
+
+function promptFoldtableRequest(weekStart, sat, sun, peak, cap){
+  const extra = peak - cap;
+  const msg = `⚠️ Foldtables-tekort in het weekend van ${fmtS(sat)}–${fmtS(sun)}\n\n`
+    + `Ingepland (piek):  ${peak} foldtables\n`
+    + `Eigen voorraad:    ${cap} foldtables\n`
+    + `Tekort:            ${extra} extra foldtables\n\n`
+    + `Automatisch een aanvraag voor ${extra} extra foldtables mailen naar\n`
+    + `jan@sesam.events en jan.junior@sesam.events?`;
+  if (!confirm(msg)){
+    // Bewust afgewezen — niveau onthouden zodat het niet blijft vragen.
+    fbdb.ref('foldtable_requests/' + weekStart)
+      .set({ status:'dismissed', qty:peak, extra, at:new Date().toISOString() })
+      .catch(()=>{});
+    return;
+  }
+  sendFoldtableRequest(weekStart, sat, sun, peak, cap, extra);
+}
+
+async function sendFoldtableRequest(weekStart, sat, sun, peak, cap, extra){
+  showToast('📧 Aanvraag extra foldtables wordt verstuurd…');
+  try {
+    const resp = await fetch(FOLDTABLE_REQ_URL, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        weekStart, planned:peak, capacity:cap, extra,
+        events: weekendFoldtableEvents(sat, sun)
+      })
+    });
+    const data = await resp.json().catch(()=>({}));
+    if (!resp.ok || !data.ok) throw new Error(data.error || ('HTTP ' + resp.status));
+    await fbdb.ref('foldtable_requests/' + weekStart)
+      .set({ status:'sent', qty:peak, extra, at:new Date().toISOString() });
+    showToast(`✅ Aanvraag voor ${extra} extra foldtables verstuurd naar Jan`);
+  } catch(e){
+    delete foldtableHandled[weekStart]; // mislukt — bij een volgende klik opnieuw proberen
+    showToast('❌ Mail versturen mislukt: ' + (e.message || e));
+  }
 }
 
 // Start initieel met wagens listener

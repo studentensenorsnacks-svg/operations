@@ -8,8 +8,10 @@ leest dat node — **niemand hoeft nog in te loggen met een Microsoft-account.**
 Outlook centrale agenda
    │  Microsoft Graph (app-only auth)
    ▼
-Cloud Function  ── syncOutlook  : elke 15 min (automatisch)
-                └─ refreshOutlook: /api/refresh-outlook  (de "Sync"-knop)
+Cloud Function  ── syncOutlook       : elke 15 min (automatisch)
+                ├─ refreshOutlook    : /api/refresh-outlook     (de "Sync"-knop)
+                └─ requestFoldtables : /api/request-foldtables  (mailt Jan bij
+                                       een weekend-tekort aan foldtables)
    │  schrijft /ms365_events
    ▼
 Firebase Realtime Database
@@ -35,9 +37,13 @@ jouw app):
 
 1. **API-machtigingen** → *Een machtiging toevoegen* → **Microsoft Graph** →
    **Toepassingsmachtigingen** (let op: *Toepassing*, niet *Gedelegeerd*).
-2. Zoek en vink aan: **`Calendars.Read`** → *Machtigingen toevoegen*.
+2. Zoek en vink aan: **`Calendars.Read`** én **`Mail.Send`** → *Machtigingen
+   toevoegen*.
+   - `Calendars.Read` — voor de agenda-sync.
+   - `Mail.Send` — laat de tool automatisch een mail sturen naar Jan zodra een
+     weekend boven de eigen voorraad foldtables uitkomt.
 3. Klik **Beheerderstoestemming verlenen voor …** en bevestig.
-   → De status moet groen worden ("Verleend").
+   → De status moet groen worden ("Verleend") voor *beide* machtigingen.
    *Hiervoor heb je een Global Administrator nodig.*
 
 > De oude gedelegeerde machtigingen (`User.Read`, `Calendars.Read`) mogen blijven
@@ -74,6 +80,10 @@ Test-ApplicationAccessPolicy -AppId 40a7956b-44eb-46fc-a9f1-cd6aa83407d2 -Identi
 
 Vervang `planning@senorsnacks.be` overal door het echte adres van de centrale
 agenda. Het kan tot ~30 min duren voor de policy actief is.
+
+> De policy beperkt ook `Mail.Send`: de tool kan enkel mailen *vanuit* de
+> centrale mailbox, niet vanuit andere postvakken. De foldtables-aanvraag
+> vertrekt dus altijd vanaf dat ene adres.
 
 ## 4. Centrale agenda instellen in de code
 
@@ -136,11 +146,15 @@ minuten duren.
 |---|---|---|
 | `syncOutlook` | [functions/index.js](functions/index.js) | Scheduled, elke 15 min → schrijft `/ms365_events` |
 | `refreshOutlook` | [functions/index.js](functions/index.js) | HTTP op `/api/refresh-outlook` → directe pull (Sync-knop) |
+| `requestFoldtables` | [functions/index.js](functions/index.js) | HTTP op `/api/request-foldtables` → mailt Jan bij een weekend-tekort aan foldtables |
 | `sync365()` | [planning.html](planning.html) | Leest de events, toont nieuwe om te importeren |
+| Foldtables-check | [planning.html](planning.html) | Telt per weekend de foldtables; vraagt bij >voorraad om de mail te versturen |
 | Mailbox | [functions/.env](functions/.env) | `MS_MAILBOX` — de centrale agenda |
 | Client secret | Google Secret Manager | `MS_CLIENT_SECRET` — nooit in git |
 
-- **Alleen lezen** — de tool schrijft niets terug naar Outlook.
+- **Agenda: alleen lezen** — de tool wijzigt of verwijdert nooit iets in de
+  Outlook-agenda. Het enige dat de tool verstuurt is de foldtables-aanvraag-mail
+  (en enkel na een bevestiging in de browser).
 - **Truck-toewijzingen blijven veilig:** de sync schrijft naar een aparte node
   (`/ms365_events`); je bestaande planning (`/ft_planning_v1`) wordt nooit
   overschreven. Importeren blijft een bewuste klik.

@@ -57,6 +57,48 @@ function toStr(d) {
   return `${y}-${m}-${day}`;
 }
 
+// HTML-escape voor tekst die in een mailbericht terechtkomt.
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+// Nederlandse datumnamen — geen afhankelijkheid van locale-data op de runtime.
+const NL_DAYS = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+const NL_MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+  'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+
+// "YYYY-MM-DD" -> Date (lokale middernacht).
+function fromStr(s) {
+  const [y, m, d] = String(s).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// "YYYY-MM-DD" + n dagen -> "YYYY-MM-DD".
+function addStr(s, n) {
+  const dt = fromStr(s);
+  dt.setDate(dt.getDate() + n);
+  return toStr(dt);
+}
+
+// "YYYY-MM-DD" -> "zaterdag 30 mei 2026".
+function nlDate(s) {
+  const d = fromStr(s);
+  return `${NL_DAYS[d.getDay()]} ${d.getDate()} ${NL_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// Compact weekendlabel, bv. "30–31 mei 2026" of "31 mei – 1 juni 2026".
+function weekendLabel(sat, sun) {
+  const a = fromStr(sat);
+  const b = fromStr(sun);
+  if (a.getMonth() === b.getMonth()) {
+    return `${a.getDate()}–${b.getDate()} ${NL_MONTHS[a.getMonth()]} ${a.getFullYear()}`;
+  }
+  return `${a.getDate()} ${NL_MONTHS[a.getMonth()]} – `
+    + `${b.getDate()} ${NL_MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+}
+
 // ── MICROSOFT GRAPH ──────────────────────────────────────
 async function getGraphToken(secret) {
   const body = new URLSearchParams({
@@ -165,6 +207,65 @@ async function syncToFirebase(secret, mailbox) {
   return payload;
 }
 
+// ── MICROSOFT GRAPH — MAIL VERSTUREN ─────────────────────
+// Verstuurt een mail vanuit de centrale mailbox via Graph sendMail.
+// Vereist de Application-machtiging Mail.Send op de Azure-app (zie MS365-SETUP.md).
+async function sendGraphMail(secret, mailbox, message) {
+  if (!mailbox) {
+    throw new Error('MS_MAILBOX is niet ingesteld — vul het e-mailadres in functions/.env in.');
+  }
+  const token = await getGraphToken(secret);
+  const box = encodeURIComponent(mailbox);
+  const resp = await fetch(`${GRAPH}/users/${box}/sendMail`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message, saveToSentItems: true }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Graph sendMail ${resp.status}: ${text}`);
+  }
+}
+
+// Stelt het HTML-bericht samen voor een aanvraag extra foldtables.
+function buildFoldtableMail({ sat, sun, planned, capacity, extra, items }) {
+  const rows = (items || [])
+    .filter((e) => e && Number(e.foldtables) > 0)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .map((e) => {
+      const loc = e.location ? ` — ${escapeHtml(e.location)}` : '';
+      return `<li><strong>${escapeHtml(e.name || 'Event')}</strong>${loc}`
+        + ` — ${nlDate(e.date)} — ${Number(e.foldtables)} foldtables</li>`;
+    })
+    .join('');
+
+  const html = `<p>Beste Jan,</p>`
+    + `<p>Voor het weekend van <strong>${nlDate(sat)}</strong> en `
+    + `<strong>${nlDate(sun)}</strong> staat er meer ingepland dan onze eigen `
+    + `voorraad foldtables toelaat.</p>`
+    + `<table cellpadding="4" style="border-collapse:collapse">`
+    + `<tr><td>Ingepland (piek op één dag):</td><td><strong>${planned} foldtables</strong></td></tr>`
+    + `<tr><td>Eigen voorraad:</td><td>${capacity} foldtables</td></tr>`
+    + `<tr><td>Tekort:</td><td><strong>${extra} extra foldtables</strong></td></tr>`
+    + `</table>`
+    + (rows ? `<p>Events met foldtables dit weekend:</p><ul>${rows}</ul>` : '')
+    + `<p>Graag <strong>${extra} extra foldtables</strong> voorzien voor dit weekend.</p>`
+    + `<p style="color:#888;font-size:0.85em">Deze mail werd automatisch gegenereerd `
+    + `vanuit de Señor Snacks planning-tool.</p>`;
+
+  return {
+    subject: `Aanvraag ${extra} extra foldtables — weekend ${weekendLabel(sat, sun)}`,
+    body: { contentType: 'HTML', content: html },
+    toRecipients: [
+      { emailAddress: { address: 'jan@sesam.events' } },
+      { emailAddress: { address: 'jan.junior@sesam.events' } },
+    ],
+  };
+}
+
 // ── SCHEDULED: keep /ms365_events fresh ──────────────────
 exports.syncOutlook = onSchedule(
   {
@@ -193,6 +294,52 @@ exports.refreshOutlook = onRequest(
       res.json({ ok: true, ...payload });
     } catch (e) {
       logger.error('refreshOutlook mislukt', e);
+      res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  },
+);
+
+// ── HTTP: aanvraag extra foldtables mailen ───────────────
+// Aangeroepen door planning.html zodra een weekend boven de eigen foldtables-
+// voorraad uitkomt. Bereikbaar op /api/request-foldtables via de Hosting-rewrite.
+// Verstuurt — na bevestiging in de browser — een mail naar Jan.
+exports.requestFoldtables = onRequest(
+  {
+    region: REGION,
+    secrets: [MS_CLIENT_SECRET],
+    cors: true,
+  },
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (req.method !== 'POST') {
+      res.status(405).json({ ok: false, error: 'Gebruik POST.' });
+      return;
+    }
+    try {
+      const b = req.body || {};
+      const weekStart = String(b.weekStart || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+        throw new Error('Ongeldige of ontbrekende weekStart (verwacht "YYYY-MM-DD").');
+      }
+      const capacity = Number(b.capacity) || 60;
+      const planned = Number(b.planned) || 0;
+      const extra = Number(b.extra) || Math.max(0, planned - capacity);
+      if (extra <= 0) {
+        throw new Error('Geen tekort — niets te bestellen.');
+      }
+      const sat = addStr(weekStart, 5);
+      const sun = addStr(weekStart, 6);
+
+      const message = buildFoldtableMail({
+        sat, sun, planned, capacity, extra,
+        items: Array.isArray(b.events) ? b.events : [],
+      });
+      await sendGraphMail(MS_CLIENT_SECRET.value(), MS_MAILBOX.value(), message);
+
+      logger.info(`Foldtables-aanvraag verstuurd: ${extra} extra voor weekend ${sat}.`);
+      res.json({ ok: true, extra, weekend: { sat, sun } });
+    } catch (e) {
+      logger.error('requestFoldtables mislukt', e);
       res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
   },
