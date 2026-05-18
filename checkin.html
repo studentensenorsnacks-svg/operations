@@ -207,7 +207,7 @@ const fbdb = firebase.database();
     </div>
 
     <div class="form-group" id="vet-group">
-      <span class="form-label">Vet status</span>
+      <span class="form-label">Vet status <span style="font-weight:500;color:#999;text-transform:none;letter-spacing:0;">— meerdere mogelijk</span></span>
       <div class="vet-grid">
         <div class="vet-pill" data-val="aflaten" onclick="selectVet('aflaten')">🔄 Aflaten</div>
         <div class="vet-pill" data-val="proper" onclick="selectVet('proper')">✨ Proper vet in ketels</div>
@@ -270,7 +270,7 @@ const TRUCK_GROUPS = [
 const TRUCK_TYPE = {};
 TRUCK_GROUPS.forEach(g => g.trucks.forEach(t => TRUCK_TYPE[t] = g.type));
 
-let selectedMove = null, selectedVet = null, defectOpen = false;
+let selectedMove = null, selectedVet = [], defectOpen = false;
 let prevDefectInfo = null;  // { defectWat, defectText, fromId, fromEmployee, fromDate } of null
 let prevDefectResolved = false;
 
@@ -372,11 +372,14 @@ function selectMove(val) {
 }
 
 function selectVet(val) {
-  selectedVet = val;
+  // Meerdere vet-statussen mogelijk: klikken zet aan/uit
+  const i = selectedVet.indexOf(val);
+  if (i >= 0) selectedVet.splice(i, 1);
+  else selectedVet.push(val);
   document.querySelectorAll('.vet-pill').forEach(p => {
     // Verwijder alle sel-* classes
     [...p.classList].filter(c => c.startsWith('sel-')).forEach(c => p.classList.remove(c));
-    if (p.dataset.val === val) p.classList.add('sel-' + val);
+    if (selectedVet.includes(p.dataset.val)) p.classList.add('sel-' + p.dataset.val);
   });
 }
 
@@ -399,7 +402,7 @@ function submitCheckin() {
   if (!selectedMove) { alert('Kies een truck beweging.'); return; }
 
   const statuses = Array.from(document.querySelectorAll('.check-card input:checked')).map(i => i.value);
-  if (selectedVet) statuses.push('vet-' + selectedVet);
+  selectedVet.forEach(v => statuses.push('vet-' + v));
 
   const now = new Date();
   const entry = {
@@ -487,7 +490,7 @@ function newCheckin() {
   document.querySelectorAll('.vet-pill').forEach(p => {
     [...p.classList].filter(c => c.startsWith('sel-')).forEach(c => p.classList.remove(c));
   });
-  selectedMove = null; selectedVet = null;
+  selectedMove = null; selectedVet = [];
   if (defectOpen) toggleDefect();
   document.getElementById('event-banner').style.display = 'none';
   // Reset vorig-defect banner
