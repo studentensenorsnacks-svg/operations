@@ -776,6 +776,30 @@ textarea { resize: vertical; min-height: 72px; }
   .nav-label { display: none; }
   .nav-item { padding: 6px 10px; white-space: nowrap; }
 }
+
+/* NOTITIES PANEL */
+.notes-panel { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--red); border-radius: 10px; padding: 16px 18px; margin-bottom: 24px; }
+.notes-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.notes-title { font-family: var(--font-cond); font-size: 1.15rem; font-weight: 800; letter-spacing: 0.02em; }
+.notes-all { font-size: 0.8rem; font-weight: 700; color: var(--text2); text-decoration: none; }
+.notes-all:hover { color: var(--red); }
+.notes-add { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.notes-add input { background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; color: var(--text); font-family: var(--font); font-size: 0.88rem; padding: 9px 12px; }
+.notes-add input:focus { outline: none; border-color: var(--red); }
+.notes-add input::placeholder { color: var(--text3); }
+.nt-name { width: 140px; flex-shrink: 0; }
+.nt-text { flex: 1; min-width: 180px; }
+.nt-btn { background: var(--red); color: #fff; border: none; border-radius: 6px; font-family: var(--font); font-size: 0.85rem; font-weight: 700; padding: 9px 16px; cursor: pointer; white-space: nowrap; }
+.nt-btn:hover { background: #c2001a; }
+.notes-list { display: flex; flex-direction: column; gap: 7px; }
+.nt-item { display: flex; align-items: flex-start; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; padding: 9px 12px; }
+.nt-badge { background: rgba(232,0,29,0.16); color: #ff6b7d; font-weight: 800; font-size: 0.72rem; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; flex-shrink: 0; }
+.nt-when { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+.nt-body { flex: 1; font-size: 0.88rem; line-height: 1.45; color: var(--text); word-break: break-word; white-space: pre-wrap; min-width: 0; }
+.nt-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 0.95rem; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.nt-del:hover { color: var(--red); }
+.notes-empty { font-size: 0.85rem; color: var(--text3); padding: 6px 2px; }
+@media (max-width: 560px) { .nt-name { width: 100%; } }
 </style>
 </head>
 <body>
@@ -826,6 +850,21 @@ textarea { resize: vertical; min-height: 72px; }
 
   <!-- MAIN -->
   <div class="main">
+
+    <!-- NOTITIES -->
+    <div class="notes-panel">
+      <div class="notes-head">
+        <div class="notes-title">📝 Notities</div>
+        <a class="notes-all" href="notities.html" target="_blank">Volledig overzicht →</a>
+      </div>
+      <div class="notes-add">
+        <input type="text" id="nt-name" class="nt-name" placeholder="Jouw naam" autocomplete="off">
+        <input type="text" id="nt-text" class="nt-text" placeholder="Schrijf een notitie en druk Enter..." autocomplete="off">
+        <button class="nt-btn" onclick="addOpsNote()">+ Toevoegen</button>
+      </div>
+      <div class="notes-list" id="notes-list"></div>
+    </div>
+
     <div class="page-header">
       <div class="page-title-wrap">
         <div class="page-title" id="page-title">Alle trucks</div>
@@ -996,6 +1035,75 @@ fbdb.ref('ft_priority_v1').on('value', snap => {
 fbdb.ref('ft_laadlijst_v1').on('value', snap => {
   laadlijst = snap.val() || {};
   renderDashboard();
+});
+
+// ── NOTITIES (paneel bovenaan dashboard) ──────────────
+let opsNotes = [];
+function ntPad(n){ return String(n).padStart(2,'0'); }
+function ntEsc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+fbdb.ref('ft_notities_v1').on('value', snap => {
+  const data = snap.val() || {};
+  opsNotes = Object.values(data).filter(n => n && n.id);
+  opsNotes.sort((a,b) => (b.ts||0) - (a.ts||0));
+  renderOpsNotes();
+});
+
+function renderOpsNotes(){
+  const el = document.getElementById('notes-list');
+  if(!el) return;
+  if(!opsNotes.length){
+    el.innerHTML = '<div class="notes-empty">Nog geen notities — schrijf de eerste hierboven.</div>';
+    return;
+  }
+  const now = new Date();
+  const todayStr = now.getFullYear()+'-'+ntPad(now.getMonth()+1)+'-'+ntPad(now.getDate());
+  const months = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  el.innerHTML = opsNotes.slice(0,6).map(n => {
+    let when = n.time || '';
+    if(n.date && n.date !== todayStr){
+      const p = n.date.split('-');
+      when = p[2] + ' ' + months[(+p[1]) - 1] + ' · ' + (n.time || '');
+    }
+    return '<div class="nt-item">' +
+      '<span class="nt-badge">' + ntEsc(n.name||'?') + '</span>' +
+      '<span class="nt-when">' + ntEsc(when) + '</span>' +
+      '<div class="nt-body">' + ntEsc(n.text||'') + '</div>' +
+      '<button class="nt-del" title="Verwijderen" onclick="delOpsNote(\'' + ntEsc(n.id) + '\')">✕</button>' +
+      '</div>';
+  }).join('');
+}
+
+function addOpsNote(){
+  const nameEl = document.getElementById('nt-name');
+  const textEl = document.getElementById('nt-text');
+  const name = nameEl.value.trim();
+  const text = textEl.value.trim();
+  if(!name){ nameEl.focus(); return; }
+  if(!text){ textEl.focus(); return; }
+  const now = new Date();
+  const ref = fbdb.ref('ft_notities_v1').push();
+  ref.set({
+    id: ref.key, name: name, text: text,
+    date: now.getFullYear()+'-'+ntPad(now.getMonth()+1)+'-'+ntPad(now.getDate()),
+    hour: now.getHours(),
+    time: ntPad(now.getHours())+':'+ntPad(now.getMinutes()),
+    ts: now.getTime()
+  }).catch(err => console.warn('Notitie opslaan mislukt:', err));
+  localStorage.setItem('ft_notitie_name', name);
+  textEl.value = '';
+  textEl.focus();
+}
+
+function delOpsNote(id){
+  if(!confirm('Deze notitie verwijderen?')) return;
+  fbdb.ref('ft_notities_v1/' + id).remove().catch(err => console.warn('Notitie verwijderen mislukt:', err));
+}
+
+// Naam onthouden + Enter = toevoegen
+document.getElementById('nt-name').value = localStorage.getItem('ft_notitie_name') || '';
+document.getElementById('nt-text').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); addOpsNote(); }
 });
 
 // EENMALIGE MIGRATIE: oude ft_ops_v1 data verplaatsen naar ft_ops_v2
