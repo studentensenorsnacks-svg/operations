@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Ops Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root {
+  --red: #e8001d;
+  --red-glow: rgba(232,0,29,0.25);
+  --bg: #0c0c0e;
+  --surface: #141416;
+  --surface2: #1c1c1f;
+  --surface3: #242428;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text2: #a0a0a8;
+  --text3: #606068;
+  --green: #22c55e;
+  --orange: #f97316;
+  --blue: #3b82f6;
+  --yellow: #eab308;
+  --font: 'Barlow', sans-serif;
+  --font-cond: 'Barlow Condensed', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* TOPBAR */
+.topbar {
+  height: 58px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.logo-wrap { display: flex; align-items: center; gap: 14px; }
+.logo-img { height: 32px; width: auto; display: block; filter: brightness(0) invert(1); }
+.logo-img-wrap { display: flex; align-items: center; gap: 14px; cursor: pointer; text-decoration: none; color: inherit; transition: opacity 0.15s; }
+.logo-img-wrap:hover { opacity: 0.75; }
+.topbar-divider { width: 1px; height: 22px; background: var(--border2); margin: 0 14px; }
+.topbar-section { font-size: 0.92rem; font-weight: 600; color: var(--text2); }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.nav-link {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+}
+.nav-link:hover { border-color: var(--red); color: var(--text); background: rgba(232,0,29,0.06); }
+.nav-link.nav-poets {
+  background: rgba(34,197,94,0.12);
+  border-color: rgba(34,197,94,0.35);
+  color: #4ade80;
+}
+.nav-link.nav-poets:hover {
+  background: rgba(34,197,94,0.2);
+  border-color: rgba(34,197,94,0.6);
+  color: #4ade80;
+}
+.nav-link.nav-vet {
+  background: rgba(249,115,22,0.12);
+  border-color: rgba(249,115,22,0.35);
+  color: #fb923c;
+}
+.nav-link.nav-vet:hover {
+  background: rgba(249,115,22,0.2);
+  border-color: rgba(249,115,22,0.6);
+  color: #fb923c;
+}
+.clock { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); margin-left: 8px; }
+
+/* LAYOUT */
+.layout { display: flex; flex: 1; min-height: 0; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+}
+.nav-section { margin-bottom: 8px; }
+.nav-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 20px;
+  margin-bottom: 4px;
+  margin-top: 16px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  position: relative;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.nav-item.active {
+  color: var(--text);
+  background: rgba(232,0,29,0.08);
+  border-left-color: var(--red);
+  font-weight: 600;
+}
+.nav-item .nav-icon { font-size: 0.9rem; width: 16px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-family: var(--mono);
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer-text { font-size: 0.72rem; color: var(--text3); }
+
+/* MAIN */
+.main { flex: 1; padding: 28px; overflow-y: auto; min-width: 0; }
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+
+/* PAGE HEADER */
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
+.page-title-wrap {}
+.page-title { font-family: var(--font-cond); font-size: 2rem; font-weight: 900; letter-spacing: -0.01em; line-height: 1; }
+.page-subtitle { font-size: 0.8rem; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+.page-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* FILTER PILLS */
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-pill {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-pill:hover { border-color: var(--red); color: var(--text); }
+.filter-pill.active { background: var(--red); color: #fff; border-color: var(--red); }
+
+.period-sel {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  cursor: pointer;
+  outline: none;
+}
+.btn-clear {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+/* STAT CARDS */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+
+.search-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 10px 16px; margin-bottom: 16px;
+  transition: border-color 0.15s;
+}
+.search-bar:focus-within { border-color: var(--red); }
+.search-icon { color: var(--text2); font-size: 1rem; flex-shrink: 0; }
+.search-bar input {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-family: var(--font); font-size: 0.95rem;
+}
+.search-bar input::placeholder { color: var(--text2); }
+.search-clear {
+  background: transparent; border: none; color: var(--text2);
+  cursor: pointer; padding: 4px 8px; font-size: 1rem;
+  border-radius: 4px;
+}
+.search-clear:hover { background: var(--border2); color: var(--text); }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 12px 12px 0 0;
+}
+.stat-card.total::before { background: var(--text2); }
+.stat-card.green::before { background: var(--green); }
+.stat-card.red::before { background: var(--red); }
+.stat-card.orange::before { background: var(--orange); }
+.stat-card.blue::before { background: var(--blue); }
+.stat-num {
+  font-family: var(--font-cond);
+  font-size: 2.6rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stat-card.total .stat-num { color: var(--text); }
+.stat-card.green .stat-num { color: var(--green); }
+.stat-card.red .stat-num { color: var(--red); }
+.stat-card.orange .stat-num { color: var(--orange); }
+.stat-card.blue .stat-num { color: var(--blue); }
+.stat-lbl {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  margin-top: 6px;
+}
+
+/* WACHT BANNER */
+.wacht-banner {
+  background: rgba(249,115,22,0.08);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 0.84rem;
+  color: var(--orange);
+  line-height: 1.6;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.wacht-banner::before { content: '⏳'; flex-shrink: 0; }
+
+.backup-banner {
+  background: rgba(249,115,22,0.08);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 0.86rem;
+  color: var(--orange);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.backup-banner-text { display: flex; align-items: center; gap: 10px; }
+.backup-banner button {
+  background: var(--orange); color: #fff; border: none; border-radius: 6px;
+  padding: 8px 14px; font-family: var(--font); font-size: 0.82rem;
+  font-weight: 700; cursor: pointer;
+}
+.backup-banner button:hover { background: #e67815; }
+
+/* TRUCK GRID */
+.truck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+.truck-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
+  animation: cardIn 0.3s ease both;
+}
+@keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+.truck-card:hover { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,0.3); transform: translateY(-1px); }
+.truck-card.card-defect { border-color: rgba(232,0,29,0.3); border-left: 3px solid var(--red); }
+.truck-card.card-wacht { border-color: rgba(249,115,22,0.3); border-left: 3px solid var(--orange); }
+
+/* HISTORY AREA */
+.history-area {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  max-height: 380px;
+  overflow-y: auto;
+}
+.history-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+.history-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  background: rgba(168,85,247,0.06);
+  border: 1px solid rgba(168,85,247,0.18);
+  border-radius: 8px;
+}
+.history-nav-arrow {
+  background: rgba(168,85,247,0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168,85,247,0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.history-nav-arrow:hover:not(:disabled) {
+  background: rgba(168,85,247,0.28);
+  border-color: rgba(168,85,247,0.5);
+}
+.history-nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.history-nav-info {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #c084fc;
+  font-family: var(--mono);
+}
+.history-item {
+  padding: 8px 0 4px;
+}
+.history-item.hidden { display: none; }
+.history-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.history-time {
+  font-size: 0.74rem;
+  color: var(--text2);
+  font-family: var(--mono);
+}
+.act-btn.history-btn {
+  background: rgba(168,85,247,0.12);
+  color: #c084fc;
+  border: 1px solid rgba(168,85,247,0.25);
+}
+.act-btn.history-btn:hover {
+  background: rgba(168,85,247,0.22);
+  border-color: rgba(168,85,247,0.4);
+}
+.act-btn.history-btn.open {
+  background: rgba(168,85,247,0.3);
+  border-color: rgba(168,85,247,0.55);
+}
+.act-btn.prio-btn {
+  background: rgba(249,115,22,0.10);
+  color: #fb923c;
+  border: 1px solid rgba(249,115,22,0.28);
+}
+.act-btn.prio-btn:hover {
+  background: rgba(249,115,22,0.22);
+  border-color: rgba(249,115,22,0.5);
+  color: #fb923c;
+}
+.act-btn.prio-btn.active {
+  background: rgba(249,115,22,0.85);
+  border-color: rgba(249,115,22,1);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(249,115,22,0.4);
+}
+.act-btn.prio-btn.active:hover {
+  background: rgba(249,115,22,1);
+  color: #fff;
+}
+.truck-card.has-priority {
+  border-top: 3px solid #fb923c;
+}
+.prio-flag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(249,115,22,0.25);
+  color: #fb923c;
+  margin-left: 8px;
+  vertical-align: middle;
+  border: 1px solid rgba(249,115,22,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── LAADLIJST ── */
+.laad-section {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px 10px;
+  background: rgba(255,255,255,0.015);
+}
+.laad-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text3);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.laad-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.laad-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+.laad-label {
+  min-width: 52px;
+  font-weight: 600;
+  color: var(--text2);
+  font-size: 0.76rem;
+}
+.laad-btn {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-family: var(--font);
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  white-space: nowrap;
+}
+.laad-btn:hover {
+  border-color: var(--red);
+  color: var(--text);
+}
+.laad-btn.done {
+  background: rgba(34,197,94,0.18);
+  border-color: rgba(34,197,94,0.45);
+  color: #4ade80;
+}
+.laad-btn.half {
+  background: rgba(234,179,8,0.15);
+  border-color: rgba(234,179,8,0.4);
+  color: #facc15;
+}
+.laad-check {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-family: var(--font);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.laad-check:hover { border-color: var(--red); color: var(--text); }
+.laad-check.done {
+  background: rgba(34,197,94,0.18);
+  border-color: rgba(34,197,94,0.45);
+  color: #4ade80;
+}
+.laad-check .chk-box {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  border: 2px solid currentColor;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem;
+}
+.laad-check.done .chk-box::after { content: '✓'; }
+.checkin-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(168,85,247,0.14);
+  color: #c084fc;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.card-top {
+  padding: 14px 16px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+}
+.card-name { font-family: var(--font-cond); font-size: 1rem; font-weight: 800; line-height: 1.2; }
+.card-sub { font-size: 0.72rem; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.status-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.sp-actie-nodig { background: rgba(232,0,29,0.12); color: #f87171; border: 1px solid rgba(232,0,29,0.2); }
+.sp-beschikbaar { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+
+.card-body { padding: 10px 16px 12px; }
+.badge-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.b-gepoetst { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.b-niet-gepoetst { background: rgba(232,0,29,0.12); color: #f87171; }
+.b-gecontroleerd { background: rgba(34,197,94,0.12); color: #4ade80; }
+.b-getankt { background: rgba(249,115,22,0.12); color: #fb923c; }
+.b-afwas { background: rgba(168,85,247,0.12); color: #c084fc; }
+.b-droog { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.b-sauzen { background: rgba(234,88,12,0.12); color: #fb923c; }
+.b-verpakkingen { background: rgba(132,204,22,0.12); color: #a3e635; }
+.b-volledig { background: rgba(34,197,94,0.12); color: #4ade80; }
+.b-defect { background: rgba(232,0,29,0.12); color: #f87171; }
+.b-vet-aflaten { background: rgba(249,115,22,0.12); color: #fb923c; }
+.b-vet-proper { background: rgba(34,197,94,0.12); color: #4ade80; }
+.b-vet-niet-voldoende { background: rgba(232,0,29,0.12); color: #f87171; }
+.b-vet-leeg { background: rgba(120,120,128,0.15); color: #aaa; }
+.b-frituur { background: rgba(180,83,9,0.15); color: #fbbf24; }
+.b-hamburger { background: rgba(232,0,29,0.12); color: #f87171; }
+
+.note-box {
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  margin-top: 6px;
+  display: flex;
+  gap: 7px;
+  font-family: var(--mono);
+  line-height: 1.4;
+}
+.note-defect { background: rgba(232,0,29,0.07); border: 1px solid rgba(232,0,29,0.15); color: #fca5a5; }
+.note-kantoor { background: rgba(59,130,246,0.07); border: 1px solid rgba(59,130,246,0.15); color: #93c5fd; }
+.note-general { background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text3); }
+.card-log { font-size: 0.68rem; color: var(--text3); margin-top: 4px; font-family: var(--mono); font-style: italic; }
+
+.card-foot {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.015);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-time { font-family: var(--mono); font-size: 0.72rem; color: var(--text3); }
+.card-time strong { color: var(--text2); font-size: 0.78rem; display: block; }
+.card-actions { display: flex; gap: 5px; }
+.act-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text3);
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.act-btn:hover { border-color: var(--red); color: var(--red); background: rgba(232,0,29,0.06); }
+.act-btn.edit:hover { border-color: var(--blue); color: #60a5fa; background: rgba(59,130,246,0.06); }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 60px; color: var(--text3); grid-column: 1/-1; }
+.empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.4; }
+.empty-text { font-size: 0.9rem; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 300; }
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 520px;
+  width: 92%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+.modal h3 { font-family: var(--font-cond); font-size: 1.3rem; font-weight: 800; margin-bottom: 22px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 7px; }
+input[type="text"], textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus { border-color: var(--red); }
+textarea { resize: vertical; min-height: 72px; }
+.modal-ts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.mts-btn {
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.mts-btn:hover { border-color: var(--text2); }
+.mts-btn.sel-actie-nodig { border-color: var(--red); background: rgba(232,0,29,0.1); color: #f87171; }
+.mts-btn.sel-beschikbaar { border-color: var(--green); background: rgba(34,197,94,0.1); color: #4ade80; }
+.modal-check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.m-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 9px 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text2);
+}
+.m-check:hover { border-color: var(--text3); }
+.m-check.checked { border-color: var(--red); background: rgba(232,0,29,0.07); color: var(--text); }
+.m-check input { display: none; }
+.modal-actions { display: flex; gap: 10px; margin-top: 22px; justify-content: flex-end; }
+.btn-primary { padding: 10px 24px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-family: var(--font); font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.btn-primary:hover { background: #c0001a; }
+.btn-cancel { padding: 10px 18px; background: transparent; border: 1px solid var(--border2); border-radius: 8px; color: var(--text2); font-family: var(--font); font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-cancel:hover { border-color: var(--text3); }
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  background: var(--green);
+  color: #000;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 999;
+  box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; padding: 8px 16px; overflow-x: auto; }
+  .nav-label { display: none; }
+  .nav-item { padding: 6px 10px; white-space: nowrap; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-wrap">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">Ops Dashboard</div>
+  </div>
+  <div class="topbar-right">
+    <a class="nav-link" href="checkin.html" target="_blank">🚚 Check-in</a>
+    <a class="nav-link nav-poets" href="poets.html" target="_blank">🧼 Poets Dashboard</a>
+    <a class="nav-link nav-vet" href="vet.html" target="_blank">🛢️ Vet Status</a>
+    <a class="nav-link" href="planning.html" target="_blank">📅 Planning</a>
+    <a class="nav-link" href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
+    <button class="nav-link" id="backup-btn" onclick="downloadBackup()" style="background:transparent;border:1px solid var(--border2);cursor:pointer;font-family:var(--font);font-size:0.85rem;font-weight:600;color:var(--text);">📥 Backup</button>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="nav-label">Overzicht</div>
+    <button class="nav-item active" onclick="setFilter('alle',this)"><span class="nav-icon">◈</span>Alle trucks</button>
+    <button class="nav-item" onclick="setFilter('actie-nodig',this)"><span class="nav-icon">⚠</span>Actie nodig</button>
+    <button class="nav-item" onclick="setFilter('beschikbaar',this)"><span class="nav-icon">✓</span>Beschikbaar</button>
+    <button class="nav-item" onclick="setFilter('defect',this)"><span class="nav-icon">⚠</span>Defecten</button>
+
+    <div class="nav-label">Type</div>
+    <button class="nav-item" onclick="setFilter('frituur',this)"><span class="nav-icon">🍟</span>Frituurwagens</button>
+    <button class="nav-item" onclick="setFilter('hamburger',this)"><span class="nav-icon">🍔</span>Hamburgerwagens</button>
+
+    <div class="nav-label">Navigeer</div>
+    <a class="nav-item" href="checkin.html" target="_blank"><span class="nav-icon">🚚</span>Check-in pagina</a>
+    <a class="nav-item" href="poets.html" target="_blank"><span class="nav-icon">🧼</span>Poets dashboard</a>
+    <a class="nav-item" href="planning.html" target="_blank"><span class="nav-icon">📅</span>Planning</a>
+    <a class="nav-item" href="https://senorkeuringqr.web.app/index.html" target="_blank"><span class="nav-icon">📋</span>QR Keuringen</a>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-text">Auto-refresh elke 30s</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title-wrap">
+        <div class="page-title" id="page-title">Alle trucks</div>
+        <div class="page-subtitle" id="page-subtitle">Laden...</div>
+      </div>
+      <div class="page-controls">
+        <select class="period-sel" id="period-sel" onchange="renderDashboard()">
+          <option value="today">Vandaag</option>
+          <option value="week">Deze week</option>
+          <option value="month">Deze maand</option>
+          <option value="all">Alles</option>
+        </select>
+        <div class="filter-row">
+          <button class="filter-pill active" id="fp-alle" onclick="setFilter('alle',this)">Alle</button>
+          <button class="filter-pill" id="fp-actie-nodig" onclick="setFilter('actie-nodig',this)">⚠ Actie nodig</button>
+          <button class="filter-pill" id="fp-beschikbaar" onclick="setFilter('beschikbaar',this)">✓ Beschikbaar</button>
+          <button class="filter-pill" id="fp-defect" onclick="setFilter('defect',this)">⚠ Defect</button>
+        </div>
+        <button class="btn-clear" onclick="clearAll()">Wis alles</button>
+      </div>
+    </div>
+
+    <!-- ZOEKBALK -->
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Zoek op truck (bv. C103, 404, Friet 502...)" oninput="renderDashboard()">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card total"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Ingecheckt</div></div>
+      <div class="stat-card green"><div class="stat-num" id="st-beschikbaar">0</div><div class="stat-lbl">Beschikbaar</div></div>
+      <div class="stat-card red"><div class="stat-num" id="st-actie-nodig">0</div><div class="stat-lbl">Actie nodig</div></div>
+      <div class="stat-card blue"><div class="stat-num" id="st-defects">0</div><div class="stat-lbl">Defecten</div></div>
+    </div>
+
+    <div id="wacht-banner"></div>
+    <div id="backup-banner"></div>
+
+    <div class="truck-grid" id="truck-grid">
+      <div class="empty-state"><div class="empty-icon">🚚</div><div class="empty-text">Nog geen trucks ingecheckt.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal">
+    <h3>✏️ Check-in bewerken</h3>
+    <input type="hidden" id="edit-id">
+    <div class="form-group">
+      <span class="form-label">Truck beweging</span>
+      <div class="modal-ts">
+        <button class="mts-btn" data-val="actie-nodig" onclick="modalTs('actie-nodig')">⚠ Actie nodig</button>
+        <button class="mts-btn" data-val="beschikbaar" onclick="modalTs('beschikbaar')">✓ Beschikbaar</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Status checklist</span>
+      <div class="modal-check-grid">
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="gepoetst"> 🧼 Gepoetst</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="niet-gepoetst"> ❌ Niet gepoetst</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="gecontroleerd"> ✅ Gecontroleerd</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="getankt"> ⛽ Getankt</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="geladen-afwas"> 🫧 Afwas</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="geladen-sauzen"> 🥫 Sauzen</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="geladen-verpakkingen"> 📦 Verpakkingen</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="geladen-volledig"> ✅ Volledig</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="vet-aflaten"> 🔄 Vet aflaten</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="vet-proper"> ✨ Proper vet in ketels</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="vet-niet-voldoende"> ⚠️ Niet voldoende</label>
+        <label class="m-check" onclick="toggleMCheck(this)"><input type="checkbox" value="vet-leeg"> 📭 Leeg</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Kantoor notitie</span>
+      <textarea id="edit-note" placeholder="Notitie voor het kantoor..."></textarea>
+    </div>
+    <div class="form-group">
+      <span class="form-label">Bewerkt door</span>
+      <input type="text" id="edit-by" placeholder="Jouw naam">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Annuleren</button>
+      <button class="btn-primary" onclick="saveEdit()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Opgeslagen!</div>
+
+<script>
+const BADGE = {
+  'gepoetst':['🧼 Gepoetst','b-gepoetst'],
+  'niet-gepoetst':['❌ Niet gepoetst','b-niet-gepoetst'],
+  'gecontroleerd':['✅ Gecontroleerd','b-gecontroleerd'],
+  'getankt':['⛽ Getankt','b-getankt'],
+  'geladen-afwas':['🫧 Afwas','b-afwas'],
+  'geladen-sauzen':['🥫 Sauzen','b-sauzen'],
+  'geladen-verpakkingen':['📦 Verpakkingen','b-verpakkingen'],
+  'geladen-volledig':['✅ Volledig','b-volledig'],
+  // Backward compatibility - oude key voor reeds bestaande check-ins
+  'geladen-droog':['📭 Droog','b-droog'],
+  'vet-aflaten':['🔄 Vet aflaten','b-vet-aflaten'],
+  'vet-proper':['✨ Proper vet','b-vet-proper'],
+  'vet-niet-voldoende':['⚠️ Niet voldoende','b-vet-niet-voldoende'],
+  'vet-leeg':['📭 Leeg','b-vet-leeg'],
+  // Oude vet keys voor backward compatibility
+  'vet-aanwezig':['🛢️ Vet aanwezig','b-vet-proper'],
+  'vet-deels':['⚠️ Vet deels','b-vet-niet-voldoende'],
+};
+
+let checkins = [], activeFilter = 'alle', editingTs = null;
+let poetsPriority = {};  // { 'Friet Wagen 503': true, ... }
+let laadlijst = {};      // { 'Friet_Wagen_503': { laadlijst: bool, droog: null/'ingeladen', koel: null/'koelcel'/'ingeladen', vries: null/'vriescel'/'ingeladen', vers: null/'ingeladen' } }
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleDateString('nl-NL') + '  ' +
+    now.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 30000);
+setInterval(() => { renderDashboard(); }, 30000);
+
+function save() {
+  // We schrijven niet meer het hele array — elke check-in heeft zijn eigen entry in Firebase
+  localStorage.setItem('ft_ops_v2_cache', JSON.stringify(checkins));
+}
+
+// Schrijf 1 specifieke check-in naar Firebase
+function saveOne(entry) {
+  fbdb.ref('ft_ops_v2/' + entry.id).set(entry).catch(err => console.warn('Firebase save mislukt:', err));
+}
+
+// Verwijder 1 specifieke check-in uit Firebase
+function deleteOne(id) {
+  fbdb.ref('ft_ops_v2/' + id).remove().catch(err => console.warn('Firebase delete mislukt:', err));
+}
+
+// Real-time listener — lees ALLE check-ins als individuele entries
+fbdb.ref('ft_ops_v2').on('value', snap => {
+  const data = snap.val() || {};
+  // Convert het object {id1:{...}, id2:{...}} naar een array
+  checkins = Object.values(data).filter(c => c && c.id);
+  // Sorteer op timestamp (nieuwste bovenaan)
+  checkins.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  localStorage.setItem('ft_ops_v2_cache', JSON.stringify(checkins));
+  renderDashboard();
+});
+
+// Real-time listener voor poets-prioriteit per truck
+fbdb.ref('ft_priority_v1').on('value', snap => {
+  const data = snap.val() || {};
+  poetsPriority = {};
+  Object.keys(data).forEach(k => {
+    const entry = data[k];
+    if (entry && entry.priority === true) {
+      const truckName = entry.truck || k;
+      poetsPriority[truckName] = true;
+    }
+  });
+  renderDashboard();
+});
+
+// Real-time listener voor laadlijst per truck
+fbdb.ref('ft_laadlijst_v1').on('value', snap => {
+  laadlijst = snap.val() || {};
+  renderDashboard();
+});
+
+// EENMALIGE MIGRATIE: oude ft_ops_v1 data verplaatsen naar ft_ops_v2
+fbdb.ref('ft_ops_v1').once('value', snap => {
+  const oldData = snap.val();
+  if (!oldData) return;
+  const oldArr = Array.isArray(oldData) ? oldData : Object.values(oldData);
+  console.log('Migrate', oldArr.length, 'oude check-ins naar v2');
+  oldArr.forEach(c => {
+    if (c && c.id) fbdb.ref('ft_ops_v2/' + c.id).set(c);
+  });
+  // Verwijder de oude key na succesvolle migratie
+  setTimeout(() => fbdb.ref('ft_ops_v1').remove(), 3000);
+});
+
+// EENMALIGE MIGRATIE: lokale localStorage check-ins (van gsm/oud apparaat) ook pushen naar Firebase
+const oldLocal = JSON.parse(localStorage.getItem('ft_ops_v1') || '[]');
+if (oldLocal.length > 0) {
+  console.log('Migrate', oldLocal.length, 'lokale check-ins naar Firebase');
+  oldLocal.forEach(c => {
+    if (c && c.id) fbdb.ref('ft_ops_v2/' + c.id).set(c);
+  });
+  // Wis de oude lokale data na migratie
+  setTimeout(() => localStorage.removeItem('ft_ops_v1'), 5000);
+}
+
+// Pending offline check-ins doorpushen
+const pending = JSON.parse(localStorage.getItem('ft_ops_pending') || '[]');
+if (pending.length > 0) {
+  pending.forEach(c => fbdb.ref('ft_ops_v2/' + c.id).set(c));
+  localStorage.removeItem('ft_ops_pending');
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if (btn && btn.classList.contains('filter-pill')) btn.classList.add('active');
+  if (btn && btn.classList.contains('nav-item')) btn.classList.add('active');
+  const fp = document.getElementById('fp-' + f); if (fp) fp.classList.add('active');
+  renderDashboard();
+}
+
+function clearAll() {
+  if (confirm('Wil je ALLE check-ins permanent wissen? Dit kan niet ongedaan gemaakt worden.')) {
+    fbdb.ref('ft_ops_v2').remove();
+    checkins = [];
+    save();
+    renderDashboard();
+  }
+}
+
+function togglePoetsPriority(truckName) {
+  if (!truckName) return;
+  const isPrio = !!poetsPriority[truckName];
+  if (isPrio) {
+    // Uitschakelen
+    fbdb.ref('ft_priority_v1/' + truckName.replace(/\./g,'_')).remove().catch(e => console.warn('Priority remove mislukt:', e));
+    showToast('🔥 Prioriteit uitgeschakeld voor ' + truckName);
+  } else {
+    // Inschakelen
+    fbdb.ref('ft_priority_v1/' + truckName.replace(/\./g,'_')).set({
+      truck: truckName,
+      priority: true,
+      setAt: Date.now()
+    }).catch(e => console.warn('Priority set mislukt:', e));
+    showToast('🔥 Prioriteit ingesteld voor ' + truckName);
+  }
+}
+
+// Laadlijst helpers
+function truckKey(truckName) {
+  return truckName.replace(/[\s.]/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+}
+function setLaad(truckName, field, value) {
+  const key = truckKey(truckName);
+  const current = laadlijst[key] || {};
+  const newVal = current[field] === value ? null : value; // Toggle: zelfde waarde = reset
+  const update = { ...current, truck: truckName, [field]: newVal, updatedAt: Date.now() };
+  fbdb.ref('ft_laadlijst_v1/' + key).set(update).catch(e => console.warn('Laadlijst update mislukt:', e));
+  const labels = {
+    laadlijst: 'Laadlijst gemaakt', droog: 'Droog ingeladen',
+    koel: 'Koel ingeladen', vries: 'Vries ingeladen', vers: 'Vers ingeladen'
+  };
+  showToast(newVal ? `✅ ${labels[field]||field} — ${truckName}` : `↩️ ${labels[field]||field} ongedaan — ${truckName}`);
+}
+
+function deleteCheckin(id, truck) {
+  if (!confirm('Check-in van ' + truck + ' verwijderen?')) return;
+  const editor = prompt('Jouw naam (voor het logboek):'); if (!editor) return;
+  deleteOne(id);
+  // Lokale state ook updaten zodat UI direct reageert (Firebase listener doet de rest)
+  checkins = checkins.filter(c => c.id !== id);
+  renderDashboard();
+  showToast('🗑 Check-in verwijderd');
+}
+
+function getPeriod() {
+  const now = new Date(); const p = document.getElementById('period-sel').value;
+  if (p==='today') return [new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime(), Infinity];
+  if (p==='week') { const d=now.getDay()||7; return [new Date(now.getFullYear(),now.getMonth(),now.getDate()-d+1).getTime(), Infinity]; }
+  if (p==='month') return [new Date(now.getFullYear(),now.getMonth(),1).getTime(), Infinity];
+  return [0, Infinity];
+}
+
+function statusPill(ts) {
+  const m = { 'actie-nodig':['⚠ Actie nodig','sp-actie-nodig'], beschikbaar:['✓ Beschikbaar','sp-beschikbaar'] };
+  const [l,c] = m[ts] || [ts,''];
+  return `<span class="status-pill ${c}"><span class="dot"></span>${l}</span>`;
+}
+
+function renderDashboard() {
+  // checkins wordt nu live up-to-date gehouden door de Firebase listener
+  // Voor offline gebruik laden we eerst uit cache
+  if (checkins.length === 0) {
+    const cached = JSON.parse(localStorage.getItem('ft_ops_v2_cache') || '[]');
+    if (cached.length) checkins = cached;
+  }
+  const [start] = getPeriod();
+  const period = checkins.filter(c => c.timestamp >= start);
+
+  // ── GROEPEER PER TRUCK — pak laatste check-in, hou geschiedenis bij ──
+  const latestPerTruck = {};
+  const historyPerTruck = {};
+  period.forEach(c => {
+    if (!c.truck) return;
+    if (!latestPerTruck[c.truck] || (c.timestamp||0) > (latestPerTruck[c.truck].timestamp||0)) {
+      latestPerTruck[c.truck] = c;
+    }
+    if (!historyPerTruck[c.truck]) historyPerTruck[c.truck] = [];
+    historyPerTruck[c.truck].push(c);
+  });
+  // Sorteer geschiedenis per truck — nieuwste eerst
+  Object.keys(historyPerTruck).forEach(t => {
+    historyPerTruck[t].sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+  });
+
+  const uniqueTrucks = Object.values(latestPerTruck);
+
+  document.getElementById('st-total').textContent = uniqueTrucks.length;
+  document.getElementById('st-beschikbaar').textContent = uniqueTrucks.filter(c=>c.truckStatus==='beschikbaar').length;
+  document.getElementById('st-actie-nodig').textContent = uniqueTrucks.filter(c=>c.truckStatus==='actie-nodig').length;
+  document.getElementById('st-defects').textContent = uniqueTrucks.filter(c=>c.hasDefect).length;
+
+  document.getElementById('wacht-banner').innerHTML = '';
+
+  let filtered = uniqueTrucks;
+  if (activeFilter==='defect') filtered = uniqueTrucks.filter(c=>c.hasDefect);
+  else if (activeFilter==='actie-nodig') filtered = uniqueTrucks.filter(c=>c.truckStatus==='actie-nodig');
+  else if (activeFilter==='beschikbaar') filtered = uniqueTrucks.filter(c=>c.truckStatus==='beschikbaar');
+  else if (activeFilter==='frituur') filtered = uniqueTrucks.filter(c=>c.truckType==='frituur');
+  else if (activeFilter==='hamburger') filtered = uniqueTrucks.filter(c=>c.truckType==='hamburger');
+
+  // Search filter
+  const searchInput = document.getElementById('search-input');
+  const search = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  document.getElementById('search-clear').style.display = search ? 'inline-block' : 'none';
+  if (search) {
+    filtered = filtered.filter(c =>
+      (c.truck && c.truck.toLowerCase().includes(search)) ||
+      (c.employee && c.employee.toLowerCase().includes(search))
+    );
+  }
+
+  // Sorteer: meest recent bovenaan
+  filtered.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
+  const titles = {alle:'Alle trucks','actie-nodig':'Actie nodig',beschikbaar:'Beschikbaar',defect:'Defecten',frituur:'Frituurwagens',hamburger:'Hamburgerwagens'};
+  document.getElementById('page-title').textContent = titles[activeFilter] || 'Trucks';
+  document.getElementById('page-subtitle').textContent = `${filtered.length} truck${filtered.length !== 1 ? 's' : ''} · bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+
+  const grid = document.getElementById('truck-grid');
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🚚</div><div class="empty-text">${activeFilter==='alle'?'Nog geen trucks ingecheckt.':'Geen trucks met dit filter.'}</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((c, i) => {
+    const h = Math.floor((Date.now()-c.timestamp)/3600000);
+    const age = h<1?'zojuist':h<24?`${h}u geleden`:`${Math.floor(h/24)}d geleden`;
+    const cardCls = c.hasDefect?'card-defect':'';
+    const badges = (c.statuses||[]).map(s => BADGE[s] ? `<span class="badge ${BADGE[s][1]}">${BADGE[s][0]}</span>` : '').join('');
+    const typeBadge = c.truckType==='frituur'?'<span class="badge b-frituur">🍟 Frituur</span>':c.truckType==='hamburger'?'<span class="badge b-hamburger">🍔 Hamburger</span>':'';
+    const logs = (c.log||[]).map(l=>`<div class="card-log">↳ ${l}</div>`).join('');
+    const truckEsc = c.truck.replace(/'/g,"\\'");
+
+    // Geschiedenis voor deze truck (alle check-ins behalve de laatste)
+    const history = (historyPerTruck[c.truck] || []).filter(x => x.id !== c.id);
+    const historyBtn = history.length > 0
+      ? `<button class="act-btn history-btn" id="hbtn-${c.id}" onclick="toggleHistory(${c.id})">📜 Vorige (${history.length})</button>`
+      : '';
+    const totalCountBadge = history.length > 0
+      ? `<span class="checkin-count-badge">${history.length + 1}× ingecheckt</span>`
+      : '';
+
+    // Poets prioriteit
+    const hasPrio = !!poetsPriority[c.truck];
+    const prioBtn = `<button class="act-btn prio-btn ${hasPrio ? 'active' : ''}" onclick="togglePoetsPriority('${truckEsc}')" title="${hasPrio ? 'Klik om prioriteit uit te schakelen' : 'Markeer als prioriteit voor poetsdienst'}">🔥 ${hasPrio ? 'Prio aan' : 'Poets prio'}</button>`;
+    const prioBadge = hasPrio ? '<span class="prio-flag-badge">🔥 Prio</span>' : '';
+    const prioCardCls = hasPrio ? ' has-priority' : '';
+
+    // Laadlijst
+    const lkey = truckKey(c.truck);
+    const ll = laadlijst[lkey] || {};
+    const laadHtml = `
+      <div class="laad-section">
+        <div class="laad-title">📋 Laadlijst & Inladen</div>
+        <div class="laad-rows">
+          <button class="laad-check ${ll.laadlijst ? 'done' : ''}" onclick="setLaad('${truckEsc}','laadlijst',true)">
+            <span class="chk-box"></span> Laadlijst gemaakt
+          </button>
+          <div class="laad-row">
+            <span class="laad-label">🌾 Droog</span>
+            <button class="laad-btn ${ll.droog==='ingeladen'?'done':''}" onclick="setLaad('${truckEsc}','droog','ingeladen')">${ll.droog==='ingeladen'?'✅ Ingeladen':'Ingeladen'}</button>
+          </div>
+          <div class="laad-row">
+            <span class="laad-label">❄️ Koel</span>
+            <button class="laad-btn ${ll.koel==='koelcel'?'half':ll.koel==='ingeladen'?'done':''}" onclick="setLaad('${truckEsc}','koel','koelcel')">${ll.koel==='koelcel'?'🟡 In koelcel':ll.koel==='ingeladen'?'✅':'In koelcel'}</button>
+            <button class="laad-btn ${ll.koel==='ingeladen'?'done':''}" onclick="setLaad('${truckEsc}','koel','ingeladen')">${ll.koel==='ingeladen'?'✅ Ingeladen':'Ingeladen'}</button>
+          </div>
+          <div class="laad-row">
+            <span class="laad-label">🧊 Vries</span>
+            <button class="laad-btn ${ll.vries==='vriescel'?'half':ll.vries==='ingeladen'?'done':''}" onclick="setLaad('${truckEsc}','vries','vriescel')">${ll.vries==='vriescel'?'🟡 In vriescel':ll.vries==='ingeladen'?'✅':'In vriescel'}</button>
+            <button class="laad-btn ${ll.vries==='ingeladen'?'done':''}" onclick="setLaad('${truckEsc}','vries','ingeladen')">${ll.vries==='ingeladen'?'✅ Ingeladen':'Ingeladen'}</button>
+          </div>
+          <div class="laad-row">
+            <span class="laad-label">🥬 Vers</span>
+            <button class="laad-btn ${ll.vers==='ingeladen'?'done':''}" onclick="setLaad('${truckEsc}','vers','ingeladen')">${ll.vers==='ingeladen'?'✅ Ingeladen':'Ingeladen'}</button>
+          </div>
+        </div>
+      </div>`;
+
+    const historyHtml = history.length > 0 ? `
+      <div class="history-area" id="history-${c.id}" style="display:none;" data-current="0" data-total="${history.length}">
+        <div class="history-title">📜 Geschiedenis (${history.length} eerdere check-in${history.length!==1?'s':''})</div>
+        <div class="history-nav">
+          <button class="history-nav-arrow" onclick="navHistory(${c.id}, -1)" id="hnav-prev-${c.id}">◀ Ouder</button>
+          <span class="history-nav-info" id="hnav-info-${c.id}">1 / ${history.length}</span>
+          <button class="history-nav-arrow" onclick="navHistory(${c.id}, 1)" id="hnav-next-${c.id}">Nieuwer ▶</button>
+        </div>
+        ${history.map((hc, hi) => {
+          const hbadges = (hc.statuses||[]).map(s => BADGE[s] ? `<span class="badge ${BADGE[s][1]}">${BADGE[s][0]}</span>` : '').join('');
+          const hlogs = (hc.log||[]).map(l=>`<div class="card-log">↳ ${l}</div>`).join('');
+          return `
+            <div class="history-item ${hi===0?'':'hidden'}" data-index="${hi}">
+              <div class="history-meta">
+                ${statusPill(hc.truckStatus)}
+                <span class="history-time">${hc.date} · ${hc.time} · ${hc.employee||'?'}</span>
+              </div>
+              <div class="badge-row">
+                ${hbadges}
+                ${hc.hasDefect?`<span class="badge b-defect">⚠ ${hc.defectWat||'Defect'}</span>`:''}
+                ${!(hc.statuses||[]).length&&!hc.hasDefect?'<span style="color:var(--text3);font-size:0.74rem;">—</span>':''}
+              </div>
+              ${hc.hasDefect?`<div class="note-box note-defect">⚠ <span><strong>${hc.defectWat||''}</strong>${hc.defectText?' — '+hc.defectText:''}</span></div>`:''}
+              ${hc.kantoorNote?`<div class="note-box note-kantoor">🏢 <span>${hc.kantoorNote}</span></div>`:''}
+              ${hc.notes?`<div class="note-box note-general">💬 <span>${hc.notes}</span></div>`:''}
+              ${hlogs}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+
+    return `
+      <div class="truck-card ${cardCls}${prioCardCls}" style="animation-delay:${i*0.04}s">
+        <div class="card-top">
+          <div>
+            <div class="card-name">${c.truck}${totalCountBadge}${prioBadge}</div>
+            <div class="card-sub">${c.employee} · ${c.date}</div>
+          </div>
+          ${statusPill(c.truckStatus)}
+        </div>
+        <div class="card-body">
+          <div class="badge-row">
+            ${typeBadge}${badges}
+            ${c.hasDefect?`<span class="badge b-defect">⚠ ${c.defectWat||'Defect'}</span>`:''}
+            ${!(c.statuses||[]).length&&!c.hasDefect?'<span style="color:var(--text3);font-size:0.76rem;">—</span>':''}
+          </div>
+          ${c.hasDefect?`<div class="note-box note-defect">⚠ <span><strong>${c.defectWat}</strong>${c.defectText?' — '+c.defectText:''}</span></div>`:''}
+          ${c.kantoorNote?`<div class="note-box note-kantoor">🏢 <span>${c.kantoorNote}</span></div>`:''}
+          ${c.notes?`<div class="note-box note-general">💬 <span>${c.notes}</span></div>`:''}
+          ${logs}
+        </div>
+        ${historyHtml}
+        ${laadHtml}
+        <div class="card-foot">
+          <div class="card-time"><strong>${c.time}</strong>${age}</div>
+          <div class="card-actions">
+            ${prioBtn}
+            ${historyBtn}
+            <button class="act-btn edit" onclick="openEdit(${c.id})">✏️ Bewerk</button>
+            <button class="act-btn" onclick="deleteCheckin(${c.id},'${truckEsc}')">🗑</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleHistory(id) {
+  const el = document.getElementById('history-' + id);
+  const btn = document.getElementById('hbtn-' + id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) {
+    btn.classList.toggle('open', !isOpen);
+  }
+}
+
+function navHistory(id, delta) {
+  const wrapper = document.getElementById('history-' + id);
+  if (!wrapper) return;
+  const total = parseInt(wrapper.dataset.total) || 0;
+  let cur = parseInt(wrapper.dataset.current) || 0;
+  cur = Math.max(0, Math.min(total - 1, cur + delta));
+  wrapper.dataset.current = cur;
+  // Toon enkel het juiste item
+  wrapper.querySelectorAll('.history-item').forEach(it => {
+    const idx = parseInt(it.dataset.index);
+    it.classList.toggle('hidden', idx !== cur);
+  });
+  // Update info en knoppen
+  const info = document.getElementById('hnav-info-' + id);
+  const prev = document.getElementById('hnav-prev-' + id);
+  const next = document.getElementById('hnav-next-' + id);
+  if (info) info.textContent = (cur + 1) + ' / ' + total;
+  if (prev) prev.disabled = cur >= total - 1;  // ouder = hogere index (laatste in lijst)
+  if (next) next.disabled = cur <= 0;
+}
+
+function openEdit(id) {
+  const c = checkins.find(x=>x.id===id); if (!c) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('edit-note').value = c.kantoorNote || '';
+  document.getElementById('edit-by').value = '';
+  editingTs = c.truckStatus;
+  document.querySelectorAll('.mts-btn').forEach(b => {
+    b.classList.remove('sel-actie-nodig','sel-beschikbaar');
+    if (b.dataset.val===c.truckStatus) b.classList.add('sel-'+c.truckStatus);
+  });
+  document.querySelectorAll('.m-check').forEach(el => {
+    const cb = el.querySelector('input'); cb.checked = c.statuses.includes(cb.value);
+    el.classList.toggle('checked', cb.checked);
+  });
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
+function modalTs(val) {
+  editingTs = val;
+  document.querySelectorAll('.mts-btn').forEach(b => {
+    b.classList.remove('sel-actie-nodig','sel-beschikbaar');
+    if (b.dataset.val===val) b.classList.add('sel-'+val);
+  });
+}
+function toggleMCheck(label) { const cb=label.querySelector('input'); setTimeout(()=>label.classList.toggle('checked',cb.checked),0); }
+function saveEdit() {
+  const id = parseInt(document.getElementById('edit-id').value);
+  const editor = document.getElementById('edit-by').value.trim();
+  if (!editor) { alert('Vul jouw naam in.'); return; }
+  const newStatuses = Array.from(document.querySelectorAll('.m-check input:checked')).map(i=>i.value);
+  const newNote = document.getElementById('edit-note').value.trim();
+  const now = new Date();
+  const log = `${now.toLocaleDateString('nl-NL')} ${now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} — bewerkt door ${editor}`;
+  const updated = checkins.find(c => c.id === id);
+  if (updated) {
+    const newEntry = {...updated, statuses:newStatuses, truckStatus:editingTs, kantoorNote:newNote, log:[...(updated.log||[]), log]};
+    saveOne(newEntry);
+    // Lokale state updaten zodat UI direct reageert
+    checkins = checkins.map(c => c.id === id ? newEntry : c);
+  }
+  closeModal(); renderDashboard();
+  showToast('✓ Opgeslagen!');
+}
+document.getElementById('modal-overlay').addEventListener('click', e => { if(e.target===document.getElementById('modal-overlay')) closeModal(); });
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  renderDashboard();
+}
+
+// ── BACKUP FUNCTIONS ───────────────────────────────────
+function downloadBackup() {
+  const checkinsData = JSON.parse(localStorage.getItem('ft_ops_v1') || '[]');
+  const planningData = JSON.parse(localStorage.getItem('ft_planning_v1') || '[]');
+  const backup = {
+    versie: '1.0',
+    backup_datum: new Date().toISOString(),
+    aantal_checkins: checkinsData.length,
+    aantal_events: planningData.length,
+    checkins: checkinsData,
+    planning: planningData
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const datum = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `senor-snacks-backup-${datum}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  // Bewaar tijdstempel van laatste backup
+  localStorage.setItem('ft_last_backup', Date.now().toString());
+  checkBackupReminder();
+  showToast('✓ Backup gedownload! Sleep het bestand naar Google Drive.');
+}
+
+function checkBackupReminder() {
+  const last = parseInt(localStorage.getItem('ft_last_backup') || '0');
+  const banner = document.getElementById('backup-banner');
+  if (!banner) return;
+  if (last === 0) {
+    banner.innerHTML = `<div class="backup-banner">
+      <div class="backup-banner-text">📥 <strong>Nog geen backup gemaakt.</strong> Maak je eerste backup om je data veilig te stellen.</div>
+      <button onclick="downloadBackup()">Nu backuppen</button>
+    </div>`;
+    return;
+  }
+  const dagen = Math.floor((Date.now() - last) / (1000*60*60*24));
+  if (dagen >= 7) {
+    banner.innerHTML = `<div class="backup-banner">
+      <div class="backup-banner-text">📥 <strong>Laatste backup: ${dagen} dagen geleden.</strong> Tijd voor een nieuwe!</div>
+      <button onclick="downloadBackup()">Nu backuppen</button>
+    </div>`;
+  } else {
+    banner.innerHTML = '';
+  }
+}
+
+renderDashboard();
+checkBackupReminder();
+</script>
+</body>
+</html>

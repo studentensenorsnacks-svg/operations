@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Check-in</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+  :root{
+    --red:#e8001d;--red-dark:#b8001a;--green:#1a7a1a;--green-light:#2ecc2e;
+    --orange:#e88000;--bg:#f5f5f5;--white:#fff;--text:#1a1a1a;--muted:#666;--border:#ddd;
+    --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+  .topbar{background:var(--white);border-bottom:3px solid var(--red);padding:0 24px;height:56px;
+    display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+  .logo-area{display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none;color:inherit;transition:opacity 0.15s;}
+  .logo-area:hover{opacity:0.75;}
+  .logo-img{height:30px;width:auto;display:block;}
+  .logo-icon{width:36px;height:36px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+  .logo-text{font-family:var(--font-cond);font-size:1.15rem;font-weight:900;letter-spacing:0.02em;}
+  .logo-text span{color:var(--red);}
+  .topbar-title{font-size:0.92rem;font-weight:600;color:#444;padding-left:14px;border-left:1px solid var(--border);}
+  .clock{font-size:0.8rem;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums;}
+
+  .main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;}
+
+  .form-card{background:var(--white);border-radius:12px;padding:32px;max-width:520px;width:100%;
+    box-shadow:0 4px 20px rgba(0,0,0,0.06);border:1px solid var(--border);}
+  .form-card h2{font-family:var(--font-cond);font-size:1.6rem;font-weight:800;letter-spacing:-0.01em;}
+  .form-card .sub{color:var(--muted);font-size:0.88rem;margin-top:4px;margin-bottom:24px;}
+
+  .form-group{margin-bottom:18px;}
+  .form-label{display:block;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--muted);margin-bottom:7px;}
+
+  select,input[type="text"],textarea{
+    width:100%;border:1px solid var(--border);border-radius:6px;padding:11px 14px;
+    font-family:var(--font);font-size:0.95rem;color:var(--text);background:var(--white);
+    outline:none;transition:border-color 0.15s;
+  }
+  select{appearance:auto;-webkit-appearance:menulist;cursor:pointer;}
+  select:focus,input:focus,textarea:focus{border-color:var(--red);}
+  textarea{resize:vertical;min-height:70px;}
+
+  .move-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .move-pill{padding:14px;border-radius:8px;border:2px solid var(--border);background:var(--white);
+    text-align:center;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.15s;user-select:none;}
+  .move-pill:hover{border-color:#aaa;}
+  .move-pill.sel-actie-nodig{border-color:var(--red);background:#fde8e8;color:var(--red);}
+  .move-pill.sel-beschikbaar{border-color:var(--green);background:#e8f5e9;color:var(--green);}
+
+  .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .check-card{display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:6px;
+    padding:11px 13px;cursor:pointer;transition:all 0.15s;font-size:0.9rem;font-weight:600;user-select:none;}
+  .check-card:hover{border-color:#aaa;}
+  .check-card.checked{border-color:var(--red);background:#fff5f5;}
+  .check-card input{display:none;}
+
+  .vet-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .vet-pill{padding:12px 8px;border-radius:6px;border:2px solid var(--border);background:var(--white);
+    text-align:center;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.15s;user-select:none;}
+  .vet-pill:hover{border-color:#aaa;}
+  .vet-pill.sel-aflaten{border-color:var(--orange);background:#fff3e0;color:var(--orange);}
+  .vet-pill.sel-proper{border-color:var(--green);background:#e8f5e9;color:var(--green);}
+  .vet-pill.sel-niet-voldoende{border-color:var(--red);background:#fde8e8;color:var(--red);}
+  .vet-pill.sel-leeg{border-color:#666;background:#f0f0f0;color:#444;}
+  .vet-pill.sel-friet-vol{border-color:var(--green);background:#e8f5e9;color:var(--green);}
+  .vet-pill.sel-friet-leeg{border-color:var(--red);background:#fde8e8;color:var(--red);}
+  .vet-pill.sel-vlees-vol{border-color:var(--green);background:#e8f5e9;color:var(--green);}
+  .vet-pill.sel-vlees-leeg{border-color:var(--red);background:#fde8e8;color:var(--red);}
+
+  .defect-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#fafafa;border:1px solid var(--border);border-radius:6px;padding:12px 14px;cursor:pointer;}
+  .defect-toggle.active{background:#fde8e8;border-color:var(--red);}
+  .defect-toggle .lbl{font-weight:700;font-size:0.92rem;}
+  .defect-toggle .switch{width:42px;height:24px;background:#ccc;border-radius:14px;position:relative;transition:background 0.15s;}
+  .defect-toggle .switch::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left 0.15s;}
+  .defect-toggle.active .switch{background:var(--red);}
+  .defect-toggle.active .switch::after{left:21px;}
+  .defect-fields{display:none;margin-top:10px;}
+  .defect-fields.shown{display:block;}
+
+  .event-banner{display:none;margin-top:8px;background:#e8f5e9;border:1px solid #b2dfb2;border-left:4px solid var(--green);
+    border-radius:6px;padding:10px 13px;font-size:0.85rem;color:#1a4a1a;font-weight:600;line-height:1.4;}
+
+  /* VORIG DEFECT BANNER */
+  .prev-defect-banner{display:none;margin-top:8px;background:#fff3e0;border:1px solid #f9b97a;
+    border-left:4px solid var(--orange);border-radius:6px;padding:12px 14px;line-height:1.4;}
+  .prev-defect-banner.shown{display:block;}
+  .pdb-title{font-weight:800;font-size:0.88rem;color:#7a3000;margin-bottom:6px;}
+  .pdb-text{font-weight:600;font-size:0.92rem;color:#5a2300;margin-bottom:4px;}
+  .pdb-detail{font-weight:500;font-size:0.85rem;color:#7a3000;margin-bottom:6px;}
+  .pdb-meta{font-size:0.74rem;color:#92400e;font-weight:500;margin-bottom:10px;font-style:italic;}
+  .pdb-resolved{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.55);
+    border:1px solid #fcd9a4;border-radius:6px;padding:10px 12px;cursor:pointer;user-select:none;
+    transition:all 0.15s;}
+  .pdb-resolved:hover{border-color:#f9b97a;}
+  .pdb-resolved.checked{background:#d1f7d6;border-color:var(--green);color:#15803d;}
+  .pdb-chk{width:22px;height:22px;border-radius:5px;border:2px solid #aaa;background:#fff;
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.95rem;
+    color:#fff;font-weight:800;transition:all 0.15s;}
+  .pdb-resolved.checked .pdb-chk{background:var(--green);border-color:var(--green);}
+  .pdb-resolved.checked .pdb-chk::after{content:'✓';}
+  .pdb-resolved-lbl{font-weight:700;font-size:0.92rem;}
+
+  .btn-submit{display:block;width:100%;padding:14px;background:var(--red);color:#fff;border:none;
+    border-radius:8px;font-family:var(--font);font-size:1rem;font-weight:800;letter-spacing:0.02em;cursor:pointer;
+    transition:background 0.15s;margin-top:8px;}
+  .btn-submit:hover{background:var(--red-dark);}
+
+  /* CONFIRMATION SCREEN */
+  .confirm-card{background:var(--white);border-radius:12px;padding:48px 32px;max-width:520px;width:100%;
+    box-shadow:0 4px 20px rgba(0,0,0,0.06);border:1px solid var(--border);text-align:center;
+    display:none;}
+  .confirm-card.shown{display:block;animation:fadeIn 0.4s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:scale(0.96);}to{opacity:1;transform:scale(1);}}
+  .confirm-icon{width:90px;height:90px;background:var(--green-light);color:#fff;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:3rem;margin:0 auto 20px;
+    box-shadow:0 4px 16px rgba(46,204,46,0.3);}
+  .confirm-card h2{font-family:var(--font-cond);font-size:2rem;font-weight:900;color:var(--green);margin-bottom:8px;}
+  .confirm-truck{font-size:1.15rem;font-weight:700;margin-top:8px;}
+  .confirm-emp{color:var(--muted);font-size:0.92rem;margin-top:4px;}
+  .confirm-btn{display:inline-block;margin-top:24px;padding:12px 28px;background:var(--red);color:#fff;
+    border:none;border-radius:8px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;}
+  .confirm-btn:hover{background:var(--red-dark);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html" title="Terug naar dashboard">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-title">Check-in</div>
+  </a>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+<div class="main">
+
+  <!-- FORM -->
+  <div class="form-card" id="form-card">
+    <h2>Truck Check-in</h2>
+    <p class="sub">Vul de status in bij aankomst van de foodtruck</p>
+
+    <div class="form-group">
+      <span class="form-label">Foodtruck</span>
+      <select id="truck-select" onchange="onTruckChange(this.value)">
+        <option value="">— Selecteer truck —</option>
+      </select>
+      <div class="event-banner" id="event-banner"></div>
+      <div class="prev-defect-banner" id="prev-defect-banner">
+        <div class="pdb-title">⚠️ OPEN DEFECT BIJ VORIGE CHECK-IN</div>
+        <div class="pdb-text" id="pdb-text"></div>
+        <div class="pdb-detail" id="pdb-detail"></div>
+        <div class="pdb-meta" id="pdb-meta"></div>
+        <div class="pdb-resolved" id="pdb-resolved" onclick="togglePrevDefectResolved()">
+          <div class="pdb-chk"></div>
+          <span class="pdb-resolved-lbl">Defect is opgelost</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">Medewerker</span>
+      <input type="text" id="employee" placeholder="Jouw naam">
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">Truck beweging</span>
+      <div class="move-grid">
+        <div class="move-pill" data-val="actie-nodig" onclick="selectMove('actie-nodig')">⚠️ Actie nodig</div>
+        <div class="move-pill" data-val="beschikbaar" onclick="selectMove('beschikbaar')">🟢 Beschikbaar</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">Status checklist</span>
+      <div class="check-grid">
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="gepoetst"> 🧼 Gepoetst</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="niet-gepoetst"> ❌ Niet gepoetst</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="gecontroleerd"> ✅ Gecontroleerd</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="getankt"> ⛽ Getankt</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="geladen-afwas"> 🫧 Afwas</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="geladen-sauzen"> 🥫 Sauzen</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="geladen-verpakkingen"> 📦 Verpakkingen</label>
+        <label class="check-card" onclick="toggleCheck(this)"><input type="checkbox" value="geladen-volledig"> ✅ Volledig</label>
+      </div>
+    </div>
+
+    <div class="form-group" id="vet-group">
+      <span class="form-label">Vet status</span>
+      <div class="vet-grid">
+        <div class="vet-pill" data-val="aflaten" onclick="selectVet('aflaten')">🔄 Aflaten</div>
+        <div class="vet-pill" data-val="proper" onclick="selectVet('proper')">✨ Proper vet in ketels</div>
+        <div class="vet-pill" data-val="niet-voldoende" onclick="selectVet('niet-voldoende')">⚠️ Niet voldoende</div>
+        <div class="vet-pill" data-val="leeg" onclick="selectVet('leeg')">📭 Leeg</div>
+        <div class="vet-pill" data-val="friet-vol" onclick="selectVet('friet-vol')">🍟 Friet vet vol</div>
+        <div class="vet-pill" data-val="friet-leeg" onclick="selectVet('friet-leeg')">🍟 Friet vet leeg</div>
+        <div class="vet-pill" data-val="vlees-vol" onclick="selectVet('vlees-vol')">🍔 Vlees vet vol</div>
+        <div class="vet-pill" data-val="vlees-leeg" onclick="selectVet('vlees-leeg')">🍔 Vlees vet leeg</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="defect-toggle" id="defect-toggle" onclick="toggleDefect()">
+        <span class="lbl">⚠️ Defect melden</span>
+        <div class="switch"></div>
+      </div>
+      <div class="defect-fields" id="defect-fields">
+        <div style="margin-top:12px;">
+          <span class="form-label">Wat is stuk?</span>
+          <input type="text" id="defect-wat" placeholder="bv. Friteuse, dak, koeling...">
+        </div>
+        <div style="margin-top:10px;">
+          <span class="form-label">Beschrijving (optioneel)</span>
+          <textarea id="defect-text" placeholder="Meer details over het defect..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <span class="form-label">Notitie (optioneel)</span>
+      <textarea id="notes" placeholder="Eventuele opmerkingen..."></textarea>
+    </div>
+
+    <button class="btn-submit" onclick="submitCheckin()">✓ Check-in bevestigen</button>
+  </div>
+
+  <!-- CONFIRMATION -->
+  <div class="confirm-card" id="confirm-card">
+    <div class="confirm-icon">✓</div>
+    <h2>Check-in bevestigd!</h2>
+    <div class="confirm-truck" id="confirm-truck"></div>
+    <div class="confirm-emp" id="confirm-emp"></div>
+    <button class="confirm-btn" onclick="newCheckin()">+ Nieuwe check-in</button>
+  </div>
+
+</div>
+
+<script>
+const TRUCK_GROUPS = [
+  { label:'🍟 Frituurwagens', type:'frituur', trucks:['Bicky Burger Wagen 201','Food Wagen (Snackmuur) 305','Food container (Friet) C201','Food container (Friet-2_Vallen) C203','Friet Container (Postel) 501','Friet Wagen (HR-ketel) 502','Friet Wagen 304','Friet Wagen 402','Friet Wagen 403','Friet Wagen 503','Friet Wagen 504','Friet Wagen 801','Friet Wagen 802','Friet Wagen 803','Friet Wagen 804','Friet Wagen 805','Friet Wagen 806','Friet Wagen 901']},
+  { label:'🍔 Hamburgerwagens', type:'hamburger', trucks:['Food container (Hamburger) C202','Hamburger Container 12','Hamburger Container 13','Hamburger Wagen (Kiosk) 14','Hamburger Wagen 202','Hamburger Wagen 306']},
+  { label:'🍕 Pizza & Pasta', type:'overig', trucks:['Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105']},
+  { label:'🍦 Sweet & Ijs', type:'overig', trucks:['Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53']},
+  { label:'🍺 Tap & Dranken', type:'overig', trucks:['Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43']},
+  { label:'🚛 Rijdend', type:'rijdend', trucks:['Brascheria 1','Fiat 404','Jumper 302']},
+  { label:'📦 Containers & Support', type:'overig', trucks:['Bureau container 71','Bureau container 72','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209','Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107','Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208','Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102','Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C204','Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102']}
+];
+
+const TRUCK_TYPE = {};
+TRUCK_GROUPS.forEach(g => g.trucks.forEach(t => TRUCK_TYPE[t] = g.type));
+
+let selectedMove = null, selectedVet = null, defectOpen = false;
+let prevDefectInfo = null;  // { defectWat, defectText, fromId, fromEmployee, fromDate } of null
+let prevDefectResolved = false;
+
+// Vul de select met optgroups
+function buildSelect() {
+  const sel = document.getElementById('truck-select');
+  TRUCK_GROUPS.forEach(g => {
+    const grp = document.createElement('optgroup');
+    grp.label = g.label;
+    g.trucks.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t;
+      grp.appendChild(o);
+    });
+    sel.appendChild(grp);
+  });
+}
+buildSelect();
+
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent = now.toLocaleDateString('nl-NL') + '  ' + now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 30000);
+
+// Live planning sync vanuit Firebase
+let livePlanning = JSON.parse(localStorage.getItem('ft_planning_v1') || '[]');
+fbdb.ref('ft_planning_v1').on('value', snap => {
+  const data = snap.val();
+  if (data) {
+    livePlanning = Array.isArray(data) ? data : Object.values(data);
+    localStorage.setItem('ft_planning_v1', JSON.stringify(livePlanning));
+  }
+});
+
+function onTruckChange(val) {
+  // Toon ingepland event vandaag
+  const today = new Date().toISOString().slice(0,10);
+  const ev = livePlanning.find(e => e.startDate <= today && e.endDate >= today && e.trucks.includes(val));
+  const banner = document.getElementById('event-banner');
+  if (ev && val) {
+    banner.innerHTML = `📅 Vandaag ingepland op: <strong>${ev.name}</strong>${ev.location ? ' &nbsp;📍 ' + ev.location : ''}`;
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Reset prev defect state
+  prevDefectInfo = null;
+  prevDefectResolved = false;
+  const pdb = document.getElementById('prev-defect-banner');
+  const pdbResolved = document.getElementById('pdb-resolved');
+  pdb.classList.remove('shown');
+  pdbResolved.classList.remove('checked');
+
+  if (!val) return;
+
+  // Vind laatste check-in voor deze truck in Firebase
+  fbdb.ref('ft_ops_v2').once('value').then(snap => {
+    const data = snap.val() || {};
+    const allForTruck = Object.values(data).filter(c => c && c.id && c.truck === val);
+    if (!allForTruck.length) return;
+    // Sorteer aflopend op timestamp
+    allForTruck.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+    const latest = allForTruck[0];
+    // Toon banner als er een open defect was
+    if (latest.hasDefect && (latest.defectWat || latest.defectText)) {
+      prevDefectInfo = {
+        defectWat: latest.defectWat || '',
+        defectText: latest.defectText || '',
+        fromId: latest.id,
+        fromEmployee: latest.employee || '?',
+        fromDate: latest.date || '',
+        fromTime: latest.time || ''
+      };
+      document.getElementById('pdb-text').textContent = latest.defectWat || 'Defect gemeld';
+      document.getElementById('pdb-detail').textContent = latest.defectText || '';
+      document.getElementById('pdb-detail').style.display = latest.defectText ? 'block' : 'none';
+      document.getElementById('pdb-meta').textContent = `Gemeld door ${latest.employee || '?'} op ${latest.date || '?'} · ${latest.time || ''}`;
+      pdb.classList.add('shown');
+    }
+  }).catch(err => {
+    console.warn('Kan vorige check-in niet ophalen:', err);
+  });
+}
+
+function togglePrevDefectResolved() {
+  prevDefectResolved = !prevDefectResolved;
+  document.getElementById('pdb-resolved').classList.toggle('checked', prevDefectResolved);
+}
+
+function selectMove(val) {
+  selectedMove = val;
+  document.querySelectorAll('.move-pill').forEach(p => {
+    p.classList.remove('sel-actie-nodig','sel-beschikbaar');
+    if (p.dataset.val === val) p.classList.add('sel-' + val);
+  });
+}
+
+function selectVet(val) {
+  selectedVet = val;
+  document.querySelectorAll('.vet-pill').forEach(p => {
+    // Verwijder alle sel-* classes
+    [...p.classList].filter(c => c.startsWith('sel-')).forEach(c => p.classList.remove(c));
+    if (p.dataset.val === val) p.classList.add('sel-' + val);
+  });
+}
+
+function toggleCheck(label) {
+  const cb = label.querySelector('input');
+  setTimeout(() => label.classList.toggle('checked', cb.checked), 0);
+}
+
+function toggleDefect() {
+  defectOpen = !defectOpen;
+  document.getElementById('defect-toggle').classList.toggle('active', defectOpen);
+  document.getElementById('defect-fields').classList.toggle('shown', defectOpen);
+}
+
+function submitCheckin() {
+  const truck = document.getElementById('truck-select').value;
+  const employee = document.getElementById('employee').value.trim();
+  if (!truck) { alert('Selecteer een truck.'); return; }
+  if (!employee) { alert('Vul je naam in.'); return; }
+  if (!selectedMove) { alert('Kies een truck beweging.'); return; }
+
+  const statuses = Array.from(document.querySelectorAll('.check-card input:checked')).map(i => i.value);
+  if (selectedVet) statuses.push('vet-' + selectedVet);
+
+  const now = new Date();
+  const entry = {
+    id: Date.now(),
+    truck, employee,
+    truckType: TRUCK_TYPE[truck] || 'overig',
+    truckStatus: selectedMove,
+    statuses,
+    hasDefect: defectOpen,
+    defectWat: defectOpen ? document.getElementById('defect-wat').value.trim() : '',
+    defectText: defectOpen ? document.getElementById('defect-text').value.trim() : '',
+    notes: document.getElementById('notes').value.trim(),
+    date: now.toLocaleDateString('nl-NL'),
+    time: now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'}),
+    timestamp: now.getTime(),
+    log: []
+  };
+
+  // Verwerk "vorig defect opgelost"
+  if (prevDefectInfo && prevDefectResolved) {
+    entry.resolvedPrevDefect = {
+      defectWat: prevDefectInfo.defectWat,
+      defectText: prevDefectInfo.defectText,
+      fromId: prevDefectInfo.fromId,
+      fromEmployee: prevDefectInfo.fromEmployee,
+      fromDate: prevDefectInfo.fromDate
+    };
+    entry.log.push(`✓ Vorig defect "${prevDefectInfo.defectWat || 'Defect'}" gemarkeerd als opgelost door ${employee}`);
+    // Update ook de oude check-in: defect verbergen + log toevoegen
+    fbdb.ref('ft_ops_v2/' + prevDefectInfo.fromId).once('value').then(snap => {
+      const old = snap.val();
+      if (!old) return;
+      old.hasDefect = false;
+      old.defectResolvedAt = entry.timestamp;
+      old.defectResolvedBy = employee;
+      old.log = old.log || [];
+      old.log.push(`✓ Defect opgelost door ${employee} op ${entry.date} ${entry.time}`);
+      fbdb.ref('ft_ops_v2/' + prevDefectInfo.fromId).set(old).catch(e => console.warn('Update vorige check-in mislukt:', e));
+    }).catch(e => console.warn('Lezen vorige check-in mislukt:', e));
+  }
+
+  // Schrijf alleen DEZE entry naar Firebase met zijn eigen ID als key
+  // Dit kan NIETS overschrijven want elke check-in heeft een unieke key
+  fbdb.ref('ft_ops_v2/' + entry.id).set(entry).catch(err => {
+    console.warn('Firebase save mislukt, lokaal bewaard:', err);
+    const pending = JSON.parse(localStorage.getItem('ft_ops_pending') || '[]');
+    pending.push(entry);
+    localStorage.setItem('ft_ops_pending', JSON.stringify(pending));
+  });
+
+  // OOK schrijven naar ft_trucks_v1 — altijd de meest recente staat per truck
+  // Key = truck naam gesaneerd (punten/spaties vervangen door _)
+  const truckKey = truck.replace(/[\s.]/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+  const truckProfile = {
+    ...entry,
+    lastCheckinId: entry.id,
+    lastUpdated: entry.timestamp
+  };
+  fbdb.ref('ft_trucks_v1/' + truckKey).set(truckProfile).catch(err => {
+    console.warn('Truck profile update mislukt:', err);
+  });
+
+  // Reset de laadlijst voor deze truck bij elke nieuwe check-in
+  // Defecten worden NIET gereset — die zitten in ft_ops_v2 en ft_trucks_v1
+  fbdb.ref('ft_laadlijst_v1/' + truckKey).remove().catch(err => {
+    console.warn('Laadlijst reset mislukt:', err);
+  });
+
+  // Toon confirmation
+  document.getElementById('confirm-truck').textContent = truck;
+  document.getElementById('confirm-emp').textContent = employee + ' · ' + entry.time;
+  document.getElementById('form-card').style.display = 'none';
+  document.getElementById('confirm-card').classList.add('shown');
+}
+
+function newCheckin() {
+  // Reset form
+  document.getElementById('truck-select').value = '';
+  document.getElementById('employee').value = '';
+  document.getElementById('notes').value = '';
+  document.getElementById('defect-wat').value = '';
+  document.getElementById('defect-text').value = '';
+  document.querySelectorAll('.check-card').forEach(c => { c.classList.remove('checked'); c.querySelector('input').checked = false; });
+  document.querySelectorAll('.move-pill').forEach(p => p.classList.remove('sel-actie-nodig','sel-beschikbaar'));
+  document.querySelectorAll('.vet-pill').forEach(p => {
+    [...p.classList].filter(c => c.startsWith('sel-')).forEach(c => p.classList.remove(c));
+  });
+  selectedMove = null; selectedVet = null;
+  if (defectOpen) toggleDefect();
+  document.getElementById('event-banner').style.display = 'none';
+  // Reset vorig-defect banner
+  prevDefectInfo = null;
+  prevDefectResolved = false;
+  document.getElementById('prev-defect-banner').classList.remove('shown');
+  document.getElementById('pdb-resolved').classList.remove('checked');
+
+  document.getElementById('confirm-card').classList.remove('shown');
+  document.getElementById('form-card').style.display = 'block';
+}
+</script>
+</body>
+</html>

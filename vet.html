@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Vet Status Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --bg:#0a0a0a;--surface:#161616;--surface2:#1f1f1f;--border:#2a2a2a;--border2:#333;
+  --text:#f5f5f5;--text2:#999;--red:#e8001d;--red-dark:#b8001a;--green:#22c55e;--green-light:#4ade80;
+  --orange:#f97316;--orange-dark:#ea580c;--blue:#3b82f6;--purple:#a855f7;--yellow:#eab308;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo-area{display:flex;align-items:center;gap:14px;cursor:pointer;text-decoration:none;color:inherit;transition:opacity 0.15s;}
+.logo-area:hover{opacity:0.75;}
+.logo-img{height:30px;width:auto;display:block;filter:brightness(0) invert(1);}
+.topbar-section{font-size:0.92rem;font-weight:600;color:var(--text2);padding-left:14px;border-left:1px solid var(--border2);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+
+.container{max-width:1400px;margin:0 auto;padding:32px 24px;}
+.page-header{margin-bottom:28px;}
+.page-title{font-family:var(--font-cond);font-size:2.2rem;font-weight:900;letter-spacing:-0.01em;margin-bottom:6px;}
+.page-subtitle{color:var(--text2);font-size:0.92rem;}
+
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;padding:10px 16px;margin-bottom:20px;transition:border-color 0.15s;}
+.search-bar:focus-within{border-color:var(--red);}
+.search-icon{color:var(--text2);font-size:1rem;}
+.search-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:0.95rem;}
+.search-bar input::placeholder{color:var(--text2);}
+.search-clear{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;font-size:1rem;border-radius:4px;}
+.search-clear:hover{background:var(--border2);color:var(--text);}
+
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:28px;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+  border-top:3px solid var(--border2);transition:transform 0.15s;}
+.stat-num{font-family:var(--font-cond);font-size:1.7rem;font-weight:900;line-height:1;}
+.stat-lbl{color:var(--text2);font-size:0.66rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-top:4px;}
+.stat-pill.aflaten{border-top-color:var(--orange);}
+.stat-pill.aflaten .stat-num{color:var(--orange);}
+.stat-pill.friet-niet-voldoende{border-top-color:var(--red);}
+.stat-pill.friet-niet-voldoende .stat-num{color:#f87171;}
+.stat-pill.vlees-niet-voldoende{border-top-color:var(--red);}
+.stat-pill.vlees-niet-voldoende .stat-num{color:#f87171;}
+.stat-pill.leeg{border-top-color:#6b7280;}
+.stat-pill.leeg .stat-num{color:#9ca3af;}
+.stat-pill.proper{border-top-color:var(--green);}
+.stat-pill.proper .stat-num{color:#4ade80;}
+.stat-pill.friet-vol{border-top-color:var(--green);}
+.stat-pill.friet-vol .stat-num{color:#4ade80;}
+.stat-pill.friet-leeg{border-top-color:var(--red);}
+.stat-pill.friet-leeg .stat-num{color:#f87171;}
+.stat-pill.vlees-vol{border-top-color:var(--green);}
+.stat-pill.vlees-vol .stat-num{color:#4ade80;}
+.stat-pill.vlees-leeg{border-top-color:var(--red);}
+.stat-pill.vlees-leeg .stat-num{color:#f87171;}
+
+.section{margin-bottom:32px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-family:var(--font-cond);
+  font-size:1.5rem;font-weight:800;}
+.section-count{background:var(--surface2);color:var(--text2);font-size:0.78rem;font-family:var(--font);
+  font-weight:700;padding:3px 10px;border-radius:20px;}
+.section-aflaten .section-header{color:var(--orange);}
+.section-friet .section-header{color:#f87171;}
+.section-vlees .section-header{color:#f87171;}
+.section-leeg .section-header{color:#9ca3af;}
+.section-proper .section-header{color:#4ade80;}
+.section-friet-vol .section-header{color:#4ade80;}
+.section-friet-leeg .section-header{color:#f87171;}
+.section-vlees-vol .section-header{color:#4ade80;}
+.section-vlees-leeg .section-header{color:#f87171;}
+
+.truck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.truck-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;
+  display:flex;flex-direction:column;gap:12px;transition:all 0.2s;}
+.truck-card.s-aflaten{border-left:3px solid var(--orange);}
+.truck-card.s-friet-niet-voldoende{border-left:3px solid var(--red);}
+.truck-card.s-vlees-niet-voldoende{border-left:3px solid var(--red);}
+.truck-card.s-leeg{border-left:3px solid #6b7280;}
+.truck-card.s-proper{border-left:3px solid var(--green);}
+.truck-card.s-friet-vol{border-left:3px solid var(--green);}
+.truck-card.s-friet-leeg{border-left:3px solid var(--red);}
+.truck-card.s-vlees-vol{border-left:3px solid var(--green);}
+.truck-card.s-vlees-leeg{border-left:3px solid var(--red);}
+.truck-card .truck-name{font-weight:700;font-size:0.96rem;line-height:1.3;}
+.truck-card .truck-meta{color:var(--text2);font-size:0.78rem;}
+
+.type-badge{display:inline-block;font-size:0.66rem;font-weight:800;padding:2px 7px;border-radius:8px;
+  margin-left:6px;text-transform:uppercase;letter-spacing:0.04em;vertical-align:middle;}
+.type-badge.frituur{background:rgba(249,115,22,0.18);color:#fb923c;border:1px solid rgba(249,115,22,0.35);}
+.type-badge.hamburger{background:rgba(234,88,12,0.18);color:#fb923c;border:1px solid rgba(234,88,12,0.35);}
+
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:14px;
+  font-size:0.78rem;font-weight:700;width:fit-content;}
+.status-badge.aflaten{background:rgba(249,115,22,0.14);color:#fb923c;}
+.status-badge.friet-niet-voldoende{background:rgba(232,0,29,0.12);color:#f87171;}
+.status-badge.vlees-niet-voldoende{background:rgba(232,0,29,0.12);color:#f87171;}
+.status-badge.leeg{background:rgba(107,114,128,0.20);color:#cbd5e1;}
+.status-badge.proper{background:rgba(34,197,94,0.12);color:#4ade80;}
+.status-badge.friet-vol{background:rgba(34,197,94,0.12);color:#4ade80;}
+.status-badge.friet-leeg{background:rgba(232,0,29,0.12);color:#f87171;}
+.status-badge.vlees-vol{background:rgba(34,197,94,0.12);color:#4ade80;}
+.status-badge.vlees-leeg{background:rgba(232,0,29,0.12);color:#f87171;}
+
+.btn-action{border:none;border-radius:7px;padding:10px 14px;font-family:var(--font);font-size:0.85rem;
+  font-weight:700;cursor:pointer;transition:all 0.15s;color:#fff;}
+.btn-action.btn-afgelaten{background:#6b7280;}
+.btn-action.btn-afgelaten:hover{background:#4b5563;}
+.btn-action.btn-bijgevuld{background:var(--green);}
+.btn-action.btn-bijgevuld:hover{background:#16a34a;}
+.btn-action:disabled{background:var(--surface2);color:var(--text2);cursor:default;}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text2);}
+.empty-icon{font-size:3rem;margin-bottom:10px;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;
+  padding:12px 22px;border-radius:8px;font-weight:700;font-size:0.9rem;opacity:0;transition:opacity 0.3s;
+  z-index:1000;pointer-events:none;}
+.toast.show{opacity:1;}
+
+@media(max-width:768px){
+  .topbar{padding:0 14px;}
+  .container{padding:20px 12px;}
+  .page-title{font-size:1.7rem;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .truck-grid{grid-template-columns:1fr;}
+}
+@media(max-width:1100px) and (min-width:769px){
+  .stats-row{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html" title="Terug naar dashboard">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-section">Vet Status</div>
+  </a>
+  <div class="topbar-right">
+    <div id="clock" style="color:var(--text2);font-size:0.85rem;font-weight:500;font-variant-numeric:tabular-nums;"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">🛢️ Vet Status</h1>
+    <div class="page-subtitle" id="page-subtitle">laden…</div>
+  </div>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Zoek truck (bv. 503, 802, friet…)" oninput="render()">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-pill aflaten">
+      <div class="stat-num" id="st-aflaten">0</div>
+      <div class="stat-lbl">🛢️ Aflaten</div>
+    </div>
+    <div class="stat-pill friet-leeg">
+      <div class="stat-num" id="st-friet-leeg">0</div>
+      <div class="stat-lbl">🍟 Friet leeg</div>
+    </div>
+    <div class="stat-pill vlees-leeg">
+      <div class="stat-num" id="st-vlees-leeg">0</div>
+      <div class="stat-lbl">🍔 Vlees leeg</div>
+    </div>
+    <div class="stat-pill friet-niet-voldoende">
+      <div class="stat-num" id="st-friet">0</div>
+      <div class="stat-lbl">🍟 Friet niet voldoende</div>
+    </div>
+    <div class="stat-pill vlees-niet-voldoende">
+      <div class="stat-num" id="st-vlees">0</div>
+      <div class="stat-lbl">🍔 Vlees niet voldoende</div>
+    </div>
+    <div class="stat-pill leeg">
+      <div class="stat-num" id="st-leeg">0</div>
+      <div class="stat-lbl">📭 Leeg</div>
+    </div>
+    <div class="stat-pill friet-vol">
+      <div class="stat-num" id="st-friet-vol">0</div>
+      <div class="stat-lbl">🍟 Friet vol</div>
+    </div>
+    <div class="stat-pill vlees-vol">
+      <div class="stat-num" id="st-vlees-vol">0</div>
+      <div class="stat-lbl">🍔 Vlees vol</div>
+    </div>
+    <div class="stat-pill proper">
+      <div class="stat-num" id="st-proper">0</div>
+      <div class="stat-lbl">✨ Proper</div>
+    </div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let checkins = [];
+
+// Bepaal de vet-status van een truck op basis van laatste check-in met vet-info
+function getVetStatus(truck) {
+  // Vind laatste check-in van deze truck die een vet-status heeft
+  const truckCheckins = checkins
+    .filter(c => c.truck === truck)
+    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+  if (!truckCheckins.length) return null;
+
+  // Loop door de check-ins en vind de meest recente met een vet-status
+  for (const c of truckCheckins) {
+    const statuses = c.statuses || [];
+    const vetStatus = statuses.find(s => s.startsWith('vet-'));
+    if (vetStatus) {
+      let kind = vetStatus.replace('vet-', '');  // 'aflaten' | 'proper' | 'niet-voldoende' | 'leeg' | 'friet-vol' | 'friet-leeg' | 'vlees-vol' | 'vlees-leeg'
+      // Splits 'niet-voldoende' op basis van truckType (frituur / hamburger)
+      if (kind === 'niet-voldoende') {
+        if (c.truckType === 'frituur') kind = 'friet-niet-voldoende';
+        else if (c.truckType === 'hamburger') kind = 'vlees-niet-voldoende';
+        else kind = 'friet-niet-voldoende';  // fallback
+      }
+      return { kind, latest: c };
+    }
+  }
+  return null;
+}
+
+// Markeer truck als afgelaten (vet-leeg)
+async function markAfgelaten(truckName) {
+  const status = getVetStatus(truckName);
+  if (!status || !status.latest) return;
+  const updated = {...status.latest};
+  updated.statuses = (updated.statuses || []).filter(s => !s.startsWith('vet-'));
+  updated.statuses.push('vet-leeg');
+  updated.log = updated.log || [];
+  const now = new Date();
+  updated.log.push(`${now.toLocaleDateString('nl-NL')} ${now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} — vet afgelaten (ketels leeg) via Vet Dashboard`);
+  await fbdb.ref('ft_ops_v2/' + updated.id).set(updated);
+  showToast(`🛢️ ${truckName} gemarkeerd als afgelaten`);
+}
+
+// Markeer truck als bijgevuld (vet-proper)
+async function markBijgevuld(truckName) {
+  const status = getVetStatus(truckName);
+  if (!status || !status.latest) return;
+  const updated = {...status.latest};
+  updated.statuses = (updated.statuses || []).filter(s => !s.startsWith('vet-'));
+  updated.statuses.push('vet-proper');
+  updated.log = updated.log || [];
+  const now = new Date();
+  updated.log.push(`${now.toLocaleDateString('nl-NL')} ${now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} — vet bijgevuld (proper) via Vet Dashboard`);
+  await fbdb.ref('ft_ops_v2/' + updated.id).set(updated);
+  showToast(`✨ ${truckName} gemarkeerd als bijgevuld`);
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  render();
+}
+
+function render() {
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  document.getElementById('search-clear').style.display = search ? 'inline-block' : 'none';
+
+  // Verzamel alle unieke trucks uit checkins
+  const allTrucksSet = new Set();
+  checkins.forEach(c => { if (c.truck) allTrucksSet.add(c.truck); });
+  const allTrucks = [...allTrucksSet];
+
+  // Bepaal status per truck
+  const trucksWithStatus = allTrucks
+    .map(t => {
+      const s = getVetStatus(t);
+      return s ? { truck: t, kind: s.kind, latest: s.latest } : null;
+    })
+    .filter(Boolean);
+
+  // Tellingen
+  const counts = {
+    'aflaten': 0,
+    'friet-niet-voldoende': 0,
+    'vlees-niet-voldoende': 0,
+    'leeg': 0,
+    'proper': 0,
+    'friet-vol': 0,
+    'friet-leeg': 0,
+    'vlees-vol': 0,
+    'vlees-leeg': 0
+  };
+  trucksWithStatus.forEach(t => { counts[t.kind] = (counts[t.kind]||0) + 1; });
+  document.getElementById('st-aflaten').textContent = counts['aflaten'];
+  document.getElementById('st-friet').textContent = counts['friet-niet-voldoende'];
+  document.getElementById('st-vlees').textContent = counts['vlees-niet-voldoende'];
+  document.getElementById('st-leeg').textContent = counts['leeg'];
+  document.getElementById('st-proper').textContent = counts['proper'];
+  document.getElementById('st-friet-vol').textContent = counts['friet-vol'];
+  document.getElementById('st-friet-leeg').textContent = counts['friet-leeg'];
+  document.getElementById('st-vlees-vol').textContent = counts['vlees-vol'];
+  document.getElementById('st-vlees-leeg').textContent = counts['vlees-leeg'];
+
+  // Subtitle
+  const actieNodig = counts['aflaten'] + counts['friet-niet-voldoende'] + counts['vlees-niet-voldoende']
+                   + counts['leeg'] + counts['friet-leeg'] + counts['vlees-leeg'];
+  const ok = counts['proper'] + counts['friet-vol'] + counts['vlees-vol'];
+  document.getElementById('page-subtitle').textContent =
+    `${actieNodig} truck${actieNodig!==1?'s':''} actie nodig · ${ok} OK · bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+
+  // Filter op zoekterm
+  let visible = trucksWithStatus;
+  if (search) {
+    visible = visible.filter(t => t.truck.toLowerCase().includes(search));
+  }
+
+  // Group per status (in volgorde van urgentie)
+  const ORDER = [
+    { key:'aflaten', icon:'🛢️', title:'Vet aflaten', cssCls:'section-aflaten' },
+    { key:'friet-leeg', icon:'🍟', title:'Friet vet leeg', cssCls:'section-friet-leeg' },
+    { key:'vlees-leeg', icon:'🍔', title:'Vlees vet leeg', cssCls:'section-vlees-leeg' },
+    { key:'friet-niet-voldoende', icon:'🍟', title:'Friet vet niet voldoende', cssCls:'section-friet' },
+    { key:'vlees-niet-voldoende', icon:'🍔', title:'Vlees vet niet voldoende', cssCls:'section-vlees' },
+    { key:'leeg', icon:'📭', title:'Vet ketels leeg', cssCls:'section-leeg' },
+    { key:'friet-vol', icon:'🍟', title:'Friet vet vol', cssCls:'section-friet-vol' },
+    { key:'vlees-vol', icon:'🍔', title:'Vlees vet vol', cssCls:'section-vlees-vol' },
+    { key:'proper', icon:'✨', title:'Proper vet in ketels', cssCls:'section-proper' }
+  ];
+
+  const content = document.getElementById('content');
+  let html = '';
+
+  ORDER.forEach(group => {
+    const items = visible.filter(t => t.kind === group.key);
+    if (!items.length) return;
+    // Sorteer alfabetisch op truck-naam
+    items.sort((a,b) => a.truck.localeCompare(b.truck, 'nl'));
+    html += `<div class="section ${group.cssCls}">
+      <div class="section-header">${group.icon} ${group.title} <span class="section-count">${items.length}</span></div>
+      <div class="truck-grid">${items.map(renderCard).join('')}</div>
+    </div>`;
+  });
+
+  if (!html) {
+    if (search) {
+      html = `<div class="empty"><div class="empty-icon">🔍</div><div>Geen trucks gevonden voor "${search}".</div></div>`;
+    } else {
+      html = `<div class="empty"><div class="empty-icon">🛢️</div><div><strong>Nog geen vet-status data.</strong><br>Trucks verschijnen hier zodra er een vet-status is ingevuld bij check-in.</div></div>`;
+    }
+  }
+
+  content.innerHTML = html;
+}
+
+function renderCard(t) {
+  const labels = {
+    'aflaten': '🛢️ Aflaten',
+    'friet-niet-voldoende': '⚠️ Friet vet niet voldoende',
+    'vlees-niet-voldoende': '⚠️ Vlees vet niet voldoende',
+    'leeg': '📭 Leeg',
+    'proper': '✨ Proper',
+    'friet-vol': '🍟 Friet vet vol',
+    'friet-leeg': '🍟 Friet vet leeg',
+    'vlees-vol': '🍔 Vlees vet vol',
+    'vlees-leeg': '🍔 Vlees vet leeg'
+  };
+  const typeBadge = t.latest && t.latest.truckType === 'frituur'
+    ? '<span class="type-badge frituur">🍟 Frituur</span>'
+    : t.latest && t.latest.truckType === 'hamburger'
+      ? '<span class="type-badge hamburger">🍔 Hamburger</span>'
+      : '';
+  const meta = t.latest
+    ? `${t.latest.date} · ${t.latest.time}${t.latest.employee ? ' · ' + t.latest.employee : ''}`
+    : 'nog geen check-in';
+  const truckEsc = t.truck.replace(/'/g, "\\'");
+
+  // Actie-knop afhankelijk van status
+  const needsAflaten = ['aflaten'];
+  const needsBijvullen = ['friet-niet-voldoende', 'vlees-niet-voldoende', 'leeg', 'friet-leeg', 'vlees-leeg'];
+
+  let btn = '';
+  if (needsAflaten.includes(t.kind)) {
+    btn = `<button class="btn-action btn-afgelaten" onclick="markAfgelaten('${truckEsc}')">🛢️ Markeer als afgelaten</button>`;
+  } else if (needsBijvullen.includes(t.kind)) {
+    btn = `<button class="btn-action btn-bijgevuld" onclick="markBijgevuld('${truckEsc}')">✨ Markeer als bijgevuld</button>`;
+  } else {
+    btn = `<button class="btn-action" disabled>✓ Vet OK</button>`;
+  }
+
+  return `<div class="truck-card s-${t.kind}">
+    <div>
+      <div class="truck-name">${t.truck}${typeBadge}</div>
+      <div class="truck-meta">${meta}</div>
+    </div>
+    <span class="status-badge ${t.kind}">${labels[t.kind] || t.kind}</span>
+    ${btn}
+  </div>`;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Live luisteren naar Firebase
+fbdb.ref('ft_ops_v2').on('value', snap => {
+  const data = snap.val();
+  if (data) {
+    checkins = (Array.isArray(data) ? data : Object.values(data)).filter(c => c && c.id);
+  } else {
+    checkins = [];
+  }
+  render();
+});
+
+// Klokje
+function updateClock(){
+  const now=new Date();
+  const el = document.getElementById('clock');
+  if (el) el.textContent = now.toLocaleDateString('nl-NL') + '  ' + now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 30000);
+
+// Eerste render
+render();
+</script>
+</body>
+</html>

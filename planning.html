@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Planning</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;
+  --bg:#efefef;--white:#fff;--text:#111;--muted:#666;--border:#d4d4d4;
+  --sidebar:#141414;--font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{flex-shrink:0;height:54px;background:var(--white);border-bottom:3px solid var(--red);padding:0 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,0.08);z-index:50;}
+.logo-area{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none;color:inherit;transition:opacity 0.15s;}
+.logo-area:hover{opacity:0.75;}
+.logo-img{height:30px;width:auto;display:block;}
+.logo-icon{width:33px;height:33px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.logo-text{font-family:var(--font-cond);font-size:1.1rem;font-weight:900;}
+.logo-text span{color:var(--red);}
+.topbar-sep{font-size:0.92rem;font-weight:600;color:#444;padding-left:14px;border-left:1px solid var(--border);}
+.topbar-right{display:flex;align-items:center;gap:7px;}
+.t-link{padding:5px 12px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all 0.15s;}
+.t-link:hover{border-color:var(--red);color:var(--red);}
+.btn-top{padding:6px 14px;border:none;border-radius:5px;font-family:var(--font);font-size:0.8rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.btn-pdf{background:#1a1a1a;color:#fff;}
+.btn-pdf:hover{background:#333;}
+.btn-import{background:#1d4ed8;color:#fff;}
+.btn-import:hover{background:#1e40af;}
+.btn-new-ev{background:var(--red);color:#fff;}
+.btn-new-ev:hover{background:var(--red-dark);}
+
+/* LAYOUT */
+.layout{flex:1;display:flex;overflow:hidden;min-height:0;}
+
+/* TRUCK PANEL */
+.truck-panel{width:210px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;overflow:hidden;}
+.tp-inner{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 0 20px;}
+.tp-inner::-webkit-scrollbar{width:4px;}
+.tp-inner::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
+.tp-hdr{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;user-select:none;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#888;transition:color 0.15s;}
+.tp-hdr:hover{color:#fff;}
+.tp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.tp-chev{margin-left:auto;font-size:0.6rem;transition:transform 0.2s;}
+.tp-hdr.collapsed .tp-chev{transform:rotate(-90deg);}
+.tp-trucks{padding:2px 8px 4px;}
+.tp-trucks.hidden{display:none;}
+.truck-chip{display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:3px;border-radius:5px;cursor:grab;user-select:none;border-left:3px solid transparent;background:rgba(255,255,255,0.06);font-size:0.75rem;font-weight:600;color:#ccc;transition:all 0.12s;line-height:1.3;}
+.truck-chip:hover{background:rgba(255,255,255,0.13);color:#fff;}
+.truck-chip:active{cursor:grabbing;}
+.truck-chip.dragging{opacity:0.25;}
+.truck-chip.planned{opacity:0.18;cursor:not-allowed;pointer-events:none;}
+.chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.tp-foot-row{padding:2px 12px 5px;display:flex;align-items:center;justify-content:space-between;}
+.tp-pl-lbl{font-size:0.65rem;color:#555;}
+.tp-show-btn{font-size:0.65rem;color:#777;background:none;border:none;cursor:pointer;font-family:var(--font);text-decoration:underline;padding:0;}
+.tp-show-btn:hover{color:#ccc;}
+.tp-empty-grp{padding:3px 12px 5px;font-size:0.68rem;color:#3a3a3a;font-style:italic;}
+
+/* WEEK VIEW */
+.week-view{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.week-nav{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--white);border-bottom:1px solid var(--border);}
+.wnav-btn{padding:6px 14px;border:1px solid var(--border);border-radius:5px;background:var(--white);font-family:var(--font);font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.15s;}
+.wnav-btn:hover{border-color:var(--red);color:var(--red);}
+.wnav-btn.today{background:var(--red);color:#fff;border-color:var(--red);}
+.week-label{font-family:var(--font-cond);font-size:1.1rem;font-weight:800;flex:1;text-align:center;}
+
+.week-grid{flex:1;display:grid;grid-template-columns:repeat(7,1fr);overflow:hidden;min-height:0;}
+.day-col{border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--white);overflow:hidden;min-height:0;}
+.day-col:last-child{border-right:none;}
+.day-col.today-col .day-head{background:#fff0f0;}
+.day-col.today-col .day-name,.day-col.today-col .day-date{color:var(--red);}
+.day-head{flex-shrink:0;padding:8px 10px 6px;border-bottom:1px solid var(--border);background:#f7f7f7;display:flex;align-items:center;justify-content:space-between;}
+.day-name{font-family:var(--font-cond);font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);}
+.day-date{font-family:var(--font-cond);font-size:1.4rem;font-weight:900;line-height:1;color:var(--text);}
+.btn-day-add{width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s;color:var(--muted);line-height:1;flex-shrink:0;}
+.btn-day-add:hover{background:var(--red);border-color:var(--red);color:#fff;}
+.day-events{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:6px;min-height:0;}
+.day-events::-webkit-scrollbar{width:3px;}
+.day-events::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px;}
+.empty-day{padding:14px 4px;font-size:0.72rem;color:#bbb;font-style:italic;text-align:center;}
+
+/* EVENT CARD */
+.event-card{border-radius:7px;border:1px solid var(--border);overflow:hidden;transition:box-shadow 0.15s;background:var(--white);}
+.event-card:hover{box-shadow:0 3px 12px rgba(0,0,0,0.1);}
+.event-card.drag-over{box-shadow:0 0 0 2px var(--red)!important;border-color:var(--red)!important;}
+.event-head{padding:7px 9px 6px;display:flex;align-items:flex-start;justify-content:space-between;gap:4px;}
+.ev-head-left{flex:1;min-width:0;}
+.ev-name{font-family:var(--font-cond);font-size:0.95rem;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ev-loc{font-size:0.67rem;color:var(--muted);margin-top:2px;}
+.ev-days-tag{display:inline-block;font-size:0.62rem;font-weight:700;padding:1px 6px;border-radius:3px;margin-top:3px;}
+.ev-btns{display:flex;gap:2px;flex-shrink:0;margin-top:1px;}
+.ev-btn{width:20px;height:20px;border:none;background:transparent;cursor:pointer;font-size:0.75rem;color:var(--muted);border-radius:3px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.ev-btn:hover{background:#f0f0f0;color:var(--text);}
+.ev-btn.del:hover{background:#fde8e8;color:var(--red);}
+.ev-trucks-area{padding:4px 7px 7px;border-top:1px solid rgba(0,0,0,0.06);}
+.btn-add-trucks{display:block;width:100%;padding:5px 8px;border:1px dashed #ccc;border-radius:5px;background:transparent;font-family:var(--font);font-size:0.74rem;font-weight:600;color:#aaa;cursor:pointer;transition:all 0.15s;text-align:center;margin-bottom:5px;}
+.btn-add-trucks:hover{border-color:var(--red);color:var(--red);background:#fff5f5;}
+.assigned-truck{display:flex;align-items:center;gap:6px;width:100%;padding:5px 8px;margin-bottom:3px;border-radius:5px;font-size:0.76rem;font-weight:700;line-height:1.2;}
+.assigned-truck:last-child{margin-bottom:0;}
+.at-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.at-name{flex:1;}
+.at-rm{cursor:pointer;opacity:0.4;font-size:0.65rem;transition:opacity 0.15s;flex-shrink:0;}
+.at-rm:hover{opacity:1;}
+.drop-hint{font-size:0.68rem;color:#ccc;font-style:italic;text-align:center;padding:5px 0;}
+
+/* OVERLAYS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px);}
+.overlay.hidden{display:none;}
+
+/* MODALS shared */
+.modal{background:var(--white);border-radius:10px;padding:28px;max-width:460px;width:92%;box-shadow:0 24px 60px rgba(0,0,0,0.2);}
+.modal h3{font-family:var(--font-cond);font-size:1.3rem;font-weight:800;margin-bottom:20px;}
+.fg{margin-bottom:16px;}
+.flbl{display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--muted);margin-bottom:6px;}
+input[type=text],input[type=date],textarea,select{width:100%;border:1px solid var(--border);border-radius:5px;padding:10px 12px;font-family:var(--font);font-size:0.9rem;color:var(--text);background:var(--white);outline:none;transition:border-color 0.15s;appearance:none;}
+input:focus,textarea:focus,select:focus{border-color:var(--red);}
+textarea{resize:vertical;min-height:70px;}
+.dur-ctrl{display:flex;align-items:center;border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.dur-btn{width:40px;height:40px;border:none;background:#f5f5f5;cursor:pointer;font-size:1.2rem;font-weight:700;transition:background 0.15s;flex-shrink:0;}
+.dur-btn:hover{background:#eaeaea;}
+.dur-val{flex:1;text-align:center;font-family:var(--font-cond);font-size:1rem;font-weight:800;border-left:1px solid var(--border);border-right:1px solid var(--border);height:40px;display:flex;align-items:center;justify-content:center;}
+.date-prev{font-size:0.78rem;color:var(--muted);margin-top:6px;font-style:italic;font-family:var(--mono);}
+.modal-foot{display:flex;gap:10px;margin-top:22px;justify-content:flex-end;}
+.btn-primary{padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
+.btn-primary:hover{background:var(--red-dark);}
+.btn-cancel{padding:10px 20px;background:var(--white);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--font);font-size:0.9rem;font-weight:600;cursor:pointer;}
+.btn-cancel:hover{border-color:#999;}
+
+/* TRUCK PICKER */
+.truck-picker{background:var(--white);border-radius:10px;max-width:520px;width:92%;max-height:84vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.2);overflow:hidden;}
+.tpk-head{padding:18px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tpk-head h3{font-family:var(--font-cond);font-size:1.2rem;font-weight:800;margin-bottom:10px;}
+.tpk-search{width:100%;border:1px solid var(--border);border-radius:5px;padding:8px 12px;font-family:var(--font);font-size:0.9rem;outline:none;}
+.tpk-search:focus{border-color:var(--red);}
+.tpk-body{flex:1;overflow-y:auto;padding:8px 14px;}
+.tpk-body::-webkit-scrollbar{width:4px;}
+.tpk-body::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px;}
+.tpk-grp{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--muted);padding:8px 0 4px;display:flex;align-items:center;gap:6px;}
+.tpk-gdot{width:8px;height:8px;border-radius:50%;}
+.tpk-row{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:5px;cursor:pointer;transition:background 0.1s;user-select:none;}
+.tpk-row:hover{background:#f5f5f5;}
+.tpk-row.sel{background:#fff5f5;}
+.tpk-row.already{opacity:0.35;cursor:default;pointer-events:none;}
+.tpk-chk{width:17px;height:17px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.tpk-row.sel .tpk-chk{background:var(--red);border-color:var(--red);}
+.tpk-row.sel .tpk-chk::after{content:'✓';color:#fff;font-size:0.68rem;font-weight:700;}
+.tpk-rdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.tpk-name{font-size:0.85rem;font-weight:600;flex:1;}
+.tpk-already{font-size:0.65rem;color:var(--muted);font-style:italic;}
+.tpk-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.tpk-cnt{font-size:0.82rem;color:var(--muted);}
+.tpk-cnt strong{color:var(--red);}
+
+/* PDF MODAL */
+.pdf-modal{background:var(--white);border-radius:10px;max-width:800px;width:96%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.2);overflow:hidden;}
+.pdf-modal-head{padding:16px 22px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.pdf-modal-head h3{font-family:var(--font-cond);font-size:1.2rem;font-weight:800;}
+.pdf-modal-body{flex:1;overflow-y:auto;padding:20px 22px;}
+.pdf-modal-foot{padding:12px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;}
+.pdf-week-title{font-family:var(--font-cond);font-size:1.6rem;font-weight:900;margin-bottom:4px;}
+.pdf-week-sub{font-size:0.82rem;color:var(--muted);margin-bottom:18px;font-family:var(--mono);}
+.pdf-day-block{margin-bottom:18px;}
+.pdf-day-hdr{font-family:var(--font-cond);font-size:1rem;font-weight:800;text-transform:uppercase;padding:6px 12px;background:var(--sidebar);color:#fff;border-radius:5px 5px 0 0;}
+.pdf-day-hdr.today-day{background:var(--red);}
+.pdf-no-events{padding:10px 12px;font-size:0.82rem;color:#aaa;font-style:italic;background:#fafafa;border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;}
+.pdf-ev-row{border:1px solid var(--border);border-top:none;padding:10px 12px;background:var(--white);}
+.pdf-ev-row:last-child{border-radius:0 0 5px 5px;}
+.pdf-ev-name{font-family:var(--font-cond);font-size:1rem;font-weight:800;margin-bottom:2px;}
+.pdf-ev-meta{font-size:0.75rem;color:var(--muted);margin-bottom:8px;}
+.pdf-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.pdf-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:4px;font-size:0.75rem;font-weight:700;}
+.pdf-chip-dot{width:7px;height:7px;border-radius:50%;}
+
+/* IMPORT MODAL */
+.import-modal{background:var(--white);border-radius:10px;max-width:680px;width:94%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.2);overflow:hidden;}
+.import-head{padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.import-head h3{font-family:var(--font-cond);font-size:1.3rem;font-weight:800;margin-bottom:4px;}
+.import-head p{font-size:0.84rem;color:var(--muted);}
+.import-body{flex:1;overflow-y:auto;padding:20px 24px;}
+.import-foot{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;}
+
+.drop-zone{border:2px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:#fafafa;margin-bottom:16px;}
+.drop-zone:hover,.drop-zone.drag-active{border-color:var(--red);background:#fff5f5;}
+.drop-zone-icon{font-size:2.5rem;margin-bottom:10px;}
+.drop-zone-title{font-family:var(--font-cond);font-size:1.1rem;font-weight:800;margin-bottom:4px;}
+.drop-zone-sub{font-size:0.82rem;color:var(--muted);}
+#img-preview{max-width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;display:none;}
+
+.ai-status{padding:12px 16px;border-radius:8px;font-size:0.85rem;font-weight:600;margin-bottom:14px;display:none;}
+.ai-status.loading{background:#fff8e1;border:1px solid #fcd34d;color:#92400e;}
+.ai-status.success{background:#f0fdf4;border:1px solid #86efac;color:#15803d;}
+.ai-status.error{background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;}
+
+.import-events-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.import-ev-item{border:1px solid var(--border);border-radius:8px;padding:12px 14px;background:#fafafa;display:flex;align-items:flex-start;gap:12px;}
+.import-ev-item .icheck{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.import-ev-item.selected .icheck{background:var(--red);border-color:var(--red);}
+.import-ev-item.selected .icheck::after{content:'✓';color:#fff;font-size:0.65rem;font-weight:700;}
+.import-ev-item{cursor:pointer;transition:background 0.15s;}
+.import-ev-item:hover{background:#f0f0f0;}
+.import-ev-item.selected{background:#fff5f5;border-color:#fca5a5;}
+.iev-info{flex:1;}
+.iev-name{font-family:var(--font-cond);font-size:0.95rem;font-weight:800;}
+.iev-meta{font-size:0.78rem;color:var(--muted);margin-top:2px;font-family:var(--mono);}
+.iev-edit{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:8px;}
+.iev-edit input{padding:6px 10px;font-size:0.82rem;}
+
+/* CONFLICT TOAST */
+.c-toast{position:fixed;top:62px;left:50%;transform:translateX(-50%) translateY(-20px);background:#7a3000;color:#fff;padding:10px 18px;border-radius:6px;font-size:0.84rem;font-weight:600;opacity:0;transition:all 0.25s;z-index:500;white-space:nowrap;pointer-events:none;}
+.c-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html" title="Terug naar dashboard">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-sep">Planning</div>
+  </a>
+  <div class="topbar-right">
+    <a class="t-link" href="checkin.html" target="_blank">🚚 Check-in</a>
+    <a class="t-link" href="dashboard.html" target="_blank">📊 Dashboard</a>
+    <a class="t-link" href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
+    <button class="btn-top btn-pdf" onclick="openWeekPDF()">🖨 Week PDF</button>
+    <button class="btn-top btn-import" onclick="openImport()">📸 Import agenda</button>
+    <button class="btn-top btn-new-ev" onclick="openAddEvent(null)">+ Event toevoegen</button>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="truck-panel">
+    <div class="tp-inner" id="tp-inner"></div>
+  </div>
+  <div class="week-view">
+    <div class="week-nav">
+      <button class="wnav-btn" onclick="shiftWeek(-1)">◀ Vorige</button>
+      <button class="wnav-btn today" onclick="goToday()">Vandaag</button>
+      <div class="week-label" id="week-label"></div>
+      <button class="wnav-btn" onclick="shiftWeek(1)">Volgende ▶</button>
+    </div>
+    <div class="week-grid" id="week-grid"></div>
+  </div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="overlay hidden" id="event-overlay">
+  <div class="modal">
+    <h3 id="ev-modal-title">📅 Event toevoegen</h3>
+    <div class="fg">
+      <span class="flbl">Naam event</span>
+      <input type="text" id="ev-name" placeholder="bijv. Gentse Feesten, Weekmarkt...">
+    </div>
+    <div class="fg">
+      <span class="flbl">Locatie</span>
+      <input type="text" id="ev-loc" placeholder="Stad of adres">
+    </div>
+    <div class="fg">
+      <span class="flbl">Startdatum</span>
+      <input type="date" id="ev-start" oninput="updPrev()">
+    </div>
+    <div class="fg">
+      <span class="flbl">Aantal dagen</span>
+      <div class="dur-ctrl">
+        <button class="dur-btn" type="button" onclick="chDur(-1)">−</button>
+        <div class="dur-val" id="dur-val">1 dag</div>
+        <button class="dur-btn" type="button" onclick="chDur(1)">+</button>
+      </div>
+      <div class="date-prev" id="date-prev"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" type="button" onclick="closeEvModal()">Annuleren</button>
+      <button class="btn-primary" type="button" onclick="saveEvent()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRUCK PICKER -->
+<div class="overlay hidden" id="picker-overlay">
+  <div class="truck-picker">
+    <div class="tpk-head">
+      <h3 id="picker-title">🚚 Trucks toevoegen</h3>
+      <input class="tpk-search" id="tpk-search" type="text" placeholder="Zoek truck..." oninput="renderPicker()">
+    </div>
+    <div class="tpk-body" id="tpk-body"></div>
+    <div class="tpk-foot">
+      <div class="tpk-cnt"><strong id="picker-cnt">0</strong> geselecteerd</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-cancel" type="button" onclick="closePicker()">Annuleren</button>
+        <button class="btn-primary" type="button" onclick="confirmPicker()">✓ Toevoegen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF PREVIEW -->
+<div class="overlay hidden" id="pdf-overlay">
+  <div class="pdf-modal">
+    <div class="pdf-modal-head">
+      <h3>🖨 Week overzicht</h3>
+      <button class="btn-cancel" type="button" onclick="closePDF()" style="padding:5px 12px">✕</button>
+    </div>
+    <div class="pdf-modal-body" id="pdf-body"></div>
+    <div class="pdf-modal-foot">
+      <button class="btn-cancel" type="button" onclick="closePDF()">Sluiten</button>
+      <button class="btn-primary" type="button" onclick="window.print()">🖨 Afdrukken / Opslaan als PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay hidden" id="import-overlay">
+  <div class="import-modal">
+    <div class="import-head">
+      <h3>📸 Agenda importeren via screenshot</h3>
+      <p>Upload een printscreen van je Outlook agenda — Claude leest de events automatisch uit.</p>
+    </div>
+    <div class="import-body">
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('img-input').click()" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+        <div class="drop-zone-icon">📷</div>
+        <div class="drop-zone-title">Sleep een screenshot hierheen</div>
+        <div class="drop-zone-sub">of klik om een afbeelding te kiezen · JPG, PNG, screenshot</div>
+      </div>
+      <input type="file" id="img-input" accept="image/*" style="display:none" onchange="onImgSelect(event)">
+      <img id="img-preview" alt="Preview">
+
+      <div class="ai-status" id="ai-status"></div>
+      <div class="import-events-list" id="import-ev-list"></div>
+    </div>
+    <div class="import-foot">
+      <button class="btn-cancel" type="button" onclick="closeImport()">Annuleren</button>
+      <button class="btn-primary" type="button" id="btn-import-sel" onclick="importSelected()" style="display:none">✓ Geselecteerde events importeren</button>
+    </div>
+  </div>
+</div>
+
+<div class="c-toast" id="c-toast"></div>
+
+<script>
+// ── TRUCK DATA ─────────────────────────────────────────
+const GROUPS=[
+  {label:'🍟 Frituurwagens',color:'#b45309',bg:'#fef3c7',trucks:['Bicky Burger Wagen 201','Food Wagen (Snackmuur) 305','Food container (Friet) C201','Food container (Friet-2_Vallen) C203','Friet Container (Postel) 501','Friet Wagen (HR-ketel) 502','Friet Wagen 304','Friet Wagen 402','Friet Wagen 403','Friet Wagen 503','Friet Wagen 504','Friet Wagen 801','Friet Wagen 802','Friet Wagen 803','Friet Wagen 804','Friet Wagen 805','Friet Wagen 806','Friet Wagen 901','Jumper 302']},
+  {label:'🍔 Hamburger',color:'#e8001d',bg:'#fde8e8',trucks:['Food container (Hamburger) C202','Hamburger Container 12','Hamburger Container 13','Hamburger Wagen (Kiosk) 14','Hamburger Wagen 202','Hamburger Wagen 306']},
+  {label:'🍕 Pizza & Pasta',color:'#c2410c',bg:'#ffedd5',trucks:['Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105']},
+  {label:'🍦 Sweet & Ijs',color:'#7c3aed',bg:'#ede9fe',trucks:['Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53']},
+  {label:'🍺 Tap & Dranken',color:'#1d4ed8',bg:'#dbeafe',trucks:['Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43']},
+  {label:'📦 Support',color:'#374151',bg:'#f3f4f6',trucks:['Brascheria 1','Bureau container 71','Bureau container 72','Fiat 404','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209','Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107','Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208','Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102','Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C204','Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102']}
+];
+const TC={};
+GROUPS.forEach(g=>g.trucks.forEach(t=>TC[t]={color:g.color,bg:g.bg}));
+
+// ── STATE ──────────────────────────────────────────────
+let events=JSON.parse(localStorage.getItem('ft_planning_v1')||'[]');
+let wkStart=monday(new Date());
+let editId=null, pkEvId=null, pkSel=new Set(), dur=1;
+const showPl={};
+let dragging=null;
+let importedEvents=[];
+
+const EVCOLORS=['#e8001d','#c2410c','#b45309','#1d4ed8','#15803d','#7c3aed','#0e7490','#be185d'];
+function rndColor(){return EVCOLORS[Math.floor(Math.random()*EVCOLORS.length)];}
+function save(){
+  localStorage.setItem('ft_planning_v1',JSON.stringify(events));
+  fbdb.ref('ft_planning_v1').set(events).catch(err => console.warn('Firebase save mislukt:', err));
+}
+
+// Sanitize events — Firebase slaat lege arrays niet op, dus altijd defaults zetten
+function sanitizeEvents(arr){
+  if(!Array.isArray(arr)) arr = Object.values(arr || {});
+  return arr.filter(e => e && e.id).map(e => ({
+    id: e.id,
+    name: e.name || 'Event',
+    location: e.location || '',
+    startDate: e.startDate || '',
+    endDate: e.endDate || e.startDate || '',
+    trucks: Array.isArray(e.trucks) ? e.trucks : [],
+    color: e.color || '#0078D4'
+  }));
+}
+
+// Real-time listener — planning blijft gesync over alle apparaten
+fbdb.ref('ft_planning_v1').on('value', snap => {
+  const data = snap.val();
+  if (data) {
+    events = sanitizeEvents(data);
+    localStorage.setItem('ft_planning_v1', JSON.stringify(events));
+    renderWeek();
+  } else {
+    // Firebase is leeg → push de seed events erin
+    if (events.length) fbdb.ref('ft_planning_v1').set(events);
+  }
+});
+
+// ── DATE UTILS ─────────────────────────────────────────
+function monday(d){const dt=new Date(d);const day=dt.getDay()||7;dt.setDate(dt.getDate()-day+1);dt.setHours(0,0,0,0);return dt;}
+function addD(d,n){const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt;}
+function toStr(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
+function parseD(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function fmtS(s){return parseD(s).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});}
+function fmtL(s){return parseD(s).toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+function isToday(s){return s===toStr(new Date());}
+function wkNum(d){const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dn=dt.getUTCDay()||7;dt.setUTCDate(dt.getUTCDate()+4-dn);const ys=new Date(Date.UTC(dt.getUTCFullYear(),0,1));return Math.ceil((((dt-ys)/86400000)+1)/7);}
+const DAYS=['Ma','Di','Wo','Do','Vr','Za','Zo'];
+const DAYS_FULL=['Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag','Zondag'];
+
+// ── TRUCK PANEL ────────────────────────────────────────
+function plannedW(){
+  const ws=toStr(wkStart),we=toStr(addD(wkStart,6));
+  const pl=new Set();
+  events.forEach(ev=>{if(ev.startDate<=we&&ev.endDate>=ws)ev.trucks.forEach(t=>pl.add(t));});
+  return pl;
+}
+function buildPanel(){
+  const pl=plannedW();
+  let h='';
+  GROUPS.forEach((g,gi)=>{
+    const av=g.trucks.filter(t=>!pl.has(t));
+    const hid=g.trucks.length-av.length;
+    const show=showPl[gi];
+    const chips=show?g.trucks:av;
+    h+=`<div>
+      <div class="tp-hdr" onclick="tpTog(${gi})">
+        <div class="tp-dot" style="background:${g.color}"></div>${g.label}
+        <span class="tp-chev">▾</span>
+      </div>
+      <div class="tp-trucks" id="tg-${gi}">
+        ${chips.map(t=>{
+          const ip=pl.has(t);
+          const te=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          return `<div class="truck-chip${ip?' planned':''}" draggable="${!ip}" style="border-left-color:${g.color}"
+            ${!ip?`ondragstart="onDS(event,'${te}',this)" ondragend="onDE(this)"`:''}
+          ><div class="chip-dot" style="background:${g.color}"></div>${t}</div>`;
+        }).join('')}
+        ${chips.length===0?`<div class="tp-empty-grp">Alle ingepland</div>`:''}
+        ${hid>0?`<div class="tp-foot-row"><span class="tp-pl-lbl">${hid} ingepland</span><button type="button" class="tp-show-btn" onclick="togShow(${gi})">${show?'verberg':'toon'}</button></div>`:''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('tp-inner').innerHTML=h;
+}
+function tpTog(gi){const el=document.getElementById('tg-'+gi);el.classList.toggle('hidden');el.previousElementSibling.classList.toggle('collapsed');}
+function togShow(gi){showPl[gi]=!showPl[gi];buildPanel();}
+
+// ── DRAG ───────────────────────────────────────────────
+function onDS(e,t,el){dragging=t;e.dataTransfer.setData('text/plain',t);e.dataTransfer.effectAllowed='copy';el.classList.add('dragging');}
+function onDE(el){el.classList.remove('dragging');dragging=null;}
+function onDOv(e,id){e.preventDefault();e.dataTransfer.dropEffect='copy';document.querySelectorAll('.event-card').forEach(c=>c.classList.remove('drag-over'));document.getElementById('ec-'+id)?.classList.add('drag-over');}
+function onDLv(id){document.getElementById('ec-'+id)?.classList.remove('drag-over');}
+function onDrp(e,id){e.preventDefault();document.querySelectorAll('.event-card').forEach(c=>c.classList.remove('drag-over'));const t=e.dataTransfer.getData('text/plain');if(t)addTrucks(id,[t]);}
+
+function addTrucks(evId,trucks){
+  const ev=events.find(e=>e.id===evId);if(!ev)return;
+  trucks.forEach(t=>{
+    if(ev.trucks.includes(t))return;
+    const cf=events.find(o=>o.id!==evId&&o.trucks.includes(t)&&o.startDate<=ev.endDate&&o.endDate>=ev.startDate);
+    if(cf)showToast(`⚠️ ${t} staat al op "${cf.name}" (${fmtS(cf.startDate)})`);
+    ev.trucks.push(t);
+  });
+  save();renderWeek();
+}
+function rmTruck(evId,truck){
+  const ev=events.find(e=>e.id===evId);if(!ev)return;
+  ev.trucks=ev.trucks.filter(t=>t!==truck);
+  save();renderWeek();
+}
+function showToast(msg){const t=document.getElementById('c-toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+
+// ── WEEK RENDER ────────────────────────────────────────
+function shiftWeek(n){wkStart=addD(wkStart,n*7);renderWeek();}
+function goToday(){wkStart=monday(new Date());renderWeek();}
+
+function renderWeek(){
+  const days=Array.from({length:7},(_,i)=>addD(wkStart,i));
+  const f=days[0],l=days[6];
+  document.getElementById('week-label').textContent=`Week ${wkNum(f)} — ${f.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})} t/m ${l.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}`;
+
+  document.getElementById('week-grid').innerHTML=days.map((day,di)=>{
+    const ds=toStr(day);
+    const dayEvs=events.filter(ev=>ev.startDate<=ds&&ev.endDate>=ds);
+    const evHtml=dayEvs.map(ev=>{
+      const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
+      const te=t=>t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const tHtml=ev.trucks.length
+        ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<div class="assigned-truck" style="background:${c.bg};color:${c.color}"><div class="at-dot" style="background:${c.color}"></div><span class="at-name">${t}</span><span class="at-rm" onclick="rmTruck(${ev.id},'${te(t)}')">✕</span></div>`;}).join('')
+        :`<div class="drop-hint">Sleep truck hier of klik +</div>`;
+      return `<div class="event-card" id="ec-${ev.id}" ondragover="onDOv(event,${ev.id})" ondragleave="onDLv(${ev.id})" ondrop="onDrp(event,${ev.id})">
+        <div class="event-head" style="background:${ev.color}18;border-bottom:2px solid ${ev.color}50">
+          <div class="ev-head-left">
+            <div class="ev-name">${ev.name}</div>
+            ${ev.location?`<div class="ev-loc">📍 ${ev.location}</div>`:''}
+            ${nD>1?`<div class="ev-days-tag" style="background:${ev.color}18;color:${ev.color}">${nD} dagen · t/m ${fmtS(ev.endDate)}</div>`:''}
+          </div>
+          <div class="ev-btns">
+            <button type="button" class="ev-btn" onclick="printEv(${ev.id})">🖨</button>
+            <button type="button" class="ev-btn" onclick="editEv(${ev.id})">✏️</button>
+            <button type="button" class="ev-btn del" onclick="delEv(${ev.id})">✕</button>
+          </div>
+        </div>
+        <div class="ev-trucks-area">
+          <button type="button" class="btn-add-trucks" onclick="openPicker(${ev.id})">+ Trucks toevoegen</button>
+          ${tHtml}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="day-col${isToday(ds)?' today-col':''}">
+      <div class="day-head">
+        <div><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
+        <button type="button" class="btn-day-add" onclick="openAddEvent('${ds}')">+</button>
+      </div>
+      <div class="day-events">${evHtml||'<div class="empty-day">Geen events</div>'}</div>
+    </div>`;
+  }).join('');
+  buildPanel();
+}
+
+// ── EVENT CRUD ─────────────────────────────────────────
+function chDur(n){dur=Math.max(1,Math.min(30,dur+n));document.getElementById('dur-val').textContent=dur===1?'1 dag':`${dur} dagen`;updPrev();}
+function updPrev(){
+  const s=document.getElementById('ev-start').value;
+  if(!s){document.getElementById('date-prev').textContent='';return;}
+  const e=toStr(addD(parseD(s),dur-1));
+  document.getElementById('date-prev').textContent=dur===1?fmtL(s):`${fmtS(s)} → ${fmtS(e)}`;
+}
+
+function openAddEvent(ds){
+  editId=null;dur=1;
+  document.getElementById('ev-modal-title').textContent='📅 Event toevoegen';
+  document.getElementById('ev-name').value='';
+  document.getElementById('ev-loc').value='';
+  document.getElementById('ev-start').value=ds||toStr(new Date());
+  document.getElementById('dur-val').textContent='1 dag';
+  updPrev();
+  document.getElementById('event-overlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('ev-name').focus(),80);
+}
+function editEv(id){
+  const ev=events.find(e=>e.id===id);if(!ev)return;
+  editId=id;
+  dur=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
+  document.getElementById('ev-modal-title').textContent='✏️ Event bewerken';
+  document.getElementById('ev-name').value=ev.name;
+  document.getElementById('ev-loc').value=ev.location||'';
+  document.getElementById('ev-start').value=ev.startDate;
+  document.getElementById('dur-val').textContent=dur===1?'1 dag':`${dur} dagen`;
+  updPrev();
+  document.getElementById('event-overlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('ev-name').focus(),80);
+}
+function closeEvModal(){document.getElementById('event-overlay').classList.add('hidden');editId=null;}
+function saveEvent(){
+  const name=document.getElementById('ev-name').value.trim();
+  const loc=document.getElementById('ev-loc').value.trim();
+  const start=document.getElementById('ev-start').value;
+  if(!name){alert('Vul een naam in.');return;}
+  if(!start){alert('Kies een startdatum.');return;}
+  const end=toStr(addD(parseD(start),dur-1));
+  if(editId){events=events.map(e=>e.id===editId?{...e,name,location:loc,startDate:start,endDate:end}:e);}
+  else{events.push({id:Date.now(),name,location:loc,startDate:start,endDate:end,trucks:[],color:rndColor()});}
+  save();closeEvModal();renderWeek();
+}
+function delEv(id){
+  const ev=events.find(e=>e.id===id);if(!ev)return;
+  if(!confirm(`Event "${ev.name}" verwijderen?`))return;
+  events=events.filter(e=>e.id!==id);save();renderWeek();
+}
+
+// ── TRUCK PICKER ────────────────────────────────────────
+function openPicker(evId){
+  pkEvId=evId;pkSel=new Set();
+  const ev=events.find(e=>e.id===evId);
+  document.getElementById('picker-title').textContent=`🚚 Trucks toevoegen — ${ev?.name||''}`;
+  document.getElementById('tpk-search').value='';
+  renderPicker();
+  document.getElementById('picker-overlay').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('tpk-search').focus(),80);
+}
+function closePicker(){document.getElementById('picker-overlay').classList.add('hidden');pkEvId=null;}
+function renderPicker(){
+  const q=document.getElementById('tpk-search').value.toLowerCase();
+  const ev=events.find(e=>e.id===pkEvId);
+  const already=new Set(ev?.trucks||[]);
+  let h='';
+  GROUPS.forEach(g=>{
+    const rows=g.trucks.filter(t=>!q||t.toLowerCase().includes(q));
+    if(!rows.length)return;
+    h+=`<div class="tpk-grp"><div class="tpk-gdot" style="background:${g.color}"></div>${g.label}</div>`;
+    rows.forEach(t=>{
+      const sel=pkSel.has(t),al=already.has(t);
+      const te=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      h+=`<div class="tpk-row${sel?' sel':''}${al?' already':''}" onclick="${al?'': `pkTog('${te}',this)`}">
+        <div class="tpk-chk"></div><div class="tpk-rdot" style="background:${g.color}"></div>
+        <div class="tpk-name">${t}</div>${al?'<div class="tpk-already">al toegevoegd</div>':''}
+      </div>`;
+    });
+  });
+  document.getElementById('tpk-body').innerHTML=h||'<div style="padding:20px;text-align:center;color:#aaa">Niet gevonden</div>';
+  document.getElementById('picker-cnt').textContent=pkSel.size;
+}
+function pkTog(t,row){
+  if(pkSel.has(t)){pkSel.delete(t);row.classList.remove('sel');}
+  else{pkSel.add(t);row.classList.add('sel');}
+  document.getElementById('picker-cnt').textContent=pkSel.size;
+}
+function confirmPicker(){if(pkSel.size)addTrucks(pkEvId,[...pkSel]);closePicker();}
+
+// ── WEEK PDF ───────────────────────────────────────────
+function openWeekPDF(){
+  const days=Array.from({length:7},(_,i)=>addD(wkStart,i));
+  const f=days[0],l=days[6];
+  const wLbl=`Week ${wkNum(f)} — ${f.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})} t/m ${l.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}`;
+  const dayBlocks=days.map((day,di)=>{
+    const ds=toStr(day);
+    const dayEvs=events.filter(ev=>ev.startDate<=ds&&ev.endDate>=ds);
+    const isT=isToday(ds);
+    const rows=dayEvs.map(ev=>{
+      const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
+      const chips=ev.trucks.length
+        ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<div class="pdf-chip" style="background:${c.bg};color:${c.color}"><div class="pdf-chip-dot" style="background:${c.color}"></div>${t}</div>`;}).join('')
+        :'<div style="font-size:0.78rem;color:#aaa;font-style:italic">Geen trucks</div>';
+      return `<div class="pdf-ev-row">
+        <div class="pdf-ev-name" style="color:${ev.color}">${ev.name}</div>
+        <div class="pdf-ev-meta">${ev.location?'📍 '+ev.location+' · ':''}${nD>1?nD+' dagen · t/m '+fmtS(ev.endDate):'1 dag'} · ${ev.trucks.length} truck${ev.trucks.length!==1?'s':''}</div>
+        <div class="pdf-chips">${chips}</div>
+      </div>`;
+    }).join('');
+    return `<div class="pdf-day-block">
+      <div class="pdf-day-hdr${isT?' today-day':''}">${DAYS_FULL[di]} ${day.getDate()} ${day.toLocaleDateString('nl-NL',{month:'long'})}${isT?' · Vandaag':''}</div>
+      ${dayEvs.length?rows:'<div class="pdf-no-events">Geen events gepland</div>'}
+    </div>`;
+  }).join('');
+  document.getElementById('pdf-body').innerHTML=`<div class="pdf-week-title">${wLbl}</div><div class="pdf-week-sub">Señor Snacks · ${new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>${dayBlocks}`;
+  document.getElementById('pdf-overlay').classList.remove('hidden');
+}
+function closePDF(){document.getElementById('pdf-overlay').classList.add('hidden');}
+
+function printEv(id){
+  const ev=events.find(e=>e.id===id);if(!ev)return;
+  const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
+  const dL=nD===1?fmtL(ev.startDate):`${fmtS(ev.startDate)} t/m ${fmtS(ev.endDate)} (${nD} dagen)`;
+  const chips=ev.trucks.length
+    ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<div class="pdf-chip" style="background:${c.bg};color:${c.color};margin-bottom:4px"><div class="pdf-chip-dot" style="background:${c.color}"></div>${t}</div>`;}).join('')
+    :'<p style="color:#aaa;font-style:italic">Geen trucks</p>';
+  document.getElementById('pdf-body').innerHTML=`<div class="pdf-week-title">${ev.name}</div><div class="pdf-week-sub">📍 ${ev.location||'—'} · 📅 ${dL}</div><div style="font-family:var(--font-cond);font-size:1rem;font-weight:700;margin-bottom:10px">🚚 ${ev.trucks.length} truck${ev.trucks.length!==1?'s':''}</div><div class="pdf-chips" style="flex-direction:column;align-items:flex-start">${chips}</div>`;
+  document.getElementById('pdf-overlay').classList.remove('hidden');
+}
+
+// ── SCREENSHOT IMPORT ──────────────────────────────────
+let importImgB64=null;
+
+function openImport(){
+  importImgB64=null;importedEvents=[];
+  document.getElementById('img-preview').style.display='none';
+  document.getElementById('img-preview').src='';
+  document.getElementById('ai-status').style.display='none';
+  document.getElementById('import-ev-list').innerHTML='';
+  document.getElementById('btn-import-sel').style.display='none';
+  document.getElementById('img-input').value='';
+  document.getElementById('import-overlay').classList.remove('hidden');
+}
+function closeImport(){document.getElementById('import-overlay').classList.add('hidden');}
+
+function dzOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-active');}
+function dzLeave(){document.getElementById('drop-zone').classList.remove('drag-active');}
+function dzDrop(e){
+  e.preventDefault();dzLeave();
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type.startsWith('image/'))loadImg(file);
+}
+function onImgSelect(e){const file=e.target.files[0];if(file)loadImg(file);}
+
+function loadImg(file){
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const src=ev.target.result;
+    importImgB64=src.split(',')[1];
+    const preview=document.getElementById('img-preview');
+    preview.src=src;preview.style.display='block';
+    analyzeImage();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeImage(){
+  const status=document.getElementById('ai-status');
+  status.style.display='block';
+  status.className='ai-status loading';
+  status.textContent='⏳ Claude analyseert de agenda... even geduld.';
+  document.getElementById('import-ev-list').innerHTML='';
+  document.getElementById('btn-import-sel').style.display='none';
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{
+          role:'user',
+          content:[
+            {type:'image',source:{type:'base64',media_type:'image/jpeg',data:importImgB64}},
+            {type:'text',text:`Dit is een screenshot van een Outlook agenda. Extraheer ALLE zichtbare events/afspraken.
+Geef ENKEL een JSON array terug, geen uitleg, geen markdown backticks.
+Format:
+[{"name":"naam van het event","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","location":"locatie of leeg"}]
+
+Regels:
+- Als er geen einddatum is, is endDate gelijk aan startDate
+- Datums altijd in YYYY-MM-DD formaat
+- Als je het jaar niet zeker weet, gebruik dan het huidige jaar (${new Date().getFullYear()})
+- Locatie mag leeg string zijn als niet vermeld
+- Negeer private/persoonlijke afspraken als ze duidelijk niet zakelijk zijn
+- Extraheer ALLE zichtbare events, ook meerdaagse`}
+          ]
+        }]
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error?.message||'API fout');
+    const text=data.content[0].text.trim();
+    // Strip markdown if present
+    const clean=text.replace(/```json?/g,'').replace(/```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    showImportedEvents(parsed);
+    status.className='ai-status success';
+    status.textContent=`✓ ${parsed.length} event${parsed.length!==1?'s':''} gevonden! Selecteer wat je wil importeren.`;
+  }catch(err){
+    status.className='ai-status error';
+    status.textContent='❌ Fout: '+err.message+' — Probeer opnieuw of voer events manueel in.';
+    console.error(err);
+  }
+}
+
+function showImportedEvents(evs){
+  importedEvents=evs.map((e,i)=>({...e,_i:i,_sel:true}));
+  const list=document.getElementById('import-ev-list');
+  list.innerHTML=importedEvents.map((ev,i)=>`
+    <div class="import-ev-item selected" id="iev-${i}" onclick="togIEv(${i})">
+      <div class="icheck"></div>
+      <div class="iev-info">
+        <div class="iev-name">${ev.name}</div>
+        <div class="iev-meta">${fmtS(ev.startDate)}${ev.endDate!==ev.startDate?' → '+fmtS(ev.endDate):''}${ev.location?' · 📍 '+ev.location:''}</div>
+        <div class="iev-edit" onclick="event.stopPropagation()">
+          <input type="text" value="${ev.name}" placeholder="Naam" oninput="updIEv(${i},'name',this.value)">
+          <input type="date" value="${ev.startDate}" oninput="updIEv(${i},'startDate',this.value)">
+          <input type="date" value="${ev.endDate}" oninput="updIEv(${i},'endDate',this.value)">
+        </div>
+      </div>
+    </div>`).join('');
+  document.getElementById('btn-import-sel').style.display='block';
+}
+
+function togIEv(i){
+  importedEvents[i]._sel=!importedEvents[i]._sel;
+  document.getElementById('iev-'+i).classList.toggle('selected',importedEvents[i]._sel);
+}
+function updIEv(i,field,val){importedEvents[i][field]=val;}
+
+function importSelected(){
+  const sel=importedEvents.filter(e=>e._sel);
+  if(!sel.length){alert('Selecteer minstens één event.');return;}
+  sel.forEach(e=>{
+    events.push({
+      id:Date.now()+Math.random(),
+      name:e.name||'Event',
+      location:e.location||'',
+      startDate:e.startDate,
+      endDate:e.endDate||e.startDate,
+      trucks:[],
+      color:rndColor()
+    });
+  });
+  save();closeImport();
+  // Ga naar de week van het eerste event
+  const first=sel[0];
+  if(first.startDate){wkStart=monday(parseD(first.startDate));}
+  renderWeek();
+  showToast(`✓ ${sel.length} event${sel.length!==1?'s':''} geïmporteerd!`);
+}
+
+// Close overlays on outside click + ESC
+['event-overlay','picker-overlay','pdf-overlay','import-overlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.add('hidden');});
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')['event-overlay','picker-overlay','pdf-overlay','import-overlay'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+});
+
+// ── PRE-SEED: events uit Outlook agenda (mei-juli 2026) ────
+// Echte Microsoft 365 Outlook kleuren:
+// #C19C00 = Geel    → feesten, events, parties
+// #CA5010 = Oranje  → friet/food leveringen
+// #498205 = Groen   → leveringen, verhuur werk
+// #0078D4 = Blauw   → sport, cross, voetbal
+// #038387 = Cyaan   → langlopende verhuur
+// #750B1C = Wijn    → POSTEL
+// #69797E = Grijs   → intern, poetsfirma
+// #C50F1F = Rood    → waarschuwingen
+
+const SEED_EVENTS = [
+  // ── LANGLOPENDE VERHUUR ─────────────────────────────
+  {id:1090,name:"VERHUUR CONTAINER ATLAS COPCO",location:"Atlas Copco",startDate:"2026-04-14",endDate:"2026-09-30",trucks:["Food container (Friet-2_Vallen) C203"],color:"#038387"},
+  {id:1091,name:"VH Stad Geel Bureau Container + 1 Kassa Locket Zomert",location:"Stad Geel",startDate:"2026-04-28",endDate:"2026-05-26",trucks:[],color:"#498205"},
+  {id:1076,name:"2 kassa units Frinket Geel - Jochen Vandeven Stadspaek",location:"Stadspaek Geel",startDate:"2026-05-28",endDate:"2026-06-07",trucks:[],color:"#038387"},
+
+  // ── WEEK 4-10 MEI ───────────────────────────────────
+  {id:1001,name:"Weerdse Bierfeesten 5 pot (504)",location:"Weerde",startDate:"2026-05-04",endDate:"2026-05-04",trucks:[],color:"#C19C00"},
+  {id:1002,name:"UCLL 181 frieten - plantaardige olie enkel frietjes",location:"UCLL",startDate:"2026-05-04",endDate:"2026-05-04",trucks:[],color:"#CA5010"},
+  {id:1003,name:"40 tafels en 80 banken afhalen namiddag 04/05",location:"",startDate:"2026-05-04",endDate:"2026-05-04",trucks:[],color:"#498205"},
+  {id:1004,name:"Poetsfirma 2",location:"",startDate:"2026-05-05",endDate:"2026-05-05",trucks:[],color:"#69797E"},
+  {id:1005,name:"Shownamiddag Mario - Puyenbroek tent 630 man",location:"Puyenbrug 1, Machtebeke",startDate:"2026-05-05",endDate:"2026-05-05",trucks:[],color:"#004E8C"},
+  {id:1006,name:"Janssen Hamburgers + Beerse 50 vlees",location:"Beerse",startDate:"2026-05-05",endDate:"2026-05-05",trucks:[],color:"#CA5010"},
+  {id:1007,name:"Optie Jansens Wafels 150 man",location:"",startDate:"2026-05-05",endDate:"2026-05-05",trucks:[],color:"#CA5010"},
+  {id:1008,name:"Overleg catering zomerfestival Helderwerit",location:"Vergaderzaal Eekhoorn",startDate:"2026-05-05",endDate:"2026-05-05",trucks:[],color:"#69797E"},
+  {id:1009,name:"Wortel Rommelmarkt",location:"Wortel",startDate:"2026-05-05",endDate:"2026-05-05",trucks:[],color:"#C19C00"},
+  {id:1010,name:"Francis hallaar 4 pot met koelteog",location:"Hallaar",startDate:"2026-05-06",endDate:"2026-05-06",trucks:[],color:"#498205"},
+  {id:1011,name:"BOREALIS BERLIN - 3 dagen - enkel friet",location:"Berlin",startDate:"2026-05-06",endDate:"2026-05-08",trucks:[],color:"#004E8C"},
+  {id:1012,name:"5 pot met materiaal School PUNT - donderdag namiddag leveren",location:"",startDate:"2026-05-07",endDate:"2026-05-07",trucks:[],color:"#498205"},
+  {id:1013,name:"Voetbal hallaar - Yves 0479/649636",location:"Hallaar",startDate:"2026-05-07",endDate:"2026-05-09",trucks:[],color:"#498205"},
+  {id:1014,name:"Shownamiddag Mario - 270 man max 3-4 man",location:"",startDate:"2026-05-07",endDate:"2026-05-07",trucks:[],color:"#004E8C"},
+  {id:1015,name:"UCLL Signe informeren op de middag",location:"",startDate:"2026-05-07",endDate:"2026-05-07",trucks:[],color:"#CA5010"},
+  {id:1016,name:"Feestje bedrijf ca 40 pers 12u-14u - daarna SGS",location:"",startDate:"2026-05-07",endDate:"2026-05-07",trucks:[],color:"#C19C00"},
+  {id:1017,name:"SGS Antwerpen 17u30-19u30",location:"Antwerpen",startDate:"2026-05-07",endDate:"2026-05-07",trucks:[],color:"#C19C00"},
+  {id:1018,name:"CIBOR in Middelkerke 8u00-12u00",location:"Middelkerke",startDate:"2026-05-08",endDate:"2026-05-08",trucks:[],color:"#004E8C"},
+  {id:1019,name:"Leveren vloer/kassa/tafels Antwerp Metal Fest",location:"Merksem",startDate:"2026-05-08",endDate:"2026-05-08",trucks:[],color:"#498205"},
+  {id:1020,name:"Opendeurdag Santens - feestje per stuk + hamburgers",location:"",startDate:"2026-05-08",endDate:"2026-05-08",trucks:[],color:"#C19C00"},
+  {id:1022,name:"Cross VLM Peter - Groot Lille",location:"Groot Lille",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#0078D4"},
+  {id:1023,name:"BEERSCHOT LOMMEL aftrap 18u15",location:"Lommel",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#0078D4"},
+  {id:1024,name:"POSTEL",location:"Postel",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#750B1C"},
+  {id:1025,name:"SAV Geel Thommy Fuchs GSPORT feestje 12u30-14u30",location:"Geel",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#C19C00"},
+  {id:1026,name:"Feestje Olen 16u00-18u00 50 pers",location:"Olen",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#C19C00"},
+  {id:1027,name:"Nancy Brabants 16u30 Olen ca 70 pers",location:"Olen",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#C19C00"},
+  {id:1028,name:"SAG Geel 20u-22u00 - 40 personen",location:"Geel",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#C19C00"},
+  {id:1029,name:"Rockwood Rally 19u30 open na feestje",location:"",startDate:"2026-05-09",endDate:"2026-05-09",trucks:[],color:"#0078D4"},
+  {id:1030,name:"Bromfietstreffen Rob Steyls",location:"",startDate:"2026-05-10",endDate:"2026-05-10",trucks:[],color:"#0078D4"},
+  {id:1031,name:"Cup Het Nieuwsblad - Lander Verrezen",location:"",startDate:"2026-05-10",endDate:"2026-05-10",trucks:[],color:"#0078D4"},
+  {id:1032,name:"POSTEL",location:"Postel",startDate:"2026-05-10",endDate:"2026-05-10",trucks:[],color:"#750B1C"},
+  {id:1033,name:"VH kleine frituurwagen Marc DB",location:"",startDate:"2026-05-10",endDate:"2026-05-10",trucks:[],color:"#498205"},
+
+  // ── WEEK 11-17 MEI ──────────────────────────────────
+  {id:1034,name:"VH 5 pot Stad Geel Frituurwagen Ghelamania - frieten in olie bakken",location:"Stad Geel / Ghelamania",startDate:"2026-05-12",endDate:"2026-05-12",trucks:[],color:"#498205"},
+  {id:1035,name:"Poetsfirma 2",location:"",startDate:"2026-05-12",endDate:"2026-05-12",trucks:[],color:"#69797E"},
+  {id:1036,name:"Feest Atlas Copco 40 pers - Jan Polet Wilrijk",location:"Atlas Copco, Wilrijk",startDate:"2026-05-12",endDate:"2026-05-12",trucks:[],color:"#C19C00"},
+  {id:1038,name:"Opbouw Abdijenjogging",location:"",startDate:"2026-05-13",endDate:"2026-05-13",trucks:[],color:"#498205"},
+  {id:1039,name:"B&R Bouwgroep Arendonk",location:"Arendonk",startDate:"2026-05-13",endDate:"2026-05-13",trucks:[],color:"#C19C00"},
+  {id:1040,name:"ABDIJJOGGING Golazo - Averbode",location:"Averbode",startDate:"2026-05-14",endDate:"2026-05-14",trucks:[],color:"#0078D4"},
+  {id:1041,name:"POSTEL",location:"Postel",startDate:"2026-05-14",endDate:"2026-05-14",trucks:[],color:"#750B1C"},
+  {id:1042,name:"Leveren Gladiolen frituurwagen + tafel",location:"",startDate:"2026-05-14",endDate:"2026-05-14",trucks:[],color:"#498205"},
+  {id:1043,name:"BLAUWVOET OEVEL 16u30-18u30 45 man",location:"Oevel",startDate:"2026-05-14",endDate:"2026-05-14",trucks:[],color:"#C19C00"},
+  {id:1044,name:"FEEST HULSHOUT stoofvlees",location:"Hulshout",startDate:"2026-05-14",endDate:"2026-05-15",trucks:[],color:"#C19C00"},
+  {id:1045,name:"SENOR POSTEL open - Brugdag",location:"Postel",startDate:"2026-05-15",endDate:"2026-05-15",trucks:[],color:"#750B1C"},
+  {id:1046,name:"SLORAROCK / Antwerp Metal Fest / Reggae Fort van Merksem - Bert Delville 0487886949",location:"Fort van Merksem",startDate:"2026-05-16",endDate:"2026-05-16",trucks:[],color:"#0078D4"},
+  {id:1047,name:"CROSS LOMMEL",location:"Lommel",startDate:"2026-05-16",endDate:"2026-05-16",trucks:[],color:"#0078D4"},
+  {id:1048,name:"Trekker Trek Bekkevoort - Niels Robeyn 0479/327776",location:"Bekkevoort",startDate:"2026-05-16",endDate:"2026-05-16",trucks:[],color:"#0078D4"},
+  {id:1049,name:"KOKAZ Feest Kontich Kazerne",location:"Phil Bosmansplein 1, 2550 Kontich",startDate:"2026-05-16",endDate:"2026-05-16",trucks:[],color:"#C19C00"},
+  {id:1050,name:"POSTEL",location:"Postel",startDate:"2026-05-16",endDate:"2026-05-17",trucks:[],color:"#750B1C"},
+  {id:1051,name:"FEEST HERENTALS - Luc Laenen gaat bakken",location:"Herentals",startDate:"2026-05-17",endDate:"2026-05-17",trucks:[],color:"#C19C00"},
+
+  // ── WEEK 18-24 MEI ──────────────────────────────────
+  {id:1052,name:"KVC WESTERLO AFTRAP 20u30",location:"Westerlo",startDate:"2026-05-19",endDate:"2026-05-19",trucks:[],color:"#0078D4"},
+  {id:1053,name:"Poetsfirma 3",location:"",startDate:"2026-05-19",endDate:"2026-05-19",trucks:[],color:"#69797E"},
+  {id:1054,name:"UCB Eigenbrakel - Stefan Eigenbrakel",location:"Eigenbrakel",startDate:"2026-05-19",endDate:"2026-05-19",trucks:[],color:"#CA5010"},
+  {id:1055,name:"BEAT THE BARN VOS Technics 32 personen",location:"",startDate:"2026-05-21",endDate:"2026-05-21",trucks:[],color:"#C19C00"},
+  {id:1056,name:"GLADIOLEN 3.20 voor 1 BON - ijsblokken bestellen",location:"",startDate:"2026-05-22",endDate:"2026-05-24",trucks:[],color:"#498205"},
+  {id:1057,name:"Keizersjaarsmarkt - Dhr Dag Pas",location:"",startDate:"2026-05-23",endDate:"2026-05-23",trucks:[],color:"#C19C00"},
+  {id:1058,name:"CROSS BeTeMO Lommel - Fik Hendrickx",location:"Lommel",startDate:"2026-05-23",endDate:"2026-05-23",trucks:[],color:"#0078D4"},
+  {id:1059,name:"Putte Lights On - Carl Verschueren 0475/847566",location:"Putte",startDate:"2026-05-23",endDate:"2026-05-23",trucks:[],color:"#0078D4"},
+  {id:1060,name:"Opendeurdag Brandweer Lananken 1 combi - Mick Aerts",location:"Lananken",startDate:"2026-05-23",endDate:"2026-05-23",trucks:[],color:"#C19C00"},
+  {id:1061,name:"POSTEL",location:"Postel",startDate:"2026-05-23",endDate:"2026-05-24",trucks:[],color:"#750B1C"},
+  {id:1062,name:"Feestje op Beerschot 13u00-15u00",location:"Beerschot",startDate:"2026-05-23",endDate:"2026-05-23",trucks:[],color:"#C19C00"},
+  {id:1063,name:"FEESTJE OP BEERSCHOT enkel combi",location:"Beerschot",startDate:"2026-05-24",endDate:"2026-05-24",trucks:[],color:"#C19C00"},
+
+  // ── WEEK 25-31 MEI ──────────────────────────────────
+  {id:1064,name:"GEEN FEESTEN",location:"",startDate:"2026-05-22",endDate:"2026-05-25",trucks:[],color:"#C50F1F"},
+  {id:1065,name:"POSTEL 2025 Senor met 2 kramen open",location:"Postel",startDate:"2026-05-25",endDate:"2026-05-25",trucks:[],color:"#750B1C"},
+  {id:1066,name:"Rommelmarkt Wortel - Jan Tilburghs 0474/844684",location:"Kolonie Wortel",startDate:"2026-05-25",endDate:"2026-05-25",trucks:[],color:"#C19C00"},
+  {id:1067,name:"Poetsfirma 3",location:"",startDate:"2026-05-26",endDate:"2026-05-26",trucks:[],color:"#69797E"},
+  {id:1068,name:"Pannenkoeken Geel Sociaal Huis 13u30-17u00 - 600 stuks - Julienne",location:"Sociaal Huis Geel",startDate:"2026-05-27",endDate:"2026-05-27",trucks:[],color:"#CA5010"},
+  {id:1069,name:"3 pot Jumper afhaal frituurwagen Ping Pong - via Willy",location:"",startDate:"2026-05-29",endDate:"2026-05-29",trucks:[],color:"#498205"},
+  {id:1070,name:"AZS - 1 BON = 3.75",location:"",startDate:"2026-05-29",endDate:"2026-05-29",trucks:[],color:"#C19C00"},
+  {id:1071,name:"BEAT THE BARN 75 pers 12u00-14u00 frieten en snacks",location:"",startDate:"2026-05-29",endDate:"2026-05-29",trucks:[],color:"#C19C00"},
+  {id:1072,name:"VH Frituur/Koelwagen/Sweet - GBS LO in Oevel",location:"Oevel",startDate:"2026-05-29",endDate:"2026-05-29",trucks:[],color:"#498205"},
+  {id:1073,name:"Cross VLM Peter 0496/251093 - Vorselaar",location:"Vorselaar",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#0078D4"},
+  {id:1074,name:"Hukkelfukkers Festival + 20 foldtables",location:"",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#C19C00"},
+  {id:1075,name:"Verhuur de Wondertuin 3 pot",location:"",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#498205"},
+  {id:1077,name:"VH minimaal 4 pot School Heist",location:"Heist",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#498205"},
+  {id:1078,name:"VH School Lille Renders",location:"Lille",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#498205"},
+  {id:1079,name:"SRONG Viking met vraagteken",location:"",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#69797E"},
+  {id:1080,name:"FEEST YELLOWSTICKS 17u00-19u00 100 pers",location:"",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#C19C00"},
+  {id:1081,name:"FEEST LOMMEL 17u45-19u45",location:"Lommel",startDate:"2026-05-30",endDate:"2026-05-30",trucks:[],color:"#C19C00"},
+  {id:1082,name:"Feest 100s + Stoofvlees Patrick Aerts 0494/788824 - Mol 16u-18u",location:"Mol",startDate:"2026-05-31",endDate:"2026-05-31",trucks:[],color:"#C19C00"},
+
+  // ── WEEK 1-7 JUNI ───────────────────────────────────
+  {id:2002,name:"Poetsfirma 2",location:"",startDate:"2026-06-02",endDate:"2026-06-02",trucks:[],color:"#69797E"},
+  {id:2004,name:"Verhuur 8 pot Geel - Pascal Breugelmans - Geel werft",location:"Geel",startDate:"2026-06-04",endDate:"2026-06-04",trucks:[],color:"#498205"},
+  {id:2005,name:"PLAFOMAT WILLEBROEK - friet en hamburger",location:"Willebroek",startDate:"2026-06-04",endDate:"2026-06-04",trucks:[],color:"#CA5010"},
+  {id:2007,name:"Motorcross Sven 0479/855700",location:"Damme",startDate:"2026-06-06",endDate:"2026-06-06",trucks:[],color:"#0078D4"},
+  {id:2008,name:"POSTEL",location:"Postel",startDate:"2026-06-06",endDate:"2026-06-07",trucks:[],color:"#750B1C"},
+  {id:2009,name:"Schoolfeest VBS De Regenboog",location:"",startDate:"2026-06-06",endDate:"2026-06-06",trucks:[],color:"#C19C00"},
+  {id:2010,name:"Truckers 4MS - Bert Laenen",location:"",startDate:"2026-06-06",endDate:"2026-06-06",trucks:[],color:"#0078D4"},
+  {id:2011,name:"Feestje 60 man Tessenderlo 13u15-15u15",location:"Tessenderlo",startDate:"2026-06-06",endDate:"2026-06-06",trucks:[],color:"#C19C00"},
+  {id:2012,name:"Feestje 55 pers Via Yves Lommel 17u00-19u00",location:"Lommel",startDate:"2026-06-06",endDate:"2026-06-06",trucks:[],color:"#C19C00"},
+  {id:2013,name:"Feest Guy Anthoni - Cobra Lichtaart",location:"Lichtaart",startDate:"2026-06-07",endDate:"2026-06-07",trucks:[],color:"#C19C00"},
+
+  // ── WEEK 8-14 JUNI ──────────────────────────────────
+  {id:2022,name:"Tussen 12u-13u00 HEYTENS Middelkerke",location:"Middelkerke",startDate:"2026-06-12",endDate:"2026-06-12",trucks:[],color:"#498205"},
+  {id:2023,name:"Receptie 50 jaar SJOCK",location:"",startDate:"2026-06-13",endDate:"2026-06-13",trucks:[],color:"#C19C00"},
+  {id:2024,name:"Feest 120 personen UC Retie",location:"Retie",startDate:"2026-06-13",endDate:"2026-06-13",trucks:[],color:"#C19C00"},
+  {id:2025,name:"Feest 80 personen + Stoofvlees Tessenderlo",location:"Tessenderlo",startDate:"2026-06-14",endDate:"2026-06-14",trucks:[],color:"#C19C00"},
+  {id:2026,name:"POSTEL",location:"Postel",startDate:"2026-06-14",endDate:"2026-06-14",trucks:[],color:"#750B1C"},
+
+  // ── WEEK 15-21 JUNI ─────────────────────────────────
+  {id:2030,name:"WK Voetbal - Belgie vs Egypte 21u00",location:"",startDate:"2026-06-15",endDate:"2026-06-15",trucks:[],color:"#0078D4"},
+  {id:2031,name:"Leveren Containers Knokke",location:"Knokke",startDate:"2026-06-18",endDate:"2026-06-18",trucks:[],color:"#498205"},
+  {id:2032,name:"Feestje Beat The Barn 18u30-20u30",location:"",startDate:"2026-06-18",endDate:"2026-06-18",trucks:[],color:"#C19C00"},
+  {id:2033,name:"POSTEL",location:"Postel",startDate:"2026-06-20",endDate:"2026-06-21",trucks:[],color:"#750B1C"},
+  {id:2034,name:"Feest 50 personen Nicky Verachtert 0499610696 17u00-19u00",location:"Larum",startDate:"2026-06-20",endDate:"2026-06-20",trucks:[],color:"#C19C00"},
+  {id:2035,name:"BMX Ranst",location:"Ranst",startDate:"2026-06-21",endDate:"2026-06-21",trucks:[],color:"#0078D4"},
+  {id:2036,name:"WK Voetbal - Belgie vs Iran 21u00",location:"",startDate:"2026-06-21",endDate:"2026-06-21",trucks:[],color:"#0078D4"},
+
+  // ── WEEK 22-28 JUNI ─────────────────────────────────
+  {id:2040,name:"WILLEM ZO SNEL MOGELIJK LATEN WETEN - HELE WEEK",location:"",startDate:"2026-06-22",endDate:"2026-06-28",trucks:[],color:"#C50F1F"},
+  {id:2041,name:"Ketnet Zomerfestival Wachtebeke",location:"Wachtebeke",startDate:"2026-06-24",endDate:"2026-06-24",trucks:[],color:"#C19C00"},
+  {id:2042,name:"BALLON MEETING Grobbendonk - 1 bon = 1.5 euro",location:"Grobbendonk",startDate:"2026-06-26",endDate:"2026-06-26",trucks:[],color:"#C19C00"},
+  {id:2043,name:"GEEN FEESTEN OP VRIJDAG - vrijdag volzet",location:"",startDate:"2026-06-26",endDate:"2026-06-26",trucks:[],color:"#C50F1F"},
+  {id:2044,name:"Feestje Gladiolen Medewerkers",location:"",startDate:"2026-06-26",endDate:"2026-06-26",trucks:[],color:"#C19C00"},
+  {id:2045,name:"Keizer Karel Cup",location:"Gent",startDate:"2026-06-26",endDate:"2026-06-26",trucks:[],color:"#0078D4"},
+  {id:2047,name:"FEESTEN ALTIJD EERST NAVRAGEN",location:"",startDate:"2026-06-27",endDate:"2026-06-27",trucks:[],color:"#C50F1F"},
+  {id:2048,name:"Knokke Summercamp Moeder Tente 15u00-2u00",location:"Knokke",startDate:"2026-06-27",endDate:"2026-06-27",trucks:[],color:"#C19C00"},
+  {id:2049,name:"POSTEL",location:"Postel",startDate:"2026-06-28",endDate:"2026-06-28",trucks:[],color:"#750B1C"},
+  {id:2050,name:"Fiat 404 Wendy bakt zelf en komt",location:"",startDate:"2026-06-28",endDate:"2026-06-28",trucks:["Fiat 404"],color:"#CA5010"},
+
+  // ── WEEK 29 JUNI - 5 JULI ───────────────────────────
+  {id:2060,name:"Poetsfirma 3",location:"",startDate:"2026-06-30",endDate:"2026-06-30",trucks:[],color:"#69797E"},
+  {id:2061,name:"VH 405 Heist op den Berg - 2 tonnen + 1 bain marie",location:"Heist op den Berg",startDate:"2026-07-03",endDate:"2026-07-03",trucks:[],color:"#498205"},
+  {id:2062,name:"Trekker Trek Veerle - Guy Vos",location:"Veerle",startDate:"2026-07-04",endDate:"2026-07-04",trucks:[],color:"#0078D4"},
+  {id:2063,name:"Feestje SJOCK Festival hamburgers - Dimitri 400 man",location:"",startDate:"2026-07-04",endDate:"2026-07-04",trucks:[],color:"#C19C00"},
+  {id:2064,name:"Festi Loco Ninivo - Manu Geeroms 0479/620406",location:"Ninove",startDate:"2026-07-04",endDate:"2026-07-04",trucks:[],color:"#C19C00"},
+  {id:2065,name:"POSTEL",location:"Postel",startDate:"2026-07-04",endDate:"2026-07-05",trucks:[],color:"#750B1C"},
+
+  // ── WEEK 6-12 JULI ──────────────────────────────────
+  {id:2070,name:"Poetsfirma 2",location:"",startDate:"2026-07-07",endDate:"2026-07-07",trucks:[],color:"#69797E"},
+  {id:2072,name:"Verhuur koelwagen deuren + 10 dozen FRIET",location:"",startDate:"2026-07-11",endDate:"2026-07-21",trucks:[],color:"#038387"},
+  {id:2073,name:"Sjock Festival - Jonas van Bouwel 0493/662598",location:"Poyelheide Gierle",startDate:"2026-07-11",endDate:"2026-07-11",trucks:[],color:"#C19C00"},
+  {id:2074,name:"Trekkertrek Poppel",location:"Poppel",startDate:"2026-07-11",endDate:"2026-07-11",trucks:[],color:"#0078D4"},
+  {id:2075,name:"Summercamp Knokke 80s party 14u00",location:"Knokke",startDate:"2026-07-11",endDate:"2026-07-11",trucks:[],color:"#C19C00"},
+  {id:2076,name:"POSTEL",location:"Postel",startDate:"2026-07-11",endDate:"2026-07-12",trucks:[],color:"#750B1C"},
+  {id:2077,name:"RENOTEC Geel inzet bouwverlof 15u00-17u30",location:"Geel",startDate:"2026-07-10",endDate:"2026-07-10",trucks:[],color:"#C19C00"},
+
+  // ── WEEK 13-19 JULI ─────────────────────────────────
+  {id:2080,name:"Poetsfirma 2",location:"",startDate:"2026-07-14",endDate:"2026-07-14",trucks:[],color:"#69797E"},
+  {id:2081,name:"Francis hallaar 5 pot",location:"Hallaar",startDate:"2026-07-14",endDate:"2026-07-22",trucks:[],color:"#498205"},
+  {id:2084,name:"Short Rally Lubbeek - Eddy Verdrengh",location:"Lubbeek",startDate:"2026-07-18",endDate:"2026-07-18",trucks:[],color:"#0078D4"},
+  {id:2085,name:"Nacht v/d atletiek",location:"Heusden Zolder",startDate:"2026-07-18",endDate:"2026-07-18",trucks:[],color:"#0078D4"},
+  {id:2086,name:"POSTEL",location:"Postel",startDate:"2026-07-18",endDate:"2026-07-19",trucks:[],color:"#750B1C"},
+
+  // ── WEEK 20-26 JULI ─────────────────────────────────
+  {id:2090,name:"Optie Summercamp Knokke Jardin",location:"Knokke",startDate:"2026-07-20",endDate:"2026-07-20",trucks:[],color:"#C19C00"},
+  {id:2091,name:"Cross VLM Peter 0496/251093 - Gierle",location:"Gierle",startDate:"2026-07-25",endDate:"2026-07-25",trucks:[],color:"#0078D4"},
+  {id:2092,name:"Effenaf Festival",location:"Tielen",startDate:"2026-07-25",endDate:"2026-07-25",trucks:[],color:"#C19C00"},
+  {id:2093,name:"POSTEL",location:"Postel",startDate:"2026-07-26",endDate:"2026-07-26",trucks:[],color:"#750B1C"},
+  {id:2094,name:"Trekker Trek Vessem - Gijs 0031649696",location:"Vessem",startDate:"2026-07-26",endDate:"2026-07-26",trucks:[],color:"#0078D4"},
+];
+
+// Seed events mergen — voeg toe als ze nog niet bestaan, update bestaande seed events
+const existing = sanitizeEvents(JSON.parse(localStorage.getItem('ft_planning_v1')||'[]'));
+const existingIds = new Set(existing.map(e => e.id));
+const seedIds = new Set(SEED_EVENTS.map(e => e.id));
+// Behoud niet-seed events (handmatig toegevoegd), update seed events met nieuwe data maar bewaar trucks die al toegewezen zijn
+const userEvents = existing.filter(e => !seedIds.has(e.id));
+const updatedSeed = SEED_EVENTS.map(seed => {
+  const old = existing.find(e => e.id === seed.id);
+  if (old) {
+    // Bewaar bestaande trucks, maar gebruik de seed trucks als basis als old leeg was
+    const oldTrucks = Array.isArray(old.trucks) ? old.trucks : [];
+    return {...seed, trucks: oldTrucks.length > 0 ? oldTrucks : seed.trucks};
+  }
+  return seed;
+});
+const merged = [...userEvents, ...updatedSeed];
+localStorage.setItem('ft_planning_v1', JSON.stringify(merged));
+events = merged;
+
+// ── INIT ──────────────────────────────────────────────
+renderWeek();
+
+</script>
+</body>
+</html>
