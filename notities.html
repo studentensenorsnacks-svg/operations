@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Notities</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;--blue:#1d4ed8;
+  --bg:#efefef;--white:#fff;--text:#111;--muted:#666;--border:#d4d4d4;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{flex-shrink:0;height:54px;background:var(--white);border-bottom:3px solid var(--red);padding:0 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,0.08);z-index:50;}
+.logo-area{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.logo-icon{width:33px;height:33px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.logo-text{font-family:var(--font-cond);font-size:1.1rem;font-weight:900;}
+.logo-text span{color:var(--red);}
+.topbar-sep{font-size:0.82rem;font-weight:600;color:var(--muted);padding-left:12px;border-left:1px solid var(--border);}
+.topbar-right{display:flex;align-items:center;gap:7px;}
+.t-link{padding:5px 12px;border:1px solid var(--border);border-radius:5px;font-size:0.78rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all 0.15s;}
+.t-link:hover{border-color:var(--red);color:var(--red);}
+
+/* TABS */
+.tabs{flex-shrink:0;display:flex;background:#f0f0f0;border-bottom:1px solid var(--border);padding:0 16px;}
+.tab{padding:10px 22px;font-family:var(--font-cond);font-size:0.9rem;font-weight:800;cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;color:var(--muted);transition:all 0.15s;letter-spacing:0.02em;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--red);border-bottom-color:var(--red);}
+
+/* LAYOUT */
+.wrap{flex:1;max-width:880px;width:100%;margin:0 auto;padding:24px 18px 60px;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* CARD / FORM */
+.card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.card h2{font-family:var(--font-cond);font-size:1.4rem;font-weight:800;margin-bottom:4px;}
+.card .sub{font-size:0.85rem;color:var(--muted);margin-bottom:20px;}
+.fg{margin-bottom:16px;}
+.flbl{display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--muted);margin-bottom:6px;}
+input[type=text],textarea,select{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.95rem;color:var(--text);background:var(--white);}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--red);}
+textarea{resize:vertical;min-height:120px;line-height:1.5;}
+.form-foot{display:flex;align-items:center;gap:12px;margin-top:6px;}
+.btn-primary{padding:11px 26px;background:var(--red);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;transition:background 0.15s;}
+.btn-primary:hover{background:var(--red-dark);}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.form-hint{font-size:0.8rem;color:var(--muted);}
+
+/* STATS */
+.stats{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 18px;flex:1;min-width:120px;}
+.stat .num{font-family:var(--font-cond);font-size:1.7rem;font-weight:900;line-height:1;}
+.stat .lbl{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-top:4px;}
+.stat.r .num{color:var(--red);}
+.stat.g .num{color:var(--green);}
+.stat.b .num{color:var(--blue);}
+
+/* FILTERS */
+.filters{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.filters select,.filters input{flex:1;min-width:160px;padding:9px 12px;font-size:0.88rem;}
+
+/* DASHBOARD GROUPS */
+.day-block{margin-bottom:26px;}
+.day-head{display:flex;align-items:baseline;gap:10px;font-family:var(--font-cond);font-size:1.15rem;font-weight:800;color:var(--text);padding-bottom:6px;border-bottom:2px solid var(--red);margin-bottom:12px;}
+.day-head .day-count{font-family:var(--font);font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+.hour-block{margin-bottom:14px;}
+.hour-head{display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:0.82rem;font-weight:500;color:var(--muted);margin-bottom:7px;padding-left:2px;}
+.hour-head::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);}
+
+/* NOTE CARD */
+.note{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:7px;padding:13px 15px;margin-bottom:9px;}
+.note-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.note-name{background:#fde8ea;color:var(--red-dark);font-weight:800;font-size:0.78rem;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.03em;}
+.note-time{font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);}
+.note-del{margin-left:auto;background:none;border:none;color:#bbb;font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
+.note-del:hover{color:var(--red);background:#fde8ea;}
+.note-text{font-size:0.95rem;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty .ico{font-size:2.6rem;margin-bottom:10px;}
+.empty .txt{font-size:0.95rem;}
+
+/* TOAST */
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-24px);background:var(--green);color:#fff;padding:13px 26px;border-radius:7px;font-size:0.95rem;font-weight:700;opacity:0;transition:all 0.25s;z-index:500;box-shadow:0 6px 18px rgba(0,0,0,0.2);pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+@media(max-width:560px){
+  .topbar-sep,.t-link-label{display:none;}
+  .wrap{padding:16px 12px 50px;}
+  .card{padding:18px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html">
+    <div class="logo-icon">🌮</div>
+    <div class="logo-text">SEÑOR <span>SNACKS</span></div>
+    <div class="topbar-sep">Notities</div>
+  </a>
+  <div class="topbar-right">
+    <a class="t-link" href="dashboard.html">📊 <span class="t-link-label">Dashboard</span></a>
+    <a class="t-link" href="planning.html">📅 <span class="t-link-label">Planning</span></a>
+    <a class="t-link" href="checkin.html">🚚 <span class="t-link-label">Check-in</span></a>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" id="tab-new" onclick="switchTab('new')">✏️ Nieuwe notitie</button>
+  <button class="tab" id="tab-board" onclick="switchTab('board')">📋 Notitie dashboard</button>
+</div>
+
+<div class="wrap">
+
+  <!-- ── NIEUWE NOTITIE ─────────────────────────── -->
+  <div class="view active" id="view-new">
+    <div class="card">
+      <h2>Nieuwe notitie</h2>
+      <div class="sub">Vul je naam en notitie in. Datum en uur worden automatisch bewaard.</div>
+      <div class="fg">
+        <label class="flbl" for="in-name">Jouw naam</label>
+        <input type="text" id="in-name" list="names-list" placeholder="bijv. Jelle" autocomplete="off">
+        <datalist id="names-list"></datalist>
+      </div>
+      <div class="fg">
+        <label class="flbl" for="in-text">Notitie</label>
+        <textarea id="in-text" placeholder="Schrijf hier je notitie..."></textarea>
+      </div>
+      <div class="form-foot">
+        <button class="btn-primary" id="btn-save" onclick="saveNote()">💾 Notitie opslaan</button>
+        <span class="form-hint" id="now-hint"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NOTITIE DASHBOARD ──────────────────────── -->
+  <div class="view" id="view-board">
+    <div class="stats">
+      <div class="stat r"><div class="num" id="st-total">0</div><div class="lbl">Notities totaal</div></div>
+      <div class="stat g"><div class="num" id="st-today">0</div><div class="lbl">Vandaag</div></div>
+      <div class="stat b"><div class="num" id="st-people">0</div><div class="lbl">Personen</div></div>
+    </div>
+    <div class="filters">
+      <select id="f-name" onchange="renderBoard()"><option value="">Alle personen</option></select>
+      <input type="text" id="f-search" placeholder="🔍 Zoek in notities..." oninput="renderBoard()">
+    </div>
+    <div id="board"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────
+let notes = JSON.parse(localStorage.getItem('ft_notities_v1') || '[]');
+const FB_PATH = 'ft_notities_v1';
+const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+
+// ── HELPERS ────────────────────────────────────
+const pad = n => String(n).padStart(2,'0');
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function dutchDate(str){
+  const [y,m,d] = str.split('-').map(Number);
+  const dt = new Date(y,m-1,d);
+  return DAYS[dt.getDay()]+' '+d+' '+MONTHS[m-1]+' '+y;
+}
+function toast(msg,color){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=color||'var(--green)';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ── FIREBASE SYNC ──────────────────────────────
+fbdb.ref(FB_PATH).on('value', snap => {
+  const data = snap.val();
+  notes = data ? Object.values(data).filter(n => n && n.id) : [];
+  localStorage.setItem(FB_PATH, JSON.stringify(notes));
+  refreshAll();
+}, err => console.warn('Firebase lezen mislukt:', err));
+
+// ── TAB SWITCH ─────────────────────────────────
+function switchTab(tab){
+  document.getElementById('tab-new').classList.toggle('active', tab==='new');
+  document.getElementById('tab-board').classList.toggle('active', tab==='board');
+  document.getElementById('view-new').classList.toggle('active', tab==='new');
+  document.getElementById('view-board').classList.toggle('active', tab==='board');
+  if(tab==='board') renderBoard();
+}
+
+// ── NOTITIE OPSLAAN ────────────────────────────
+function saveNote(){
+  const name = document.getElementById('in-name').value.trim();
+  const text = document.getElementById('in-text').value.trim();
+  if(!name){ toast('Vul eerst je naam in', 'var(--red)'); document.getElementById('in-name').focus(); return; }
+  if(!text){ toast('De notitie is leeg', 'var(--red)'); document.getElementById('in-text').focus(); return; }
+
+  const now = new Date();
+  const ref = fbdb.ref(FB_PATH).push();
+  const note = {
+    id: ref.key,
+    name: name,
+    text: text,
+    date: now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()),
+    hour: now.getHours(),
+    time: pad(now.getHours())+':'+pad(now.getMinutes()),
+    ts: now.getTime()
+  };
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  ref.set(note)
+    .then(()=>{
+      localStorage.setItem('ft_notitie_name', name);   // naam onthouden
+      document.getElementById('in-text').value='';
+      toast('✓ Notitie opgeslagen');
+    })
+    .catch(()=>{
+      // Offline fallback — lokaal bewaren
+      notes.push(note);
+      localStorage.setItem(FB_PATH, JSON.stringify(notes));
+      refreshAll();
+      toast('Opgeslagen (offline) — synct later', 'var(--orange)');
+    })
+    .finally(()=>{ btn.disabled=false; });
+}
+
+// ── NOTITIE VERWIJDEREN ────────────────────────
+function deleteNote(id){
+  if(!confirm('Deze notitie verwijderen?')) return;
+  fbdb.ref(FB_PATH+'/'+id).remove().catch(()=>{
+    notes = notes.filter(n=>n.id!==id);
+    localStorage.setItem(FB_PATH, JSON.stringify(notes));
+    refreshAll();
+  });
+}
+
+// ── ALLES VERVERSEN ────────────────────────────
+function refreshAll(){
+  // Namenlijst (datalist + filter)
+  const names = [...new Set(notes.map(n=>n.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('names-list').innerHTML =
+    names.map(n=>'<option value="'+esc(n)+'">').join('');
+  const fName = document.getElementById('f-name');
+  const cur = fName.value;
+  fName.innerHTML = '<option value="">Alle personen</option>' +
+    names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('');
+  if(names.includes(cur)) fName.value = cur;
+
+  // Stats
+  const today = todayStr();
+  document.getElementById('st-total').textContent  = notes.length;
+  document.getElementById('st-today').textContent  = notes.filter(n=>n.date===today).length;
+  document.getElementById('st-people').textContent = names.length;
+
+  renderBoard();
+}
+
+// ── DASHBOARD RENDEREN ─────────────────────────
+function renderBoard(){
+  const board = document.getElementById('board');
+  const nameF   = document.getElementById('f-name').value;
+  const searchF = document.getElementById('f-search').value.toLowerCase().trim();
+
+  let list = notes.slice();
+  if(nameF)   list = list.filter(n=>n.name===nameF);
+  if(searchF) list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF));
+  list.sort((a,b)=>(b.ts||0)-(a.ts||0));
+
+  if(!list.length){
+    board.innerHTML = '<div class="empty"><div class="ico">📝</div>' +
+      '<div class="txt">'+(notes.length ? 'Geen notities gevonden met deze filter.' : 'Nog geen notities. Voeg er een toe bij "Nieuwe notitie".')+'</div></div>';
+    return;
+  }
+
+  // Groeperen: dag -> uur
+  const byDay = {};
+  list.forEach(n=>{
+    const d = n.date || 'onbekend';
+    (byDay[d] = byDay[d] || []).push(n);
+  });
+
+  let html = '';
+  Object.keys(byDay).sort().reverse().forEach(date=>{
+    const dayNotes = byDay[date];
+    html += '<div class="day-block">';
+    html += '<div class="day-head">'+esc(dutchDate(date))+
+            '<span class="day-count">'+dayNotes.length+' notitie'+(dayNotes.length>1?'s':'')+'</span></div>';
+
+    // per uur groeperen
+    const byHour = {};
+    dayNotes.forEach(n=>{
+      const h = (n.hour!=null ? n.hour : 0);
+      (byHour[h] = byHour[h] || []).push(n);
+    });
+    Object.keys(byHour).map(Number).sort((a,b)=>b-a).forEach(h=>{
+      html += '<div class="hour-block">';
+      html += '<div class="hour-head">'+pad(h)+':00 – '+pad((h+1)%24)+':00 uur</div>';
+      byHour[h].forEach(n=>{
+        html += '<div class="note">';
+        html += '<div class="note-top">';
+        html += '<span class="note-name">'+esc(n.name||'?')+'</span>';
+        html += '<span class="note-time">🕒 '+esc(n.time||'')+'</span>';
+        html += '<button class="note-del" title="Verwijderen" onclick="deleteNote(\''+esc(n.id)+'\')">✕</button>';
+        html += '</div>';
+        html += '<div class="note-text">'+esc(n.text||'')+'</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  board.innerHTML = html;
+}
+
+// ── INIT ───────────────────────────────────────
+document.getElementById('in-name').value = localStorage.getItem('ft_notitie_name') || '';
+(function(){
+  const n=new Date();
+  document.getElementById('now-hint').textContent =
+    'Wordt opgeslagen op ' + DAYS[n.getDay()].toLowerCase() + ' ' + n.getDate() + ' ' +
+    MONTHS[n.getMonth()] + ' om ' + pad(n.getHours()) + ':' + pad(n.getMinutes());
+})();
+// Ctrl+Enter = snel opslaan
+document.getElementById('in-text').addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter') saveNote();
+});
+refreshAll();
+</script>
+</body>
+</html>
