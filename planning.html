@@ -717,101 +717,87 @@ function logiBump(evId, key, dir, date){
     if (tot > it.max) showToast(`⚠️ ${it.label}: ${tot} ${it.unit} ingepland op ${fmtS(d)} — slechts ${it.max} ${it.unit} beschikbaar`);
   }
   save(); renderWeek();
-  if (dir > 0 && key === 'foldtables') checkFoldtableWeekend(d);
+  if (dir > 0 && key === 'foldtables') checkFoldtableDay(d);
 }
 
-// ── FOLDTABLES — AANVRAAG BIJ WEEKEND-TEKORT ─────────────
-// Plant iemand op een zaterdag/zondag méér foldtables in dan onze eigen
+// ── FOLDTABLES — AANVRAAG BIJ TEKORT ─────────────────────
+// Plant iemand op gelijk welke dag méér foldtables in dan onze eigen
 // voorraad (LOGI_BY.foldtables.max), dan opent — na bevestiging — een
 // kant-en-klaar e-mailconcept naar Jan voor extra foldtables.
-// De controle gebeurt per wéék: zaterdag + zondag tellen samen als één
-// weekend en er wordt maar één keer per week gevraagd (tenzij het tekort
-// nog groter wordt). De bevestiging zorgt dat een misklik niets opent.
-// weekStart -> hoogste piek waarvoor deze sessie al gevraagd is (race-guard).
+// De controle gebeurt per dag: er wordt maar één keer per dag gevraagd
+// (tenzij het tekort nog groter wordt). De bevestiging zorgt dat een
+// misklik niets opent.
+// datum -> hoogste totaal waarvoor deze sessie al gevraagd is (race-guard).
 const foldtableHandled = {};
 
-// Zaterdag/zondag van de week die op weekStartStr (maandag) begint, plus de
-// hoogste foldtables-bezetting van die twee dagen. Foldtables worden per dag
-// (her)gebruikt, dus de piekdag bepaalt hoeveel er nodig zijn.
-function weekendFoldtablePeak(weekStartStr){
-  const sat = toStr(addD(parseD(weekStartStr), 5));
-  const sun = toStr(addD(parseD(weekStartStr), 6));
-  return { sat, sun, peak: Math.max(logiUsedOnDay(sat).foldtables, logiUsedOnDay(sun).foldtables) };
-}
-
-// Events met foldtables op de zaterdag/zondag van dat weekend.
-function weekendFoldtableEvents(sat, sun){
+// Events met foldtables op een specifieke dag.
+function dayFoldtableEvents(date){
   const out = [];
   filterEvents(events).forEach(ev=>{
-    [sat, sun].forEach(d=>{
-      if (ev.startDate <= d && ev.endDate >= d){
-        const q = logiGet(ev, d, 'foldtables');
-        if (q > 0) out.push({ name:ev.name, location:ev.location||'', date:d, foldtables:q });
-      }
-    });
+    if (ev.startDate <= date && ev.endDate >= date){
+      const q = logiGet(ev, date, 'foldtables');
+      if (q > 0) out.push({ name:ev.name, location:ev.location||'', foldtables:q });
+    }
   });
   return out;
 }
 
-function checkFoldtableWeekend(date){
-  const dow = parseD(date).getDay();            // 0=zo … 6=za
-  if (dow !== 0 && dow !== 6) return;            // enkel bij een weekenddag
-  const weekStart = toStr(monday(parseD(date)));
+function checkFoldtableDay(date){
   const cap = LOGI_BY.foldtables.max;            // eigen voorraad (60)
-  const { sat, sun, peak } = weekendFoldtablePeak(weekStart);
-  if (peak <= cap) return;                       // binnen voorraad — niets doen
-  if ((foldtableHandled[weekStart] || 0) >= peak) return; // deze sessie al gevraagd
-  foldtableHandled[weekStart] = peak;            // meteen claimen tegen dubbele clicks
-  // Per week in Firebase onthouden: niet opnieuw vragen tenzij het tekort groeit.
-  fbdb.ref('foldtable_requests/' + weekStart).once('value').then(snap=>{
+  const total = logiUsedOnDay(date).foldtables;
+  if (total <= cap) return;                      // binnen voorraad — niets doen
+  if ((foldtableHandled[date] || 0) >= total) return; // deze sessie al gevraagd
+  foldtableHandled[date] = total;                // meteen claimen tegen dubbele clicks
+  // Per dag in Firebase onthouden: niet opnieuw vragen tenzij het tekort groeit.
+  fbdb.ref('foldtable_requests/' + date).once('value').then(snap=>{
     const prev = snap.val() || {};
-    if ((prev.qty || 0) >= peak) return;         // andere planner deed dit al
-    promptFoldtableRequest(weekStart, sat, sun, peak, cap);
+    if ((prev.qty || 0) >= total) return;        // andere planner deed dit al
+    promptFoldtableRequest(date, total, cap);
   }).catch(()=>{});
 }
 
-function promptFoldtableRequest(weekStart, sat, sun, peak, cap){
-  const extra = peak - cap;
-  const msg = `⚠️ Foldtables-tekort in het weekend van ${fmtS(sat)}–${fmtS(sun)}\n\n`
-    + `Ingepland (piek):  ${peak} foldtables\n`
-    + `Eigen voorraad:    ${cap} foldtables\n`
-    + `Tekort:            ${extra} extra foldtables\n\n`
+function promptFoldtableRequest(date, total, cap){
+  const extra = total - cap;
+  const msg = `⚠️ Foldtables-tekort op ${fmtL(date)}\n\n`
+    + `Ingepland:       ${total} foldtables\n`
+    + `Eigen voorraad:  ${cap} foldtables\n`
+    + `Tekort:          ${extra} extra foldtables\n\n`
     + `Een e-mailconcept voor ${extra} extra foldtables openen naar\n`
     + `jan@sesam.events en jan.junior@sesam.events?`;
   if (!confirm(msg)){
     // Bewust afgewezen — niveau onthouden zodat het niet blijft vragen.
-    fbdb.ref('foldtable_requests/' + weekStart)
-      .set({ status:'dismissed', qty:peak, extra, at:new Date().toISOString() })
+    fbdb.ref('foldtable_requests/' + date)
+      .set({ status:'dismissed', qty:total, extra, at:new Date().toISOString() })
       .catch(()=>{});
     return;
   }
-  openFoldtableMail(weekStart, sat, sun, peak, cap, extra);
+  openFoldtableMail(date, total, cap, extra);
 }
 
 // Opent een kant-en-klaar e-mailconcept naar Jan voor extra foldtables.
 // De planner controleert en verstuurt zelf vanuit het e-mailprogramma.
-function openFoldtableMail(weekStart, sat, sun, peak, cap, extra){
-  const lines = weekendFoldtableEvents(sat, sun).map(e=>{
+function openFoldtableMail(date, total, cap, extra){
+  const lines = dayFoldtableEvents(date).map(e=>{
     const loc = e.location ? ` (${e.location})` : '';
-    return `• ${e.name}${loc} — ${fmtL(e.date)} — ${e.foldtables} foldtables`;
+    return `• ${e.name}${loc} — ${e.foldtables} foldtables`;
   });
-  const subject = `Aanvraag ${extra} extra foldtables — weekend van ${fmtS(sat)}`;
+  const subject = `Aanvraag ${extra} extra foldtables — ${fmtS(date)}`;
   const body = `Beste Jan,\n\n`
-    + `Voor het weekend van ${fmtL(sat)} en ${fmtL(sun)} staat er meer `
-    + `ingepland dan onze eigen voorraad foldtables toelaat.\n\n`
-    + `Ingepland (piek op één dag): ${peak} foldtables\n`
+    + `Voor ${fmtL(date)} staat er meer ingepland dan onze eigen voorraad `
+    + `foldtables toelaat.\n\n`
+    + `Ingepland: ${total} foldtables\n`
     + `Eigen voorraad: ${cap} foldtables\n`
     + `Tekort: ${extra} extra foldtables\n\n`
-    + (lines.length ? `Events met foldtables dit weekend:\n${lines.join('\n')}\n\n` : '')
-    + `Graag ${extra} extra foldtables voorzien voor dit weekend.\n\n`
+    + (lines.length ? `Events met foldtables die dag:\n${lines.join('\n')}\n\n` : '')
+    + `Graag ${extra} extra foldtables voorzien voor die dag.\n\n`
     + `Met vriendelijke groet,\nSeñor Snacks planning`;
   // mailto: opent het standaard e-mailprogramma met een ingevuld concept.
   location.href = 'mailto:jan@sesam.events,jan.junior@sesam.events'
     + '?subject=' + encodeURIComponent(subject)
     + '&body=' + encodeURIComponent(body);
-  // Per week onthouden zodat het concept niet bij elke klik opnieuw opent.
-  fbdb.ref('foldtable_requests/' + weekStart)
-    .set({ status:'mailed', qty:peak, extra, at:new Date().toISOString() })
+  // Per dag onthouden zodat het concept niet bij elke klik opnieuw opent.
+  fbdb.ref('foldtable_requests/' + date)
+    .set({ status:'mailed', qty:total, extra, at:new Date().toISOString() })
     .catch(()=>{});
   showToast(`📧 E-mail voor ${extra} extra foldtables klaargezet — controleer en verstuur`);
 }
