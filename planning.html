@@ -717,7 +717,7 @@ function logiBump(evId, key, dir, date){
     if (tot > it.max) showToast(`⚠️ ${it.label}: ${tot} ${it.unit} ingepland op ${fmtS(d)} — slechts ${it.max} ${it.unit} beschikbaar`);
   }
   save(); renderWeek();
-  if (dir > 0 && key === 'foldtables') checkFoldtableDay(d);
+  if (dir > 0 && key === 'foldtables') scheduleFoldtableCheck(d);
 }
 
 // ── FOLDTABLES — AANVRAAG BIJ TEKORT ─────────────────────
@@ -729,6 +729,18 @@ function logiBump(evId, key, dir, date){
 // misklik niets opent.
 // datum -> hoogste totaal waarvoor deze sessie al gevraagd is (race-guard).
 const foldtableHandled = {};
+// Lopende debounce-timers per datum (zie scheduleFoldtableCheck).
+const foldtableCheckTimers = {};
+
+// Wacht tot het +-klikken ~2 s stilvalt voor de melding verschijnt, zodat je
+// eerst rustig het juiste aantal kan instellen zonder onderbroken te worden.
+function scheduleFoldtableCheck(date){
+  clearTimeout(foldtableCheckTimers[date]);
+  foldtableCheckTimers[date] = setTimeout(()=>{
+    delete foldtableCheckTimers[date];
+    checkFoldtableDay(date);
+  }, 2000);
+}
 
 // Events met foldtables op een specifieke dag.
 function dayFoldtableEvents(date){
