@@ -21,13 +21,6 @@
         }
       },
       {
-        "source": "/api/request-foldtables",
-        "function": {
-          "functionId": "requestFoldtables",
-          "region": "europe-west1"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
