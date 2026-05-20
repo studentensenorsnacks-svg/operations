@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Señor Snacks — Operations</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1a;min-height:100vh}
+:root{--orange:#d4521a;--orange-light:#faeee7;--orange-mid:#f0996b;--dark:#1c1917;--muted:#6b6560;--border:#e5e0d8;--white:#ffffff;--green:#3b6d11;--green-bg:#eaf3de;--blue:#185fa5;--blue-bg:#e6f1fb;--red:#a32d2d;--red-bg:#fcebeb;--gray-bg:#f1efe8}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+.sidebar{background:var(--dark);color:#fff;display:flex;flex-direction:column}
+.logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo-main{font-size:17px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+.nav{padding:12px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;font-size:13.5px;color:rgba(255,255,255,.6);border-left:3px solid transparent;transition:all .15s;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:rgba(212,82,26,.15);color:#fff;border-left-color:var(--orange)}
+.sync-btn{margin:10px 12px 4px;background:var(--orange);color:#fff;border:none;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;justify-content:center;transition:opacity .15s}
+.sync-btn:hover{opacity:.88}
+.sync-btn:disabled{opacity:.55;cursor:not-allowed}
+.sync-status{padding:6px 14px 14px;font-size:11px;color:rgba(255,255,255,.3)}
+.main{overflow:auto;padding:28px 32px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.page-title{font-size:22px;font-weight:700;color:var(--dark)}
+.page-sub{font-size:13px;color:var(--muted);margin-top:3px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.stat-val{font-size:28px;font-weight:700;color:var(--dark)}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.stat-card.accent{background:var(--orange);border-color:var(--orange)}
+.stat-card.accent .stat-label,.stat-card.accent .stat-val,.stat-card.accent .stat-sub{color:#fff}
+.section-heading{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin:20px 0 10px}
+.events-list{display:flex;flex-direction:column;gap:8px}
+.event-row{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:90px 1fr 130px 95px 36px;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.event-row:hover{border-color:#c8b8a8;box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.event-date-month{font-size:11px;color:var(--muted);text-transform:uppercase}
+.event-date-day{font-size:18px;font-weight:700;color:var(--dark)}
+.event-name{font-size:14px;font-weight:600;color:var(--dark)}
+.event-addr{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px}
+.badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:99px}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-gray{background:var(--gray-bg);color:var(--muted)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-orange{background:var(--orange-light);color:var(--orange)}
+.arrow-btn{background:var(--gray-bg);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.arrow-btn:hover{background:var(--orange-light);color:var(--orange)}
+.detail-panel{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.detail-header{background:var(--dark);color:#fff;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between}
+.detail-header h2{font-size:18px;font-weight:700}
+.detail-header .meta{font-size:13px;color:rgba(255,255,255,.55);margin-top:4px}
+.detail-body{padding:24px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.info-field label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;display:block;margin-bottom:5px}
+.info-field input,.info-field textarea,.info-field select{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:14px;color:var(--dark);background:var(--white);font-family:inherit;outline:none;transition:border-color .15s}
+.info-field input:focus,.info-field textarea:focus,.info-field select:focus{border-color:var(--orange)}
+.info-field textarea{min-height:70px;resize:vertical}
+.toggle-wrap{display:flex;align-items:center;gap:10px;margin-top:4px}
+.toggle{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#d1cec7;border-radius:22px;transition:.2s}
+.toggle input:checked+.slider{background:var(--orange)}
+.slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
+.toggle input:checked+.slider:before{transform:translateX(18px)}
+.staff-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.staff-table th{background:var(--gray-bg);padding:8px 10px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.staff-table td{padding:5px 6px;border-bottom:1px solid var(--border)}
+.staff-table tr:last-child td{border-bottom:none}
+.staff-table td input{border:1px solid transparent;border-radius:5px;padding:5px 8px;font-size:13px;width:100%;background:transparent;font-family:inherit;outline:none}
+.staff-table td input:focus{border-color:var(--orange);background:#fff}
+.add-row-btn{margin-top:10px;background:none;border:1px dashed var(--border);border-radius:7px;padding:7px 14px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s}
+.add-row-btn:hover{border-color:var(--orange);color:var(--orange)}
+.del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:15px;padding:3px 7px;border-radius:5px}
+.del-btn:hover{color:var(--red);background:var(--red-bg)}
+.save-bar{background:var(--orange-light);border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.save-btn{background:var(--orange);color:#fff;border:none;padding:9px 22px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:opacity .15s}
+.save-btn:hover{opacity:.88}
+.cancel-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:9px 16px;border-radius:8px;cursor:pointer;font-size:14px}
+.back-btn{background:var(--gray-bg);border:1px solid var(--border);color:var(--dark);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px}
+.back-btn:hover{border-color:#c8b8a8}
+.new-event-btn{background:var(--orange);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:opacity .15s}
+.new-event-btn:hover{opacity:.88}
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.filter-btn{background:var(--white);border:1px solid var(--border);border-radius:7px;padding:6px 14px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s}
+.filter-btn.active{background:var(--orange-light);border-color:var(--orange-mid);color:var(--orange);font-weight:500}
+.search-box{border:1px solid var(--border);border-radius:7px;padding:7px 12px;font-size:13px;background:var(--white);outline:none;width:220px;font-family:inherit}
+.search-box:focus{border-color:var(--orange)}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.today-banner{background:var(--orange);border-radius:12px;padding:16px 20px;color:#fff;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.empty-state{padding:48px;text-align:center;color:var(--muted)}
+.spinner{width:24px;height:24px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.15);transition:opacity .3s}
+.warn-badge{background:#faeeda;color:#854f0b;font-size:11px;padding:2px 8px;border-radius:5px;font-weight:500}
+.col-full{grid-column:1/-1}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-main">🌮 Señor Snacks</div>
+      <div class="logo-sub">Operations</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">📊 Dashboard</div>
+      <div class="nav-item" id="nav-events" onclick="showPage('events')">📅 Events</div>
+      <div class="nav-item" id="nav-planning" onclick="showPage('planning')">👥 Planning</div>
+    </nav>
+    <button class="sync-btn" id="sync-btn" onclick="syncOutlook()">🔄 Sync Outlook</button>
+    <div class="sync-status" id="sync-status">Niet gesynchroniseerd</div>
+  </aside>
+  <main class="main" id="main">
+    <div id="page-dashboard"></div>
+    <div id="page-events" style="display:none"></div>
+    <div id="page-planning" style="display:none"></div>
+    <div id="page-detail" style="display:none"></div>
+  </main>
+</div>
+
+<script>
+const SKEY = 'senorsnacks_v3';
+const MKEY = 'senorsnacks_meta_v3';
+const M365 = 'https://microsoft365.mcp.claude.com/mcp';
+
+let allEvents = [];
+let curPage = 'dashboard';
+let editing = null;
+let lastSync = null;
+let activeFilter = 'alle';
+
+const DAYS = ['zo','ma','di','wo','do','vr','za'];
+const MONTHS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+function fmt(d){ const dt=new Date(d); return `${DAYS[dt.getDay()]} ${dt.getDate()} ${MONTHS[dt.getMonth()]}`; }
+function fmtDay(d){ return new Date(d).getDate(); }
+function fmtMY(d){ const dt=new Date(d); return `${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`; }
+
+function badge(s){
+  const m={komend:['badge-blue','Komend'],vandaag:['badge-orange','Vandaag'],afgerond:['badge-gray','Afgerond'],geannuleerd:['badge-red','Geannuleerd']};
+  const [c,l]=m[s]||m.komend; return `<span class="badge ${c}">${l}</span>`;
+}
+
+function toast(msg, ok=true){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');
+  t.className='toast';
+  t.style.background=ok?'#eaf3de':'#fcebeb';
+  t.style.color=ok?'#3b6d11':'#a32d2d';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300)},3000);
+}
+
+async function load(){
+  try{
+    const r=await window.storage.get(SKEY);
+    if(r) allEvents=JSON.parse(r.value);
+    const m=await window.storage.get(MKEY);
+    if(m){const md=JSON.parse(m.value);lastSync=md.lastSync;}
+  }catch(e){}
+  if(lastSync) document.getElementById('sync-status').textContent='Gesync: '+lastSync;
+  renderPage(curPage);
+}
+
+async function persist(){
+  try{await window.storage.set(SKEY,JSON.stringify(allEvents));}catch(e){}
+}
+
+async function syncOutlook(){
+  const btn=document.getElementById('sync-btn');
+  const st=document.getElementById('sync-status');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Bezig…';
+  st.textContent='Outlook ophalen…';
+
+  try{
+    const from=new Date().toISOString();
+    const to=new Date(Date.now()+90*864e5).toISOString();
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:3000,
+        system:`Je helpt Señor Snacks (Belgisch frituurwagenbedrijf) hun agenda te beheren.
+Taak: haal Outlook-events op van ${from} tot ${to} en geef ze terug als ALLEEN een JSON-array (geen uitleg, geen markdown).
+Elk object: {id, datum (YYYY-MM-DD), evenement, adres, contact, openingsuren, aantallen, outlookId}
+Gebruik lege string voor ontbrekende velden. Haal de gedeelde agenda op.`,
+        messages:[{role:'user',content:`Haal alle agenda-events op van ${from} tot ${to}. Geef ENKEL een JSON-array terug.`}],
+        mcp_servers:[{type:'url',url:M365,name:'microsoft365'}]
+      })
+    });
+    const data=await res.json();
+    let text='';
+    for(const b of data.content||[]){
+      if(b.type==='text') text+=b.text;
+      if(b.type==='mcp_tool_result') text+=(b.content?.[0]?.text||'');
+    }
+    const m=text.match(/\[[\s\S]*\]/);
+    let parsed=null;
+    if(m){try{parsed=JSON.parse(m[0]);}catch(e){}}
+
+    if(parsed&&parsed.length>0){
+      let added=0;
+      for(const ev of parsed){
+        if(!ev.datum||!ev.evenement) continue;
+        const exists=allEvents.find(e=>e.outlookId&&e.outlookId===ev.outlookId);
+        if(!exists){
+          allEvents.push(makeEvent(ev));
+          added++;
+        }
+      }
+      lastSync=new Date().toLocaleString('nl-BE');
+      try{await window.storage.set(MKEY,JSON.stringify({lastSync}));}catch(e){}
+      await persist();
+      st.textContent='Gesync: '+lastSync;
+      toast(`✓ ${added} nieuwe event${added!==1?'s':''} ingeladen`);
+    } else {
+      toast('⚠️ Geen events gevonden. Controleer de M365-koppeling.',false);
+      st.textContent='Sync mislukt';
+    }
+  }catch(err){
+    toast('✗ Sync mislukt: '+err.message,false);
+    st.textContent='Fout bij sync';
+  }
+  btn.disabled=false;
+  btn.innerHTML='🔄 Sync Outlook';
+  renderPage(curPage);
+}
+
+function makeEvent(ev){
+  return {
+    id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+    datum:ev.datum||'',evenement:ev.evenement||'',adres:ev.adres||'',
+    contact:ev.contact||'',openingsuren:ev.openingsuren||'',
+    aantallen:ev.aantallen||'',betaling:'',wagen:'',
+    wagenUitladen:false,wagenMeebrengen:true,opmerkingen:'',
+    medewerkers:[emptyMw()],
+    status:(ev.datum||'')<new Date().toISOString().slice(0,10)?'afgerond':'komend',
+    outlookId:ev.outlookId||''
+  };
+}
+function emptyMw(){return{naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''};}
+function newBlankEvent(){
+  return{id:'new_'+Date.now(),datum:'',evenement:'',adres:'',contact:'',openingsuren:'',
+    aantallen:'',betaling:'',wagen:'',wagenUitladen:false,wagenMeebrengen:true,
+    opmerkingen:'',medewerkers:[emptyMw()],status:'komend',outlookId:''};
+}
+
+function showPage(p){
+  curPage=p;
+  ['dashboard','events','planning','detail'].forEach(x=>{
+    document.getElementById('page-'+x).style.display='none';
+  });
+  ['dashboard','events','planning'].forEach(x=>{
+    document.getElementById('nav-'+x)?.classList.toggle('active',x===p);
+  });
+  document.getElementById('page-'+p).style.display='block';
+  renderPage(p);
+}
+
+function renderPage(p){
+  if(p==='dashboard') renderDash();
+  else if(p==='events') renderEvents();
+  else if(p==='planning') renderPlanning();
+}
+
+function renderDash(){
+  const el=document.getElementById('page-dashboard');
+  const today=new Date().toISOString().slice(0,10);
+  const todayEvs=allEvents.filter(e=>e.datum===today);
+  const week=allEvents.filter(e=>{const d=new Date(e.datum)-new Date();return d>=0&&d<=7*864e5;});
+  const upcoming=allEvents.filter(e=>e.datum>=today&&e.status!=='geannuleerd').sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,10);
+  const needsOps=allEvents.filter(e=>e.datum>=today&&(!e.wagen||e.medewerkers.every(m=>!m.naam)));
+
+  let html=`<div class="page-header">
+    <div><div class="page-title">Dashboard</div>
+    <div class="page-sub">${new Date().toLocaleDateString('nl-BE',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div></div>
+    <button class="new-event-btn" onclick="openNew()">+ Nieuw event</button>
+  </div>`;
+
+  if(todayEvs.length>0){
+    html+=`<div class="today-banner">
+      <div style="font-size:28px">🚚</div>
+      <div>
+        <div style="font-size:15px;font-weight:700">Vandaag op de weg: ${todayEvs.length} event${todayEvs.length>1?'s':''}</div>
+        <div style="font-size:13px;opacity:.8;margin-top:3px">${todayEvs.map(e=>e.evenement).join(' · ')}</div>
+      </div>
+    </div>`;
+  }
+
+  html+=`<div class="stat-grid">
+    <div class="stat-card accent">
+      <div class="stat-label">Vandaag</div>
+      <div class="stat-val">${todayEvs.length}</div>
+      <div class="stat-sub">events actief</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Komende 7 dagen</div>
+      <div class="stat-val">${week.length}</div>
+      <div class="stat-sub">events gepland</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Totaal events</div>
+      <div class="stat-val">${allEvents.length}</div>
+      <div class="stat-sub">in het systeem</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label" style="color:${needsOps.length>0?'var(--orange)':'var(--muted)'}">Nog in te vullen</div>
+      <div class="stat-val" style="color:${needsOps.length>0?'var(--orange)':'var(--dark)'}">${needsOps.length}</div>
+      <div class="stat-sub">wagen/ploeg ontbreekt</div>
+    </div>
+  </div>`;
+
+  if(needsOps.length>0){
+    html+=`<div class="section-heading">⚠️ Operationele details nog in te vullen</div><div class="events-list">`;
+    for(const e of needsOps.slice(0,4)) html+=eRow(e);
+    html+=`</div>`;
+  }
+
+  html+=`<div class="section-heading" style="margin-top:${needsOps.length>0?'20px':'0'}">📅 Volgende events</div>
+  <div class="events-list">`;
+  if(upcoming.length===0){
+    html+=`<div class="empty-state">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <p>Geen events. Klik op <strong>Sync Outlook</strong> om te starten.</p>
+    </div>`;
+  } else {
+    for(const e of upcoming) html+=eRow(e);
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+
+function eRow(e){
+  const staff=e.medewerkers.filter(m=>m.naam).length;
+  const warnWagen=!e.wagen;
+  const warnStaff=staff===0;
+  return `<div class="event-row" onclick="openDetail('${e.id}')">
+    <div>
+      <div class="event-date-month">${fmtMY(e.datum)}</div>
+      <div class="event-date-day">${fmtDay(e.datum)} ${DAYS[new Date(e.datum).getDay()]}</div>
+    </div>
+    <div>
+      <div class="event-name">${e.evenement||'(naamloos)'}</div>
+      <div class="event-addr">${e.adres||'<em style="color:#c8a090">adres onbekend</em>'}</div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:500;color:${warnWagen?'#c8a090':'var(--dark)'}">${e.wagen?'🚚 '+e.wagen:'<span style="color:#c8a090">Wagen?</span>'}</div>
+      <div style="font-size:12px;color:${warnStaff?'#c8a090':'var(--muted)'};margin-top:2px">${staff>0?staff+' medewerker'+(staff!==1?'s':''):'<span style="color:#c8a090">Ploeg?</span>'}</div>
+    </div>
+    <div>${badge(e.status)}</div>
+    <button class="arrow-btn">›</button>
+  </div>`;
+}
+
+function renderEvents(){
+  const el=document.getElementById('page-events');
+  const sorted=[...allEvents].sort((a,b)=>a.datum.localeCompare(b.datum));
+  let html=`<div class="page-header">
+    <div><div class="page-title">Alle events</div><div class="page-sub">${allEvents.length} events</div></div>
+    <button class="new-event-btn" onclick="openNew()">+ Nieuw event</button>
+  </div>
+  <div class="filter-bar">
+    <input class="search-box" id="srch" placeholder="Zoek op naam of adres…" oninput="filterEvs()"/>
+    <button class="filter-btn active" id="f-alle" onclick="setF('alle')">Alle</button>
+    <button class="filter-btn" id="f-komend" onclick="setF('komend')">Komend</button>
+    <button class="filter-btn" id="f-afgerond" onclick="setF('afgerond')">Afgerond</button>
+  </div>
+  <div id="ev-list" class="events-list">`;
+  if(sorted.length===0){
+    html+=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📭</div><p>Nog geen events geladen.</p></div>`;
+  } else {
+    for(const e of sorted) html+=eRow(e);
+  }
+  html+=`</div>`;
+  el.innerHTML=html;
+  document.getElementById('f-'+activeFilter)?.classList.add('active');
+}
+
+function setF(f){
+  activeFilter=f;
+  ['alle','komend','afgerond'].forEach(x=>document.getElementById('f-'+x)?.classList.toggle('active',x===f));
+  filterEvs();
+}
+function filterEvs(){
+  const q=(document.getElementById('srch')?.value||'').toLowerCase();
+  const list=document.getElementById('ev-list'); if(!list) return;
+  const sorted=[...allEvents].sort((a,b)=>a.datum.localeCompare(b.datum));
+  const filtered=sorted.filter(e=>{
+    const mq=!q||e.evenement.toLowerCase().includes(q)||(e.adres||'').toLowerCase().includes(q);
+    const mf=activeFilter==='alle'||e.status===activeFilter;
+    return mq&&mf;
+  });
+  list.innerHTML=filtered.length===0
+    ?`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">🔍</div><p>Geen resultaten.</p></div>`
+    :filtered.map(eRow).join('');
+}
+
+function renderPlanning(){
+  const el=document.getElementById('page-planning');
+  const today=new Date().toISOString().slice(0,10);
+  const upcoming=allEvents.filter(e=>e.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum));
+  const sm={};
+  for(const ev of upcoming) for(const m of ev.medewerkers) if(m.naam){if(!sm[m.naam])sm[m.naam]=[];sm[m.naam].push(ev);}
+
+  let html=`<div class="page-header">
+    <div><div class="page-title">Personeelsplanning</div><div class="page-sub">Overzicht per medewerker</div></div>
+  </div>`;
+
+  if(Object.keys(sm).length===0){
+    html+=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">👥</div><p>Nog geen medewerkers ingevuld.</p></div>`;
+  } else {
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`;
+    for(const [naam,evs] of Object.entries(sm).sort()){
+      const initials=naam.slice(0,2).toUpperCase();
+      html+=`<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+        <div style="background:var(--dark);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${initials}</div>
+          <div>
+            <div style="font-weight:600;font-size:14px">${naam}</div>
+            <div style="font-size:11px;opacity:.55">${evs.length} event${evs.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div style="padding:8px 14px">`;
+      for(const ev of evs){
+        html+=`<div onclick="openDetail('${ev.id}')" style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;align-items:center">
+          <div style="width:38px;height:38px;background:var(--orange-light);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+            <div style="font-size:14px;font-weight:700;color:var(--orange)">${fmtDay(ev.datum)}</div>
+            <div style="font-size:9px;color:var(--orange);text-transform:uppercase">${MONTHS[new Date(ev.datum).getMonth()]}</div>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:500">${ev.evenement}</div>
+            <div style="font-size:11px;color:var(--muted)">${ev.openingsuren||'uren onbekend'}</div>
+          </div>
+        </div>`;
+      }
+      html+=`</div></div></div>`;
+    }
+    html+=`</div>`;
+  }
+  el.innerHTML=html;
+}
+
+function openDetail(id){
+  editing=JSON.parse(JSON.stringify(allEvents.find(e=>e.id===id)||{}));
+  if(!editing.id) return;
+  renderDetail();
+  ['dashboard','events','planning'].forEach(p=>document.getElementById('page-'+p).style.display='none');
+  document.getElementById('page-detail').style.display='block';
+}
+
+function openNew(){
+  editing=newBlankEvent();
+  renderDetail();
+  ['dashboard','events','planning'].forEach(p=>document.getElementById('page-'+p).style.display='none');
+  document.getElementById('page-detail').style.display='block';
+}
+
+function renderDetail(){
+  if(!editing) return;
+  const e=editing;
+  const el=document.getElementById('page-detail');
+  const isNew=e.id.startsWith('new_');
+  let staffRows='';
+  for(let i=0;i<e.medewerkers.length;i++){
+    const m=e.medewerkers[i];
+    staffRows+=`<tr>
+      <td><input value="${esc(m.naam)}" oninput="updMw(${i},'naam',this.value)" placeholder="Naam…" style="width:140px"/></td>
+      <td><input value="${esc(m.vertrekSenor)}" oninput="updMw(${i},'vertrekSenor',this.value)" placeholder="9u" style="width:80px"/></td>
+      <td><input value="${esc(m.aankomstEvent)}" oninput="updMw(${i},'aankomstEvent',this.value)" placeholder="10u30" style="width:80px"/></td>
+      <td><input value="${esc(m.vertrekEvent)}" oninput="updMw(${i},'vertrekEvent',this.value)" placeholder="" style="width:80px"/></td>
+      <td><input value="${esc(m.aankomstSenor)}" oninput="updMw(${i},'aankomstSenor',this.value)" placeholder="" style="width:80px"/></td>
+      <td><button class="del-btn" onclick="removeMw(${i})">✕</button></td>
+    </tr>`;
+  }
+
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <button class="back-btn" onclick="goBack()">← Terug</button>
+    <div style="font-size:13px;color:var(--muted)">${isNew?'Nieuw event':fmt(e.datum)+' · '+e.evenement}</div>
+  </div>
+  <div class="detail-panel">
+    <div class="detail-header">
+      <div>
+        <h2>${e.evenement||'Nieuw event'}</h2>
+        <div class="meta">${e.datum?fmt(e.datum):''}${e.adres?' · '+e.adres:''}</div>
+      </div>
+      ${badge(e.status)}
+    </div>
+    <div class="detail-body">
+
+      <div class="section-heading" style="margin-top:0">📋 Basisinfo</div>
+      <div class="info-grid">
+        <div class="info-field">
+          <label>Datum</label>
+          <input type="date" value="${e.datum}" oninput="upd('datum',this.value)"/>
+        </div>
+        <div class="info-field">
+          <label>Evenement / Klant</label>
+          <input value="${esc(e.evenement)}" oninput="upd('evenement',this.value)" placeholder="Naam event of klant"/>
+        </div>
+        <div class="info-field col-full">
+          <label>Adres</label>
+          <input value="${esc(e.adres)}" oninput="upd('adres',this.value)" placeholder="Volledig adres van de locatie"/>
+        </div>
+        <div class="info-field">
+          <label>Contactpersoon</label>
+          <input value="${esc(e.contact)}" oninput="upd('contact',this.value)" placeholder="Naam + telefoonnummer"/>
+        </div>
+        <div class="info-field">
+          <label>Openingsuren</label>
+          <input value="${esc(e.openingsuren)}" oninput="upd('openingsuren',this.value)" placeholder="bijv. 17u – 19u"/>
+        </div>
+        <div class="info-field">
+          <label>Verwacht aantal</label>
+          <input value="${esc(e.aantallen)}" oninput="upd('aantallen',this.value)" placeholder="bijv. 150 personen"/>
+        </div>
+        <div class="info-field">
+          <label>Betaling</label>
+          <select onchange="upd('betaling',this.value)">
+            <option value="">— kies —</option>
+            <option value="factuur" ${e.betaling==='factuur'?'selected':''}>Factuur</option>
+            <option value="cash" ${e.betaling==='cash'?'selected':''}>Cash</option>
+            <option value="bonnen" ${e.betaling==='bonnen'?'selected':''}>Bonnen</option>
+            <option value="à volonté" ${e.betaling==='à volonté'?'selected':''}>À volonté</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-heading" style="margin-top:0">⚙️ Operations</div>
+      <div class="info-grid">
+        <div class="info-field">
+          <label>Wagen</label>
+          <input value="${esc(e.wagen)}" oninput="upd('wagen',this.value)" placeholder="bijv. Fiat 404, Wagen 806…"/>
+        </div>
+        <div class="info-field">
+          <label>Status</label>
+          <select onchange="upd('status',this.value)">
+            <option value="komend" ${e.status==='komend'?'selected':''}>Komend</option>
+            <option value="vandaag" ${e.status==='vandaag'?'selected':''}>Vandaag</option>
+            <option value="afgerond" ${e.status==='afgerond'?'selected':''}>Afgerond</option>
+            <option value="geannuleerd" ${e.status==='geannuleerd'?'selected':''}>Geannuleerd</option>
+          </select>
+        </div>
+        <div class="info-field">
+          <label>Wagen uitladen</label>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" ${e.wagenUitladen?'checked':''} onchange="upd('wagenUitladen',this.checked)"/><span class="slider"></span></label>
+            <span id="lbl-uitladen" style="font-size:14px">${e.wagenUitladen?'Ja':'Nee'}</span>
+          </div>
+        </div>
+        <div class="info-field">
+          <label>Wagen meebrengen</label>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" ${e.wagenMeebrengen?'checked':''} onchange="upd('wagenMeebrengen',this.checked)"/><span class="slider"></span></label>
+            <span id="lbl-meebrengen" style="font-size:14px">${e.wagenMeebrengen?'Ja':'Nee'}</span>
+          </div>
+        </div>
+        <div class="info-field col-full">
+          <label>Opmerkingen</label>
+          <textarea oninput="upd('opmerkingen',this.value)" placeholder="Speciale instructies, bonnen, borg, wateremmer, veiligheidsinstructies…">${esc(e.opmerkingen)}</textarea>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-heading" style="margin-top:0">👥 Medewerkers & uren</div>
+      <table class="staff-table">
+        <thead><tr>
+          <th style="width:150px">Naam</th>
+          <th>Vertrek Senor</th>
+          <th>Aankomst event</th>
+          <th>Vertrek event</th>
+          <th>Aankomst Senor</th>
+          <th style="width:40px"></th>
+        </tr></thead>
+        <tbody id="staff-body">${staffRows}</tbody>
+      </table>
+      <button class="add-row-btn" onclick="addMw()">+ Medewerker toevoegen</button>
+
+    </div>
+    <div class="save-bar">
+      <button class="cancel-btn" onclick="goBack()">Annuleer</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${!isNew?`<button class="cancel-btn" onclick="delEvent('${e.id}')" style="color:var(--red);border-color:#f7c1c1">Verwijder</button>`:''}
+        <button class="save-btn" onclick="saveEvent()">💾 Opslaan</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function upd(k,v){if(editing){editing[k]=v;
+  if(k==='wagenUitladen'){const l=document.getElementById('lbl-uitladen');if(l)l.textContent=v?'Ja':'Nee';}
+  if(k==='wagenMeebrengen'){const l=document.getElementById('lbl-meebrengen');if(l)l.textContent=v?'Ja':'Nee';}
+}}
+function updMw(i,k,v){if(editing)editing.medewerkers[i][k]=v;}
+function addMw(){if(!editing)return;editing.medewerkers.push(emptyMw());renderDetail();document.getElementById('page-detail').style.display='block';}
+function removeMw(i){
+  if(!editing)return;
+  editing.medewerkers.splice(i,1);
+  if(!editing.medewerkers.length)editing.medewerkers.push(emptyMw());
+  renderDetail();document.getElementById('page-detail').style.display='block';
+}
+async function saveEvent(){
+  if(!editing)return;
+  const idx=allEvents.findIndex(e=>e.id===editing.id);
+  if(idx>=0)allEvents[idx]=editing; else allEvents.push(editing);
+  await persist();
+  toast('✓ Event opgeslagen!');
+  goBack();
+}
+async function delEvent(id){
+  if(!confirm('Weet je zeker dat je dit event wilt verwijderen?'))return;
+  allEvents=allEvents.filter(e=>e.id!==id);
+  await persist();
+  toast('Event verwijderd.');
+  goBack();
+}
+function goBack(){
+  editing=null;
+  document.getElementById('page-detail').style.display='none';
+  document.getElementById('page-'+curPage).style.display='block';
+  renderPage(curPage);
+}
+
+load();
+</script>
+</body>
+</html>
