@@ -1853,9 +1853,10 @@ const MSAL_CFG = {
   },
   cache: { cacheLocation: 'sessionStorage' }
 };
-const MS_SCOPES = ['User.Read', 'Calendars.Read', 'Calendars.Read.Shared'];
-// Centrale agenda waaruit events worden gesynct (gedeelde mailbox).
-// Alle drie de scopes hierboven zijn user-consentable — geen admin consent nodig.
+const MS_SCOPES = ['User.Read', 'Calendars.Read'];
+// Account waarvan de agenda gesynct wordt. De gebruiker logt met DIT account
+// in (MSAL) en de planning leest diens eigen agenda via /me — geen gedeelde-
+// mailboxrechten nodig, wel inloggen met dit account.
 const CENTRAL_MAILBOX = 'administratie@senorsnacks.be';
 let msalInst = null;
 let msAcc = null;
@@ -1895,7 +1896,7 @@ async function sync365() {
   }
   document.getElementById('import-overlay').classList.remove('hidden');
   document.getElementById('import-modal-title').textContent = '📅 Sync met Microsoft 365';
-  document.getElementById('import-modal-sub').textContent = 'Events worden opgehaald uit de centrale agenda...';
+  document.getElementById('import-modal-sub').textContent = 'Log in met het account ' + CENTRAL_MAILBOX + ' — daaruit worden de afspraken opgehaald.';
   document.getElementById('drop-zone').style.display = 'none';
   document.getElementById('img-preview').style.display = 'none';
   document.getElementById('img-preview').src = '';
@@ -1912,13 +1913,14 @@ async function sync365() {
     const token = await getMsToken();
     if (!token) return;
 
-    const mb = encodeURIComponent(CENTRAL_MAILBOX);
+    // De agenda van het ingelogde account zelf (/me) — log in als CENTRAL_MAILBOX.
+    const acct = msAcc?.username || CENTRAL_MAILBOX;
 
-    // Stap 1: Categorie-kleuren uit de centrale mailbox (best-effort — kleuren
-    // mappen lukt enkel als MailboxSettings.Read beschikbaar is, anders random)
+    // Stap 1: Categorie-kleuren (best-effort — lukt enkel met MailboxSettings.Read,
+    // anders krijgen events een willekeurige kleur)
     status.textContent = '⏳ Categorieën ophalen...';
     const catMap = {};
-    const catResp = await fetch(`https://graph.microsoft.com/v1.0/users/${mb}/outlook/masterCategories`,
+    const catResp = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories',
       { headers: { Authorization: `Bearer ${token}` } });
     if (catResp.ok) {
       const catData = await catResp.json();
@@ -1927,14 +1929,14 @@ async function sync365() {
       });
     }
 
-    // Stap 2: Events ophalen uit de centrale agenda
+    // Stap 2: Events ophalen uit de eigen agenda
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
     const end   = new Date(now.getFullYear(), now.getMonth() + 8, 0).toISOString();
     let allEvts = [];
 
-    status.textContent = '⏳ Events ophalen...';
-    let url = `https://graph.microsoft.com/v1.0/users/${mb}/calendarView`
+    status.textContent = `⏳ Agenda ophalen van ${acct}...`;
+    let url = `https://graph.microsoft.com/v1.0/me/calendarView`
       + `?startDateTime=${start}&endDateTime=${end}`
       + `&$top=500&$select=subject,start,end,location,isAllDay,categories`
       + `&$orderby=start/dateTime`;
@@ -1942,17 +1944,11 @@ async function sync365() {
       const r = await fetch(url, {
         headers: { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="Europe/Brussels"' }
       });
-      if (!r.ok) {
-        if (r.status === 403 || r.status === 404) {
-          throw new Error(`Geen toegang tot de agenda van ${CENTRAL_MAILBOX} (${r.status}). `
-            + `Vraag de beheerder om deze mailbox met je te delen.`);
-        }
-        throw new Error(`Events ophalen mislukt (${r.status})`);
-      }
+      if (!r.ok) throw new Error(`Agenda ophalen mislukt (${r.status})`);
       const d = await r.json();
       (d.value || []).forEach(e => allEvts.push(e));
       url = d['@odata.nextLink'] || null;
-      status.textContent = `⏳ Events ophalen... (${allEvts.length})`;
+      status.textContent = `⏳ Agenda ophalen van ${acct}... (${allEvts.length})`;
     }
 
     // Stap 3: Converteer
