@@ -6,6 +6,8 @@
 <title>Señor Snacks — Planning</title>
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Microsoft Authentication Library v2 (via jsDelivr) -->
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -1809,16 +1811,88 @@ const SEED_EVENTS = [
 renderWeek();
 
 // ── MICROSOFT 365 SYNC ────────────────────────────────
-// De centrale Outlook-agenda wordt server-side opgehaald door een Firebase
-// Cloud Function (app-only Graph auth) en gespiegeld naar /ms365_events.
-// Deze pagina leest dat node — geen Microsoft-login per gebruiker meer nodig.
-// Cloud Function: zie functions/index.js
-const MS365_REFRESH_URL = '/api/refresh-outlook';
+// De Outlook-agenda's worden client-side opgehaald: de gebruiker logt in met
+// zijn eigen Microsoft 365-account (MSAL) en de planning leest de agenda's
+// rechtstreeks via Microsoft Graph. Geen Cloud Function / backend nodig.
+
+// Outlook categorie-kleuren (preset0 t/m preset24 → hex)
+const OUTLOOK_COLORS = {
+  none:'#374151',
+  preset0:'#C50F1F',  // Rood
+  preset1:'#CA5010',  // Oranje
+  preset2:'#C19C00',  // Geel
+  preset3:'#498205',  // Groen
+  preset4:'#0078D4',  // Blauw
+  preset5:'#038387',  // Cyaan/Teal
+  preset6:'#8764B8',  // Paars
+  preset7:'#C239B3',  // Roze
+  preset8:'#B45309',  // Donkerbruin/Amber
+  preset9:'#00B294',  // Zeegroen
+  preset10:'#0099BC', // Hemelblauw
+  preset11:'#7A7574', // Grijs
+  preset12:'#69797E', // Staalgrijs
+  preset13:'#750B1C', // Wijnrood/Bordeaux
+  preset14:'#BE185D', // Fuchsia
+  preset15:'#15803D', // Donkergroen
+  preset16:'#0E7490', // Donkercyaan
+  preset17:'#1D4ED8', // Donkerblauw
+  preset18:'#7C3AED', // Violet
+  preset19:'#6B7280', // Koel grijs
+  preset20:'#92400E', // Bruin
+  preset21:'#065F46', // Emerald
+  preset22:'#1E40AF', // Kobaltblauw
+  preset23:'#5B21B6', // Indigo
+  preset24:'#831843', // Donkerpaars
+};
+
+const MSAL_CFG = {
+  auth: {
+    clientId: '40a7956b-44eb-46fc-a9f1-cd6aa83407d2',
+    authority: 'https://login.microsoftonline.com/d613124d-7d7b-4fe5-be9f-04e9bab00da8',
+    redirectUri: 'https://operationssenorsnacks.web.app/planning.html'
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+};
+const MS_SCOPES = ['User.Read', 'User.ReadBasic.All', 'Calendars.Read'];
+let msalInst = null;
+let msAcc = null;
+
+async function initMsal() {
+  if (msalInst) return;
+  msalInst = new msal.PublicClientApplication(MSAL_CFG);
+  await msalInst.initialize();
+  try { await msalInst.handleRedirectPromise(); } catch(e){}
+  const accs = msalInst.getAllAccounts();
+  if (accs.length > 0) {
+    msAcc = accs[0];
+    if (sessionStorage.getItem('ms365_sync_pending') === '1') {
+      sessionStorage.removeItem('ms365_sync_pending');
+      sync365();
+    }
+  }
+}
+
+async function getMsToken() {
+  await initMsal();
+  try {
+    const r = await msalInst.acquireTokenSilent({ scopes: MS_SCOPES, account: msAcc });
+    msAcc = r.account;
+    return r.accessToken;
+  } catch(e) {
+    sessionStorage.setItem('ms365_sync_pending', '1');
+    await msalInst.loginRedirect({ scopes: MS_SCOPES });
+    return null;
+  }
+}
 
 async function sync365() {
+  if (typeof msal === 'undefined') {
+    alert('Microsoft login library niet geladen. Herlaad de pagina.');
+    return;
+  }
   document.getElementById('import-overlay').classList.remove('hidden');
   document.getElementById('import-modal-title').textContent = '📅 Sync met Microsoft 365';
-  document.getElementById('import-modal-sub').textContent = 'Events worden opgehaald uit de centrale Señor Snacks agenda...';
+  document.getElementById('import-modal-sub').textContent = 'Events worden opgehaald uit alle mailboxen...';
   document.getElementById('drop-zone').style.display = 'none';
   document.getElementById('img-preview').style.display = 'none';
   document.getElementById('img-preview').src = '';
@@ -1829,51 +1903,87 @@ async function sync365() {
   const status = document.getElementById('ai-status');
   status.style.display = 'block';
   status.className = 'ai-status loading';
-  status.textContent = '⏳ Centrale agenda ophalen...';
+  status.textContent = '⏳ Verbinden met Microsoft 365...';
 
   try {
-    let payload = null;
+    const token = await getMsToken();
+    if (!token) return;
 
-    // Verse pull via de Cloud Function (app-only Graph auth, server-side).
-    try {
-      const resp = await fetch(MS365_REFRESH_URL, { cache: 'no-store' });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.ok && Array.isArray(data.events)) payload = data;
-      }
-    } catch (e) { /* function onbereikbaar → val terug op Firebase-spiegel */ }
+    // Stap 1: Alle gebruikers ophalen
+    status.textContent = '⏳ Gebruikers ophalen...';
+    const usersResp = await fetch(
+      'https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail&$top=100&$filter=accountEnabled eq true',
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!usersResp.ok) throw new Error(`Gebruikers ophalen mislukt (${usersResp.status}) — log in met een admin account`);
+    const usersData = await usersResp.json();
+    const mailboxen = (usersData.value || []).filter(u => u.mail);
 
-    // Fallback: lees de laatst gespiegelde versie uit Firebase.
-    if (!payload) {
-      const snap = await fbdb.ref('ms365_events').once('value');
-      const mirror = snap.val();
-      if (mirror && Array.isArray(mirror.events)) payload = mirror;
+    // Stap 2: Categorie-kleuren
+    status.textContent = '⏳ Categorieën ophalen...';
+    const catMap = {};
+    const catResp = await fetch('https://graph.microsoft.com/v1.0/me/outlook/masterCategories',
+      { headers: { Authorization: `Bearer ${token}` } });
+    if (catResp.ok) {
+      const catData = await catResp.json();
+      (catData.value || []).forEach(c => {
+        catMap[c.displayName] = OUTLOOK_COLORS[c.color] || OUTLOOK_COLORS.none;
+      });
     }
 
-    if (!payload || !Array.isArray(payload.events)) {
-      throw new Error('Geen agenda-data gevonden. Is de Microsoft 365-sync al ingesteld? (zie MS365-SETUP.md)');
+    // Stap 3: Per mailbox events ophalen
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    const end   = new Date(now.getFullYear(), now.getMonth() + 8, 0).toISOString();
+    let allEvts = [];
+
+    for (const user of mailboxen) {
+      status.textContent = `⏳ ${user.displayName || user.mail} (${allEvts.length} events tot nu toe)...`;
+      try {
+        let url = `https://graph.microsoft.com/v1.0/users/${user.id}/calendarView`
+          + `?startDateTime=${start}&endDateTime=${end}`
+          + `&$top=500&$select=subject,start,end,location,isAllDay,categories`
+          + `&$orderby=start/dateTime`;
+        while (url) {
+          const r = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="Europe/Brussels"' }
+          });
+          if (!r.ok) break;
+          const d = await r.json();
+          (d.value || []).forEach(e => allEvts.push({ ...e, _owner: user.displayName || user.mail }));
+          url = d['@odata.nextLink'] || null;
+        }
+      } catch(_) {}
     }
 
-    const converted = payload.events;
+    // Stap 4: Converteer
+    const converted = allEvts
+      .filter(e => e.subject && !e.subject.startsWith('Geannuleerd:') && !e.subject.startsWith('Cancelled:'))
+      .map(e => {
+        const s  = new Date(e.start.dateTime || (e.start.date + 'T00:00:00'));
+        const en = new Date(e.end.dateTime   || (e.end.date   + 'T00:00:00'));
+        if (e.isAllDay) en.setDate(en.getDate() - 1);
+        const endClamped = en < s ? s : en;
+        const cats  = e.categories || [];
+        const color = (cats.length > 0 && catMap[cats[0]]) ? catMap[cats[0]] : rndColor();
+        return {
+          name: e.subject.trim(),
+          startDate: toStr(s),
+          endDate: toStr(endClamped),
+          location: (e.location?.displayName || '').trim(),
+          color
+        };
+      });
 
-    // Filter duplicaten (zelfde naam + startdatum staat al in de planning)
+    // Stap 5: Duplicaten eruit (zelfde naam + startdatum staat al in de planning)
     const existingKeys = new Set(events.map(e => e.name + '|' + e.startDate));
     const nieuws = converted.filter(e => !existingKeys.has(e.name + '|' + e.startDate));
-    const dupes = converted.length - nieuws.length;
-
-    // Hoe vers is de data?
-    let leeftijd = '';
-    if (payload.updatedAt) {
-      const mins = Math.round((Date.now() - new Date(payload.updatedAt).getTime()) / 60000);
-      leeftijd = mins < 1 ? ' · zonet bijgewerkt'
-        : mins < 60 ? ` · ${mins} min geleden bijgewerkt`
-        : ` · ${Math.round(mins / 60)} u geleden bijgewerkt`;
-    }
+    const dupes  = converted.length - nieuws.length;
 
     status.className = 'ai-status success';
-    status.textContent = `✓ ${converted.length} events uit 365`
+    status.textContent = `✓ ${converted.length} events gevonden in ${mailboxen.length} mailboxen`
       + (dupes > 0 ? ` · ${dupes} staan al in de planning` : '')
-      + leeftijd + '. Selecteer wat je wil importeren.';
+      + `. Selecteer wat je wil importeren.`;
 
     document.getElementById('import-modal-sub').textContent =
       `${nieuws.length} nieuwe events — inclusief kleuren uit Outlook. `
@@ -1885,7 +1995,6 @@ async function sync365() {
         '<div style="padding:24px;text-align:center;color:#888;font-size:0.9rem">✅ Alles staat al in de planning!</div>';
       return;
     }
-
     showImportedEvents(nieuws);
 
   } catch(err) {
@@ -1905,6 +2014,9 @@ function openScreenshotImport() {
   document.getElementById('btn-import-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 }
+
+// Init MSAL bij laden
+initMsal().catch(console.error);
 
 </script>
 </body>
