@@ -4,6 +4,8 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Señor Snacks — Operations</title>
+<!-- Microsoft Authentication Library v2 (via jsDelivr) -->
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1a;min-height:100vh}
@@ -124,7 +126,22 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 <script>
 const SKEY = 'senorsnacks_v3';
 const MKEY = 'senorsnacks_meta_v3';
-const M365 = 'https://microsoft365.mcp.claude.com/mcp';
+
+// ── Microsoft 365 — client-side sync via MSAL + Graph ──────────
+// De Outlook-agenda wordt rechtstreeks in de browser opgehaald: de
+// gebruiker logt in met zijn Microsoft 365-account en de events komen
+// uit de centrale gedeelde agenda. Geen Cloud Function / backend nodig.
+const MSAL_CFG = {
+  auth: {
+    clientId: '40a7956b-44eb-46fc-a9f1-cd6aa83407d2',
+    authority: 'https://login.microsoftonline.com/d613124d-7d7b-4fe5-be9f-04e9bab00da8',
+    redirectUri: 'https://operationssenorsnacks.web.app/ops.html'
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+};
+const MS_SCOPES = ['User.Read', 'Calendars.Read', 'Calendars.Read.Shared'];
+const CENTRAL_MAILBOX = 'administratie@senorsnacks.be';
+let msalInst = null, msAcc = null;
 
 let allEvents = [];
 let curPage = 'dashboard';
@@ -170,59 +187,117 @@ async function persist(){
   try{await window.storage.set(SKEY,JSON.stringify(allEvents));}catch(e){}
 }
 
+async function initMsal(){
+  if(msalInst) return;
+  msalInst=new msal.PublicClientApplication(MSAL_CFG);
+  await msalInst.initialize();
+  try{await msalInst.handleRedirectPromise();}catch(e){}
+  const accs=msalInst.getAllAccounts();
+  if(accs.length>0){
+    msAcc=accs[0];
+    // Sync hervatten na een login-redirect
+    if(sessionStorage.getItem('ms365_sync_pending')==='1'){
+      sessionStorage.removeItem('ms365_sync_pending');
+      syncOutlook();
+    }
+  }
+}
+
+async function getMsToken(){
+  await initMsal();
+  try{
+    const r=await msalInst.acquireTokenSilent({scopes:MS_SCOPES,account:msAcc});
+    msAcc=r.account;
+    return r.accessToken;
+  }catch(e){
+    // Geen geldige token in cache → interactieve login (redirect)
+    sessionStorage.setItem('ms365_sync_pending','1');
+    await msalInst.loginRedirect({scopes:MS_SCOPES});
+    return null;
+  }
+}
+
+// Graph-event → ops-event ({datum, evenement, adres, openingsuren, outlookId})
+function graphToEvent(e){
+  const s=new Date(e.start.dateTime||(e.start.date+'T00:00:00'));
+  const en=new Date(e.end.dateTime||(e.end.date+'T00:00:00'));
+  const uren=e.isAllDay?'':`${fmtUur(s)} – ${fmtUur(en)}`;
+  return {
+    datum:toISODate(s),
+    evenement:(e.subject||'').trim(),
+    adres:(e.location?.displayName||'').trim(),
+    contact:'',
+    openingsuren:uren,
+    aantallen:'',
+    outlookId:e.id||''
+  };
+}
+function toISODate(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtUur(d){
+  const h=d.getHours(),m=d.getMinutes();
+  return m?`${h}u${String(m).padStart(2,'0')}`:`${h}u`;
+}
+
 async function syncOutlook(){
   const btn=document.getElementById('sync-btn');
   const st=document.getElementById('sync-status');
+  if(typeof msal==='undefined'){
+    toast('✗ Microsoft-login niet geladen. Herlaad de pagina.',false);
+    return;
+  }
   btn.disabled=true;
   btn.innerHTML='<span class="spinner"></span> Bezig…';
-  st.textContent='Outlook ophalen…';
+  st.textContent='Verbinden met Microsoft 365…';
 
   try{
-    const from=new Date().toISOString();
-    const to=new Date(Date.now()+90*864e5).toISOString();
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:3000,
-        system:`Je helpt Señor Snacks (Belgisch frituurwagenbedrijf) hun agenda te beheren.
-Taak: haal Outlook-events op van ${from} tot ${to} en geef ze terug als ALLEEN een JSON-array (geen uitleg, geen markdown).
-Elk object: {id, datum (YYYY-MM-DD), evenement, adres, contact, openingsuren, aantallen, outlookId}
-Gebruik lege string voor ontbrekende velden. Haal de gedeelde agenda op.`,
-        messages:[{role:'user',content:`Haal alle agenda-events op van ${from} tot ${to}. Geef ENKEL een JSON-array terug.`}],
-        mcp_servers:[{type:'url',url:M365,name:'microsoft365'}]
-      })
-    });
-    const data=await res.json();
-    let text='';
-    for(const b of data.content||[]){
-      if(b.type==='text') text+=b.text;
-      if(b.type==='mcp_tool_result') text+=(b.content?.[0]?.text||'');
-    }
-    const m=text.match(/\[[\s\S]*\]/);
-    let parsed=null;
-    if(m){try{parsed=JSON.parse(m[0]);}catch(e){}}
+    const token=await getMsToken();
+    if(!token) return; // login-redirect onderweg — sync hervat na terugkeer
 
-    if(parsed&&parsed.length>0){
-      let added=0;
-      for(const ev of parsed){
-        if(!ev.datum||!ev.evenement) continue;
-        const exists=allEvents.find(e=>e.outlookId&&e.outlookId===ev.outlookId);
-        if(!exists){
-          allEvents.push(makeEvent(ev));
-          added++;
-        }
+    const mb=encodeURIComponent(CENTRAL_MAILBOX);
+    const now=new Date();
+    const from=new Date(now.getFullYear(),now.getMonth(),now.getDate()).toISOString();
+    const to=new Date(Date.now()+90*864e5).toISOString();
+
+    st.textContent='Events ophalen…';
+    let raw=[];
+    let url=`https://graph.microsoft.com/v1.0/users/${mb}/calendarView`
+      +`?startDateTime=${from}&endDateTime=${to}`
+      +`&$top=500&$select=subject,start,end,location,isAllDay`
+      +`&$orderby=start/dateTime`;
+    while(url){
+      const r=await fetch(url,{
+        headers:{Authorization:`Bearer ${token}`,Prefer:'outlook.timezone="Europe/Brussels"'}
+      });
+      if(!r.ok){
+        if(r.status===403||r.status===404)
+          throw new Error(`Geen toegang tot de agenda van ${CENTRAL_MAILBOX} (${r.status}). Vraag de beheerder om deze mailbox te delen.`);
+        throw new Error(`Events ophalen mislukt (${r.status})`);
       }
-      lastSync=new Date().toLocaleString('nl-BE');
-      try{await window.storage.set(MKEY,JSON.stringify({lastSync}));}catch(e){}
-      await persist();
-      st.textContent='Gesync: '+lastSync;
-      toast(`✓ ${added} nieuwe event${added!==1?'s':''} ingeladen`);
-    } else {
-      toast('⚠️ Geen events gevonden. Controleer de M365-koppeling.',false);
-      st.textContent='Sync mislukt';
+      const d=await r.json();
+      (d.value||[]).forEach(e=>raw.push(e));
+      url=d['@odata.nextLink']||null;
+      st.textContent=`Events ophalen… (${raw.length})`;
     }
+
+    let added=0;
+    for(const e of raw){
+      if(!e.subject) continue;
+      if(e.subject.startsWith('Geannuleerd:')||e.subject.startsWith('Cancelled:')) continue;
+      const ev=graphToEvent(e);
+      if(!ev.datum||!ev.evenement) continue;
+      const exists=allEvents.find(x=>x.outlookId&&x.outlookId===ev.outlookId);
+      if(!exists){
+        allEvents.push(makeEvent(ev));
+        added++;
+      }
+    }
+    lastSync=new Date().toLocaleString('nl-BE');
+    try{await window.storage.set(MKEY,JSON.stringify({lastSync}));}catch(e){}
+    await persist();
+    st.textContent='Gesync: '+lastSync;
+    toast(`✓ ${added} nieuwe event${added!==1?'s':''} ingeladen`);
   }catch(err){
     toast('✗ Sync mislukt: '+err.message,false);
     st.textContent='Fout bij sync';
@@ -629,6 +704,7 @@ function goBack(){
 }
 
 load();
+initMsal().catch(console.error);
 </script>
 </body>
 </html>
