@@ -1931,7 +1931,8 @@ async function sync365() {
 
     // Stap 2: Events ophalen uit de eigen agenda
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+    // Venster: 2 jaar terug t/m ~8 maanden vooruit, zodat ook het verleden mee komt.
+    const start = new Date(now.getFullYear() - 2, now.getMonth(), 1).toISOString();
     const end   = new Date(now.getFullYear(), now.getMonth() + 8, 0).toISOString();
     let allEvts = [];
 
