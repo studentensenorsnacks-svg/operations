@@ -3,9 +3,23 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Señor Snacks — Operations</title>
-<!-- Microsoft Authentication Library v2 (via jsDelivr) -->
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<title>Señor Snacks — Personeelsfiche</title>
+<!-- Firebase — gedeelde agenda met de Planning -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1a;min-height:100vh}
@@ -60,6 +74,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 .info-field input,.info-field textarea,.info-field select{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:14px;color:var(--dark);background:var(--white);font-family:inherit;outline:none;transition:border-color .15s}
 .info-field input:focus,.info-field textarea:focus,.info-field select:focus{border-color:var(--orange)}
 .info-field textarea{min-height:70px;resize:vertical}
+.info-hint{font-size:11px;color:var(--muted);margin-top:5px}
 .toggle-wrap{display:flex;align-items:center;gap:10px;margin-top:4px}
 .toggle{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0}
@@ -105,15 +120,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-main">🌮 Señor Snacks</div>
-      <div class="logo-sub">Operations</div>
+      <div class="logo-sub">Personeelsfiche</div>
     </div>
     <nav class="nav">
       <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">📊 Dashboard</div>
       <div class="nav-item" id="nav-events" onclick="showPage('events')">📅 Events</div>
       <div class="nav-item" id="nav-planning" onclick="showPage('planning')">👥 Planning</div>
     </nav>
-    <button class="sync-btn" id="sync-btn" onclick="syncOutlook()">🔄 Sync Outlook</button>
-    <div class="sync-status" id="sync-status">Niet gesynchroniseerd</div>
+    <a class="sync-btn" href="planning.html" style="text-decoration:none">📅 Open Planning</a>
+    <div class="sync-status" id="sync-status">Agenda laden…</div>
   </aside>
   <main class="main" id="main">
     <div id="page-dashboard"></div>
@@ -124,34 +139,29 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 </div>
 
 <script>
-const SKEY = 'senorsnacks_v3';
-const MKEY = 'senorsnacks_meta_v3';
+// ── Agenda gedeeld met de Planning ─────────────────────────────
+// De Personeelsfiche heeft GEEN eigen agenda meer. De events komen
+// live uit dezelfde Firebase-database als planning.html (pad
+// 'ft_planning_v1'). Voeg je hier een event toe of bewerk je datum/
+// naam/adres, dan verandert dat ook in de Planning.
+//
+// De operationele laag (ploeg & uren, wagen, betaling, opmerkingen)
+// hoort bij de Personeelsfiche en wordt apart bewaard onder
+// 'ops_details', gekoppeld aan het event via zijn id.
+const PLAN_PATH = 'ft_planning_v1';
+const OPS_PATH  = 'ops_details';
 
-// ── Microsoft 365 — client-side sync via MSAL + Graph ──────────
-// De Outlook-agenda wordt rechtstreeks in de browser opgehaald: de
-// gebruiker logt in met zijn Microsoft 365-account en de events komen
-// uit de centrale gedeelde agenda. Geen Cloud Function / backend nodig.
-const MSAL_CFG = {
-  auth: {
-    clientId: '40a7956b-44eb-46fc-a9f1-cd6aa83407d2',
-    authority: 'https://login.microsoftonline.com/d613124d-7d7b-4fe5-be9f-04e9bab00da8',
-    redirectUri: 'https://operationssenorsnacks.web.app/ops.html'
-  },
-  cache: { cacheLocation: 'sessionStorage' }
-};
-const MS_SCOPES = ['User.Read', 'Calendars.Read', 'Calendars.Read.Shared'];
-const CENTRAL_MAILBOX = 'administratie@senorsnacks.be';
-let msalInst = null, msAcc = null;
-
-let allEvents = [];
+let planningEvents = [];   // ruwe agenda uit de Planning
+let opsDetails     = {};   // operationele laag, per event-id
+let allEvents      = [];   // samengevoegd — alle views werken hierop
 let curPage = 'dashboard';
 let editing = null;
-let lastSync = null;
 let activeFilter = 'alle';
 
 const DAYS = ['zo','ma','di','wo','do','vr','za'];
 const MONTHS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 
+function todayISO(){ return new Date().toISOString().slice(0,10); }
 function fmt(d){ const dt=new Date(d); return `${DAYS[dt.getDay()]} ${dt.getDate()} ${MONTHS[dt.getMonth()]}`; }
 function fmtDay(d){ return new Date(d).getDate(); }
 function fmtMY(d){ const dt=new Date(d); return `${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`; }
@@ -172,158 +182,75 @@ function toast(msg, ok=true){
   setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300)},3000);
 }
 
-async function load(){
-  try{
-    const r=await window.storage.get(SKEY);
-    if(r) allEvents=JSON.parse(r.value);
-    const m=await window.storage.get(MKEY);
-    if(m){const md=JSON.parse(m.value);lastSync=md.lastSync;}
-  }catch(e){}
-  if(lastSync) document.getElementById('sync-status').textContent='Gesync: '+lastSync;
-  renderPage(curPage);
-}
-
-async function persist(){
-  try{await window.storage.set(SKEY,JSON.stringify(allEvents));}catch(e){}
-}
-
-async function initMsal(){
-  if(msalInst) return;
-  msalInst=new msal.PublicClientApplication(MSAL_CFG);
-  await msalInst.initialize();
-  try{await msalInst.handleRedirectPromise();}catch(e){}
-  const accs=msalInst.getAllAccounts();
-  if(accs.length>0){
-    msAcc=accs[0];
-    // Sync hervatten na een login-redirect
-    if(sessionStorage.getItem('ms365_sync_pending')==='1'){
-      sessionStorage.removeItem('ms365_sync_pending');
-      syncOutlook();
-    }
-  }
-}
-
-async function getMsToken(){
-  await initMsal();
-  try{
-    const r=await msalInst.acquireTokenSilent({scopes:MS_SCOPES,account:msAcc});
-    msAcc=r.account;
-    return r.accessToken;
-  }catch(e){
-    // Geen geldige token in cache → interactieve login (redirect)
-    sessionStorage.setItem('ms365_sync_pending','1');
-    await msalInst.loginRedirect({scopes:MS_SCOPES});
-    return null;
-  }
-}
-
-// Graph-event → ops-event ({datum, evenement, adres, openingsuren, outlookId})
-function graphToEvent(e){
-  const s=new Date(e.start.dateTime||(e.start.date+'T00:00:00'));
-  const en=new Date(e.end.dateTime||(e.end.date+'T00:00:00'));
-  const uren=e.isAllDay?'':`${fmtUur(s)} – ${fmtUur(en)}`;
-  return {
-    datum:toISODate(s),
-    evenement:(e.subject||'').trim(),
-    adres:(e.location?.displayName||'').trim(),
-    contact:'',
-    openingsuren:uren,
-    aantallen:'',
-    outlookId:e.id||''
-  };
-}
-function toISODate(d){
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-function fmtUur(d){
-  const h=d.getHours(),m=d.getMinutes();
-  return m?`${h}u${String(m).padStart(2,'0')}`:`${h}u`;
-}
-
-async function syncOutlook(){
-  const btn=document.getElementById('sync-btn');
-  const st=document.getElementById('sync-status');
-  if(typeof msal==='undefined'){
-    toast('✗ Microsoft-login niet geladen. Herlaad de pagina.',false);
-    return;
-  }
-  btn.disabled=true;
-  btn.innerHTML='<span class="spinner"></span> Bezig…';
-  st.textContent='Verbinden met Microsoft 365…';
-
-  try{
-    const token=await getMsToken();
-    if(!token) return; // login-redirect onderweg — sync hervat na terugkeer
-
-    const mb=encodeURIComponent(CENTRAL_MAILBOX);
-    const now=new Date();
-    const from=new Date(now.getFullYear(),now.getMonth(),now.getDate()).toISOString();
-    const to=new Date(Date.now()+90*864e5).toISOString();
-
-    st.textContent='Events ophalen…';
-    let raw=[];
-    let url=`https://graph.microsoft.com/v1.0/users/${mb}/calendarView`
-      +`?startDateTime=${from}&endDateTime=${to}`
-      +`&$top=500&$select=subject,start,end,location,isAllDay`
-      +`&$orderby=start/dateTime`;
-    while(url){
-      const r=await fetch(url,{
-        headers:{Authorization:`Bearer ${token}`,Prefer:'outlook.timezone="Europe/Brussels"'}
-      });
-      if(!r.ok){
-        if(r.status===403||r.status===404)
-          throw new Error(`Geen toegang tot de agenda van ${CENTRAL_MAILBOX} (${r.status}). Vraag de beheerder om deze mailbox te delen.`);
-        throw new Error(`Events ophalen mislukt (${r.status})`);
-      }
-      const d=await r.json();
-      (d.value||[]).forEach(e=>raw.push(e));
-      url=d['@odata.nextLink']||null;
-      st.textContent=`Events ophalen… (${raw.length})`;
-    }
-
-    let added=0;
-    for(const e of raw){
-      if(!e.subject) continue;
-      if(e.subject.startsWith('Geannuleerd:')||e.subject.startsWith('Cancelled:')) continue;
-      const ev=graphToEvent(e);
-      if(!ev.datum||!ev.evenement) continue;
-      const exists=allEvents.find(x=>x.outlookId&&x.outlookId===ev.outlookId);
-      if(!exists){
-        allEvents.push(makeEvent(ev));
-        added++;
-      }
-    }
-    lastSync=new Date().toLocaleString('nl-BE');
-    try{await window.storage.set(MKEY,JSON.stringify({lastSync}));}catch(e){}
-    await persist();
-    st.textContent='Gesync: '+lastSync;
-    toast(`✓ ${added} nieuwe event${added!==1?'s':''} ingeladen`);
-  }catch(err){
-    toast('✗ Sync mislukt: '+err.message,false);
-    st.textContent='Fout bij sync';
-  }
-  btn.disabled=false;
-  btn.innerHTML='🔄 Sync Outlook';
-  renderPage(curPage);
-}
-
-function makeEvent(ev){
-  return {
-    id:'ev_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
-    datum:ev.datum||'',evenement:ev.evenement||'',adres:ev.adres||'',
-    contact:ev.contact||'',openingsuren:ev.openingsuren||'',
-    aantallen:ev.aantallen||'',betaling:'',wagen:'',
-    wagenUitladen:false,wagenMeebrengen:true,opmerkingen:'',
-    medewerkers:[emptyMw()],
-    status:(ev.datum||'')<new Date().toISOString().slice(0,10)?'afgerond':'komend',
-    outlookId:ev.outlookId||''
-  };
-}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function emptyMw(){return{naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''};}
+
+// Firebase-sleutels mogen geen . # $ [ ] / bevatten — import-id's uit
+// de Planning kunnen een decimaal hebben, daarom saneren we het id.
+function detailKey(id){ return String(id).replace(/[.#$/\[\]]/g,'_'); }
+function toArray(data){ return !data ? [] : (Array.isArray(data)?data:Object.values(data)); }
+
+// ── SAMENVOEGEN ────────────────────────────────────────────────
+// Eén agenda-event uit de Planning + zijn operationele laag → ops-event
+function mergeEvent(pe){
+  const d = opsDetails[detailKey(pe.id)] || {};
+  const datum = pe.startDate || '';
+  let status = d.status;
+  if(!status){
+    const t = todayISO();
+    status = !datum ? 'komend' : datum < t ? 'afgerond' : datum === t ? 'vandaag' : 'komend';
+  }
+  const mw = Array.isArray(d.medewerkers) && d.medewerkers.length ? d.medewerkers : [emptyMw()];
+  return {
+    id: pe.id,
+    datum,
+    endDate: pe.endDate || datum,
+    evenement: pe.name || '',
+    adres: pe.location || '',
+    trucks: Array.isArray(pe.trucks) ? pe.trucks : [],
+    contact: d.contact || '',
+    openingsuren: d.openingsuren || '',
+    aantallen: d.aantallen || '',
+    betaling: d.betaling || '',
+    wagen: d.wagen || '',
+    wagenUitladen: !!d.wagenUitladen,
+    wagenMeebrengen: d.wagenMeebrengen === undefined ? true : !!d.wagenMeebrengen,
+    opmerkingen: d.opmerkingen || '',
+    medewerkers: mw,
+    status
+  };
+}
+
+function rebuild(){
+  allEvents = planningEvents.filter(pe=>pe && pe.id!=null).map(mergeEvent);
+  const st=document.getElementById('sync-status');
+  if(st) st.textContent=`📋 ${allEvents.length} events uit Planning`;
+  // Niet her-renderen terwijl iemand een fiche aan het bewerken is
+  if(document.getElementById('page-detail').style.display!=='block'){
+    renderPage(curPage);
+  }
+}
+
+// ── FIREBASE LISTENERS ─────────────────────────────────────────
+function listen(){
+  fbdb.ref(PLAN_PATH).on('value', snap=>{
+    planningEvents = toArray(snap.val());
+    rebuild();
+  }, err=>{
+    const st=document.getElementById('sync-status');
+    if(st) st.textContent='⚠ Geen verbinding met Planning';
+    console.warn('Firebase:',err);
+  });
+  fbdb.ref(OPS_PATH).on('value', snap=>{
+    opsDetails = snap.val() || {};
+    rebuild();
+  });
+}
+
 function newBlankEvent(){
   return{id:'new_'+Date.now(),datum:'',evenement:'',adres:'',contact:'',openingsuren:'',
-    aantallen:'',betaling:'',wagen:'',wagenUitladen:false,wagenMeebrengen:true,
-    opmerkingen:'',medewerkers:[emptyMw()],status:'komend',outlookId:''};
+    aantallen:'',betaling:'',wagen:'',trucks:[],wagenUitladen:false,wagenMeebrengen:true,
+    opmerkingen:'',medewerkers:[emptyMw()],status:'komend'};
 }
 
 function showPage(p){
@@ -346,7 +273,7 @@ function renderPage(p){
 
 function renderDash(){
   const el=document.getElementById('page-dashboard');
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayISO();
   const todayEvs=allEvents.filter(e=>e.datum===today);
   const week=allEvents.filter(e=>{const d=new Date(e.datum)-new Date();return d>=0&&d<=7*864e5;});
   const upcoming=allEvents.filter(e=>e.datum>=today&&e.status!=='geannuleerd').sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,10);
@@ -363,7 +290,7 @@ function renderDash(){
       <div style="font-size:28px">🚚</div>
       <div>
         <div style="font-size:15px;font-weight:700">Vandaag op de weg: ${todayEvs.length} event${todayEvs.length>1?'s':''}</div>
-        <div style="font-size:13px;opacity:.8;margin-top:3px">${todayEvs.map(e=>e.evenement).join(' · ')}</div>
+        <div style="font-size:13px;opacity:.8;margin-top:3px">${todayEvs.map(e=>esc(e.evenement)).join(' · ')}</div>
       </div>
     </div>`;
   }
@@ -382,7 +309,7 @@ function renderDash(){
     <div class="stat-card">
       <div class="stat-label">Totaal events</div>
       <div class="stat-val">${allEvents.length}</div>
-      <div class="stat-sub">in het systeem</div>
+      <div class="stat-sub">uit de Planning</div>
     </div>
     <div class="stat-card">
       <div class="stat-label" style="color:${needsOps.length>0?'var(--orange)':'var(--muted)'}">Nog in te vullen</div>
@@ -402,7 +329,7 @@ function renderDash(){
   if(upcoming.length===0){
     html+=`<div class="empty-state">
       <div style="font-size:40px;margin-bottom:12px">📭</div>
-      <p>Geen events. Klik op <strong>Sync Outlook</strong> om te starten.</p>
+      <p>Geen komende events in de Planning.</p>
     </div>`;
   } else {
     for(const e of upcoming) html+=eRow(e);
@@ -417,15 +344,15 @@ function eRow(e){
   const warnStaff=staff===0;
   return `<div class="event-row" onclick="openDetail('${e.id}')">
     <div>
-      <div class="event-date-month">${fmtMY(e.datum)}</div>
-      <div class="event-date-day">${fmtDay(e.datum)} ${DAYS[new Date(e.datum).getDay()]}</div>
+      <div class="event-date-month">${e.datum?fmtMY(e.datum):''}</div>
+      <div class="event-date-day">${e.datum?fmtDay(e.datum)+' '+DAYS[new Date(e.datum).getDay()]:'—'}</div>
     </div>
     <div>
-      <div class="event-name">${e.evenement||'(naamloos)'}</div>
-      <div class="event-addr">${e.adres||'<em style="color:#c8a090">adres onbekend</em>'}</div>
+      <div class="event-name">${esc(e.evenement)||'(naamloos)'}</div>
+      <div class="event-addr">${esc(e.adres)||'<em style="color:#c8a090">adres onbekend</em>'}</div>
     </div>
     <div>
-      <div style="font-size:13px;font-weight:500;color:${warnWagen?'#c8a090':'var(--dark)'}">${e.wagen?'🚚 '+e.wagen:'<span style="color:#c8a090">Wagen?</span>'}</div>
+      <div style="font-size:13px;font-weight:500;color:${warnWagen?'#c8a090':'var(--dark)'}">${e.wagen?'🚚 '+esc(e.wagen):'<span style="color:#c8a090">Wagen?</span>'}</div>
       <div style="font-size:12px;color:${warnStaff?'#c8a090':'var(--muted)'};margin-top:2px">${staff>0?staff+' medewerker'+(staff!==1?'s':''):'<span style="color:#c8a090">Ploeg?</span>'}</div>
     </div>
     <div>${badge(e.status)}</div>
@@ -437,7 +364,7 @@ function renderEvents(){
   const el=document.getElementById('page-events');
   const sorted=[...allEvents].sort((a,b)=>a.datum.localeCompare(b.datum));
   let html=`<div class="page-header">
-    <div><div class="page-title">Alle events</div><div class="page-sub">${allEvents.length} events</div></div>
+    <div><div class="page-title">Alle events</div><div class="page-sub">${allEvents.length} events uit de Planning</div></div>
     <button class="new-event-btn" onclick="openNew()">+ Nieuw event</button>
   </div>
   <div class="filter-bar">
@@ -448,7 +375,7 @@ function renderEvents(){
   </div>
   <div id="ev-list" class="events-list">`;
   if(sorted.length===0){
-    html+=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📭</div><p>Nog geen events geladen.</p></div>`;
+    html+=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📭</div><p>Nog geen events in de Planning.</p></div>`;
   } else {
     for(const e of sorted) html+=eRow(e);
   }
@@ -478,7 +405,7 @@ function filterEvs(){
 
 function renderPlanning(){
   const el=document.getElementById('page-planning');
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayISO();
   const upcoming=allEvents.filter(e=>e.datum>=today).sort((a,b)=>a.datum.localeCompare(b.datum));
   const sm={};
   for(const ev of upcoming) for(const m of ev.medewerkers) if(m.naam){if(!sm[m.naam])sm[m.naam]=[];sm[m.naam].push(ev);}
@@ -488,16 +415,16 @@ function renderPlanning(){
   </div>`;
 
   if(Object.keys(sm).length===0){
-    html+=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">👥</div><p>Nog geen medewerkers ingevuld.</p></div>`;
+    html+=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">👥</div><p>Nog geen medewerkers ingevuld. Open een event en vul de ploeg in.</p></div>`;
   } else {
     html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">`;
     for(const [naam,evs] of Object.entries(sm).sort()){
       const initials=naam.slice(0,2).toUpperCase();
       html+=`<div style="background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden">
         <div style="background:var(--dark);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${initials}</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">${esc(initials)}</div>
           <div>
-            <div style="font-weight:600;font-size:14px">${naam}</div>
+            <div style="font-weight:600;font-size:14px">${esc(naam)}</div>
             <div style="font-size:11px;opacity:.55">${evs.length} event${evs.length!==1?'s':''}</div>
           </div>
         </div>
@@ -509,8 +436,8 @@ function renderPlanning(){
             <div style="font-size:9px;color:var(--orange);text-transform:uppercase">${MONTHS[new Date(ev.datum).getMonth()]}</div>
           </div>
           <div>
-            <div style="font-size:13px;font-weight:500">${ev.evenement}</div>
-            <div style="font-size:11px;color:var(--muted)">${ev.openingsuren||'uren onbekend'}</div>
+            <div style="font-size:13px;font-weight:500">${esc(ev.evenement)}</div>
+            <div style="font-size:11px;color:var(--muted)">${esc(ev.openingsuren)||'uren onbekend'}</div>
           </div>
         </div>`;
       }
@@ -522,8 +449,9 @@ function renderPlanning(){
 }
 
 function openDetail(id){
-  editing=JSON.parse(JSON.stringify(allEvents.find(e=>e.id===id)||{}));
-  if(!editing.id) return;
+  const src=allEvents.find(e=>String(e.id)===String(id));
+  if(!src) return;
+  editing=JSON.parse(JSON.stringify(src));
   renderDetail();
   ['dashboard','events','planning'].forEach(p=>document.getElementById('page-'+p).style.display='none');
   document.getElementById('page-detail').style.display='block';
@@ -540,7 +468,7 @@ function renderDetail(){
   if(!editing) return;
   const e=editing;
   const el=document.getElementById('page-detail');
-  const isNew=e.id.startsWith('new_');
+  const isNew=String(e.id).startsWith('new_');
   let staffRows='';
   for(let i=0;i<e.medewerkers.length;i++){
     const m=e.medewerkers[i];
@@ -556,30 +484,31 @@ function renderDetail(){
 
   el.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
     <button class="back-btn" onclick="goBack()">← Terug</button>
-    <div style="font-size:13px;color:var(--muted)">${isNew?'Nieuw event':fmt(e.datum)+' · '+e.evenement}</div>
+    <div style="font-size:13px;color:var(--muted)">${isNew?'Nieuw event':(e.datum?fmt(e.datum):'')+' · '+esc(e.evenement)}</div>
   </div>
   <div class="detail-panel">
     <div class="detail-header">
       <div>
-        <h2>${e.evenement||'Nieuw event'}</h2>
-        <div class="meta">${e.datum?fmt(e.datum):''}${e.adres?' · '+e.adres:''}</div>
+        <h2>${esc(e.evenement)||'Nieuw event'}</h2>
+        <div class="meta">${e.datum?fmt(e.datum):''}${e.adres?' · '+esc(e.adres):''}</div>
       </div>
       ${badge(e.status)}
     </div>
     <div class="detail-body">
 
-      <div class="section-heading" style="margin-top:0">📋 Basisinfo</div>
+      <div class="section-heading" style="margin-top:0">📋 Basisinfo <span style="text-transform:none;letter-spacing:0;font-weight:400">— gedeeld met de Planning</span></div>
       <div class="info-grid">
         <div class="info-field">
           <label>Datum</label>
           <input type="date" value="${e.datum}" oninput="upd('datum',this.value)"/>
+          ${e.endDate&&e.endDate!==e.datum?`<div class="info-hint">Meerdaags t/m ${fmt(e.endDate)} — duur blijft behouden bij opslaan</div>`:''}
         </div>
         <div class="info-field">
           <label>Evenement / Klant</label>
           <input value="${esc(e.evenement)}" oninput="upd('evenement',this.value)" placeholder="Naam event of klant"/>
         </div>
         <div class="info-field col-full">
-          <label>Adres</label>
+          <label>Adres / Locatie</label>
           <input value="${esc(e.adres)}" oninput="upd('adres',this.value)" placeholder="Volledig adres van de locatie"/>
         </div>
         <div class="info-field">
@@ -612,6 +541,7 @@ function renderDetail(){
         <div class="info-field">
           <label>Wagen</label>
           <input value="${esc(e.wagen)}" oninput="upd('wagen',this.value)" placeholder="bijv. Fiat 404, Wagen 806…"/>
+          ${e.trucks.length?`<div class="info-hint">In planning: ${e.trucks.map(esc).join(', ')}</div>`:''}
         </div>
         <div class="info-field">
           <label>Status</label>
@@ -668,7 +598,6 @@ function renderDetail(){
   </div>`;
 }
 
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function upd(k,v){if(editing){editing[k]=v;
   if(k==='wagenUitladen'){const l=document.getElementById('lbl-uitladen');if(l)l.textContent=v?'Ja':'Nee';}
   if(k==='wagenMeebrengen'){const l=document.getElementById('lbl-meebrengen');if(l)l.textContent=v?'Ja':'Nee';}
@@ -681,21 +610,68 @@ function removeMw(i){
   if(!editing.medewerkers.length)editing.medewerkers.push(emptyMw());
   renderDetail();document.getElementById('page-detail').style.display='block';
 }
+
 async function saveEvent(){
   if(!editing)return;
-  const idx=allEvents.findIndex(e=>e.id===editing.id);
-  if(idx>=0)allEvents[idx]=editing; else allEvents.push(editing);
-  await persist();
-  toast('✓ Event opgeslagen!');
+  const e=editing;
+  if(!e.evenement.trim()){toast('✗ Vul een naam voor het event in.',false);return;}
+  const isNew=String(e.id).startsWith('new_');
+  let pid=e.id;
+
+  // 1. Agenda-velden terug naar de gedeelde Planning
+  if(isNew){
+    pid=Date.now();
+    planningEvents.push({
+      id:pid,name:e.evenement.trim(),location:e.adres||'',
+      startDate:e.datum||'',endDate:e.datum||'',trucks:[],color:'#0078D4'
+    });
+  } else {
+    const pe=planningEvents.find(x=>String(x.id)===String(e.id));
+    if(pe){
+      // Bewaar de duur van een meerdaags event bij een datumwijziging
+      let endDate=pe.endDate||pe.startDate||e.datum;
+      if(pe.startDate&&e.datum&&pe.startDate!==e.datum){
+        const delta=new Date(e.datum)-new Date(pe.startDate);
+        endDate=new Date(new Date(pe.endDate||pe.startDate).getTime()+delta).toISOString().slice(0,10);
+      }
+      pe.name=e.evenement.trim();
+      pe.location=e.adres||'';
+      pe.startDate=e.datum||'';
+      pe.endDate=endDate;
+    }
+  }
+  try{
+    await fbdb.ref(PLAN_PATH).set(planningEvents);
+    // 2. Operationele laag in ops_details
+    const mw=(e.medewerkers||[]).filter(m=>m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
+    await fbdb.ref(OPS_PATH+'/'+detailKey(pid)).set({
+      contact:e.contact||'',openingsuren:e.openingsuren||'',aantallen:e.aantallen||'',
+      betaling:e.betaling||'',wagen:e.wagen||'',wagenUitladen:!!e.wagenUitladen,
+      wagenMeebrengen:!!e.wagenMeebrengen,opmerkingen:e.opmerkingen||'',
+      medewerkers:mw,status:e.status||''
+    });
+    toast('✓ Opgeslagen — ook zichtbaar in de Planning.');
+  }catch(err){
+    toast('✗ Opslaan mislukt: '+err.message,false);
+    return;
+  }
   goBack();
 }
+
 async function delEvent(id){
-  if(!confirm('Weet je zeker dat je dit event wilt verwijderen?'))return;
-  allEvents=allEvents.filter(e=>e.id!==id);
-  await persist();
-  toast('Event verwijderd.');
+  if(!confirm('Dit event ook uit de Planning verwijderen?\n\nHet verdwijnt dan overal — ook bij de truck-planning.'))return;
+  planningEvents=planningEvents.filter(e=>String(e.id)!==String(id));
+  try{
+    await fbdb.ref(PLAN_PATH).set(planningEvents);
+    await fbdb.ref(OPS_PATH+'/'+detailKey(id)).remove();
+    toast('Event verwijderd.');
+  }catch(err){
+    toast('✗ Verwijderen mislukt: '+err.message,false);
+    return;
+  }
   goBack();
 }
+
 function goBack(){
   editing=null;
   document.getElementById('page-detail').style.display='none';
@@ -703,8 +679,8 @@ function goBack(){
   renderPage(curPage);
 }
 
-load();
-initMsal().catch(console.error);
+renderPage('dashboard');
+listen();
 </script>
 </body>
 </html>
