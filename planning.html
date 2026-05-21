@@ -263,6 +263,19 @@ textarea{resize:vertical;min-height:70px;}
 .evd-logi-val{font-family:var(--font-cond);font-weight:800;font-size:0.95rem;}
 .evd-foot{display:flex;gap:10px;padding:14px 22px;border-top:1px solid var(--border);flex-shrink:0;justify-content:flex-end;}
 
+/* AGENDA TAB — weekoverzicht */
+.ag-mgrid{display:grid;grid-template-columns:repeat(7,minmax(145px,1fr));gap:3px;min-width:1015px;}
+.ag-mgrid + .ag-mgrid{margin-top:3px;}
+.ag-mbar{background:#fff;border-left:4px solid;border-radius:5px;padding:5px 9px;display:flex;align-items:center;gap:6px;cursor:pointer;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.05);transition:box-shadow 0.15s;}
+.ag-mbar:hover{box-shadow:0 3px 8px rgba(0,0,0,0.12);}
+.ag-mbar-name{font-family:var(--font-cond);font-weight:700;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+.ag-mbar-loc{font-size:0.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;flex-shrink:0;}
+.ag-arrow{opacity:0.5;font-size:0.65rem;flex-shrink:0;}
+.ag-evt{background:#fff;border:1px solid var(--border);border-left:4px solid var(--border);border-radius:5px;padding:6px 9px;cursor:pointer;transition:box-shadow 0.15s,transform 0.15s;}
+.ag-evt:hover{box-shadow:0 3px 8px rgba(0,0,0,0.1);transform:translateY(-1px);}
+.ag-evt-name{font-family:var(--font-cond);font-size:0.85rem;font-weight:800;line-height:1.2;letter-spacing:0.01em;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.ag-evt-loc{font-size:0.65rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
 /* TRUCK PICKER */
 .truck-picker{background:var(--white);border-radius:10px;max-width:520px;width:92%;max-height:84vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.2);overflow:hidden;}
 .tpk-head{padding:18px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
@@ -420,7 +433,7 @@ textarea{resize:vertical;min-height:70px;}
     <a class="t-link" href="verhuur.html" target="_blank">🚐 <span class="t-link-label">Verhuur</span></a>
     <a class="t-link" href="notities.html" target="_blank">📝 <span class="t-link-label">Notities</span></a>
     <a class="t-link" href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 <span class="t-link-label">Keuringen</span></a>
-    <button class="btn-top btn-pdf" onclick="openWeekPDF()">🖨 <span class="t-link-label">Week PDF</span></button>
+    <button class="btn-top btn-pdf" id="btn-weekpdf" onclick="openWeekPDF()">🖨 <span class="t-link-label">Week PDF</span></button>
     <button class="btn-top btn-import" onclick="sync365()">📅 <span class="t-link-label">Sync</span></button>
     <button class="btn-top btn-new-ev" onclick="openAddEvent(null)">+ <span class="t-link-label">Event</span></button>
   </div>
@@ -433,6 +446,7 @@ textarea{resize:vertical;min-height:70px;}
   <div class="week-view">
     <!-- PLANNING TABS -->
     <div class="plan-tabs">
+      <button class="plan-tab" id="tab-agenda" onclick="switchMode('agenda')">📅 Agenda</button>
       <button class="plan-tab active" id="tab-wagens" onclick="switchMode('wagens')">🚛 Wagens</button>
       <button class="plan-tab" id="tab-camions" onclick="switchMode('camions')">🚐 Camionetten</button>
       <button class="plan-tab" id="tab-terminals" onclick="switchMode('terminals')">💳 Betaal terminals</button>
@@ -591,7 +605,7 @@ function isLogi(){ return currentMode === 'logistiek'; }
 // Elke mode bewaart toewijzingen in eigen event-velden, zodat tabs niet vermengen.
 const FIELD      = {wagens:'trucks', camions:'trucks', terminals:'terminals',    logistiek:'logistiek'};
 const FIELD_DAYS = {wagens:'truckDays', camions:'truckDays', terminals:'terminalDays', logistiek:'logistiekDays'};
-function groupsFor(m){ return m === 'camions' ? GROUPS_CAMIONS : m === 'terminals' ? GROUPS_TERMINALS : m === 'logistiek' ? [] : GROUPS_WAGENS; }
+function groupsFor(m){ return m === 'camions' ? GROUPS_CAMIONS : m === 'terminals' ? GROUPS_TERMINALS : (m === 'logistiek' || m === 'agenda') ? [] : GROUPS_WAGENS; }
 function fItems(m){ return FIELD[m||currentMode]; }
 function fDays(m){ return FIELD_DAYS[m||currentMode]; }
 const TC = {};
@@ -651,7 +665,7 @@ function filterEvents(evList) {
     if (/\bverlof\b/.test(n) && !n.includes('bouwverlof')) return false;
     if (/\bdr\b/.test(n) || /\bdr\.\s/.test(n)) return false;  // "Greet Dr 8u30" etc
     // Camionetten/terminals/logistiek tab: ook verhuur/VH weg
-    if (isDayMode()) {
+    if (isDayMode() && currentMode !== 'agenda') {
       if (n.includes('verhuur')) return false;
       if (n.startsWith('vh ')) return false;
     }
@@ -863,6 +877,7 @@ function switchMode(mode) {
   GROUPS = groupsFor(mode);
   rebuildTC();
   // Update tabs
+  document.getElementById('tab-agenda').classList.toggle('active', mode==='agenda');
   document.getElementById('tab-wagens').classList.toggle('active', mode==='wagens');
   document.getElementById('tab-camions').classList.toggle('active', mode==='camions');
   document.getElementById('tab-terminals').classList.toggle('active', mode==='terminals');
@@ -1103,6 +1118,16 @@ function goToday(){wkStart=monday(new Date());renderWeek();}
 function toggleSidebar(){const p=document.querySelector('.truck-panel');p.classList.toggle('open');}
 
 function renderWeek(){
+  const tp=document.querySelector('.truck-panel');
+  const pdfBtn=document.getElementById('btn-weekpdf');
+  if(currentMode==='agenda'){
+    if(tp) tp.style.display='none';
+    if(pdfBtn) pdfBtn.style.display='none';
+    renderAgenda();
+    return;
+  }
+  if(tp) tp.style.display='';
+  if(pdfBtn) pdfBtn.style.display='';
   const days=Array.from({length:7},(_,i)=>addD(wkStart,i));
   const f=days[0],l=days[6];
   const wkS=toStr(f),wkE=toStr(l);
@@ -1294,14 +1319,14 @@ function closeEvDetail(){
   document.getElementById('evd-overlay').classList.add('hidden');
   evDetailId = null;
 }
-function openEvDetail(id){
-  const ev = events.find(e=>e.id===id);
-  if(!ev) return;
-  evDetailId = id;
+// Bouwt de 4 categorie-overzichten (wagens/camionetten/terminals/logistiek) voor een event.
+// scopeDate = null         → volledig event (popup; multi-dag toont per-dag uitsplitsing)
+// scopeDate = 'YYYY-MM-DD'  → enkel die ene dag (agenda)
+function evCatHTML(ev, scopeDate){
   const multi = ev.endDate > ev.startDate;
+  const asObj = v => (v && typeof v==='object' && !Array.isArray(v)) ? v : {};
   const days = [];
   for(let d=parseD(ev.startDate); toStr(d)<=ev.endDate; d=addD(d,1)) days.push(toStr(d));
-  const asObj = v => (v && typeof v==='object' && !Array.isArray(v)) ? v : {};
 
   const itemRow = n => {
     const info = TRUCK_INFO[n] || {color:'#999'};
@@ -1319,8 +1344,13 @@ function openEvDetail(id){
 
   // Sectie voor voertuigen die ook per-dag bewaard kunnen zijn (camionetten / terminals).
   function vehicleSection(flat, dayField, emptyTxt){
+    const dd = asObj(ev[dayField]);
+    if(scopeDate){
+      const dayArr = Array.isArray(dd[scopeDate]) ? dd[scopeDate] : [];
+      const list = multi ? Array.from(new Set([...flat, ...dayArr])) : flat;
+      return { count: list.length, html: list.length ? itemList(list) : `<div class="evd-empty">${emptyTxt}</div>` };
+    }
     if(multi){
-      const dd = asObj(ev[dayField]);
       const blocks = days
         .filter(ds => Array.isArray(dd[ds]) && dd[ds].length)
         .map(ds => `<div class="evd-day"><div class="evd-day-lbl">${fmtL(ds)}</div>${itemList(dd[ds])}</div>`);
@@ -1346,7 +1376,10 @@ function openEvDetail(id){
     .map(x => `<div class="evd-logi"><span>${x.it.icon} ${x.it.label}</span><span class="evd-logi-val">${x.v} ${x.it.unit}</span></div>`)
     .join('');
   let logiHtml;
-  if(multi){
+  if(scopeDate){
+    const src = multi ? asObj(asObj(ev.logistiekDays)[scopeDate]) : asObj(ev.logistiek);
+    logiHtml = logiRows(src) || `<div class="evd-empty">— geen logistiek ingepland</div>`;
+  } else if(multi){
     const ld = asObj(ev.logistiekDays);
     const blocks = days
       .map(ds => ({ds, rows:logiRows(asObj(ld[ds]))}))
@@ -1357,6 +1390,18 @@ function openEvDetail(id){
     logiHtml = logiRows(asObj(ev.logistiek)) || `<div class="evd-empty">— geen logistiek ingepland</div>`;
   }
 
+  return { wagens: wagenSec, camions: camSec, terminals: termSec, logiHtml };
+}
+
+// ── EVENT DETAIL POPUP ─────────────────────────────────
+function openEvDetail(id){
+  const ev = events.find(e=>e.id===id);
+  if(!ev) return;
+  evDetailId = id;
+  const multi = ev.endDate > ev.startDate;
+  let dayCount = 0;
+  for(let d=parseD(ev.startDate); toStr(d)<=ev.endDate; d=addD(d,1)) dayCount++;
+  const cat = evCatHTML(ev, null);
   const dateLine = multi
     ? `📅 ${fmtS(ev.startDate)} → ${fmtS(ev.endDate)}`
     : `📅 ${fmtL(ev.startDate)}`;
@@ -1367,25 +1412,25 @@ function openEvDetail(id){
       <div class="evd-meta">
         ${ev.location?`<span>📍 ${ev.location}</span>`:''}
         <span>${dateLine}</span>
-        ${multi?`<span class="evd-badge">${days.length} dagen</span>`:''}
+        ${multi?`<span class="evd-badge">${dayCount} dagen</span>`:''}
       </div>
     </div>
     <div class="evd-body">
       <div class="evd-section">
-        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${wagenSec.count}</span></div>
-        ${wagenSec.html}
+        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${cat.wagens.count}</span></div>
+        ${cat.wagens.html}
       </div>
       <div class="evd-section">
-        <div class="evd-sec-title">🚐 Camionetten <span class="evd-sec-count">${camSec.count}</span></div>
-        ${camSec.html}
+        <div class="evd-sec-title">🚐 Camionetten <span class="evd-sec-count">${cat.camions.count}</span></div>
+        ${cat.camions.html}
       </div>
       <div class="evd-section">
-        <div class="evd-sec-title">💳 Betaalterminals <span class="evd-sec-count">${termSec.count}</span></div>
-        ${termSec.html}
+        <div class="evd-sec-title">💳 Betaalterminals <span class="evd-sec-count">${cat.terminals.count}</span></div>
+        ${cat.terminals.html}
       </div>
       <div class="evd-section">
         <div class="evd-sec-title">📦 Logistiek</div>
-        ${logiHtml}
+        ${cat.logiHtml}
       </div>
     </div>
     <div class="evd-foot">
@@ -1393,6 +1438,77 @@ function openEvDetail(id){
       <button type="button" class="btn-primary" onclick="closeEvDetail();editEv(${ev.id})">✏️ Bewerken</button>
     </div>`;
   document.getElementById('evd-overlay').classList.remove('hidden');
+}
+
+// ── AGENDA-TAB — weekoverzicht van alle events ─────────
+function renderAgenda(){
+  const days = Array.from({length:7},(_,i)=>addD(wkStart,i));
+  const f=days[0], l=days[6];
+  const wkS=toStr(f), wkE=toStr(l);
+  document.getElementById('week-label').textContent =
+    `Week ${wkNum(f)} — ${f.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})} t/m ${l.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}`;
+
+  const vis = filterEvents(events).filter(ev => ev.startDate<=wkE && ev.endDate>=wkS);
+  const multiDay  = vis.filter(ev => ev.endDate > ev.startDate);
+  const singleDay = vis.filter(ev => ev.endDate === ev.startDate);
+
+  // Dag-koppen
+  const headsHtml = `<div class="week-dayheads">${days.map((day,di)=>{
+    const ds=toStr(day);
+    return `<div class="week-dayhead${isToday(ds)?' today-hd':''}">
+      <div class="day-info"><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
+      <button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
+    </div>`;
+  }).join('')}</div>`;
+
+  // Multi-dag events — strook bovenaan
+  let multiHtml = '';
+  const placed = multiDay.map(ev=>{
+    const si = days.findIndex(d=>toStr(d)>=ev.startDate);
+    const ei = days.findLastIndex(d=>toStr(d)<=ev.endDate);
+    return { ev, colStart: si<0?1:si+1, colEnd: (ei<0?6:ei)+2,
+             startsB: ev.startDate<wkS, endsA: ev.endDate>wkE };
+  }).sort((a,b)=>a.colStart-b.colStart || (b.colEnd-b.colStart)-(a.colEnd-a.colStart));
+  const rows=[];
+  placed.forEach(p=>{
+    let done=false;
+    for(const row of rows){
+      if(p.colStart >= row[row.length-1].colEnd){ row.push(p); done=true; break; }
+    }
+    if(!done) rows.push([p]);
+  });
+  if(rows.length){
+    let bars='';
+    rows.forEach(row=>{
+      bars+='<div class="ag-mgrid">';
+      row.forEach(({ev,colStart,colEnd,startsB,endsA})=>{
+        bars+=`<div class="ag-mbar" style="border-left-color:${ev.color};grid-column:${colStart}/${colEnd}" onclick="openEvDetail(${ev.id})">
+          ${startsB?'<span class="ag-arrow">◀</span>':''}
+          <span class="ag-mbar-name" style="color:${ev.color}">${ev.name}</span>
+          ${ev.location?`<span class="ag-mbar-loc">📍 ${ev.location}</span>`:''}
+          ${endsA?'<span class="ag-arrow">▶</span>':''}
+        </div>`;
+      });
+      bars+='</div>';
+    });
+    multiHtml = `<div class="multiday-strip">${bars}</div>`;
+  }
+
+  // Dag-kolommen — events op hun dag (hele dag, bovenaan gestapeld)
+  const bodyHtml = `<div class="week-body">${days.map(day=>{
+    const ds=toStr(day);
+    const dayEvs = singleDay.filter(ev=>ev.startDate===ds)
+                            .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    const evHtml = dayEvs.map(ev=>`<div class="ag-evt" style="border-left-color:${ev.color}" onclick="openEvDetail(${ev.id})">
+        <div class="ag-evt-name" style="color:${ev.color}">${ev.name}</div>
+        ${ev.location?`<div class="ag-evt-loc">📍 ${ev.location}</div>`:''}
+      </div>`).join('');
+    return `<div class="day-col${isToday(ds)?' today-col':''}">
+      <div class="day-events">${evHtml||'<div class="empty-day">—</div>'}</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  document.getElementById('week-outer').innerHTML = headsHtml + multiHtml + bodyHtml;
 }
 
 // ── TRUCK PICKER ────────────────────────────────────────
