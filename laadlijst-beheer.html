@@ -160,7 +160,6 @@
     <a href="poets.html" class="nav-link">Poets</a>
     <a href="laadlijst-beheer.html" class="nav-link active">Laadlijsten</a>
   </nav>
-  <button class="btn btn-outline btn-sm" onclick="openSettings()">⚙ API Sleutel</button>
 </div>
 
 <div class="main">
@@ -260,27 +259,6 @@
   </div>
 </div>
 
-<!-- MODAL API -->
-<div class="modal-overlay hidden" id="settings-modal">
-  <div class="modal">
-    <div class="modal-hdr">
-      <span class="modal-title">⚙ API Instellingen</span>
-      <button class="modal-close" onclick="closeSettings()">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:14px;color:var(--text2);margin-bottom:14px;">De Anthropic API sleutel is nodig voor automatische PDF extractie. Wordt lokaal opgeslagen op dit apparaat.</p>
-      <div class="form-group" style="margin-bottom:16px;">
-        <label class="form-label">Anthropic API Sleutel</label>
-        <input type="password" class="form-input" id="api-key-input" placeholder="sk-ant-api03-…">
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:8px;">
-        <button class="btn btn-gray" onclick="closeSettings()">Annuleren</button>
-        <button class="btn btn-red" onclick="saveApiKey()">Opslaan</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- MODAL FICHE QR -->
 <div class="modal-overlay hidden" id="fiche-modal">
   <div class="modal">
@@ -348,23 +326,9 @@ function switchTab(name, btn) {
   btn.classList.add('active');
 }
 
-// ── Settings ──────────────────────────────────────────────────
-function openSettings() {
-  document.getElementById('api-key-input').value = localStorage.getItem('ss_anthropic_key') || '';
-  document.getElementById('settings-modal').classList.remove('hidden');
-}
-function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
-function saveApiKey() {
-  const k = document.getElementById('api-key-input').value.trim();
-  if (k) localStorage.setItem('ss_anthropic_key', k);
-  closeSettings();
-}
-
 // ── PDF Upload & AI Extract ───────────────────────────────────
 async function handlePdfUpload(file) {
   if (!file || file.type !== 'application/pdf') { showStatus('Kies een geldig PDF bestand.', 'error'); return; }
-  const key = localStorage.getItem('ss_anthropic_key');
-  if (!key) { showStatus('⚠ Stel eerst de Anthropic API sleutel in via ⚙ API Sleutel (rechts bovenaan).', 'error'); return; }
 
   showStatus('<div class="loader-wrap"><div class="spinner"></div>PDF wordt geanalyseerd door AI… even geduld.</div>');
   document.getElementById('extract-preview').style.display = 'none';
@@ -372,11 +336,11 @@ async function handlePdfUpload(file) {
   const base64 = await fileToBase64(file);
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/anthropic', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2000,
         system: 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES, MATERIALEN. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Formaat: {"naam":"korte omschrijving event en type","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[],"MATERIALEN":[]}}',
         messages: [{
@@ -400,7 +364,7 @@ async function handlePdfUpload(file) {
     document.getElementById('extract-preview').style.display = 'block';
     showStatus('✅ Extractie geslaagd! Controleer de items en sla op.', 'success');
   } catch (e) {
-    showStatus('❌ Fout bij AI extractie: ' + e.message + '<br><small>Controleer je API sleutel of probeer opnieuw.</small>', 'error');
+    showStatus('❌ Fout bij AI extractie: ' + e.message + '<br><small>Probeer opnieuw.</small>', 'error');
   }
 }
 

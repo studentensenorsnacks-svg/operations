@@ -1,6 +1,6 @@
 {
   "name": "operations-functions",
-  "description": "Microsoft 365 calendar sync for the Señor Snacks planning tool",
+  "description": "Cloud Functions for the Señor Snacks operations tool (Anthropic API proxy)",
   "engines": {
     "node": "20"
   },

@@ -14,9 +14,9 @@
     ],
     "rewrites": [
       {
-        "source": "/api/refresh-outlook",
+        "source": "/api/anthropic",
         "function": {
-          "functionId": "refreshOutlook",
+          "functionId": "anthropicProxy",
           "region": "europe-west1"
         }
       },
