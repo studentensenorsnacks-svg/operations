@@ -54,28 +54,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .layout{flex:1;display:flex;overflow:hidden;min-height:0;}
 
 /* TRUCK PANEL */
-.truck-panel{width:210px;flex-shrink:0;background:var(--sidebar);display:flex;flex-direction:column;overflow:hidden;}
+.truck-panel{width:210px;flex-shrink:0;background:#f7f7f7;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
 .tp-inner{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 0 20px;}
 .tp-inner::-webkit-scrollbar{width:4px;}
-.tp-inner::-webkit-scrollbar-thumb{background:#333;border-radius:2px;}
-.tp-hdr{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;user-select:none;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#888;transition:color 0.15s;}
-.tp-hdr:hover{color:#fff;}
+.tp-inner::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px;}
+.tp-hdr{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;user-select:none;font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#666;transition:color 0.15s;}
+.tp-hdr:hover{color:#111;}
 .tp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .tp-chev{margin-left:auto;font-size:0.6rem;transition:transform 0.2s;}
 .tp-hdr.collapsed .tp-chev{transform:rotate(-90deg);}
 .tp-trucks{padding:2px 8px 4px;}
 .tp-trucks.hidden{display:none;}
-.truck-chip{display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:3px;border-radius:5px;cursor:grab;user-select:none;border-left:3px solid transparent;background:rgba(255,255,255,0.06);font-size:0.75rem;font-weight:600;color:#ccc;transition:all 0.12s;line-height:1.3;}
-.truck-chip:hover{background:rgba(255,255,255,0.13);color:#fff;}
+.truck-chip{display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:3px;border-radius:5px;cursor:grab;user-select:none;border-left:3px solid transparent;background:rgba(0,0,0,0.05);font-size:0.75rem;font-weight:600;color:#333;transition:all 0.12s;line-height:1.3;}
+.truck-chip:hover{background:rgba(0,0,0,0.1);color:#111;}
 .truck-chip:active{cursor:grabbing;}
 .truck-chip.dragging{opacity:0.25;}
 .truck-chip.planned{opacity:0.18;cursor:not-allowed;pointer-events:none;}
 .chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .tp-foot-row{padding:2px 12px 5px;display:flex;align-items:center;justify-content:space-between;}
-.tp-pl-lbl{font-size:0.65rem;color:#555;}
+.tp-pl-lbl{font-size:0.65rem;color:#888;}
 .tp-show-btn{font-size:0.65rem;color:#777;background:none;border:none;cursor:pointer;font-family:var(--font);text-decoration:underline;padding:0;}
-.tp-show-btn:hover{color:#ccc;}
-.tp-empty-grp{padding:3px 12px 5px;font-size:0.68rem;color:#3a3a3a;font-style:italic;}
+.tp-show-btn:hover{color:#111;}
+.tp-empty-grp{padding:3px 12px 5px;font-size:0.68rem;color:#aaa;font-style:italic;}
 
 /* PLANNING TABS */
 .plan-tabs{flex-shrink:0;display:flex;background:#f0f0f0;border-bottom:1px solid var(--border);padding:0 16px;gap:0;overflow-x:auto;}
@@ -195,16 +195,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .event-card.is-multiday{border-left-style:dashed;border-left-width:3px;}
 
 /* LOGISTIEK — sleepbare items in panel */
-.logi-hint{padding:9px 12px 5px;font-size:0.64rem;color:#999;line-height:1.45;}
-.logi-drag{margin:4px 8px;padding:7px 9px;border-radius:6px;border-left:3px solid transparent;background:rgba(255,255,255,0.07);cursor:grab;user-select:none;transition:background 0.12s;}
-.logi-drag:hover{background:rgba(255,255,255,0.14);}
+.logi-hint{padding:9px 12px 5px;font-size:0.64rem;color:#777;line-height:1.45;}
+.logi-drag{margin:4px 8px;padding:7px 9px;border-radius:6px;border-left:3px solid transparent;background:rgba(0,0,0,0.05);cursor:grab;user-select:none;transition:background 0.12s;}
+.logi-drag:hover{background:rgba(0,0,0,0.09);}
 .logi-drag:active{cursor:grabbing;}
 .logi-drag.dragging{opacity:0.3;}
-.logi-drag-top{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:0.78rem;font-weight:700;color:#eee;}
-.logi-drag-step{font-size:0.6rem;font-weight:700;color:#aaa;background:rgba(255,255,255,0.09);padding:1px 6px;border-radius:10px;white-space:nowrap;}
-.logi-stock{margin-top:4px;font-size:0.63rem;color:#a5a5a5;line-height:1.35;}
-.logi-stock strong{color:#fff;}
-.logi-stock.over,.logi-stock.over strong{color:#fca5a5;}
+.logi-drag-top{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:0.78rem;font-weight:700;color:#222;}
+.logi-drag-step{font-size:0.6rem;font-weight:700;color:#666;background:rgba(0,0,0,0.07);padding:1px 6px;border-radius:10px;white-space:nowrap;}
+.logi-stock{margin-top:4px;font-size:0.63rem;color:#777;line-height:1.35;}
+.logi-stock strong{color:#111;}
+.logi-stock.over,.logi-stock.over strong{color:#dc2626;}
 /* LOGISTIEK — tellers op event-card */
 .ev-logi-area{padding:0 7px 7px;display:flex;flex-direction:column;gap:3px;}
 .logi-row{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:3px 4px 3px 7px;border-radius:4px;border-left:3px solid transparent;background:#f6f6f6;}

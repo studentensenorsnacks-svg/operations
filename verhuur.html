@@ -12,12 +12,12 @@
    CONFIG & TOKENS
 ===================================================== */
 :root {
-  --bg:        #07080f;
-  --s1:        #0e1018;
-  --s2:        #141720;
-  --s3:        #1b1f2e;
-  --border:    #252a3d;
-  --border2:   #2e3450;
+  --bg:        #f4f4f5;
+  --s1:        #ffffff;
+  --s2:        #eeeef0;
+  --s3:        #e4e4e7;
+  --border:    #e2e2e5;
+  --border2:   #d0d0d4;
   --gold:      #f6a821;
   --gold-s:    rgba(246,168,33,.12);
   --blue:      #4d8fff;
@@ -28,9 +28,9 @@
   --green-s:   rgba(52,210,123,.12);
   --amber:     #f59e0b;
   --purple:    #9d74f7;
-  --text:      #e8ecf7;
-  --sub:       #7b87a8;
-  --faint:     #323858;
+  --text:      #1a1a1a;
+  --sub:       #5f5f66;
+  --faint:     #c0c0c6;
   --radius:    12px;
   --font-h:    'Syne', sans-serif;
   --font-b:    'IBM Plex Sans', sans-serif;
@@ -43,6 +43,8 @@ input, select, textarea, button { font-family: var(--font-b); }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 3px; }
+::placeholder { color: var(--faint); opacity: 1; }
+::selection { background: var(--blue-s); color: var(--text); }
 
 /* ===== SIDEBAR ===== */
 #sidebar {
@@ -88,7 +90,7 @@ nav { padding: 12px 8px; flex: 1; display: flex; flex-direction: column; gap: 1p
   width: 100%; transition: all .15s;
 }
 #ms-btn:hover { border-color: var(--blue); color: var(--blue); }
-#ms-btn.connected { border-color: var(--green); color: var(--green); }
+#ms-btn.connected { border-color: var(--green); color: #16a34a; }
 .ms-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sub); flex-shrink: 0; }
 #ms-btn.connected .ms-dot { background: var(--green); }
 
@@ -151,14 +153,14 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
   display: inline-block; padding: 2px 10px; border-radius: 20px;
   font-size: 11px; font-weight: 700; letter-spacing: .03em; white-space: nowrap;
 }
-.b-active    { background: var(--green-s); color: var(--green); border: 1px solid rgba(52,210,123,.3); }
+.b-active    { background: var(--green-s); color: #16a34a; border: 1px solid rgba(52,210,123,.3); }
 .b-done      { background: var(--s3); color: var(--sub); border: 1px solid var(--border); }
 .b-avail     { background: var(--blue-s); color: var(--blue); border: 1px solid rgba(77,143,255,.3); }
-.b-minor     { background: var(--gold-s); color: var(--gold); border: 1px solid rgba(246,168,33,.3); }
-.b-medium    { background: rgba(245,158,11,.12); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
-.b-serious   { background: var(--red-s); color: var(--red); border: 1px solid rgba(240,80,80,.3); }
-.b-fixed     { background: var(--green-s); color: var(--green); border: 1px solid rgba(52,210,123,.3); }
-.b-pending   { background: var(--gold-s); color: var(--gold); border: 1px solid rgba(246,168,33,.3); }
+.b-minor     { background: var(--gold-s); color: #b45309; border: 1px solid rgba(246,168,33,.3); }
+.b-medium    { background: rgba(245,158,11,.12); color: #b45309; border: 1px solid rgba(245,158,11,.3); }
+.b-serious   { background: var(--red-s); color: #dc2626; border: 1px solid rgba(240,80,80,.3); }
+.b-fixed     { background: var(--green-s); color: #16a34a; border: 1px solid rgba(52,210,123,.3); }
+.b-pending   { background: var(--gold-s); color: #b45309; border: 1px solid rgba(246,168,33,.3); }
 .b-progress  { background: var(--blue-s); color: var(--blue); border: 1px solid rgba(77,143,255,.3); }
 
 /* ===== BUTTONS ===== */
@@ -173,9 +175,9 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
 .btn:active { filter: brightness(.95); }
 .btn-gold   { background: var(--gold); color: #0a0b0f; }
 .btn-blue   { background: var(--blue-s); color: var(--blue); border: 1px solid rgba(77,143,255,.3); }
-.btn-red    { background: var(--red-s); color: var(--red); border: 1px solid rgba(240,80,80,.3); }
+.btn-red    { background: var(--red-s); color: #dc2626; border: 1px solid rgba(240,80,80,.3); }
 .btn-ghost  { background: transparent; color: var(--sub); border: 1px solid var(--border); }
-.btn-green  { background: var(--green-s); color: var(--green); border: 1px solid rgba(52,210,123,.3); }
+.btn-green  { background: var(--green-s); color: #16a34a; border: 1px solid rgba(52,210,123,.3); }
 .btn-sm     { padding: 5px 11px; font-size: 12px; }
 .btn-xs     { padding: 3px 9px; font-size: 11px; }
 .btn-icon   { padding: 7px; border-radius: 7px; }
@@ -231,7 +233,7 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
 .photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photo-cell .photo-ts {
   position: absolute; bottom: 0; left: 0; right: 0;
-  background: rgba(0,0,0,.75); font-size: 9px; color: #fff;
+  background: rgba(0,0,0,.75); font-size: 9px; color: #ffffff;
   padding: 2px 4px; text-align: center; line-height: 1.3;
 }
 .photo-del {
@@ -283,9 +285,9 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
 
 /* ===== ALERT STRIP ===== */
 .alert { border-radius: 9px; padding: 11px 14px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
-.alert-warn  { background: var(--gold-s); border: 1px solid rgba(246,168,33,.3); color: var(--gold); }
-.alert-error { background: var(--red-s);  border: 1px solid rgba(240,80,80,.3);  color: var(--red); }
-.alert-ok    { background: var(--green-s);border: 1px solid rgba(52,210,123,.3); color: var(--green); }
+.alert-warn  { background: var(--gold-s); border: 1px solid rgba(246,168,33,.3); color: #b45309; }
+.alert-error { background: var(--red-s);  border: 1px solid rgba(240,80,80,.3);  color: #dc2626; }
+.alert-ok    { background: var(--green-s);border: 1px solid rgba(52,210,123,.3); color: #16a34a; }
 .alert-info  { background: var(--blue-s); border: 1px solid rgba(77,143,255,.3); color: var(--blue); }
 
 /* ===== KM BOX ===== */
@@ -380,7 +382,7 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
 ===================================================== -->
 <div id="sidebar">
   <div class="logo">
-    <img src="senorsnacks-logo-white.png" alt="Señor Snacks" class="logo-img">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
     <div class="logo-tag">Verhuurmodule</div>
   </div>
 
@@ -1092,10 +1094,10 @@ function renderDashboard() {
 
   document.getElementById('dash-stats').innerHTML = [
     { l:'Wagens',         v:trucks.length,   s:'in vloot',          c:'var(--blue)',   i:'🚚' },
-    { l:'Actieve events', v:active.length,   s:'huidig onderweg',   c:'var(--green)',  i:'📅' },
+    { l:'Actieve events', v:active.length,   s:'huidig onderweg',   c:'#16a34a',       i:'📅' },
     { l:'Totale km',      v:totalKm+' km',   s:'alle events',       c:'var(--gold)',   i:'🛣️' },
     { l:'Totale omzet',   v:'€'+totalRev.toFixed(0), s:'incl. km',  c:'var(--purple)', i:'💶' },
-    { l:'Open defecten',  v:openD.length,    s:'niet hersteld',     c:'var(--red)',    i:'⚠️' },
+    { l:'Open defecten',  v:openD.length,    s:'niet hersteld',     c:'#dc2626',       i:'⚠️' },
   ].map(s => `
     <div class="stat">
       <div class="stat-l">${s.l}</div>
@@ -1109,7 +1111,7 @@ function renderDashboard() {
         return `<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEventDetail('${e.id}')">
           <div style="font-weight:600;font-size:13px">${esc(e.name)}</div>
           <div style="font-size:11px;color:var(--sub);margin-top:2px">
-            <span style="color:${t.color||'#888'};margin-right:6px">●</span>${eventTruckLabel(e)} · ${esc(e.location)}
+            <span style="color:${t.color||'#c0c0c6'};margin-right:6px">●</span>${eventTruckLabel(e)} · ${esc(e.location)}
           </div>
           <div style="font-size:11px;color:var(--sub);margin-top:1px">${fmtD(e.startDate)} → ${fmtD(e.endDate)}</div>
         </div>`;
@@ -1153,11 +1155,11 @@ function renderTrucks() {
               </div>
               ${aev ? '<span class="badge b-active">Actief</span>' : '<span class="badge b-avail">Beschikbaar</span>'}
             </div>
-            ${aev ? `<div style="background:var(--green-s);border:1px solid rgba(52,210,123,.2);border-radius:7px;padding:7px 10px;font-size:11px;color:var(--green);margin-top:10px">📍 ${esc(aev.location)} — ${esc(aev.client)}</div>` : ''}
+            ${aev ? `<div style="background:var(--green-s);border:1px solid rgba(52,210,123,.2);border-radius:7px;padding:7px 10px;font-size:11px;color:#16a34a;margin-top:10px">📍 ${esc(aev.location)} — ${esc(aev.client)}</div>` : ''}
             <div class="truck-stats">
               <div class="truck-stat"><span>${tevents.length}</span>events</div>
               <div class="truck-stat"><span>${kmTotal.toLocaleString('nl')} km</span>totaal</div>
-              <div class="truck-stat" style="${openDef?'color:var(--red)':''}"><span>${tDef.length}</span>defecten ${openDef?`(${openDef} open)`:''}</div>
+              <div class="truck-stat" style="${openDef?'color:#dc2626':''}"><span>${tDef.length}</span>defecten ${openDef?`(${openDef} open)`:''}</div>
             </div>
           </div>
         </div>`;
@@ -1246,7 +1248,7 @@ function renderEvents() {
         return `<tr>
           <td>
             <div class="td-main">${esc(e.name)}${e.planningId?' <span class="badge b-progress" style="font-size:9px;padding:1px 7px;vertical-align:middle">PLANNING</span>':''}</div>
-            <div class="td-sub">${esc(e.client)||'—'} ${e.phone?'· '+esc(e.phone):''}${dCount?` · <span style="color:var(--red)">⚠ ${dCount} defect${dCount>1?'en':''}</span>`:''}</div>
+            <div class="td-sub">${esc(e.client)||'—'} ${e.phone?'· '+esc(e.phone):''}${dCount?` · <span style="color:#dc2626">⚠ ${dCount} defect${dCount>1?'en':''}</span>`:''}</div>
           </td>
           <td><span style="color:${t.color||'var(--faint)'};margin-right:5px">●</span><span style="font-size:13px">${eventTruckLabel(e)}</span></td>
           <td style="font-size:12px;color:var(--sub);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.location)}</td>
@@ -1369,7 +1371,7 @@ function renderDefectRow(d, showEventLink) {
         <span style="font-size:11px;color:var(--faint)">${fmtDT(d.ts)}</span>
       </div>
       <div class="defect-desc">${esc(d.desc)}</div>
-      ${d.resolveNote?`<div style="font-size:11px;color:var(--green);margin-top:4px">✓ ${esc(d.resolveNote)} — ${fmtDT(d.resolveTs)}</div>`:''}
+      ${d.resolveNote?`<div style="font-size:11px;color:#16a34a;margin-top:4px">✓ ${esc(d.resolveNote)} — ${fmtDT(d.resolveTs)}</div>`:''}
       ${showEventLink && e.id?`<div class="defect-info">Event: ${esc(e.name)} · ${esc(e.location)}</div>`:''}
       ${d.photos&&d.photos.length?`<div class="photo-grid" style="margin-top:8px">${d.photos.map(p=>`<div class="photo-cell" onclick="openLightbox('${p.src}','${fmtPhotoTs(p)}')"><img src="${p.src}" alt=""><div class="photo-ts">${p.exifTs?fmtDT(p.exifTs):fmtDT(p.uploadTs)}</div></div>`).join('')}</div>`:''}
       <div class="defect-actions">
@@ -1487,7 +1489,7 @@ function calcKm(){
   const el   = document.getElementById('ev-km-calc');
   const km   = kmCalc(dep, ret, rate);
   el.textContent = km ? `→ ${km.km} km gereden · €${rate}/km = €${km.cost} km-vergoeding` : (dep&&ret&&ret<=dep)?'⚠ Terugkomst-km moet hoger zijn dan vertrek':'';
-  el.style.color = km?'var(--green)':'var(--red)';
+  el.style.color = km?'#16a34a':'#dc2626';
 }
 
 function saveEvent(){
@@ -1543,7 +1545,7 @@ function calcReturnKm(){
   const km=kmCalc(e.kmDep,ret,rate);
   const el=document.getElementById('ret-calc');
   el.textContent=km?`→ ${km.km} km gereden · €${km.cost} vergoeding`:'';
-  el.style.color='var(--green)';
+  el.style.color='#16a34a';
 }
 
 function confirmReturn(){
@@ -1694,7 +1696,7 @@ function updateMsBtn(){
   if(msAccount){ btn.classList.add('connected'); lbl.textContent=msAccount.name||'Verbonden'; }
   else          { btn.classList.remove('connected'); lbl.textContent='Verbinden met M365'; }
   document.getElementById('outlook-status').innerHTML = msAccount
-    ? `<span style="color:var(--green)">✓ Verbonden als ${msAccount.username}</span>`
+    ? `<span style="color:#16a34a">✓ Verbonden als ${msAccount.username}</span>`
     : '🔗 Verbind met Microsoft 365 om agenda-events te importeren.';
   document.getElementById('outlook-status').className = msAccount?'alert alert-ok':'alert alert-info';
 }
