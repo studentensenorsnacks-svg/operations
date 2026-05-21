@@ -168,6 +168,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 // 'ops_details', gekoppeld aan het event via zijn id.
 const PLAN_PATH = 'ft_planning_v1';
 const OPS_PATH  = 'ops_details';
+// Leervoorbeelden voor de AI-herkenning (zelflerende feedback-lus)
+const AI_VB_PATH = 'ai_voorbeelden_v1';
 
 let planningEvents = [];   // ruwe agenda uit de Planning
 let opsDetails     = {};   // operationele laag, per event-id
@@ -344,7 +346,9 @@ Regels:
 - Laat een veld leeg ("") als je het niet met redelijke zekerheid kunt bepalen. Liever leeg dan gokken.
 - Verzin niets — neem alleen over wat echt in de tekst staat.
 - Bij twijfel tussen aankomst-/vertrekuren en openingsuren: openingsuren = wanneer klanten kunnen komen eten.
-- Antwoord in het Nederlands.`;
+- Antwoord in het Nederlands.
+
+Mogelijk krijg je eerst enkele voorbeeldparen (rommelige agenda-tekst → de door de gebruiker bevestigde correcte JSON) van eerdere events. Gebruik die om de schrijfstijl, afkortingen en gewoontes van dit bedrijf te leren, en pas die kennis toe op het laatste bericht.`;
 
 async function aiHerken(){
   if(!editing) return;
@@ -354,14 +358,37 @@ async function aiHerken(){
   const btn=document.getElementById('ai-herken-btn');
   if(btn){ btn.disabled=true; btn.textContent='🪄 Bezig met lezen…'; }
   try{
+    // Geleerde voorbeelden ophalen (zelflerende feedback-lus): eerdere
+    // events waar de gebruiker de velden bevestigde of corrigeerde,
+    // dienen als few-shot voorbeelden zodat de AI jullie stijl leert.
+    let voorbeelden=[];
+    try{
+      const snap=await fbdb.ref(AI_VB_PATH).once('value');
+      const all=snap.val()||{};
+      voorbeelden=Object.entries(all)
+        .filter(([k,v])=>v&&v.bron&&v.velden&&k!==detailKey(e.id))
+        .map(([,v])=>v)
+        .sort((a,b)=>(b.ts||0)-(a.ts||0))
+        .slice(0,6)
+        .reverse();
+    }catch(err){ console.warn('AI-voorbeelden laden mislukt:',err); }
+
+    // Few-shot: oudste voorbeeld eerst, het echte event als laatste bericht.
+    const messages=[];
+    for(const v of voorbeelden){
+      messages.push({role:'user',content:v.bron});
+      messages.push({role:'assistant',content:JSON.stringify(v.velden)});
+    }
+    messages.push({role:'user',content:bron});
+
     const res=await fetch('/api/anthropic',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-haiku-4-5',
+        model:'claude-sonnet-4-6',
         max_tokens:1000,
         system:AI_HERKEN_PROMPT,
-        messages:[{role:'user',content:bron}]
+        messages
       })
     });
     const data=await res.json();
@@ -377,10 +404,13 @@ async function aiHerken(){
       const v=(ai[k]==null?'':String(ai[k])).trim();
       if(v && !String(editing[k]||'').trim()){ editing[k]=v; ingevuld.push(k); }
     }
+    // Onthoud welke bron-tekst de AI las — bij 'Opslaan' bewaren we het
+    // paar (bron → definitieve velden) als nieuw leervoorbeeld.
+    editing._aiBron=bron;
     renderDetail();
     document.getElementById('page-detail').style.display='block';
     toast(ingevuld.length
-      ? `✓ AI vulde ${ingevuld.length} leeg veld(en) in — kijk ze even na voor je opslaat.`
+      ? `✓ AI vulde ${ingevuld.length} leeg veld(en) in${voorbeelden.length?` · leerde van ${voorbeelden.length} eerder event${voorbeelden.length>1?'en':''}`:''} — kijk ze na voor je opslaat.`
       : 'AI vond geen nieuwe info — alle velden waren al ingevuld.');
   }catch(err){
     console.error('aiHerken:',err);
@@ -921,6 +951,20 @@ async function saveEvent(){
       wagenMeebrengen:!!e.wagenMeebrengen,opmerkingen:e.opmerkingen||'',
       medewerkers:mw,status:e.status||''
     });
+    // 3. Leervoorbeeld voor de zelflerende AI-herkenning — enkel als op
+    //    deze fiche de AI-knop gebruikt is. De definitieve velden
+    //    (eventueel door de gebruiker gecorrigeerd) zijn de juiste uitvoer.
+    if(e._aiBron){
+      fbdb.ref(AI_VB_PATH+'/'+detailKey(pid)).set({
+        bron:e._aiBron,
+        velden:{
+          contact:e.contact||'',gsm:e.gsm||'',openingsuren:e.openingsuren||'',
+          aantallen:e.aantallen||'',betaling:e.betaling||'',wagen:e.wagen||'',
+          wagenUitladen:e.wagenUitladen||'',opmerkingen:e.opmerkingen||''
+        },
+        ts:Date.now()
+      }).catch(err=>console.warn('AI-leervoorbeeld bewaren mislukt:',err));
+    }
     toast('✓ Opgeslagen — ook zichtbaar in de Planning.');
   }catch(err){
     toast('✗ Opslaan mislukt: '+err.message,false);
