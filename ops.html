@@ -7,6 +7,9 @@
 <!-- Firebase — gedeelde agenda met de Planning -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<!-- Word-generatie — docx UMD-build (browser) + FileSaver -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
@@ -113,6 +116,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 .toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.15);transition:opacity .3s}
 .warn-badge{background:#faeeda;color:#854f0b;font-size:11px;padding:2px 8px;border-radius:5px;font-weight:500}
 .col-full{grid-column:1/-1}
+.agenda-note{background:var(--blue-bg);border:1px solid #b3d1f0;border-radius:9px;padding:12px 14px;margin-bottom:16px}
+.agenda-note-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--blue);font-weight:600;margin-bottom:5px}
+.agenda-note-text{font-size:13px;color:var(--dark);white-space:pre-wrap;line-height:1.5}
+.recog-note{background:var(--orange-light);border:1px solid var(--orange-mid);border-radius:9px;padding:12px 14px;margin-bottom:16px}
+.recog-note-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--orange);font-weight:600;margin-bottom:5px}
+.recog-note-text{font-size:14px;color:var(--dark);line-height:1.6;font-weight:500}
 </style>
 </head>
 <body>
@@ -185,6 +194,123 @@ function toast(msg, ok=true){
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function emptyMw(){return{naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''};}
 
+// ── HERKENNING ─────────────────────────────────────────────────
+// Twee niveaus:
+//  1. STRUCTUUR — staat er "Label: waarde" (bv. "Tel: 0489..."), dan
+//     nemen we dat exact over. Zet je events zo in Outlook = 100% juist.
+//  2. LOSSE HERKENNING — anders classificeren we de vrije tekst op wát
+//     het is: plaats, telefoon, naam, aantal, uren, betaling. We raden
+//     liever (eventueel fout) dan een veld leeg te laten.
+function recognize(name, location, notes){
+  const loc=(location||'').trim();
+  const raw=[name||'',loc,notes||''].join('\n');
+  const all=' '+raw.replace(/\s+/g,' ')+' ';
+  const rec={personen:'',uren:'',telefoon:'',betaling:'',naam:'',plaats:'',info:''};
+  let m;
+
+  // ── 1. Structuur: "Label: waarde" per regel ──
+  const LBL=[
+    ['naam',     /\b(?:contactpersoon|contact|klant|naam)\b/i],
+    ['telefoon', /\b(?:telefoon|tel|gsm|nummer|nr)\b/i],
+    ['plaats',   /\b(?:adres|locatie|plaats)\b/i],
+    ['personen', /\b(?:personen|aantal|pers|volk)\b/i],
+    ['uren',     /\b(?:uren|uur|tijd|tijdstip)\b/i],
+    ['betaling', /\b(?:betaling|betaald|betalen)\b/i]
+  ];
+  for(const line of raw.split('\n')){
+    const mm=line.match(/^\s*([A-Za-zÀ-ÿ ]{3,22}?)\s*[:=]\s*(.+)$/);
+    if(!mm) continue;
+    const lab=mm[1], val=mm[2].trim().replace(/[;,.]+$/,'');
+    if(!val) continue;
+    for(const [key,re] of LBL){ if(!rec[key] && re.test(lab)) rec[key]=val; }
+  }
+
+  // ── 2. Losse herkenning voor wat nog leeg is ──
+  // Aantal personen — "80 pers", "50 man", "85 à 90 man", "200 stuks"
+  if(!rec.personen){
+    m=all.match(/(\d+(?:\s*(?:à|tot|-|–)\s*\d+)?)\s*(personen|pers|man|mensen|pax|gasten|stuks)\b/i);
+    if(m) rec.personen=m[1].replace(/\s+/g,' ').trim()+' '+(m[2].toLowerCase()==='pers'?'personen':m[2].toLowerCase());
+  }
+  // Openingsuren — "17u45-19u45", "17u-19u", "11u00 tot 14u00", "14u30 à 15u00"
+  if(!rec.uren){
+    m=all.match(/(\d{1,2}\s*[u:h]\s*\d{0,2})\s*(?:-|–|tot|t\/m|à)\s*(\d{1,2}\s*[u:h]\s*\d{0,2})/i);
+    if(m){const nrm=s=>s.replace(/\s+/g,'').replace(/[:h]/i,'u');rec.uren=nrm(m[1])+' - '+nrm(m[2]);}
+  }
+  // Telefoon — Belgisch nummer (9-10 cijfers, begint met 0)
+  if(!rec.telefoon){
+    m=all.match(/0\d[\d\s.\/-]{6,}/);
+    if(m){
+      let digits='',out='';
+      for(const ch of m[0]){
+        if(/\d/.test(ch)){ if(digits.length>=10)break; digits+=ch; out+=ch; }
+        else { if(digits.length>=9)break; out+=ch; }
+      }
+      if(digits.length>=9) rec.telefoon=out.replace(/[\s.\/-]+$/,'');
+    }
+  }
+  // Betaling — trefwoorden
+  if(!rec.betaling){
+    if(/factuur/i.test(all)) rec.betaling='factuur';
+    else if(/volont/i.test(all)) rec.betaling='à volonté';
+    else if(/\bcash\b/i.test(all)) rec.betaling='cash';
+    else if(/\bbonnen\b/i.test(all)) rec.betaling='bonnen';
+  }
+
+  // Contactnaam — vóór het telefoonnr, na "via", of agressieve gok
+  const STOP=/^(de|het|een|en|of|via|voor|vd|na|met|om|in|op|bij|aan|tot|per|pers|personen|man|mensen|pax|gasten|stuks|feest|feestje|verjaardag|combi|enkel|mail|zie|whatsapp|wagen|wagens|truck|friet|frituur|hamburger|burger|pizza|pasta|snack|snacks|drank|saus|verhuur|levering|leveren|levert|container|containers|pot|avond|avondshift|shift|nodig|voorzien|gaat|gaan|komt|komen|komst|niet|wel|nog|dag|dagen|tussen|circa|ongeveer|factuur|cash|bonnen|volonte|sweet|tap|ijs|nieuw|nieuwe|grote|kleine|tel|gsm|tegen|afhaal|geel|mol|olen|balen|kontich|mechelen|lommel|beerse|oevel|donk|temse|willebroek|antwerpen|turnhout|herentals|kasterlee|laakdal|westerlo)$/i;
+  const INFIX=/^(de|van|den|der|het|'t|vande|vanden)$/i;
+  if(!rec.naam && rec.telefoon){
+    const before=all.slice(0,all.indexOf(rec.telefoon)).trim().split(/\s+/).filter(Boolean);
+    const nm=[];
+    for(let i=before.length-1;i>=0 && nm.length<3;i--){
+      const w=before[i];
+      if(/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ.'-]+$/.test(w) && !STOP.test(w)) nm.unshift(w);
+      else if(nm.length && INFIX.test(w)) nm.unshift(w);
+      else break;
+    }
+    while(nm.length && INFIX.test(nm[0])) nm.shift();
+    if(nm.length) rec.naam=nm.join(' ');
+  }
+  if(!rec.naam){
+    m=all.match(/\bvia\s+([A-Za-zÀ-ÿ][a-zà-ÿ'.-]+(?:\s+[A-Za-zÀ-ÿ][a-zà-ÿ'.-]+){1,2})/i);
+    if(m) rec.naam=m[1].trim();
+  }
+  if(!rec.naam){
+    // agressieve gok — langste reeks naam-achtige woorden
+    let best=[],run=[];
+    for(let w of all.trim().split(/\s+/)){
+      w=w.replace(/[^A-Za-zÀ-ÿ'-]/g,'');
+      if((w.length>=3 && !STOP.test(w)) || (run.length && INFIX.test(w))) run.push(w);
+      else { if(run.length>best.length) best=run.slice(); run=[]; }
+      if(run.length>=3){ if(run.length>best.length) best=run.slice(); run=[]; }
+    }
+    if(run.length>best.length) best=run.slice();
+    while(best.length && INFIX.test(best[0])) best.shift();
+    while(best.length && INFIX.test(best[best.length-1])) best.pop();
+    if(best.length) rec.naam=best.join(' ');
+  }
+
+  // Plaats / adres — uit het location-veld (als er nog geen label was)
+  if(!rec.plaats && loc){
+    if(/\b[1-9]\d{3}\b/.test(loc) || /\b(straat|laan|plein|weg|baan|dreef|steenweg|markt)\b/i.test(loc)){
+      rec.plaats=loc.replace(/^.*?adres\s*(?:is)?\s*:?\s*/i,'').trim() || loc;
+    } else {
+      const infoKw=/\b(pers|personen|man|mensen|pax|gasten|stuks|factuur|cash|bonnen|volont|via|combi|mail|whatsapp|zie|meepakken|voorzien|shift|snack|drank|saus|friet|enkel|mogelijk)\b/i;
+      if(loc.split(/\s+/).length<=3 && !infoKw.test(loc) && !/\d/.test(loc)) rec.plaats=loc;
+    }
+  }
+  // Wat in het location-veld stond maar geen plaats is = losse info
+  if(loc && !rec.plaats) rec.info=loc;
+
+  // Betaling normaliseren naar de keuzelijst-waarden
+  if(rec.betaling){
+    const b=rec.betaling.toLowerCase();
+    rec.betaling = /factuur/.test(b)?'factuur' : /volont/.test(b)?'à volonté'
+                 : /cash|contant/.test(b)?'cash' : /bonn/.test(b)?'bonnen' : rec.betaling;
+  }
+  return rec;
+}
+
 // Firebase-sleutels mogen geen . # $ [ ] / bevatten — import-id's uit
 // de Planning kunnen een decimaal hebben, daarom saneren we het id.
 function detailKey(id){ return String(id).replace(/[.#$/\[\]]/g,'_'); }
@@ -201,22 +327,28 @@ function mergeEvent(pe){
     status = !datum ? 'komend' : datum < t ? 'afgerond' : datum === t ? 'vandaag' : 'komend';
   }
   const mw = Array.isArray(d.medewerkers) && d.medewerkers.length ? d.medewerkers : [emptyMw()];
+  // Classificeer info die los in naam/locatie/notities staat
+  const rec = recognize(pe.name, pe.location, pe.notes);
   return {
     id: pe.id,
     datum,
     endDate: pe.endDate || datum,
     evenement: pe.name || '',
-    adres: pe.location || '',
+    adres: d.adres !== undefined ? d.adres : (rec.plaats || ''),
+    planningLocatie: pe.location || '',
     trucks: Array.isArray(pe.trucks) ? pe.trucks : [],
-    contact: d.contact || '',
-    openingsuren: d.openingsuren || '',
-    aantallen: d.aantallen || '',
-    betaling: d.betaling || '',
+    agendaInfo: pe.notes || '',
+    contact: d.contact || rec.naam || '',
+    gsm: d.gsm || rec.telefoon || '',
+    openingsuren: d.openingsuren || rec.uren || '',
+    aantallen: d.aantallen || rec.personen || '',
+    betaling: d.betaling || rec.betaling || '',
     wagen: d.wagen || '',
     wagenUitladen: !!d.wagenUitladen,
     wagenMeebrengen: d.wagenMeebrengen === undefined ? true : !!d.wagenMeebrengen,
     opmerkingen: d.opmerkingen || '',
     medewerkers: mw,
+    recognized: rec,
     status
   };
 }
@@ -248,8 +380,8 @@ function listen(){
 }
 
 function newBlankEvent(){
-  return{id:'new_'+Date.now(),datum:'',evenement:'',adres:'',contact:'',openingsuren:'',
-    aantallen:'',betaling:'',wagen:'',trucks:[],wagenUitladen:false,wagenMeebrengen:true,
+  return{id:'new_'+Date.now(),datum:'',evenement:'',adres:'',planningLocatie:'',contact:'',gsm:'',openingsuren:'',
+    aantallen:'',betaling:'',wagen:'',trucks:[],agendaInfo:'',recognized:{},wagenUitladen:false,wagenMeebrengen:true,
     opmerkingen:'',medewerkers:[emptyMw()],status:'komend'};
 }
 
@@ -469,6 +601,18 @@ function renderDetail(){
   const e=editing;
   const el=document.getElementById('page-detail');
   const isNew=String(e.id).startsWith('new_');
+  const _r=e.recognized||{};
+  const _rb=[];
+  if(_r.plaats)_rb.push('📍 '+esc(_r.plaats));
+  if(_r.naam)_rb.push('👤 '+esc(_r.naam));
+  if(_r.telefoon)_rb.push('📞 '+esc(_r.telefoon));
+  if(_r.personen)_rb.push('👥 '+esc(_r.personen));
+  if(_r.uren)_rb.push('🕒 '+esc(_r.uren));
+  if(_r.betaling)_rb.push('💶 '+esc(_r.betaling));
+  const recBlock=_rb.length?`<div class="recog-note">
+        <div class="recog-note-label">🔍 Herkend uit de planning-tekst — automatisch in het juiste veld gezet (waar dat leeg was)</div>
+        <div class="recog-note-text">${_rb.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>
+      </div>`:'';
   let staffRows='';
   for(let i=0;i<e.medewerkers.length;i++){
     const m=e.medewerkers[i];
@@ -496,7 +640,7 @@ function renderDetail(){
     </div>
     <div class="detail-body">
 
-      <div class="section-heading" style="margin-top:0">📋 Basisinfo <span style="text-transform:none;letter-spacing:0;font-weight:400">— gedeeld met de Planning</span></div>
+      <div class="section-heading" style="margin-top:0">📋 Basisinfo <span style="text-transform:none;letter-spacing:0;font-weight:400">— datum &amp; naam gedeeld met de Planning</span></div>
       <div class="info-grid">
         <div class="info-field">
           <label>Datum</label>
@@ -509,11 +653,16 @@ function renderDetail(){
         </div>
         <div class="info-field col-full">
           <label>Adres / Locatie</label>
-          <input value="${esc(e.adres)}" oninput="upd('adres',this.value)" placeholder="Volledig adres van de locatie"/>
+          <input value="${esc(e.adres)}" oninput="upd('adres',this.value)" placeholder="Straat, nummer, gemeente"/>
+          ${e.planningLocatie?`<div class="info-hint">📍 Outlook-locatieveld: "${esc(e.planningLocatie)}"${_r.plaats?'':' — geen duidelijk adres herkend, vul zelf aan'}</div>`:''}
         </div>
         <div class="info-field">
           <label>Contactpersoon</label>
-          <input value="${esc(e.contact)}" oninput="upd('contact',this.value)" placeholder="Naam + telefoonnummer"/>
+          <input value="${esc(e.contact)}" oninput="upd('contact',this.value)" placeholder="Voor- en achternaam"/>
+        </div>
+        <div class="info-field">
+          <label>Telefoon / GSM</label>
+          <input value="${esc(e.gsm)}" oninput="upd('gsm',this.value)" placeholder="bijv. 0470 12 34 56"/>
         </div>
         <div class="info-field">
           <label>Openingsuren</label>
@@ -534,6 +683,12 @@ function renderDetail(){
           </select>
         </div>
       </div>
+
+      ${e.agendaInfo?`<div class="agenda-note">
+        <div class="agenda-note-label">📅 Uit de Outlook-agenda</div>
+        <div class="agenda-note-text">${esc(e.agendaInfo)}</div>
+      </div>`:''}
+      ${recBlock}
 
       <div class="divider"></div>
       <div class="section-heading" style="margin-top:0">⚙️ Operations</div>
@@ -592,6 +747,7 @@ function renderDetail(){
       <button class="cancel-btn" onclick="goBack()">Annuleer</button>
       <div style="display:flex;align-items:center;gap:10px">
         ${!isNew?`<button class="cancel-btn" onclick="delEvent('${e.id}')" style="color:var(--red);border-color:#f7c1c1">Verwijder</button>`:''}
+        <button class="cancel-btn" onclick="generateWord()" style="color:var(--blue);border-color:#b3d1f0;display:flex;align-items:center;gap:6px">📄 Fiche als Word</button>
         <button class="save-btn" onclick="saveEvent()">💾 Opslaan</button>
       </div>
     </div>
@@ -635,9 +791,10 @@ async function saveEvent(){
         endDate=new Date(new Date(pe.endDate||pe.startDate).getTime()+delta).toISOString().slice(0,10);
       }
       pe.name=e.evenement.trim();
-      pe.location=e.adres||'';
       pe.startDate=e.datum||'';
       pe.endDate=endDate;
+      // pe.location blijft ongemoeid — dat is het planning-infoveld,
+      // het ops-adres wordt apart in ops_details bewaard.
     }
   }
   try{
@@ -645,7 +802,8 @@ async function saveEvent(){
     // 2. Operationele laag in ops_details
     const mw=(e.medewerkers||[]).filter(m=>m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
     await fbdb.ref(OPS_PATH+'/'+detailKey(pid)).set({
-      contact:e.contact||'',openingsuren:e.openingsuren||'',aantallen:e.aantallen||'',
+      adres:e.adres||'',contact:e.contact||'',gsm:e.gsm||'',
+      openingsuren:e.openingsuren||'',aantallen:e.aantallen||'',
       betaling:e.betaling||'',wagen:e.wagen||'',wagenUitladen:!!e.wagenUitladen,
       wagenMeebrengen:!!e.wagenMeebrengen,opmerkingen:e.opmerkingen||'',
       medewerkers:mw,status:e.status||''
@@ -677,6 +835,219 @@ function goBack(){
   document.getElementById('page-detail').style.display='none';
   document.getElementById('page-'+curPage).style.display='block';
   renderPage(curPage);
+}
+
+// ── WORD GENERATIE ──────────────────────────────────────────
+// De Word-fiche neemt ALLE agenda-info uit de Planning over:
+// datum (incl. meerdaags bereik), evenement, adres en de in de
+// Planning toegewezen wagen(s) — aangevuld met de operationele
+// laag (contact, uren, betaling, ploeg, opmerkingen).
+async function generateWord(){
+  if(!editing){toast('✗ Geen event geselecteerd.',false);return;}
+  const e=editing;
+  if(!window.docx){toast('✗ Word-library nog niet geladen. Probeer opnieuw.',false);return;}
+
+  const {
+    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    AlignmentType, BorderStyle, WidthType, ShadingType
+  } = window.docx;
+
+  // Datumopmaak
+  function fmtWordDate(d){
+    if(!d) return '';
+    const dt=new Date(d+'T00:00:00');
+    const dn=['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+    return `${dn[dt.getDay()]} ${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+  }
+
+  // Helper: labelrij (bold label + gewone waarde)
+  function labelPara(label, value, opts={}){
+    const runs=[new TextRun({text:label+': ', bold:true, size:opts.size||22, font:'Arial'})];
+    if(value) runs.push(new TextRun({text:String(value), size:opts.size||22, font:'Arial'}));
+    return new Paragraph({spacing:{after:80}, children:runs});
+  }
+
+  // Helper: lege paragraf
+  function emptyPara(after=80){
+    return new Paragraph({spacing:{after}, children:[new TextRun({text:'',font:'Arial'})]});
+  }
+
+  // Tabel borders
+  const bdr={style:BorderStyle.SINGLE,size:4,color:'AAAAAA'};
+  const borders={top:bdr,bottom:bdr,left:bdr,right:bdr};
+
+  // Kolombreedtes (A4 met ~10mm marges)
+  const COL=[2200,2071,2072,2072,2071];
+
+  // Header van personeelstabel
+  const colLabels=['Medewerkers','Vertrek Señor','Aankomst event','Vertrek event','Aankomst Señor'];
+  const headerRow=new TableRow({
+    tableHeader:true,
+    children:colLabels.map((h,i)=>new TableCell({
+      borders,
+      width:{size:COL[i],type:WidthType.DXA},
+      shading:{fill:'1C1917',type:ShadingType.CLEAR},
+      margins:{top:80,bottom:80,left:120,right:120},
+      children:[new Paragraph({
+        alignment:AlignmentType.CENTER,
+        children:[new TextRun({text:h,bold:true,color:'FFFFFF',size:18,font:'Arial'})]
+      })]
+    }))
+  });
+
+  // Datarijen — minimum 8 rijen
+  const mwLijst=(e.medewerkers||[]).filter(m=>m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
+  while(mwLijst.length<8) mwLijst.push({naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''});
+
+  const dataRows=mwLijst.map(m=>new TableRow({
+    children:[m.naam,m.vertrekSenor,m.aankomstEvent,m.vertrekEvent,m.aankomstSenor].map((val,i)=>new TableCell({
+      borders,
+      width:{size:COL[i],type:WidthType.DXA},
+      margins:{top:80,bottom:80,left:120,right:120},
+      children:[new Paragraph({children:[new TextRun({text:val||'',size:20,font:'Arial'})]})]
+    }))
+  }));
+
+  // Agenda-info uit de Planning
+  const datumTxt = (e.endDate && e.endDate!==e.datum)
+    ? `${fmtWordDate(e.datum)}  t/m  ${fmtWordDate(e.endDate)}`
+    : fmtWordDate(e.datum);
+  const planTrucks = Array.isArray(e.trucks) ? e.trucks.filter(Boolean) : [];
+
+  // Wagen uitladen / meebrengen tekst
+  const wagenUitTxt=e.wagenUitladen?'JA — zie opmerkingen':'NEE';
+  const wagenMeeTxt=e.wagenMeebrengen?'JA':'NEE';
+
+  // Bouw document
+  const doc=new Document({
+    styles:{default:{document:{run:{font:'Arial',size:22}}}},
+    sections:[{
+      properties:{
+        page:{
+          size:{width:11906,height:16838},
+          margin:{top:567,right:567,bottom:567,left:567}
+        }
+      },
+      children:[
+        // ── LOGO / WEBSITE
+        new Paragraph({
+          alignment:AlignmentType.CENTER,
+          spacing:{after:40},
+          children:[new TextRun({text:'🌮 SEÑOR SNACKS',bold:true,size:36,color:'D4521A',font:'Arial'})]
+        }),
+        new Paragraph({
+          alignment:AlignmentType.CENTER,
+          spacing:{after:200},
+          children:[new TextRun({text:'www.senorsnacks.be',size:20,color:'888888',font:'Arial'})]
+        }),
+
+        // ── TITEL
+        new Paragraph({
+          spacing:{before:0,after:100},
+          border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'D4521A',space:1}},
+          children:[new TextRun({text:'PERSONEELSFICHE',bold:true,size:26,color:'1C1917',font:'Arial'})]
+        }),
+        emptyPara(100),
+
+        // ── BASISINFO (uit de agenda)
+        labelPara('DATUM', datumTxt),
+        labelPara('EVENEMENT', e.evenement),
+        labelPara('ADRES', e.adres),
+        emptyPara(60),
+        labelPara('CONTACT', e.contact),
+        labelPara('TELEFOON / GSM', e.gsm),
+        labelPara('OPENINGSUREN', e.openingsuren),
+        labelPara('VERWACHT AANTAL', e.aantallen),
+        labelPara('BETALING', e.betaling ? e.betaling.charAt(0).toUpperCase()+e.betaling.slice(1) : ''),
+        emptyPara(60),
+
+        // ── INFO UIT DE AGENDA (Outlook-omschrijving)
+        ...(e.agendaInfo ? [
+          new Paragraph({
+            spacing:{before:0,after:100},
+            border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}},
+            children:[new TextRun({text:'INFO UIT DE AGENDA',bold:true,size:22,color:'555555',font:'Arial'})]
+          }),
+          emptyPara(60),
+          new Paragraph({
+            spacing:{after:200},
+            children:[new TextRun({text:e.agendaInfo,size:22,font:'Arial'})]
+          })
+        ] : []),
+
+        // ── WAGEN & LOGISTIEK
+        new Paragraph({
+          spacing:{before:0,after:100},
+          border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}},
+          children:[new TextRun({text:'WAGEN & LOGISTIEK',bold:true,size:22,color:'555555',font:'Arial'})]
+        }),
+        emptyPara(60),
+        labelPara('Wagen', e.wagen || planTrucks.join(', ')),
+        ...(planTrucks.length && e.wagen ? [labelPara('Volgens planning', planTrucks.join(', '))] : []),
+        labelPara('Wagen uitladen', wagenUitTxt),
+        labelPara('Wagen meebrengen', wagenMeeTxt),
+        emptyPara(60),
+
+        // ── OPMERKINGEN
+        new Paragraph({
+          spacing:{before:0,after:100},
+          border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}},
+          children:[new TextRun({text:'OPMERKINGEN',bold:true,size:22,color:'555555',font:'Arial'})]
+        }),
+        emptyPara(60),
+        new Paragraph({
+          spacing:{after:200},
+          children:[new TextRun({text:e.opmerkingen||'/',size:22,font:'Arial'})]
+        }),
+
+        // ── VASTE SLUITINGSTEKST
+        new Paragraph({
+          spacing:{after:200},
+          children:[new TextRun({
+            text:'Sluiten: Steeds in overleg met de organisatie! Voor je de klep sluit ALTIJD met de organisatie bespreken. Indien het zeer rustig is ook even de organisatie op de hoogte brengen dat je gaat sluiten.',
+            size:18,italics:true,color:'666666',font:'Arial'
+          })]
+        }),
+
+        // ── MEDEWERKERS
+        new Paragraph({
+          spacing:{before:0,after:120},
+          border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}},
+          children:[new TextRun({text:'MEDEWERKERS & UREN',bold:true,size:22,color:'555555',font:'Arial'})]
+        }),
+        emptyPara(80),
+        new Table({
+          width:{size:10486,type:WidthType.DXA},
+          columnWidths:COL,
+          rows:[headerRow,...dataRows]
+        }),
+
+        emptyPara(300),
+
+        // ── VOETTEKST
+        new Paragraph({
+          alignment:AlignmentType.CENTER,
+          border:{top:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}},
+          spacing:{before:100},
+          children:[new TextRun({
+            text:'SENOR SNACKS BVBA · Winkelom 87c · 2440 Geel · tel 014/58 76 56 · BE465 570 997 · KBC: BE39 7330 4242 6719',
+            size:16,color:'888888',font:'Arial'
+          })]
+        })
+      ]
+    }]
+  });
+
+  try{
+    const blob=await Packer.toBlob(doc);
+    const safeName=(e.evenement||'event').replace(/[^a-zA-Z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+    const dateStr=(e.datum||'').replace(/-/g,'');
+    saveAs(blob,`Fiche_${safeName}_${dateStr}.docx`);
+    toast('✓ Word-fiche gedownload.');
+  }catch(err){
+    console.error(err);
+    toast('✗ Word genereren mislukt: '+err.message,false);
+  }
 }
 
 renderPage('dashboard');

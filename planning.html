@@ -624,11 +624,12 @@ function attachFbListener(path) {
   fbdb.ref(path).on('value', snap => {
     const data = snap.val();
     if (data) {
-      events = sanitizeEvents(data);
-      localStorage.setItem(path, JSON.stringify(events));
+      const live = sanitizeEvents(data);
+      localStorage.setItem(path, JSON.stringify(live));  // cache enkel de live planning
+      events = withArchive(live);
       renderWeek();
     } else {
-      if (events.length) fbdb.ref(path).set(events);
+      if (events.length) fbdb.ref(path).set(liveEvents());
     }
   });
 }
@@ -636,6 +637,40 @@ function attachFbListener(path) {
 // Beide tabs gebruiken hetzelfde Firebase pad — events zijn gedeeld
 function fbPath() {
   return 'ft_planning_v1';
+}
+
+// ── ARCHIEF: historische Outlook-events ────────────────
+// De oude agenda (events t/m ~2 jaar terug) staat in een apart Firebase-
+// pad zodat de live planning licht blijft. We TONEN die events wel in de
+// agenda, maar schrijven ze nooit terug naar 'ft_planning_v1': archief-
+// events worden getagd met _archief en door liveEvents() weggefilterd.
+const ARCHIVE_PATH = 'ft_planning_outlook_archief';
+let archiveEvents = [];   // alleen-lezen historische events (getagd _archief)
+
+function loadArchive() {
+  fbdb.ref(ARCHIVE_PATH).once('value').then(snap => {
+    const data = snap.val();
+    archiveEvents = data ? sanitizeEvents(data).map(e => (e._archief = true, e)) : [];
+    events = withArchive(events);   // archief mee in de huidige lijst
+    renderWeek();
+  }).catch(err => console.warn('Archief laden mislukt:', err));
+}
+
+// Live events + historische archief-events, ontdubbeld. Archief-events die
+// al live staan (zelfde id of naam+startdatum) vallen weg. Idempotent: een
+// reeds gemengde lijst wordt eerst gestript, zodat herhaald aanroepen veilig is.
+function withArchive(list) {
+  const live = list.filter(e => !e._archief);
+  if (!archiveEvents.length) return live;
+  const ids  = new Set(live.map(e => e.id));
+  const keys = new Set(live.map(e => e.name + '|' + e.startDate));
+  return live.concat(archiveEvents.filter(e =>
+    !ids.has(e.id) && !keys.has(e.name + '|' + e.startDate)));
+}
+
+// De live planning zonder archief — enkel dit mag naar Firebase.
+function liveEvents() {
+  return events.filter(e => !e._archief);
 }
 
 // Filter events op basis van actieve mode
@@ -662,11 +697,13 @@ function filterEvents(evList) {
 const EVCOLORS=['#e8001d','#c2410c','#b45309','#1d4ed8','#15803d','#7c3aed','#0e7490','#be185d'];
 function rndColor(){return EVCOLORS[Math.floor(Math.random()*EVCOLORS.length)];}
 function save(){
-  localStorage.setItem(fbPath(), JSON.stringify(events));
-  fbdb.ref(fbPath()).set(events).then(() => {
+  // Archief-events nooit mee terugschrijven naar de live planning.
+  const live = liveEvents();
+  localStorage.setItem(fbPath(), JSON.stringify(live));
+  fbdb.ref(fbPath()).set(live).then(() => {
     // Automatische backup bij elke wijziging
     const ts = new Date().toISOString().replace(/[:.]/g,'-').substring(0,19);
-    fbdb.ref('ft_planning_backup/' + ts).set(events).catch(()=>{});
+    fbdb.ref('ft_planning_backup/' + ts).set(live).catch(()=>{});
     // Bewaar max 10 backups
     fbdb.ref('ft_planning_backup').once('value').then(snap => {
       const keys = Object.keys(snap.val() || {}).sort();
@@ -689,6 +726,7 @@ function sanitizeEvents(arr){
     terminalDays:(e.terminalDays && typeof e.terminalDays === 'object' && !Array.isArray(e.terminalDays))?e.terminalDays:{},
     logistiek:(e.logistiek && typeof e.logistiek === 'object' && !Array.isArray(e.logistiek))?e.logistiek:{},
     logistiekDays:(e.logistiekDays && typeof e.logistiekDays === 'object' && !Array.isArray(e.logistiekDays))?e.logistiekDays:{},
+    notes:typeof e.notes==='string'?e.notes:'',
     color:e.color||'#0078D4'
   }));
 }
@@ -854,6 +892,7 @@ function openFoldtableMail(date, total, cap, extra){
 // Start initieel met wagens listener
 events=JSON.parse(localStorage.getItem('ft_planning_v1')||'[]');
 attachFbListener('ft_planning_v1');
+loadArchive();  // historische Outlook-events erbij tonen
 
 // ── MODE SWITCH ────────────────────────────────────────
 function switchMode(mode) {
@@ -1688,6 +1727,7 @@ function importSelected(){
       startDate:e.startDate,
       endDate:e.endDate||e.startDate,
       trucks:[],
+      notes:e.notes||'',
       color:e.color||rndColor()  // gebruik Outlook kleur als beschikbaar
     });
   });
@@ -2073,15 +2113,16 @@ async function sync365() {
 
     // Stap 2: Events ophalen uit de eigen agenda
     const now = new Date();
-    // Venster: 2 jaar terug t/m ~8 maanden vooruit, zodat ook het verleden mee komt.
-    const start = new Date(now.getFullYear() - 2, now.getMonth(), 1).toISOString();
+    // Venster: vanaf vandaag t/m ~8 maanden vooruit. De geschiedenis staat
+    // al in het archief (ft_planning_outlook_archief) en hoeft niet opnieuw.
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const end   = new Date(now.getFullYear(), now.getMonth() + 8, 0).toISOString();
     let allEvts = [];
 
     status.textContent = `⏳ Agenda ophalen van ${acct}...`;
     let url = `https://graph.microsoft.com/v1.0/me/calendarView`
       + `?startDateTime=${start}&endDateTime=${end}`
-      + `&$top=500&$select=subject,start,end,location,isAllDay,categories`
+      + `&$top=500&$select=subject,start,end,location,isAllDay,categories,bodyPreview`
       + `&$orderby=start/dateTime`;
     while (url) {
       const r = await fetch(url, {
@@ -2109,9 +2150,23 @@ async function sync365() {
           startDate: toStr(s),
           endDate: toStr(endClamped),
           location: (e.location?.displayName || '').trim(),
+          // Regeleinden behouden — zo blijft een "Label: waarde"-sjabloon leesbaar
+          notes: (e.bodyPreview || '').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim(),
           color
         };
       });
+
+    // Bestaande events bijwerken met de omschrijving uit Outlook.
+    // Dupes worden niet opnieuw geïmporteerd, dus verrijken we ze hier
+    // zodat de notities ook bij al ingeplande events terechtkomen.
+    const convByKey = {};
+    converted.forEach(c => { convByKey[c.name + '|' + c.startDate] = c; });
+    let verrijkt = 0;
+    events.forEach(ev => {
+      const c = convByKey[ev.name + '|' + ev.startDate];
+      if (c && c.notes && ev.notes !== c.notes) { ev.notes = c.notes; verrijkt++; }
+    });
+    if (verrijkt > 0) save();
 
     // Stap 4: Duplicaten eruit (zelfde naam + startdatum staat al in de planning)
     const existingKeys = new Set(events.map(e => e.name + '|' + e.startDate));
@@ -2121,6 +2176,7 @@ async function sync365() {
     status.className = 'ai-status success';
     status.textContent = `✓ ${converted.length} events gevonden`
       + (dupes > 0 ? ` · ${dupes} staan al in de planning` : '')
+      + (verrijkt > 0 ? ` · ${verrijkt} bijgewerkt met notities` : '')
       + `. Selecteer wat je wil importeren.`;
 
     document.getElementById('import-modal-sub').textContent =
