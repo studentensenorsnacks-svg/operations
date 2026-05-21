@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Señor Snacks — Laadlijst ↔ Truck</title>
+  <link rel="icon" type="image/png" href="senorsnacks-logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    :root{
+      --red:#e8001d;--bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+      --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+      --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+      --green:#15803d;--green-bg:#eaf6ec;--orange:#c2410c;--orange-bg:#fdeee2;
+      --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+    /* TOPBAR */
+    .topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:100;}
+    .logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+    .logo-sq{width:32px;height:32px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+    .logo-sq span{color:#fff;font-weight:700;font-size:14px;font-family:var(--font-cond);}
+    .logo-text{font-family:var(--font-cond);font-weight:600;font-size:18px;}
+    .nav-links{display:flex;gap:4px;}
+    .nav-link{padding:6px 14px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;color:var(--text2);transition:background .15s;}
+    .nav-link:hover{background:var(--surface2);}
+    .nav-link.active{background:var(--red);color:#fff;}
+
+    /* MAIN */
+    .main{padding:26px 28px;max-width:1000px;margin:0 auto;}
+    .page-title{font-family:var(--font-cond);font-size:26px;font-weight:700;}
+    .page-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+    .info-banner{background:#e6f1fb;border:1px solid #b3d1f0;border-radius:10px;padding:12px 15px;font-size:13px;color:#185fa5;line-height:1.55;margin:16px 0 20px;}
+
+    /* STATS */
+    .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px 16px;}
+    .stat .n{font-family:var(--font-cond);font-size:27px;font-weight:700;line-height:1;}
+    .stat .l{font-size:12px;color:var(--text2);margin-top:5px;}
+    .stat.warn .n{color:var(--orange);}
+
+    /* EVENT CARD */
+    .evt-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;}
+    .evt-hdr{padding:13px 16px;background:var(--surface2);border-bottom:1px solid var(--border);}
+    .evt-name{font-family:var(--font-cond);font-size:17px;font-weight:700;}
+    .evt-meta{font-size:12px;color:var(--text2);margin-top:1px;}
+
+    /* LAADLIJST ROW */
+    .ll-row{display:flex;align-items:center;gap:13px;padding:11px 16px;border-bottom:1px solid var(--border);}
+    .ll-row:last-child{border-bottom:none;}
+    .ll-truck{font-family:var(--font-cond);font-weight:700;font-size:15px;width:200px;flex-shrink:0;}
+    .ll-info{flex:1;min-width:0;}
+    .ll-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ll-sub{font-size:12px;color:var(--text2);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .ll-actions{display:flex;gap:6px;flex-shrink:0;}
+    .ll-row.missing .ll-truck{font-weight:600;color:var(--text2);}
+    .ll-row.missing{background:#fcfcfc;}
+
+    .btn{padding:6px 11px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .12s;display:inline-flex;align-items:center;gap:4px;}
+    .btn:hover{background:var(--surface2);color:var(--text);}
+    .btn-move:hover{border-color:var(--red);color:var(--red);}
+    .btn-icon{padding:6px 9px;}
+
+    .tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;}
+    .tag-ok{background:var(--green-bg);color:var(--green);}
+    .tag-warn{background:var(--orange-bg);color:var(--orange);}
+    .tag-none{background:var(--surface2);color:var(--text3);}
+
+    /* ITEMS */
+    .ll-items{padding:6px 16px 14px;background:#fafafa;border-bottom:1px solid var(--border);font-size:12.5px;}
+    .ll-items .cat{font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-size:11px;margin:9px 0 3px;}
+    .ll-items .it{display:flex;justify-content:space-between;padding:2px 0;color:var(--text2);}
+    .ll-items .it span:last-child{font-family:var(--mono);}
+
+    .section-hdr{font-family:var(--font-cond);font-size:18px;font-weight:700;margin:26px 0 10px;}
+    .empty{text-align:center;padding:44px 20px;color:var(--text3);}
+    .empty-icon{font-size:34px;margin-bottom:10px;}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .modal-overlay.hidden{display:none;}
+    .modal{background:var(--surface);border-radius:15px;width:100%;max-width:440px;}
+    .modal-hdr{padding:18px 20px 0;display:flex;justify-content:space-between;align-items:center;}
+    .modal-title{font-family:var(--font-cond);font-size:19px;font-weight:700;}
+    .modal-close{background:var(--surface2);border:none;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px;}
+    .modal-body{padding:14px 20px 20px;}
+    .m-current{font-size:13px;color:var(--text2);background:var(--surface2);border-radius:9px;padding:10px 12px;margin-bottom:15px;line-height:1.6;}
+    .fld{margin-bottom:14px;}
+    .fld label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:5px;}
+    .fld select,.fld input{width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:var(--surface);color:var(--text);}
+    .fld select:focus,.fld input:focus{outline:none;border-color:var(--red);}
+    .truck-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+    .truck-chips .hint{font-size:11px;color:var(--text3);width:100%;}
+    .truck-chip{font-size:12px;padding:4px 9px;border-radius:99px;background:var(--surface2);border:none;cursor:pointer;font-family:var(--font);color:var(--text2);}
+    .truck-chip:hover{background:var(--red);color:#fff;}
+    .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;}
+    .btn-red{background:var(--red);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;}
+    .btn-gray{background:var(--surface2);color:var(--text);border:none;padding:9px 16px;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;}
+
+    .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:11px 20px;border-radius:9px;font-size:13.5px;font-weight:600;z-index:300;opacity:0;transition:opacity .25s;pointer-events:none;}
+    .toast.show{opacity:1;}
+    .loader{text-align:center;padding:50px;color:var(--text3);font-size:14px;}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="index.html">
+    <div class="logo-sq"><span>SS</span></div>
+    <span class="logo-text">Señor Snacks</span>
+  </a>
+  <nav class="nav-links">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="planning.html" class="nav-link">Planning</a>
+    <a href="laadlijst-beheer.html" class="nav-link">Laadlijsten</a>
+    <a href="laadlijst-koppeling.html" class="nav-link active">Koppelingen</a>
+  </nav>
+</div>
+
+<div class="main">
+  <div class="page-title">🔗 Laadlijst ↔ Truck koppelingen</div>
+  <div class="page-sub">Welke laadlijst-PDF hangt aan welke foodtruck — en verplaats ze mee bij een truckwissel.</div>
+
+  <div class="info-banner">
+    💡 Wissel je een truck (bv. 504 is stuk → 503 neemt over)? Klik dan bij de laadlijst op <strong>🔄 Verplaats</strong> en kies de nieuwe truck. Zo gaat de PDF nooit verloren — ook niet als de oude truck van het event verdwijnt.
+  </div>
+
+  <div class="stat-row" id="stat-row"></div>
+  <div id="content"><div class="loader">Laden…</div></div>
+</div>
+
+<!-- VERPLAATS-MODAL -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">🔄 Laadlijst verplaatsen</span>
+      <button class="modal-close" onclick="closeReassign()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-current" id="m-current"></div>
+      <div class="fld">
+        <label>Event</label>
+        <select id="m-event" onchange="onEventPick()"></select>
+      </div>
+      <div class="fld">
+        <label>Truck / wagen</label>
+        <input type="text" id="m-truck" list="truck-list" placeholder="Typ of kies een truck…" autocomplete="off">
+        <datalist id="truck-list"></datalist>
+        <div class="truck-chips" id="m-chips"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-gray" onclick="closeReassign()">Annuleren</button>
+        <button class="btn-red" onclick="saveReassign()">Verplaatsen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain:"operationssenorsnacks.firebaseapp.com",
+  databaseURL:"https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"operationssenorsnacks",
+  storageBucket:"operationssenorsnacks.firebasestorage.app",
+  messagingSenderId:"526032166243",
+  appId:"1:526032166243:web:5af01c6d17aecd56114756"
+});
+const db = firebase.database();
+
+const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
+let laadlijsten = {}, planningEvents = [];
+let reassignKey = null;
+
+function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800); }
+function fmtDate(d){ if(!d) return '—'; try{ return new Date(d+'T00:00:00').toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short',year:'numeric'}); }catch(e){ return d; } }
+function itemCount(ll){ return Object.values(ll.categorieën||{}).reduce((s,a)=>s+(Array.isArray(a)?a.length:0),0); }
+function eid(v){ return (v==null||v==='') ? null : String(v); }   // genormaliseerd event-id
+
+// ── Firebase: live laadlijsten + planning-events ─────────────────
+db.ref('ft_laadlijsten_v1').on('value', snap=>{ laadlijsten = snap.val() || {}; render(); });
+db.ref('ft_planning_v1').on('value', snap=>{
+  const raw = snap.val() || {};
+  planningEvents = (Array.isArray(raw)?raw:Object.values(raw)).filter(e=>e && e.id!=null);
+  render();
+});
+
+function eventMap(){ const m={}; planningEvents.forEach(e=>{ m[String(e.id)]=e; }); return m; }
+function allTruckNames(){
+  const s=new Set();
+  planningEvents.forEach(e=>(Array.isArray(e.trucks)?e.trucks:[]).forEach(t=>{ if(t) s.add(t); }));
+  Object.values(laadlijsten).forEach(ll=>{ if(ll && ll.wagen) s.add(ll.wagen); });
+  return [...s].sort((a,b)=>a.localeCompare(b,'nl'));
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function render(){
+  const content=document.getElementById('content');
+  const lls=Object.entries(laadlijsten).filter(([k,ll])=>ll);
+  const emap=eventMap();
+
+  // Groepeer laadlijsten: per bestaand event, of als 'orphan'
+  const byEvent={}, orphans=[];
+  lls.forEach(([key,ll])=>{
+    const e=eid(ll.eventId);
+    if(e && emap[e]) (byEvent[e]=byEvent[e]||[]).push({key,ll});
+    else orphans.push({key,ll});
+  });
+
+  // Tellingen
+  let linked=0, attention=orphans.length;
+  Object.keys(byEvent).forEach(e=>{
+    const trucks=Array.isArray(emap[e].trucks)?emap[e].trucks:[];
+    byEvent[e].forEach(x=>{ (x.ll.wagen && trucks.includes(x.ll.wagen)) ? linked++ : attention++; });
+  });
+  renderStats(lls.length, linked, attention);
+
+  let html='';
+  // Events met laadlijsten — nieuwste bovenaan
+  const evs=Object.keys(byEvent).map(e=>emap[e])
+    .sort((a,b)=>String(b.startDate||'').localeCompare(String(a.startDate||'')));
+  evs.forEach(ev=>{
+    const arr=byEvent[String(ev.id)];
+    const trucks=Array.isArray(ev.trucks)?ev.trucks:[];
+    html+=`<div class="evt-card">
+      <div class="evt-hdr">
+        <div class="evt-name">${escHtml(ev.name||ev.naam||'(naamloos event)')}</div>
+        <div class="evt-meta">📅 ${fmtDate(ev.startDate)} · ${arr.length} laadlijst${arr.length!==1?'en':''} · ${trucks.length} truck${trucks.length!==1?'s':''}</div>
+      </div>`;
+    // Elke truck op het event — met of zonder laadlijst
+    trucks.forEach(t=>{
+      const found=arr.find(x=>x.ll.wagen===t);
+      html+= found ? row(found.key,found.ll,'ok') : missingRow(t);
+    });
+    // Laadlijsten van dit event waarvan de truck NIET (meer) op het event staat
+    arr.filter(x=>!trucks.includes(x.ll.wagen)).forEach(x=>{ html+=row(x.key,x.ll,'offtruck'); });
+    html+=`</div>`;
+  });
+
+  // Orphans — event verdwenen of nooit gekoppeld
+  if(orphans.length){
+    html+=`<div class="section-hdr">⚠️ Niet (meer) gekoppeld — ${orphans.length}</div><div class="evt-card">`;
+    orphans.forEach(x=>{ html+=row(x.key,x.ll, eid(x.ll.eventId)?'eventgone':'template'); });
+    html+=`</div>`;
+  }
+
+  if(!evs.length && !orphans.length){
+    html=`<div class="empty"><div class="empty-icon">📄</div>Nog geen laadlijsten.<br>Upload een PDF bij een truck in de Planning (de 📄 PDF-knop).</div>`;
+  }
+  content.innerHTML=html;
+}
+
+function renderStats(total,linked,attention){
+  document.getElementById('stat-row').innerHTML=`
+    <div class="stat"><div class="n">${total}</div><div class="l">laadlijsten totaal</div></div>
+    <div class="stat"><div class="n" style="color:var(--green)">${linked}</div><div class="l">correct gekoppeld</div></div>
+    <div class="stat ${attention?'warn':''}"><div class="n">${attention}</div><div class="l">aandacht nodig</div></div>`;
+}
+
+const TAGS={
+  ok:        ['tag-ok',  '✅ Gekoppeld'],
+  offtruck:  ['tag-warn','⚠ Truck niet (meer) op dit event'],
+  eventgone: ['tag-warn','⚠ Event bestaat niet meer'],
+  template:  ['tag-none','◯ Geen event/truck']
+};
+function row(key,ll,status){
+  const [cls,label]=TAGS[status]||TAGS.template;
+  const sub=[`<span class="tag ${cls}">${label}</span>`];
+  if(status==='eventgone' && ll.eventNaam) sub.push('was event: '+escHtml(ll.eventNaam));
+  else if(status==='template' && ll.aangemaakt) sub.push('aangemaakt '+fmtDate(String(ll.aangemaakt).slice(0,10)));
+  sub.push(itemCount(ll)+' items');
+  return `<div class="ll-row">
+    <div class="ll-truck">🚚 ${escHtml(ll.wagen||'—')}</div>
+    <div class="ll-info">
+      <div class="ll-name">${escHtml(ll.naam||'(zonder naam)')}</div>
+      <div class="ll-sub">${sub.join(' · ')}</div>
+    </div>
+    <div class="ll-actions">
+      <button class="btn btn-icon" onclick="toggleItems('${key}')" title="Bekijk items">👁</button>
+      <button class="btn btn-move" onclick="openReassign('${key}')">🔄 Verplaats</button>
+      <button class="btn btn-icon" onclick="delLL('${key}')" title="Verwijder">🗑</button>
+    </div>
+  </div>
+  <div class="ll-items" id="items-${key}" hidden></div>`;
+}
+function missingRow(truck){
+  return `<div class="ll-row missing">
+    <div class="ll-truck">🚚 ${escHtml(truck)}</div>
+    <div class="ll-info">
+      <div class="ll-name" style="color:var(--text3)">Geen laadlijst</div>
+      <div class="ll-sub">Upload een PDF voor deze truck in de Planning</div>
+    </div>
+    <div class="ll-actions"></div>
+  </div>`;
+}
+
+function toggleItems(key){
+  const el=document.getElementById('items-'+key);
+  if(!el) return;
+  if(!el.hasAttribute('hidden')){ el.setAttribute('hidden',''); return; }
+  const ll=laadlijsten[key]; if(!ll) return;
+  const cats=ll.categorieën||{};
+  let h='';
+  CATS.forEach(c=>{
+    const items=cats[c];
+    if(!Array.isArray(items)||!items.length) return;
+    h+=`<div class="cat">${c}</div>`;
+    items.forEach(it=>{ h+=`<div class="it"><span>${escHtml(it.naam)}</span><span>${it.aantal||0}</span></div>`; });
+  });
+  el.innerHTML=h||'<div class="cat">Geen items</div>';
+  el.removeAttribute('hidden');
+}
+
+async function delLL(key){
+  const ll=laadlijsten[key]||{};
+  if(!confirm('Laadlijst verwijderen?\n\n'+(ll.naam||'(zonder naam)')+'\n\nDit kan niet ongedaan gemaakt worden.')) return;
+  try{ await db.ref('ft_laadlijsten_v1/'+key).remove(); toast('Laadlijst verwijderd'); }
+  catch(e){ alert('Verwijderen mislukt: '+e.message); }
+}
+
+// ── Verplaats-modal ──────────────────────────────────────────────
+function openReassign(key){
+  const ll=laadlijsten[key]; if(!ll) return;
+  reassignKey=key;
+  document.getElementById('m-current').innerHTML=
+    'Laadlijst: <strong>'+escHtml(ll.naam||'(zonder naam)')+'</strong><br>'+
+    'Nu gekoppeld aan: <strong>'+escHtml(ll.wagen||'— geen truck —')+'</strong>';
+
+  const sel=document.getElementById('m-event');
+  const evs=planningEvents.slice().sort((a,b)=>String(b.startDate||'').localeCompare(String(a.startDate||'')));
+  sel.innerHTML='<option value="">— geen event —</option>'+evs.map(e=>
+    `<option value="${escHtml(String(e.id))}">${escHtml(e.name||e.naam||'(naamloos)')} · ${fmtDate(e.startDate)}</option>`).join('');
+  const cur=eid(ll.eventId);
+  sel.value=(cur && planningEvents.some(e=>String(e.id)===cur)) ? cur : '';
+
+  document.getElementById('m-truck').value=ll.wagen||'';
+  document.getElementById('truck-list').innerHTML=allTruckNames().map(t=>`<option value="${escHtml(t)}">`).join('');
+  onEventPick();
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+function onEventPick(){
+  const id=document.getElementById('m-event').value;
+  const ev=planningEvents.find(e=>String(e.id)===id);
+  const trucks=(ev && Array.isArray(ev.trucks))?ev.trucks:[];
+  document.getElementById('m-chips').innerHTML = trucks.length
+    ? '<span class="hint">Trucks op dit event — klik om te kiezen:</span>'+
+      trucks.map(t=>`<button type="button" class="truck-chip" onclick="pickTruck(this)">${escHtml(t)}</button>`).join('')
+    : '';
+}
+function pickTruck(btn){ document.getElementById('m-truck').value=btn.textContent; }
+function closeReassign(){ document.getElementById('modal').classList.add('hidden'); reassignKey=null; }
+
+async function saveReassign(){
+  if(!reassignKey){ return; }
+  const ll=laadlijsten[reassignKey]; if(!ll){ return; }
+  const evId=document.getElementById('m-event').value;
+  const truck=document.getElementById('m-truck').value.trim();
+  if(!truck){ alert('Kies of typ een truck.'); return; }
+
+  const ev=planningEvents.find(e=>String(e.id)===evId);
+  const upd={
+    wagen: truck,
+    eventId: ev?String(ev.id):'',
+    eventNaam: ev?(ev.name||ev.naam||''):'',
+    datum: ev?(ev.startDate||''):(ll.datum||'')
+  };
+  if(upd.eventNaam) upd.naam=upd.eventNaam+' — '+truck;   // naam consistent houden
+
+  // Waarschuw als die truck op dat event al een laadlijst heeft
+  const dup=Object.entries(laadlijsten).find(([k,o])=>
+    k!==reassignKey && o && upd.eventId && eid(o.eventId)===eid(upd.eventId) && o.wagen===truck);
+  if(dup && !confirm('Let op: '+truck+' heeft op dit event al een laadlijst ("'+(dup[1].naam||'')+'").\n\nToch verplaatsen? Je houdt dan 2 laadlijsten voor die truck.')) return;
+
+  try{
+    await db.ref('ft_laadlijsten_v1/'+reassignKey).update(upd);
+    toast('Laadlijst verplaatst naar '+truck);
+    closeReassign();
+  }catch(e){ alert('Verplaatsen mislukt: '+e.message); }
+}
+
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeReassign(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeReassign(); });
+</script>
+</body>
+</html>
