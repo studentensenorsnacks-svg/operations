@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Eindstock invullen — Señor Snacks</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    :root {
+      --red:#e8001d;--bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+      --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+      --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+      --green:#22c55e;--font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:110px;}
+
+    /* HEADER */
+    .header{background:var(--red);padding:18px 18px 22px;color:#fff;}
+    .header-logo{display:flex;align-items:center;gap:8px;margin-bottom:14px;opacity:.85;}
+    .logo-sq{width:26px;height:26px;background:rgba(255,255,255,.25);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+    .logo-sq span{font-family:var(--font-cond);font-weight:700;font-size:12px;}
+    .logo-name{font-family:var(--font-cond);font-weight:600;font-size:14px;}
+    .header-title{font-family:var(--font-cond);font-size:24px;font-weight:700;margin-bottom:4px;}
+    .header-sub{font-size:14px;opacity:.8;}
+
+    /* INFO CARDS */
+    .info-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px;}
+    .info-card{background:var(--surface);border-radius:10px;padding:12px 14px;}
+    .info-card .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);}
+    .info-card .val{font-size:17px;font-weight:600;font-family:var(--font-cond);margin-top:2px;}
+
+    /* CONTENT */
+    .content{padding:0 16px;}
+    .cat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text2);padding:14px 0 6px;}
+
+    /* ITEM CARD */
+    .item-card{background:var(--surface);border-radius:12px;margin-bottom:9px;overflow:hidden;}
+    .item-top{padding:13px 14px 10px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+    .item-naam{font-weight:600;font-size:15px;line-height:1.3;flex:1;}
+    .item-geladen{font-size:13px;color:var(--text3);white-space:nowrap;margin-top:1px;}
+    .item-geladen strong{color:var(--text2);font-family:var(--mono);}
+    .item-input-wrap{padding:0 14px 14px;}
+    .input-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:5px;}
+    .item-input{width:100%;padding:12px;border:2px solid var(--border2);border-radius:9px;font-family:var(--mono);font-size:22px;font-weight:500;text-align:center;background:var(--bg);transition:border-color .15s,background .15s;}
+    .item-input:focus{outline:none;border-color:var(--red);background:#fff;}
+    .item-input.filled{border-color:var(--green);background:rgba(34,197,94,.04);}
+
+    /* SUBMIT BAR */
+    .submit-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;box-shadow:0 -4px 16px rgba(0,0,0,.06);}
+    .progress-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .progress-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+    .progress-fill{height:100%;background:var(--red);border-radius:3px;transition:width .3s;}
+    .progress-text{font-size:12px;font-weight:600;color:var(--text3);white-space:nowrap;}
+    .submit-btn{width:100%;padding:15px;background:var(--red);color:#fff;border:none;border-radius:11px;font-family:var(--font);font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+    .submit-btn:hover{opacity:.88;}
+    .submit-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+    /* ALREADY BANNER */
+    .already-banner{margin:0 16px 12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:13px 15px;font-size:14px;color:#166534;line-height:1.5;}
+
+    /* SUCCESS */
+    .success-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;padding:32px;text-align:center;}
+    .success-icon{font-size:64px;margin-bottom:20px;}
+    .success-title{font-family:var(--font-cond);font-size:30px;font-weight:700;margin-bottom:8px;}
+    .success-sub{font-size:15px;color:var(--text2);line-height:1.6;}
+
+    /* LOADING */
+    .loading-screen{display:flex;align-items:center;justify-content:center;min-height:70vh;flex-direction:column;gap:16px;color:var(--text2);font-size:15px;}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ERROR */
+    .error-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;padding:32px;text-align:center;color:var(--text2);}
+    .error-icon{font-size:44px;margin-bottom:16px;}
+    .error-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px;}
+    .error-sub{font-size:14px;line-height:1.6;}
+  </style>
+</head>
+<body>
+
+<div id="loading-screen" class="loading-screen">
+  <div class="spinner"></div>
+  <div>Fiche laden…</div>
+</div>
+
+<div id="error-screen" class="error-screen">
+  <div class="error-icon">❌</div>
+  <div class="error-title">Fiche niet gevonden</div>
+  <div class="error-sub">Controleer de QR-code of vraag een nieuwe aan bij de planner.</div>
+</div>
+
+<div id="main-content" style="display:none;">
+  <div class="header">
+    <div class="header-logo">
+      <div class="logo-sq"><span>SS</span></div>
+      <span class="logo-name">Señor Snacks</span>
+    </div>
+    <div class="header-title" id="hdr-event">—</div>
+    <div class="header-sub" id="hdr-datum">—</div>
+  </div>
+
+  <div class="info-cards">
+    <div class="info-card"><div class="lbl">Medewerker</div><div class="val" id="inf-medewerker">—</div></div>
+    <div class="info-card"><div class="lbl">Wagen</div><div class="val" id="inf-wagen">—</div></div>
+  </div>
+
+  <div id="already-banner" style="display:none;" class="already-banner">
+    ✅ Je hebt al een eindstock ingediend voor dit event. Je kan hieronder een nieuwe indienen indien nodig.
+  </div>
+
+  <div class="content" id="items-content"></div>
+
+  <div class="submit-bar">
+    <div class="progress-row">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <span class="progress-text" id="progress-text">0 / 0</span>
+    </div>
+    <button class="submit-btn" id="submit-btn" onclick="submitEindstock()">Eindstock indienen</button>
+  </div>
+</div>
+
+<div id="success-screen" class="success-screen">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Eindstock ingediend!</div>
+  <div class="success-sub">Je gegevens zijn opgeslagen.<br>Bedankt voor je medewerking!</div>
+</div>
+
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain:"operationssenorsnacks.firebaseapp.com",
+  databaseURL:"https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"operationssenorsnacks",
+  storageBucket:"operationssenorsnacks.firebasestorage.app",
+  messagingSenderId:"526032166243",
+  appId:"1:526032166243:web:5af01c6d17aecd56114756"
+});
+const db = firebase.database();
+
+const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
+const params = new URLSearchParams(location.search);
+const ficheId = params.get('fiche');
+let ficheData = null, laadlijstData = null;
+
+function show(id) {
+  ['loading-screen','error-screen','main-content','success-screen'].forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? (s === 'success-screen' ? 'flex' : 'block') : 'none';
+  });
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!ficheId) { show('error-screen'); return; }
+
+  try {
+    const [ficheSnap, llSnap] = await Promise.all([
+      db.ref('ft_fiches_v1/' + ficheId).once('value'),
+      null // placeholder
+    ]);
+
+    ficheData = ficheSnap.val();
+    if (!ficheData) { show('error-screen'); return; }
+
+    const llSnap2 = await db.ref('ft_laadlijsten_v1/' + ficheData.laadlijstId).once('value');
+    laadlijstData = llSnap2.val();
+    if (!laadlijstData) { show('error-screen'); return; }
+
+    // Check if already submitted
+    const esSnap = await db.ref('ft_eindstock_v1/' + ficheId).once('value');
+    if (esSnap.exists()) document.getElementById('already-banner').style.display = 'block';
+
+    renderPage();
+    show('main-content');
+
+  } catch (e) {
+    console.error(e);
+    show('error-screen');
+  }
+});
+
+function renderPage() {
+  document.getElementById('hdr-event').textContent = ficheData.eventNaam || '—';
+  const datum = ficheData.datum
+    ? new Date(ficheData.datum + 'T00:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+    : '—';
+  document.getElementById('hdr-datum').textContent = datum;
+  document.getElementById('inf-medewerker').textContent = ficheData.medewerker || '—';
+  document.getElementById('inf-wagen').textContent = ficheData.wagen || '—';
+
+  const cats = laadlijstData.categorieën || {};
+  let html = '';
+
+  for (const cat of CATS) {
+    const items = cats[cat];
+    if (!items || !items.length) continue;
+
+    html += `<div class="cat-label">${cat}</div>`;
+    items.forEach((item, i) => {
+      html += `<div class="item-card">
+        <div class="item-top">
+          <span class="item-naam">${escHtml(item.naam)}</span>
+          ${item.aantal ? `<span class="item-geladen">Geladen: <strong>${item.aantal}</strong></span>` : ''}
+        </div>
+        <div class="item-input-wrap">
+          <div class="input-label">Eindstock</div>
+          <input type="number" class="item-input" min="0" inputmode="numeric" pattern="[0-9]*"
+            data-cat="${cat}" data-idx="${i}" placeholder="—"
+            oninput="handleInput(this)">
+        </div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('items-content').innerHTML = html;
+  updateProgress();
+}
+
+function handleInput(inp) {
+  inp.classList.toggle('filled', inp.value !== '');
+  updateProgress();
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('.item-input');
+  const filled = [...all].filter(i => i.value !== '').length;
+  const pct = all.length ? Math.round(filled / all.length * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = filled + ' / ' + all.length;
+}
+
+async function submitEindstock() {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Bezig met indienen…';
+
+  const cats = laadlijstData.categorieën || {};
+  const result = {};
+
+  for (const cat of CATS) {
+    const items = cats[cat];
+    if (!items || !items.length) continue;
+    result[cat] = items.map((item, i) => {
+      const inp = document.querySelector(`.item-input[data-cat="${cat}"][data-idx="${i}"]`);
+      const eindstock = inp ? (inp.value !== '' ? parseFloat(inp.value) : null) : null;
+      return { naam: item.naam, geladen: item.aantal || 0, eindstock };
+    });
+  }
+
+  try {
+    await db.ref('ft_eindstock_v1/' + ficheId).set({
+      ficheId,
+      medewerker: ficheData.medewerker,
+      wagen: ficheData.wagen,
+      eventNaam: ficheData.eventNaam,
+      datum: ficheData.datum,
+      ingediend: new Date().toISOString(),
+      items: result
+    });
+    show('success-screen');
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Eindstock indienen';
+    alert('Fout bij indienen: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>

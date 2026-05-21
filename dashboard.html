@@ -801,6 +801,40 @@ textarea { resize: vertical; min-height: 72px; }
   .modal { padding: 20px 18px; }
   .modal-actions { flex-wrap: wrap; }
 }
+
+/* ── Eindstock per truck ── */
+.eindstock-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  background: rgba(59,130,246,.1); color: #1d4ed8; cursor: pointer;
+  border: none; font-family: var(--font); transition: background .15s;
+  margin-top: 4px;
+}
+.eindstock-badge:hover { background: rgba(59,130,246,.2); }
+
+.es-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px; }
+.es-modal-overlay.hidden { display:none; }
+.es-modal { background:var(--surface);border-radius:16px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto; }
+.es-modal-hdr { padding:20px 22px 0;display:flex;justify-content:space-between;align-items:center; }
+.es-modal-title { font-family:var(--font-cond);font-size:20px;font-weight:700; }
+.es-modal-close { background:var(--surface2);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center; }
+.es-modal-body { padding:18px 22px 24px; }
+
+.es-submission { border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden; }
+.es-sub-hdr { background:var(--surface2);padding:10px 14px;display:flex;justify-content:space-between;align-items:center; }
+.es-sub-title { font-weight:600;font-size:14px; }
+.es-sub-date { font-size:12px;color:var(--text3); }
+.es-sub-body { padding:0; }
+.es-cat { padding:6px 14px 2px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2); }
+.es-item { display:flex;align-items:center;padding:6px 14px;border-bottom:1px solid var(--border);font-size:14px; }
+.es-item:last-child { border-bottom:none; }
+.es-item-naam { flex:1; }
+.es-item-vals { display:flex;gap:18px;align-items:center; }
+.es-item-val { text-align:right;min-width:50px; }
+.es-item-val .lbl { font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text3); }
+.es-item-val .num { font-family:var(--mono);font-size:14px;font-weight:500; }
+.es-diff-pos { color:#166534; }
+.es-diff-neg { color:var(--red); }
 </style>
 </head>
 <body>
@@ -821,6 +855,7 @@ textarea { resize: vertical; min-height: 72px; }
     <a class="nav-link" href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
     <a class="nav-link" href="ocb.html" target="_blank">✅ OCB</a>
     <a class="nav-link" href="ops.html" target="_blank">👥 Personeelsfiche</a>
+    <a class="nav-link" href="laadlijst-beheer.html" target="_blank">📦 Laadlijsten</a>
     <button class="nav-link" id="backup-btn" onclick="downloadBackup()" style="background:transparent;border:1px solid var(--border2);cursor:pointer;font-family:var(--font);font-size:0.85rem;font-weight:600;color:var(--text);">📥 Backup</button>
     <div class="clock" id="clock">--:--</div>
   </div>
@@ -847,6 +882,7 @@ textarea { resize: vertical; min-height: 72px; }
     <a class="nav-item" href="https://senorkeuringqr.web.app/index.html" target="_blank"><span class="nav-icon">📋</span>QR Keuringen</a>
     <a class="nav-item" href="ocb.html" target="_blank"><span class="nav-icon">✅</span>OCB keuring</a>
     <a class="nav-item" href="ops.html" target="_blank"><span class="nav-icon">👥</span>Personeelsfiche</a>
+    <a class="nav-item" href="laadlijst-beheer.html" target="_blank"><span class="nav-icon">📦</span>Laadlijsten</a>
 
     <div class="sidebar-footer">
       <div class="sidebar-footer-text">Auto-refresh elke 30s</div>
@@ -971,6 +1007,7 @@ const BADGE = {
 let checkins = [], activeFilter = 'alle', editingTs = null;
 let poetsPriority = {};  // { 'Friet Wagen 503': true, ... }
 let laadlijst = {};      // { 'Friet_Wagen_503': { laadlijst: bool, droog: null/'ingeladen', koel: null/'koelcel'/'ingeladen', vries: null/'vriescel'/'ingeladen', vers: null/'ingeladen' } }
+let eindstockData = {};  // { truckKey: [eindstock-submission, ...] }
 
 function updateClock() {
   const now = new Date();
@@ -1024,6 +1061,19 @@ fbdb.ref('ft_priority_v1').on('value', snap => {
 // Real-time listener voor laadlijst per truck
 fbdb.ref('ft_laadlijst_v1').on('value', snap => {
   laadlijst = snap.val() || {};
+  renderDashboard();
+});
+
+// Real-time listener voor eindstock per truck
+fbdb.ref('ft_eindstock_v1').on('value', snap => {
+  const raw = snap.val() || {};
+  eindstockData = {};
+  Object.values(raw).forEach(es => {
+    if (!es || !es.wagen) return;
+    const key = truckKey(es.wagen);
+    if (!eindstockData[key]) eindstockData[key] = [];
+    eindstockData[key].push(es);
+  });
   renderDashboard();
 });
 
@@ -1229,6 +1279,12 @@ function renderDashboard() {
     // Laadlijst
     const lkey = truckKey(c.truck);
     const ll = laadlijst[lkey] || {};
+
+    // Eindstock
+    const esSubs = eindstockData[lkey] || [];
+    const esBadge = esSubs.length > 0
+      ? `<button class="eindstock-badge" onclick="openEindstockModal('${lkey}','${truckEsc}')">📋 ${esSubs.length} eindstock${esSubs.length > 1 ? 's' : ''}</button>`
+      : '';
     const laadHtml = `
       <div class="laad-section">
         <div class="laad-title">📋 Laadlijst & Inladen</div>
@@ -1295,6 +1351,7 @@ function renderDashboard() {
           <div>
             <div class="card-name">${c.truck}${totalCountBadge}${prioBadge}</div>
             <div class="card-sub">${c.employee} · ${c.date}</div>
+            ${esBadge}
           </div>
           ${statusPill(c.truckStatus)}
         </div>
@@ -1457,8 +1514,68 @@ function checkBackupReminder() {
   }
 }
 
+// ── Eindstock modal ──────────────────────────────────────────
+function openEindstockModal(esKey, truckNaam) {
+  const submissions = eindstockData[esKey] || [];
+  document.getElementById('es-modal-title').textContent = '📋 Eindstock — ' + truckNaam;
+  const ES_CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
+
+  if (!submissions.length) {
+    document.getElementById('es-modal-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);">Geen eindstocks ingediend</div>';
+    document.getElementById('es-modal').classList.remove('hidden');
+    return;
+  }
+
+  const html = submissions.slice().sort((a,b) => (b.ingediend||'') > (a.ingediend||'') ? 1 : -1).map(sub => {
+    const datum = sub.ingediend ? new Date(sub.ingediend).toLocaleString('nl-BE', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    let itemsHtml = '';
+    for (const cat of ES_CATS) {
+      const items = (sub.items || {})[cat];
+      if (!items || !items.length) continue;
+      itemsHtml += `<div class="es-cat">${cat}</div>`;
+      items.forEach(item => {
+        const diff = item.eindstock !== null && item.eindstock !== undefined ? item.geladen - item.eindstock : null;
+        const diffClass = diff !== null ? (diff > 0 ? 'es-diff-neg' : diff < 0 ? 'es-diff-pos' : '') : '';
+        const diffStr = diff !== null ? (diff > 0 ? '−'+diff : diff < 0 ? '+'+Math.abs(diff) : '±0') : '—';
+        itemsHtml += `<div class="es-item">
+          <span class="es-item-naam">${escHtml(item.naam)}</span>
+          <div class="es-item-vals">
+            <div class="es-item-val"><div class="lbl">Geladen</div><div class="num">${item.geladen ?? '—'}</div></div>
+            <div class="es-item-val"><div class="lbl">Eindstock</div><div class="num">${item.eindstock ?? '—'}</div></div>
+            <div class="es-item-val"><div class="lbl">Verbruik</div><div class="num ${diffClass}">${diffStr}</div></div>
+          </div>
+        </div>`;
+      });
+    }
+    return `<div class="es-submission">
+      <div class="es-sub-hdr">
+        <span class="es-sub-title">${escHtml(sub.eventNaam || '—')} · ${escHtml(sub.medewerker || '—')}</span>
+        <span class="es-sub-date">${datum}</span>
+      </div>
+      <div class="es-sub-body">${itemsHtml}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('es-modal-body').innerHTML = html;
+  document.getElementById('es-modal').classList.remove('hidden');
+}
+
+function closeEsModal() { document.getElementById('es-modal').classList.add('hidden'); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 renderDashboard();
 checkBackupReminder();
 </script>
+
+<!-- Eindstock modal -->
+<div class="es-modal-overlay hidden" id="es-modal">
+  <div class="es-modal">
+    <div class="es-modal-hdr">
+      <span class="es-modal-title" id="es-modal-title">Eindstock</span>
+      <button class="es-modal-close" onclick="closeEsModal()">✕</button>
+    </div>
+    <div class="es-modal-body" id="es-modal-body"></div>
+  </div>
+</div>
 </body>
 </html>

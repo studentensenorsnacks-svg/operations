@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Señor Snacks — Laadlijsten &amp; Fiches</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root {
+      --red:#e8001d;--red-glow:rgba(232,0,29,0.25);
+      --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+      --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+      --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+      --green:#22c55e;--orange:#f97316;--blue:#3b82f6;
+      --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+    /* TOPBAR */
+    .topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:100;}
+    .logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+    .logo-sq{width:32px;height:32px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+    .logo-sq span{color:#fff;font-weight:700;font-size:14px;font-family:var(--font-cond);}
+    .logo-text{font-family:var(--font-cond);font-weight:600;font-size:18px;}
+    .nav-links{display:flex;gap:4px;}
+    .nav-link{padding:6px 14px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;color:var(--text2);transition:background .15s;}
+    .nav-link:hover{background:var(--surface2);}
+    .nav-link.active{background:var(--red);color:#fff;}
+
+    /* MAIN */
+    .main{padding:28px;max-width:1100px;margin:0 auto;}
+    .page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+    .page-title{font-family:var(--font-cond);font-size:26px;font-weight:700;}
+
+    /* TABS */
+    .tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:22px;}
+    .tab-btn{padding:8px 22px;border-radius:7px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;}
+    .tab-btn.active{background:var(--red);color:#fff;}
+    .tab-content{display:none;}.tab-content.active{display:block;}
+
+    /* CARDS */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;}
+    .card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+    .card-title{font-weight:600;font-size:15px;}
+
+    /* BUTTONS */
+    .btn{padding:9px 18px;border-radius:8px;border:none;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+    .btn-red{background:var(--red);color:#fff;}.btn-red:hover{opacity:.88;}
+    .btn-gray{background:var(--surface2);color:var(--text);}.btn-gray:hover{background:var(--surface3);}
+    .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2);}.btn-outline:hover{background:var(--surface2);}
+    .btn-sm{padding:6px 12px;font-size:13px;}
+
+    /* UPLOAD */
+    .upload-zone{border:2px dashed var(--border2);border-radius:10px;padding:36px;text-align:center;cursor:pointer;transition:all .2s;}
+    .upload-zone:hover,.upload-zone.drag-over{border-color:var(--red);background:rgba(232,0,29,0.025);}
+    .upload-icon{font-size:36px;margin-bottom:10px;}
+    .upload-label{font-size:15px;font-weight:500;}
+    .upload-sub{font-size:13px;color:var(--text3);margin-top:4px;}
+    input[type=file]{display:none;}
+
+    /* FORM */
+    .form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+    .form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:160px;}
+    .form-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+    .form-input,.form-select{padding:9px 12px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:var(--surface);color:var(--text);}
+    .form-input:focus,.form-select:focus{outline:none;border-color:var(--red);}
+
+    /* LOADER */
+    .loader-wrap{display:flex;align-items:center;gap:10px;padding:16px;color:var(--text2);font-size:14px;}
+    .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* ITEMS EDITOR */
+    .cat-section{margin-bottom:6px;}
+    .cat-label-hdr{background:var(--surface2);padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text2);border-radius:6px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;}
+    .item-row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);}
+    .item-row:last-of-type{border-bottom:none;}
+    .item-naam-inp{flex:1;padding:5px 8px;border:1px solid transparent;border-radius:6px;font-family:var(--font);font-size:14px;background:transparent;}
+    .item-naam-inp:focus{outline:none;border-color:var(--border2);background:var(--surface2);}
+    .item-aantal-inp{width:80px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:13px;text-align:right;}
+    .item-aantal-inp:focus{outline:none;border-color:var(--red);}
+    .item-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:4px 6px;border-radius:4px;line-height:1;}
+    .item-del:hover{color:var(--red);background:rgba(232,0,29,.07);}
+    .add-item-row{padding:7px 12px;}
+    .add-item-btn{background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);}
+    .add-item-btn:hover{color:var(--red);}
+
+    /* LIST ITEMS */
+    .ll-item,.fiche-item{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+    .ll-item:last-child,.fiche-item:last-child{border-bottom:none;}
+    .ll-icon{width:42px;height:42px;background:rgba(232,0,29,.08);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+    .fiche-icon{width:42px;height:42px;background:rgba(59,130,246,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+    .item-info{flex:1;}
+    .item-naam{font-weight:600;font-size:15px;}
+    .item-meta{font-size:13px;color:var(--text2);margin-top:2px;}
+    .item-actions{display:flex;gap:6px;flex-shrink:0;}
+
+    /* BADGE */
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600;}
+    .badge-blue{background:rgba(59,130,246,.1);color:#1d4ed8;}
+    .badge-green{background:rgba(34,197,94,.1);color:#166534;}
+
+    /* EMPTY */
+    .empty{text-align:center;padding:36px 20px;color:var(--text3);}
+    .empty-icon{font-size:32px;margin-bottom:8px;}
+    .empty-text{font-size:14px;}
+
+    /* ALERT */
+    .alert{padding:11px 14px;border-radius:8px;font-size:14px;margin-bottom:12px;}
+    .alert-success{background:rgba(34,197,94,.1);color:#166534;}
+    .alert-error{background:rgba(232,0,29,.08);color:var(--red);}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .modal-overlay.hidden{display:none;}
+    .modal{background:var(--surface);border-radius:16px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;}
+    .modal-hdr{padding:20px 22px 0;display:flex;justify-content:space-between;align-items:center;}
+    .modal-title{font-family:var(--font-cond);font-size:20px;font-weight:700;}
+    .modal-close{background:var(--surface2);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;}
+    .modal-body{padding:18px 22px 24px;}
+
+    /* PRINT FICHE */
+    .print-fiche{font-family:var(--font);}
+    .print-logo{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+    .print-logo-sq{width:36px;height:36px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+    .print-logo-sq span{color:#fff;font-weight:700;font-size:16px;font-family:var(--font-cond);}
+    .print-brand{font-family:var(--font-cond);font-size:20px;font-weight:700;}
+    .print-subtitle{font-family:var(--font-cond);font-size:14px;color:var(--text2);}
+    .print-divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+    .print-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+    .print-field .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);}
+    .print-field .val{font-size:17px;font-weight:600;font-family:var(--font-cond);margin-top:2px;}
+    .print-qr-wrap{display:flex;flex-direction:column;align-items:center;margin:16px 0;}
+    .print-qr-caption{font-size:13px;color:var(--text2);margin-top:8px;text-align:center;}
+    .print-instruction{background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text2);line-height:1.55;}
+
+    @media print{
+      body>*:not(.modal-overlay){display:none!important;}
+      .modal-overlay{position:static!important;background:none!important;padding:0!important;}
+      .modal{max-height:none!important;border-radius:0!important;}
+      .modal-hdr,.print-actions{display:none!important;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="index.html">
+    <div class="logo-sq"><span>SS</span></div>
+    <span class="logo-text">Señor Snacks</span>
+  </a>
+  <nav class="nav-links">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="planning.html" class="nav-link">Planning</a>
+    <a href="checkin.html" class="nav-link">Check-in</a>
+    <a href="poets.html" class="nav-link">Poets</a>
+    <a href="laadlijst-beheer.html" class="nav-link active">Laadlijsten</a>
+  </nav>
+  <button class="btn btn-outline btn-sm" onclick="openSettings()">⚙ API Sleutel</button>
+</div>
+
+<div class="main">
+  <div class="page-hdr">
+    <h1 class="page-title">Laadlijsten &amp; Fiches</h1>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tbtn-laadlijsten" onclick="switchTab('laadlijsten',this)">📄 Laadlijsten</button>
+    <button class="tab-btn" id="tbtn-fiches" onclick="switchTab('fiches',this)">👤 Fiches</button>
+  </div>
+
+  <!-- ── TAB LAADLIJSTEN ── -->
+  <div class="tab-content active" id="tab-laadlijsten">
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Nieuwe laadlijst via PDF</span></div>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('pdf-input').click()">
+        <div class="upload-icon">📤</div>
+        <div class="upload-label">Klik om een laadlijst PDF te uploaden</div>
+        <div class="upload-sub">of sleep een bestand hierheen · AI extraheert de items automatisch</div>
+      </div>
+      <input type="file" id="pdf-input" accept=".pdf" onchange="handlePdfUpload(this.files[0])">
+      <div id="extract-status" style="display:none;margin-top:14px;"></div>
+      <div id="extract-preview" style="display:none;margin-top:18px;">
+        <div class="form-row" style="margin-bottom:16px;">
+          <div class="form-group">
+            <label class="form-label">Naam laadlijst</label>
+            <input type="text" class="form-input" id="ll-naam" placeholder="bv. Miniatuurbeurs Friet 01/03/2026">
+          </div>
+        </div>
+        <div id="items-editor" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;"></div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
+          <button class="btn btn-gray" onclick="cancelExtract()">Annuleren</button>
+          <button class="btn btn-red" onclick="saveLaadlijst()">💾 Opslaan</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-title">Opgeslagen laadlijsten</span>
+        <span id="ll-count" style="font-size:13px;color:var(--text3);">laden…</span>
+      </div>
+      <div id="ll-list"><div class="loader-wrap"><div class="spinner"></div> Laden…</div></div>
+    </div>
+  </div>
+
+  <!-- ── TAB FICHES ── -->
+  <div class="tab-content" id="tab-fiches">
+    <div class="card">
+      <div class="card-hdr"><span class="card-title">Nieuwe fiche aanmaken</span></div>
+      <div id="fiche-alert" style="display:none;"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Naam medewerker</label>
+          <input type="text" class="form-input" id="f-medewerker" placeholder="Voornaam Naam">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Wagen nr.</label>
+          <input type="text" class="form-input" id="f-wagen" placeholder="bv. 404 of brascheria">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Evenement (kies uit planning)</label>
+          <select class="form-select" id="f-event-select" onchange="fillFromEvent(this)">
+            <option value="">— Kies uit planning —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Of vrije invoer evenement</label>
+          <input type="text" class="form-input" id="f-event-naam" placeholder="Naam evenement">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Datum</label>
+          <input type="date" class="form-input" id="f-datum">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Laadlijst template</label>
+          <select class="form-select" id="f-laadlijst"><option value="">— Kies laadlijst —</option></select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-red" onclick="genereerFiche()">✨ Genereer fiche + QR</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-title">Aangemaakte fiches</span>
+        <span id="fiches-count" style="font-size:13px;color:var(--text3);">laden…</span>
+      </div>
+      <div id="fiches-list"><div class="loader-wrap"><div class="spinner"></div> Laden…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL API -->
+<div class="modal-overlay hidden" id="settings-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">⚙ API Instellingen</span>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:14px;">De Anthropic API sleutel is nodig voor automatische PDF extractie. Wordt lokaal opgeslagen op dit apparaat.</p>
+      <div class="form-group" style="margin-bottom:16px;">
+        <label class="form-label">Anthropic API Sleutel</label>
+        <input type="password" class="form-input" id="api-key-input" placeholder="sk-ant-api03-…">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn btn-gray" onclick="closeSettings()">Annuleren</button>
+        <button class="btn btn-red" onclick="saveApiKey()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FICHE QR -->
+<div class="modal-overlay hidden" id="fiche-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Personeelsfiche</span>
+      <button class="modal-close" onclick="closeFicheModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="fiche-print-area"></div>
+      <div class="print-actions" style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn btn-gray btn-sm" onclick="closeFicheModal()">Sluiten</button>
+        <button class="btn btn-red btn-sm" onclick="window.print()">🖨 Afdrukken</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Firebase ──────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain:"operationssenorsnacks.firebaseapp.com",
+  databaseURL:"https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"operationssenorsnacks",
+  storageBucket:"operationssenorsnacks.firebasestorage.app",
+  messagingSenderId:"526032166243",
+  appId:"1:526032166243:web:5af01c6d17aecd56114756"
+});
+const db = firebase.database();
+
+// ── State ─────────────────────────────────────────────────────
+const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
+let laadlijsten = {}, fiches = {}, planningEvents = [];
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // drag/drop
+  const zone = document.getElementById('upload-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handlePdfUpload(e.dataTransfer.files[0]); });
+
+  // Firebase listeners
+  db.ref('ft_laadlijsten_v1').on('value', snap => {
+    laadlijsten = snap.val() || {};
+    renderLaadlijsten();
+    populateLaadlijstSelect();
+  });
+  db.ref('ft_fiches_v1').on('value', snap => {
+    fiches = snap.val() || {};
+    renderFiches();
+  });
+  db.ref('ft_planning_v1').once('value', snap => {
+    const all = snap.val() || {};
+    planningEvents = Object.values(all).sort((a,b) => (a.startDate||'') > (b.startDate||'') ? 1 : -1);
+    populateEventSelect();
+  });
+});
+
+// ── Tabs ──────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Settings ──────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('api-key-input').value = localStorage.getItem('ss_anthropic_key') || '';
+  document.getElementById('settings-modal').classList.remove('hidden');
+}
+function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+function saveApiKey() {
+  const k = document.getElementById('api-key-input').value.trim();
+  if (k) localStorage.setItem('ss_anthropic_key', k);
+  closeSettings();
+}
+
+// ── PDF Upload & AI Extract ───────────────────────────────────
+async function handlePdfUpload(file) {
+  if (!file || file.type !== 'application/pdf') { showStatus('Kies een geldig PDF bestand.', 'error'); return; }
+  const key = localStorage.getItem('ss_anthropic_key');
+  if (!key) { showStatus('⚠ Stel eerst de Anthropic API sleutel in via ⚙ API Sleutel (rechts bovenaan).', 'error'); return; }
+
+  showStatus('<div class="loader-wrap"><div class="spinner"></div>PDF wordt geanalyseerd door AI… even geduld.</div>');
+  document.getElementById('extract-preview').style.display = 'none';
+
+  const base64 = await fileToBase64(file);
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES, MATERIALEN. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Formaat: {"naam":"korte omschrijving event en type","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[],"MATERIALEN":[]}}',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+            { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Geef terug als JSON.' }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const raw = data.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+
+    if (parsed.naam) document.getElementById('ll-naam').value = parsed.naam;
+    renderItemsEditor(parsed.categorieën || {});
+    document.getElementById('extract-preview').style.display = 'block';
+    showStatus('✅ Extractie geslaagd! Controleer de items en sla op.', 'success');
+  } catch (e) {
+    showStatus('❌ Fout bij AI extractie: ' + e.message + '<br><small>Controleer je API sleutel of probeer opnieuw.</small>', 'error');
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function showStatus(html, type) {
+  const el = document.getElementById('extract-status');
+  el.style.display = 'block';
+  el.className = type === 'error' ? 'alert alert-error' : type === 'success' ? 'alert alert-success' : '';
+  el.innerHTML = html;
+}
+
+// ── Items Editor ──────────────────────────────────────────────
+function renderItemsEditor(cats) {
+  const editor = document.getElementById('items-editor');
+  editor.innerHTML = '';
+  for (const cat of CATS) {
+    const items = (cats[cat] || []);
+    const sec = document.createElement('div');
+    sec.className = 'cat-section';
+    sec.dataset.cat = cat;
+    let html = `<div class="cat-label-hdr">${cat} <span style="font-size:12px;font-weight:400;">${items.length} items</span></div>`;
+    items.forEach((item, i) => { html += itemRowHtml(cat, i, item); });
+    html += `<div class="add-item-row"><button class="add-item-btn" onclick="addItem('${cat}')">＋ Item toevoegen</button></div>`;
+    sec.innerHTML = html;
+    editor.appendChild(sec);
+  }
+}
+
+function itemRowHtml(cat, idx, item) {
+  return `<div class="item-row" data-cat="${cat}" data-idx="${idx}">
+    <input class="item-naam-inp" type="text" value="${escHtml(item.naam)}" placeholder="Item naam" data-cat="${cat}" data-idx="${idx}" data-field="naam">
+    <input class="item-aantal-inp" type="number" min="0" value="${item.aantal||0}" data-cat="${cat}" data-idx="${idx}" data-field="aantal">
+    <button class="item-del" onclick="delItem('${cat}',${idx})" title="Verwijder">✕</button>
+  </div>`;
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function addItem(cat) {
+  const sec = document.querySelector(`.cat-section[data-cat="${cat}"]`);
+  const addRow = sec.querySelector('.add-item-row');
+  const count = sec.querySelectorAll('.item-row').length;
+  const div = document.createElement('div');
+  div.innerHTML = itemRowHtml(cat, count, { naam: '', aantal: 0 });
+  sec.insertBefore(div.firstElementChild, addRow);
+  reindexCat(cat);
+}
+
+function delItem(cat, idx) {
+  const row = document.querySelector(`.item-row[data-cat="${cat}"][data-idx="${idx}"]`);
+  if (row) row.remove();
+  reindexCat(cat);
+}
+
+function reindexCat(cat) {
+  document.querySelectorAll(`.item-row[data-cat="${cat}"]`).forEach((r, i) => {
+    r.dataset.idx = i;
+    r.querySelectorAll('[data-idx]').forEach(el => el.dataset.idx = i);
+  });
+}
+
+function getEditorData() {
+  const cats = {};
+  for (const cat of CATS) {
+    cats[cat] = [];
+    document.querySelectorAll(`.item-row[data-cat="${cat}"]`).forEach(row => {
+      const naam = row.querySelector('[data-field="naam"]').value.trim();
+      const aantal = parseFloat(row.querySelector('[data-field="aantal"]').value) || 0;
+      if (naam) cats[cat].push({ naam, aantal });
+    });
+  }
+  return cats;
+}
+
+function cancelExtract() {
+  document.getElementById('extract-preview').style.display = 'none';
+  document.getElementById('extract-status').style.display = 'none';
+  document.getElementById('pdf-input').value = '';
+}
+
+// ── Save Laadlijst ────────────────────────────────────────────
+async function saveLaadlijst() {
+  const naam = document.getElementById('ll-naam').value.trim();
+  if (!naam) { alert('Geef een naam op voor de laadlijst.'); return; }
+  try {
+    await db.ref('ft_laadlijsten_v1').push({ naam, aangemaakt: new Date().toISOString(), categorieën: getEditorData() });
+    showStatus('✅ Laadlijst opgeslagen!', 'success');
+    cancelExtract();
+    document.getElementById('ll-naam').value = '';
+  } catch (e) { showStatus('❌ Fout: ' + e.message, 'error'); }
+}
+
+// ── Render Laadlijsten ────────────────────────────────────────
+function renderLaadlijsten() {
+  const keys = Object.keys(laadlijsten).reverse();
+  document.getElementById('ll-count').textContent = keys.length + ' laadlijsten';
+  const list = document.getElementById('ll-list');
+  if (!keys.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><div class="empty-text">Nog geen laadlijsten opgeslagen</div></div>'; return; }
+  list.innerHTML = keys.map(k => {
+    const ll = laadlijsten[k];
+    const totaal = Object.values(ll.categorieën || {}).reduce((s, a) => s + a.length, 0);
+    const datum = ll.aangemaakt ? new Date(ll.aangemaakt).toLocaleDateString('nl-BE') : '';
+    return `<div class="ll-item">
+      <div class="ll-icon">📋</div>
+      <div class="item-info">
+        <div class="item-naam">${escHtml(ll.naam)}</div>
+        <div class="item-meta">${totaal} items · ${datum}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-outline btn-sm" onclick="deleteLaadlijst('${k}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteLaadlijst(id) {
+  if (!confirm('Laadlijst verwijderen?')) return;
+  await db.ref('ft_laadlijsten_v1/' + id).remove();
+}
+
+function populateLaadlijstSelect() {
+  const sel = document.getElementById('f-laadlijst');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Kies laadlijst —</option>';
+  Object.entries(laadlijsten).reverse().forEach(([k, ll]) => {
+    const o = document.createElement('option');
+    o.value = k; o.textContent = ll.naam;
+    sel.appendChild(o);
+  });
+  if (cur) sel.value = cur;
+}
+
+// ── Planning Events ───────────────────────────────────────────
+function populateEventSelect() {
+  const sel = document.getElementById('f-event-select');
+  sel.innerHTML = '<option value="">— Kies uit planning —</option>';
+  planningEvents.forEach(ev => {
+    const o = document.createElement('option');
+    o.value = JSON.stringify({ naam: ev.name || ev.naam || '', datum: ev.startDate || '' });
+    o.textContent = (ev.name || ev.naam || 'Onbekend') + (ev.startDate ? ' · ' + ev.startDate : '');
+    sel.appendChild(o);
+  });
+}
+
+function fillFromEvent(sel) {
+  if (!sel.value) return;
+  try {
+    const ev = JSON.parse(sel.value);
+    if (ev.naam) document.getElementById('f-event-naam').value = ev.naam;
+    if (ev.datum) document.getElementById('f-datum').value = ev.datum;
+  } catch (e) {}
+}
+
+// ── Genereer Fiche ────────────────────────────────────────────
+async function genereerFiche() {
+  const medewerker = document.getElementById('f-medewerker').value.trim();
+  const wagen = document.getElementById('f-wagen').value.trim();
+  const eventNaam = document.getElementById('f-event-naam').value.trim();
+  const datum = document.getElementById('f-datum').value;
+  const laadlijstId = document.getElementById('f-laadlijst').value;
+  const alertEl = document.getElementById('fiche-alert');
+
+  if (!medewerker || !wagen || !eventNaam || !datum || !laadlijstId) {
+    alertEl.style.display = 'block'; alertEl.className = 'alert alert-error';
+    alertEl.textContent = 'Vul alle velden in.'; return;
+  }
+  alertEl.style.display = 'none';
+
+  try {
+    const ref = await db.ref('ft_fiches_v1').push({ medewerker, wagen, eventNaam, datum, laadlijstId, aangemaakt: new Date().toISOString() });
+    ['f-medewerker','f-wagen','f-event-naam','f-datum','f-laadlijst','f-event-select'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+    showFicheModal({ medewerker, wagen, eventNaam, datum, laadlijstId, id: ref.key });
+  } catch (e) {
+    alertEl.style.display = 'block'; alertEl.className = 'alert alert-error'; alertEl.textContent = 'Fout: ' + e.message;
+  }
+}
+
+// ── Render Fiches ─────────────────────────────────────────────
+function renderFiches() {
+  const keys = Object.keys(fiches).reverse();
+  document.getElementById('fiches-count').textContent = keys.length + ' fiches';
+  const list = document.getElementById('fiches-list');
+  if (!keys.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nog geen fiches aangemaakt</div></div>'; return; }
+  list.innerHTML = keys.map(k => {
+    const f = fiches[k];
+    const ll = laadlijsten[f.laadlijstId];
+    const datum = f.datum ? new Date(f.datum + 'T00:00:00').toLocaleDateString('nl-BE', {day:'2-digit',month:'short',year:'numeric'}) : '';
+    return `<div class="fiche-item">
+      <div class="fiche-icon">👤</div>
+      <div class="item-info">
+        <div class="item-naam">${escHtml(f.medewerker)} · Wagen ${escHtml(f.wagen)}</div>
+        <div class="item-meta">${escHtml(f.eventNaam)} · ${datum}${ll?' · <span class="badge badge-blue">'+escHtml(ll.naam)+'</span>':''}</div>
+      </div>
+      <div class="item-actions">
+        <button class="btn btn-outline btn-sm" onclick='showFicheModal(${JSON.stringify({...f,id:k})})'>🖨 QR</button>
+        <button class="btn btn-outline btn-sm" onclick="deleteFiche('${k}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteFiche(id) { if (!confirm('Fiche verwijderen?')) return; await db.ref('ft_fiches_v1/' + id).remove(); }
+
+// ── Fiche Modal & QR ──────────────────────────────────────────
+function showFicheModal(fiche) {
+  const url = `https://operationssenorsnacks.web.app/eindstock.html?fiche=${fiche.id}`;
+  const ll = laadlijsten[fiche.laadlijstId] || {};
+  const datum = fiche.datum ? new Date(fiche.datum + 'T00:00:00').toLocaleDateString('nl-BE', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '—';
+
+  document.getElementById('fiche-print-area').innerHTML = `
+    <div class="print-fiche">
+      <div class="print-logo">
+        <div class="print-logo-sq"><span>SS</span></div>
+        <div><div class="print-brand">Señor Snacks</div><div class="print-subtitle">Personeelsfiche</div></div>
+      </div>
+      <hr class="print-divider">
+      <div class="print-grid">
+        <div class="print-field"><div class="lbl">Medewerker</div><div class="val">${escHtml(fiche.medewerker)}</div></div>
+        <div class="print-field"><div class="lbl">Wagen</div><div class="val">${escHtml(fiche.wagen)}</div></div>
+        <div class="print-field"><div class="lbl">Evenement</div><div class="val">${escHtml(fiche.eventNaam)}</div></div>
+        <div class="print-field"><div class="lbl">Datum</div><div class="val">${datum}</div></div>
+      </div>
+      ${ll.naam ? `<div style="margin-bottom:12px;"><span class="badge badge-blue">📋 ${escHtml(ll.naam)}</span></div>` : ''}
+      <hr class="print-divider">
+      <div class="print-qr-wrap">
+        <div id="qr-container"></div>
+        <div class="print-qr-caption">Scan deze QR-code aan het einde van het event<br>om je eindstock in te vullen</div>
+      </div>
+      <hr class="print-divider">
+      <div class="print-instruction">
+        📱 Open de camera app op je smartphone en scan de QR-code. Je krijgt de volledige laadlijst te zien met de geladen hoeveelheden en kan je eindstock invullen. De gegevens worden automatisch doorgestuurd.
+      </div>
+    </div>`;
+
+  document.getElementById('fiche-modal').classList.remove('hidden');
+  setTimeout(() => {
+    document.getElementById('qr-container').innerHTML = '';
+    new QRCode(document.getElementById('qr-container'), { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+  }, 60);
+}
+
+function closeFicheModal() { document.getElementById('fiche-modal').classList.add('hidden'); }
+</script>
+</body>
+</html>
