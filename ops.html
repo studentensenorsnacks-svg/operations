@@ -10,6 +10,8 @@
 <!-- Word-generatie — docx UMD-build (browser) + FileSaver -->
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<!-- QR-codes voor de eindstock-registratie per foodtruck -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
@@ -122,6 +124,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 .recog-note{background:var(--orange-light);border:1px solid var(--orange-mid);border-radius:9px;padding:12px 14px;margin-bottom:16px}
 .recog-note-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--orange);font-weight:600;margin-bottom:5px}
 .recog-note-text{font-size:14px;color:var(--dark);line-height:1.6;font-weight:500}
+.qr-truck-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 13px;border:1px solid var(--border);border-radius:9px;margin-bottom:6px;font-size:13px;background:var(--white)}
+.qr-truck-row .qr-truck-name{font-weight:600;color:var(--dark)}
+.qr-truck-tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;white-space:nowrap;background:var(--red-bg);color:var(--red)}
+.qr-truck-tag.ok{background:var(--green-bg);color:var(--green)}
 </style>
 </head>
 <body>
@@ -163,6 +169,7 @@ const OPS_PATH  = 'ops_details';
 let planningEvents = [];   // ruwe agenda uit de Planning
 let opsDetails     = {};   // operationele laag, per event-id
 let allEvents      = [];   // samengevoegd — alle views werken hierop
+let laadlijsten    = {};   // ft_laadlijsten_v1 — laadlijst-PDF's per event+wagen
 let curPage = 'dashboard';
 let editing = null;
 let activeFilter = 'alle';
@@ -316,6 +323,31 @@ function recognize(name, location, notes){
 function detailKey(id){ return String(id).replace(/[.#$/\[\]]/g,'_'); }
 function toArray(data){ return !data ? [] : (Array.isArray(data)?data:Object.values(data)); }
 
+// ── LAADLIJST-KOPPELING ────────────────────────────────────────
+// De laadlijst-PDF's worden in de Planning per event+wagen geüpload.
+// Hier zoeken we de laadlijst die bij dit event én deze foodtruck hoort.
+function findLaadlijst(eventId, truck){
+  for(const [k,ll] of Object.entries(laadlijsten)){
+    if(ll && String(ll.eventId)===String(eventId) && ll.wagen===truck) return {key:k, ll};
+  }
+  return null;
+}
+// Statusregels voor de QR-sectie in het fiche-detail
+function qrTruckRows(e){
+  const trucks = Array.isArray(e.trucks) ? e.trucks : [];
+  if(!trucks.length)
+    return '<div class="info-hint">Nog geen foodtrucks toegewezen in de Planning.</div>';
+  return trucks.map(t=>{
+    const f = findLaadlijst(e.id, t);
+    return `<div class="qr-truck-row">
+      <span class="qr-truck-name">🚚 ${esc(t)}</span>
+      ${f
+        ? '<span class="qr-truck-tag ok">✅ Laadlijst — QR komt in de Word-fiche</span>'
+        : '<span class="qr-truck-tag">⚠ Geen laadlijst — upload de PDF in de Planning</span>'}
+    </div>`;
+  }).join('');
+}
+
 // ── SAMENVOEGEN ────────────────────────────────────────────────
 // Eén agenda-event uit de Planning + zijn operationele laag → ops-event
 function mergeEvent(pe){
@@ -376,6 +408,15 @@ function listen(){
   fbdb.ref(OPS_PATH).on('value', snap=>{
     opsDetails = snap.val() || {};
     rebuild();
+  });
+  // Laadlijst-PDF's (geüpload in de Planning) — nodig voor de QR-codes
+  fbdb.ref('ft_laadlijsten_v1').on('value', snap=>{
+    laadlijsten = snap.val() || {};
+    // Ververs alleen de QR-statuslijst als er een fiche open staat
+    if(editing && document.getElementById('page-detail').style.display==='block'){
+      const list = document.getElementById('qr-truck-list');
+      if(list) list.innerHTML = qrTruckRows(editing);
+    }
   });
 }
 
@@ -728,6 +769,11 @@ function renderDetail(){
       </div>
 
       <div class="divider"></div>
+      <div class="section-heading" style="margin-top:0">📲 Eindstock-QR per foodtruck</div>
+      <div class="info-hint" style="margin-bottom:10px">Elke foodtruck met een geüploade laadlijst krijgt een eigen QR-code in de Word-fiche. De medewerker scant die op het einde van het event om de eindstock in te vullen — de aantallen verschijnen daarna op het dashboard.</div>
+      <div id="qr-truck-list">${qrTruckRows(e)}</div>
+
+      <div class="divider"></div>
       <div class="section-heading" style="margin-top:0">👥 Medewerkers & uren</div>
       <table class="staff-table">
         <thead><tr>
@@ -849,7 +895,7 @@ async function generateWord(){
 
   const {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    AlignmentType, BorderStyle, WidthType, ShadingType
+    AlignmentType, BorderStyle, WidthType, ShadingType, ImageRun
   } = window.docx;
 
   // Datumopmaak
@@ -917,6 +963,73 @@ async function generateWord(){
   // Wagen uitladen / meebrengen tekst
   const wagenUitTxt=e.wagenUitladen?'JA — zie opmerkingen':'NEE';
   const wagenMeeTxt=e.wagenMeebrengen?'JA':'NEE';
+
+  // ── QR-codes per foodtruck (eindstock-registratie) ──────────
+  // Voor elke truck met een geüploade laadlijst maken we een QR die
+  // naar eindstock.html?ll=<laadlijstKey> verwijst. De medewerker
+  // scant die op het einde van het event en vult de eindstock in.
+  function qrPngBytes(text){
+    if(typeof QRCode==='undefined') return null;
+    const holder=document.createElement('div');
+    holder.style.cssText='position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(holder);
+    try{
+      new QRCode(holder,{text,width:260,height:260,correctLevel:QRCode.CorrectLevel.M});
+      const canvas=holder.querySelector('canvas');
+      if(!canvas) return null;
+      const b64=canvas.toDataURL('image/png').split(',')[1];
+      const bin=atob(b64);
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+      return bytes;
+    }catch(err){ console.warn('QR genereren mislukt:',err); return null; }
+    finally{ holder.remove(); }
+  }
+
+  const qrChildren=[];
+  if(planTrucks.length){
+    qrChildren.push(new Paragraph({
+      pageBreakBefore:true, spacing:{before:0,after:100},
+      border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'D4521A',space:1}},
+      children:[new TextRun({text:'EINDSTOCK — QR PER FOODTRUCK',bold:true,size:26,color:'1C1917',font:'Arial'})]
+    }));
+    qrChildren.push(new Paragraph({
+      spacing:{after:180},
+      children:[new TextRun({
+        text:'Elke medewerker scant op het einde van het event de QR-code van zijn foodtruck en vult de eindstock in. De aantallen verschijnen automatisch op het dashboard.',
+        size:18,italics:true,color:'666666',font:'Arial'})]
+    }));
+    for(const truck of planTrucks){
+      const found=findLaadlijst(e.id,truck);
+      qrChildren.push(new Paragraph({
+        spacing:{before:160,after:50},
+        children:[new TextRun({text:'🚚  '+truck,bold:true,size:24,font:'Arial'})]
+      }));
+      if(found){
+        const bytes=qrPngBytes('https://operationssenorsnacks.web.app/eindstock.html?ll='+found.key);
+        if(bytes && ImageRun){
+          qrChildren.push(new Paragraph({
+            spacing:{after:30},
+            children:[new ImageRun({data:bytes,transformation:{width:132,height:132}})]
+          }));
+          qrChildren.push(new Paragraph({
+            spacing:{after:120},
+            children:[new TextRun({text:'Scan om de eindstock in te vullen',size:16,color:'888888',font:'Arial'})]
+          }));
+        } else {
+          qrChildren.push(new Paragraph({
+            spacing:{after:120},
+            children:[new TextRun({text:'(QR-code kon niet gegenereerd worden)',size:16,italics:true,color:'A32D2D',font:'Arial'})]
+          }));
+        }
+      } else {
+        qrChildren.push(new Paragraph({
+          spacing:{after:120},
+          children:[new TextRun({text:'Nog geen laadlijst geüpload — doe dit in de Planning.',size:18,italics:true,color:'A32D2D',font:'Arial'})]
+        }));
+      }
+    }
+  }
 
   // Bouw document
   const doc=new Document({
@@ -1033,7 +1146,10 @@ async function generateWord(){
             text:'SENOR SNACKS BVBA · Winkelom 87c · 2440 Geel · tel 014/58 76 56 · BE465 570 997 · KBC: BE39 7330 4242 6719',
             size:16,color:'888888',font:'Arial'
           })]
-        })
+        }),
+
+        // ── QR-CODES PER FOODTRUCK (eigen pagina)
+        ...qrChildren
       ]
     }]
   });

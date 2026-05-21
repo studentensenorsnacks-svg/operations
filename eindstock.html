@@ -31,6 +31,8 @@
     .info-card{background:var(--surface);border-radius:10px;padding:12px 14px;}
     .info-card .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);}
     .info-card .val{font-size:17px;font-weight:600;font-family:var(--font-cond);margin-top:2px;}
+    .mw-name-input{width:100%;border:2px solid var(--border2);border-radius:8px;padding:6px 9px;margin-top:3px;font-family:var(--font-cond);font-size:17px;font-weight:600;background:var(--bg);color:var(--text);}
+    .mw-name-input:focus{outline:none;border-color:var(--red);background:#fff;}
 
     /* CONTENT */
     .content{padding:0 16px;}
@@ -143,7 +145,9 @@ const db = firebase.database();
 const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
 const params = new URLSearchParams(location.search);
 const ficheId = params.get('fiche');
-let ficheData = null, laadlijstData = null;
+const llId = params.get('ll');                  // per-foodtruck modus (QR uit ops.html)
+const mode = llId ? 'truck' : 'fiche';
+let ficheData = null, laadlijstData = null, llKey = null, prevSubmission = null;
 
 function show(id) {
   ['loading-screen','error-screen','main-content','success-screen'].forEach(s => {
@@ -155,24 +159,32 @@ function show(id) {
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  if (!ficheId) { show('error-screen'); return; }
-
   try {
-    const [ficheSnap, llSnap] = await Promise.all([
-      db.ref('ft_fiches_v1/' + ficheId).once('value'),
-      null // placeholder
-    ]);
+    if (mode === 'truck') {
+      // ── Per-foodtruck modus: QR linkt rechtstreeks naar één laadlijst ──
+      const llSnap = await db.ref('ft_laadlijsten_v1/' + llId).once('value');
+      laadlijstData = llSnap.val();
+      if (!laadlijstData) { show('error-screen'); return; }
+      llKey = llId;
+      const esSnap = await db.ref('ft_eindstock_v1/' + llKey).once('value');
+      if (esSnap.exists()) {
+        prevSubmission = esSnap.val();
+        document.getElementById('already-banner').style.display = 'block';
+      }
+    } else {
+      // ── Fiche-modus: QR linkt naar een personeelsfiche ──
+      if (!ficheId) { show('error-screen'); return; }
+      const ficheSnap = await db.ref('ft_fiches_v1/' + ficheId).once('value');
+      ficheData = ficheSnap.val();
+      if (!ficheData) { show('error-screen'); return; }
 
-    ficheData = ficheSnap.val();
-    if (!ficheData) { show('error-screen'); return; }
+      const llSnap2 = await db.ref('ft_laadlijsten_v1/' + ficheData.laadlijstId).once('value');
+      laadlijstData = llSnap2.val();
+      if (!laadlijstData) { show('error-screen'); return; }
 
-    const llSnap2 = await db.ref('ft_laadlijsten_v1/' + ficheData.laadlijstId).once('value');
-    laadlijstData = llSnap2.val();
-    if (!laadlijstData) { show('error-screen'); return; }
-
-    // Check if already submitted
-    const esSnap = await db.ref('ft_eindstock_v1/' + ficheId).once('value');
-    if (esSnap.exists()) document.getElementById('already-banner').style.display = 'block';
+      const esSnap = await db.ref('ft_eindstock_v1/' + ficheId).once('value');
+      if (esSnap.exists()) document.getElementById('already-banner').style.display = 'block';
+    }
 
     renderPage();
     show('main-content');
@@ -184,13 +196,27 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function renderPage() {
-  document.getElementById('hdr-event').textContent = ficheData.eventNaam || '—';
-  const datum = ficheData.datum
-    ? new Date(ficheData.datum + 'T00:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
-    : '—';
-  document.getElementById('hdr-datum').textContent = datum;
-  document.getElementById('inf-medewerker').textContent = ficheData.medewerker || '—';
-  document.getElementById('inf-wagen').textContent = ficheData.wagen || '—';
+  if (mode === 'truck') {
+    document.getElementById('hdr-event').textContent = laadlijstData.eventNaam || laadlijstData.naam || '—';
+    const datum = laadlijstData.datum
+      ? new Date(laadlijstData.datum + 'T00:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+      : '—';
+    document.getElementById('hdr-datum').textContent = datum;
+    document.getElementById('inf-wagen').textContent = laadlijstData.wagen || '—';
+    // Medewerker = vrij invulveld (geen fiche met een vaste naam)
+    document.getElementById('inf-medewerker').innerHTML =
+      `<input type="text" id="mw-name" class="mw-name-input" placeholder="Jouw naam…" autocomplete="name">`;
+    if (prevSubmission && prevSubmission.medewerker)
+      document.getElementById('mw-name').value = prevSubmission.medewerker;
+  } else {
+    document.getElementById('hdr-event').textContent = ficheData.eventNaam || '—';
+    const datum = ficheData.datum
+      ? new Date(ficheData.datum + 'T00:00:00').toLocaleDateString('nl-BE', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+      : '—';
+    document.getElementById('hdr-datum').textContent = datum;
+    document.getElementById('inf-medewerker').textContent = ficheData.medewerker || '—';
+    document.getElementById('inf-wagen').textContent = ficheData.wagen || '—';
+  }
 
   const cats = laadlijstData.categorieën || {};
   let html = '';
@@ -201,10 +227,13 @@ function renderPage() {
 
     html += `<div class="cat-label">${cat}</div>`;
     items.forEach((item, i) => {
+      // In truck-modus tonen we GEEN geladen aantallen — enkel de producten.
+      const geladenHtml = (mode === 'fiche' && item.aantal)
+        ? `<span class="item-geladen">Geladen: <strong>${item.aantal}</strong></span>` : '';
       html += `<div class="item-card">
         <div class="item-top">
           <span class="item-naam">${escHtml(item.naam)}</span>
-          ${item.aantal ? `<span class="item-geladen">Geladen: <strong>${item.aantal}</strong></span>` : ''}
+          ${geladenHtml}
         </div>
         <div class="item-input-wrap">
           <div class="input-label">Eindstock</div>
@@ -234,6 +263,18 @@ function updateProgress() {
 }
 
 async function submitEindstock() {
+  let medewerker;
+  if (mode === 'truck') {
+    medewerker = (document.getElementById('mw-name')?.value || '').trim();
+    if (!medewerker) {
+      alert('Vul eerst je naam in.');
+      document.getElementById('mw-name')?.focus();
+      return;
+    }
+  } else {
+    medewerker = ficheData.medewerker || '';
+  }
+
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.textContent = 'Bezig met indienen…';
@@ -252,15 +293,29 @@ async function submitEindstock() {
   }
 
   try {
-    await db.ref('ft_eindstock_v1/' + ficheId).set({
-      ficheId,
-      medewerker: ficheData.medewerker,
-      wagen: ficheData.wagen,
-      eventNaam: ficheData.eventNaam,
-      datum: ficheData.datum,
-      ingediend: new Date().toISOString(),
-      items: result
-    });
+    if (mode === 'truck') {
+      // Eén eindstock per laadlijst (event + foodtruck) — opnieuw scannen overschrijft.
+      await db.ref('ft_eindstock_v1/' + llKey).set({
+        laadlijstId: llKey,
+        wagen: laadlijstData.wagen || '',
+        eventNaam: laadlijstData.eventNaam || laadlijstData.naam || '',
+        eventId: laadlijstData.eventId || '',
+        datum: laadlijstData.datum || '',
+        medewerker,
+        ingediend: new Date().toISOString(),
+        items: result
+      });
+    } else {
+      await db.ref('ft_eindstock_v1/' + ficheId).set({
+        ficheId,
+        medewerker: ficheData.medewerker,
+        wagen: ficheData.wagen,
+        eventNaam: ficheData.eventNaam,
+        datum: ficheData.datum,
+        ingediend: new Date().toISOString(),
+        items: result
+      });
+    }
     show('success-screen');
   } catch (e) {
     btn.disabled = false;
