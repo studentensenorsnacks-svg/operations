@@ -376,7 +376,7 @@ function mergeEvent(pe){
     aantallen: d.aantallen || rec.personen || '',
     betaling: d.betaling || rec.betaling || '',
     wagen: d.wagen || '',
-    wagenUitladen: !!d.wagenUitladen,
+    wagenUitladen: typeof d.wagenUitladen==='boolean' ? (d.wagenUitladen?'Ja':'') : (d.wagenUitladen||''),
     wagenMeebrengen: d.wagenMeebrengen === undefined ? true : !!d.wagenMeebrengen,
     opmerkingen: d.opmerkingen || '',
     medewerkers: mw,
@@ -422,7 +422,7 @@ function listen(){
 
 function newBlankEvent(){
   return{id:'new_'+Date.now(),datum:'',evenement:'',adres:'',planningLocatie:'',contact:'',gsm:'',openingsuren:'',
-    aantallen:'',betaling:'',wagen:'',trucks:[],agendaInfo:'',recognized:{},wagenUitladen:false,wagenMeebrengen:true,
+    aantallen:'',betaling:'',wagen:'',trucks:[],agendaInfo:'',recognized:{},wagenUitladen:'',wagenMeebrengen:true,
     opmerkingen:'',medewerkers:[emptyMw()],status:'komend'};
 }
 
@@ -715,13 +715,7 @@ function renderDetail(){
         </div>
         <div class="info-field">
           <label>Betaling</label>
-          <select onchange="upd('betaling',this.value)">
-            <option value="">— kies —</option>
-            <option value="factuur" ${e.betaling==='factuur'?'selected':''}>Factuur</option>
-            <option value="cash" ${e.betaling==='cash'?'selected':''}>Cash</option>
-            <option value="bonnen" ${e.betaling==='bonnen'?'selected':''}>Bonnen</option>
-            <option value="à volonté" ${e.betaling==='à volonté'?'selected':''}>À volonté</option>
-          </select>
+          <input value="${esc(e.betaling)}" oninput="upd('betaling',this.value)" placeholder="bijv. Factuur, Cash, Bonnen, À volonté…"/>
         </div>
       </div>
 
@@ -750,10 +744,7 @@ function renderDetail(){
         </div>
         <div class="info-field">
           <label>Wagen uitladen</label>
-          <div class="toggle-wrap">
-            <label class="toggle"><input type="checkbox" ${e.wagenUitladen?'checked':''} onchange="upd('wagenUitladen',this.checked)"/><span class="slider"></span></label>
-            <span id="lbl-uitladen" style="font-size:14px">${e.wagenUitladen?'Ja':'Nee'}</span>
-          </div>
+          <input value="${esc(e.wagenUitladen)}" oninput="upd('wagenUitladen',this.value)" placeholder="bijv. Ja — zie opmerkingen, Nee…"/>
         </div>
         <div class="info-field">
           <label>Wagen meebrengen</label>
@@ -801,7 +792,6 @@ function renderDetail(){
 }
 
 function upd(k,v){if(editing){editing[k]=v;
-  if(k==='wagenUitladen'){const l=document.getElementById('lbl-uitladen');if(l)l.textContent=v?'Ja':'Nee';}
   if(k==='wagenMeebrengen'){const l=document.getElementById('lbl-meebrengen');if(l)l.textContent=v?'Ja':'Nee';}
 }}
 function updMw(i,k,v){if(editing)editing.medewerkers[i][k]=v;}
@@ -850,7 +840,7 @@ async function saveEvent(){
     await fbdb.ref(OPS_PATH+'/'+detailKey(pid)).set({
       adres:e.adres||'',contact:e.contact||'',gsm:e.gsm||'',
       openingsuren:e.openingsuren||'',aantallen:e.aantallen||'',
-      betaling:e.betaling||'',wagen:e.wagen||'',wagenUitladen:!!e.wagenUitladen,
+      betaling:e.betaling||'',wagen:e.wagen||'',wagenUitladen:e.wagenUitladen||'',
       wagenMeebrengen:!!e.wagenMeebrengen,opmerkingen:e.opmerkingen||'',
       medewerkers:mw,status:e.status||''
     });
@@ -961,7 +951,7 @@ async function generateWord(){
   const planTrucks = Array.isArray(e.trucks) ? e.trucks.filter(Boolean) : [];
 
   // Wagen uitladen / meebrengen tekst
-  const wagenUitTxt=e.wagenUitladen?'JA — zie opmerkingen':'NEE';
+  const wagenUitTxt=e.wagenUitladen||'—';
   const wagenMeeTxt=e.wagenMeebrengen?'JA':'NEE';
 
   // ── QR-codes per foodtruck (eindstock-registratie) ──────────
@@ -1031,6 +1021,13 @@ async function generateWord(){
     }
   }
 
+  // ── Logo inladen (senorsnacks-logo.png) ────────────────────
+  let logoBytes=null;
+  try{
+    const resp=await fetch('senorsnacks-logo.png');
+    if(resp.ok) logoBytes=new Uint8Array(await resp.arrayBuffer());
+  }catch(err){ console.warn('Logo laden mislukt:',err); }
+
   // Bouw document
   const doc=new Document({
     styles:{default:{document:{run:{font:'Arial',size:22}}}},
@@ -1043,11 +1040,17 @@ async function generateWord(){
       },
       children:[
         // ── LOGO / WEBSITE
-        new Paragraph({
-          alignment:AlignmentType.CENTER,
-          spacing:{after:40},
-          children:[new TextRun({text:'🌮 SEÑOR SNACKS',bold:true,size:36,color:'D4521A',font:'Arial'})]
-        }),
+        (logoBytes && ImageRun)
+          ? new Paragraph({
+              alignment:AlignmentType.CENTER,
+              spacing:{after:60},
+              children:[new ImageRun({data:logoBytes,transformation:{width:212,height:139}})]
+            })
+          : new Paragraph({
+              alignment:AlignmentType.CENTER,
+              spacing:{after:40},
+              children:[new TextRun({text:'SEÑOR SNACKS',bold:true,size:36,color:'D4521A',font:'Arial'})]
+            }),
         new Paragraph({
           alignment:AlignmentType.CENTER,
           spacing:{after:200},
@@ -1101,17 +1104,32 @@ async function generateWord(){
         labelPara('Wagen meebrengen', wagenMeeTxt),
         emptyPara(60),
 
-        // ── OPMERKINGEN
-        new Paragraph({
-          spacing:{before:0,after:100},
-          border:{bottom:{style:BorderStyle.SINGLE,size:4,color:'DDDDDD',space:1}},
-          children:[new TextRun({text:'OPMERKINGEN',bold:true,size:22,color:'555555',font:'Arial'})]
+        // ── OPMERKINGEN (duidelijk gemarkeerd in een groot kader)
+        emptyPara(120),
+        new Table({
+          width:{size:10486,type:WidthType.DXA},
+          columnWidths:[10486],
+          rows:[new TableRow({children:[new TableCell({
+            borders:{
+              top:{style:BorderStyle.SINGLE,size:24,color:'D4521A'},
+              bottom:{style:BorderStyle.SINGLE,size:24,color:'D4521A'},
+              left:{style:BorderStyle.SINGLE,size:24,color:'D4521A'},
+              right:{style:BorderStyle.SINGLE,size:24,color:'D4521A'}
+            },
+            shading:{fill:'FFF1E6',type:ShadingType.CLEAR},
+            margins:{top:200,bottom:200,left:240,right:240},
+            children:[
+              new Paragraph({
+                spacing:{after:120},
+                children:[new TextRun({text:'⚠  OPMERKINGEN',bold:true,size:30,color:'D4521A',font:'Arial'})]
+              }),
+              new Paragraph({
+                children:[new TextRun({text:e.opmerkingen||'/',bold:true,size:26,color:'1C1917',font:'Arial'})]
+              })
+            ]
+          })]})]
         }),
-        emptyPara(60),
-        new Paragraph({
-          spacing:{after:200},
-          children:[new TextRun({text:e.opmerkingen||'/',size:22,font:'Arial'})]
-        }),
+        emptyPara(240),
 
         // ── VASTE SLUITINGSTEKST
         new Paragraph({
