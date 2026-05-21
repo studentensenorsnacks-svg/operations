@@ -95,6 +95,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
 .staff-table td input:focus{border-color:var(--orange);background:#fff}
 .add-row-btn{margin-top:10px;background:none;border:1px dashed var(--border);border-radius:7px;padding:7px 14px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .15s}
 .add-row-btn:hover{border-color:var(--orange);color:var(--orange)}
+.ai-herken-btn{margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#7c3aed;border:none;border-radius:7px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;color:#fff;transition:opacity .15s}
+.ai-herken-btn:hover{opacity:.88}
+.ai-herken-btn:disabled{opacity:.55;cursor:default}
 .del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:15px;padding:3px 7px;border-radius:5px}
 .del-btn:hover{color:var(--red);background:var(--red-bg)}
 .save-bar{background:var(--orange-light);border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
@@ -316,6 +319,74 @@ function recognize(name, location, notes){
                  : /cash|contant/.test(b)?'cash' : /bonn/.test(b)?'bonnen' : rec.betaling;
   }
   return rec;
+}
+
+// ── SLIMME AI-HERKENNING ───────────────────────────────────────
+// Stuurt de rauwe agenda-tekst naar Claude (via de /api/anthropic
+// proxy) en laat die de fiche-velden eruit halen. Vult ENKEL lege
+// velden in — wat de gebruiker zelf typte blijft staan. De regex-
+// herkenning hierboven blijft de terugval als de API niet werkt.
+const AI_HERKEN_PROMPT = `Je bent een assistent voor het foodtruck-cateringbedrijf Señor Snacks. Je krijgt rommelige, ongestructureerde tekst uit een Outlook-agenda over een cateringevent. Haal hier de gevraagde velden uit.
+
+Antwoord UITSLUITEND met geldige JSON — geen uitleg, geen markdown-codeblok. Gebruik exact deze sleutels:
+{
+  "contact": "naam van de contactpersoon, of leeg",
+  "gsm": "telefoon-/gsm-nummer, of leeg",
+  "openingsuren": "uren dat de foodtruck open is voor de klanten, bv. '17u - 19u', of leeg",
+  "aantallen": "verwacht aantal personen, bv. '150 personen', of leeg",
+  "betaling": "betaalwijze (factuur, cash, bonnen, à volonté, ...), of leeg",
+  "wagen": "welke wagen of foodtruck genoemd wordt, of leeg",
+  "wagenUitladen": "moet de wagen ter plaatse uitgeladen worden? 'Ja', 'Nee', of leeg",
+  "opmerkingen": "alle overige nuttige info: speciale instructies, borg, sauzen, allergieën, parkeer-/toegangsinfo, ... of leeg"
+}
+
+Regels:
+- Laat een veld leeg ("") als je het niet met redelijke zekerheid kunt bepalen. Liever leeg dan gokken.
+- Verzin niets — neem alleen over wat echt in de tekst staat.
+- Bij twijfel tussen aankomst-/vertrekuren en openingsuren: openingsuren = wanneer klanten kunnen komen eten.
+- Antwoord in het Nederlands.`;
+
+async function aiHerken(){
+  if(!editing) return;
+  const e=editing;
+  const bron=[e.evenement,e.planningLocatie,e.adres,e.agendaInfo].filter(Boolean).join('\n');
+  if(!bron.trim()){ toast('✗ Geen agenda-tekst om te lezen.',false); return; }
+  const btn=document.getElementById('ai-herken-btn');
+  if(btn){ btn.disabled=true; btn.textContent='🪄 Bezig met lezen…'; }
+  try{
+    const res=await fetch('/api/anthropic',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5',
+        max_tokens:1000,
+        system:AI_HERKEN_PROMPT,
+        messages:[{role:'user',content:bron}]
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data&&data.error&&data.error.message?data.error.message:'HTTP '+res.status);
+    const txt=(data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('').trim();
+    const s=txt.indexOf('{'), end=txt.lastIndexOf('}');
+    if(s<0||end<0) throw new Error('Geen leesbaar antwoord ontvangen.');
+    const ai=JSON.parse(txt.slice(s,end+1));
+    // Enkel velden invullen die nu nog leeg zijn — niets overschrijven.
+    const velden=['contact','gsm','openingsuren','aantallen','betaling','wagen','wagenUitladen','opmerkingen'];
+    const ingevuld=[];
+    for(const k of velden){
+      const v=(ai[k]==null?'':String(ai[k])).trim();
+      if(v && !String(editing[k]||'').trim()){ editing[k]=v; ingevuld.push(k); }
+    }
+    renderDetail();
+    document.getElementById('page-detail').style.display='block';
+    toast(ingevuld.length
+      ? `✓ AI vulde ${ingevuld.length} leeg veld(en) in — kijk ze even na voor je opslaat.`
+      : 'AI vond geen nieuwe info — alle velden waren al ingevuld.');
+  }catch(err){
+    console.error('aiHerken:',err);
+    toast('✗ AI-herkenning mislukt: '+err.message,false);
+    if(btn){ btn.disabled=false; btn.textContent='🪄 Slim invullen met AI'; }
+  }
 }
 
 // Firebase-sleutels mogen geen . # $ [ ] / bevatten — import-id's uit
@@ -723,6 +794,7 @@ function renderDetail(){
       ${e.agendaInfo?`<div class="agenda-note">
         <div class="agenda-note-label">📅 Uit de Outlook-agenda</div>
         <div class="agenda-note-text">${esc(e.agendaInfo)}</div>
+        <button id="ai-herken-btn" class="ai-herken-btn" onclick="aiHerken()">🪄 Slim invullen met AI</button>
       </div>`:''}
       ${recBlock}
 
