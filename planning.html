@@ -170,7 +170,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .empty-day{padding:14px 4px;font-size:0.72rem;color:#bbb;font-style:italic;text-align:center;}
 
 /* EVENT CARD (compacter, consistent met multi-dag) */
-.event-card{border-radius:5px;border:1px solid var(--border);border-left:4px solid var(--border);overflow:hidden;transition:box-shadow 0.15s,transform 0.15s;background:var(--white);}
+.event-card{border-radius:5px;border:1px solid var(--border);border-left:4px solid var(--border);overflow:hidden;transition:box-shadow 0.15s,transform 0.15s;background:var(--white);cursor:pointer;}
 .event-card:hover{box-shadow:0 3px 8px rgba(0,0,0,0.08);transform:translateY(-1px);}
 .event-card.drag-over{box-shadow:0 0 0 2px var(--red)!important;border-color:var(--red)!important;}
 .event-head{padding:6px 9px 5px;display:flex;align-items:flex-start;justify-content:space-between;gap:4px;}
@@ -239,6 +239,29 @@ textarea{resize:vertical;min-height:70px;}
 .btn-primary:hover{background:var(--red-dark);}
 .btn-cancel{padding:10px 20px;background:var(--white);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--font);font-size:0.9rem;font-weight:600;cursor:pointer;}
 .btn-cancel:hover{border-color:#999;}
+
+/* EVENT DETAIL POPUP */
+.evd-modal{background:var(--white);border-radius:10px;width:92%;max-width:560px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.2);overflow:hidden;}
+.evd-head{padding:20px 22px 15px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.evd-title{font-family:var(--font-cond);font-size:1.5rem;font-weight:900;line-height:1.15;display:flex;align-items:center;gap:9px;}
+.evd-cdot{width:13px;height:13px;border-radius:50%;flex-shrink:0;}
+.evd-meta{margin-top:9px;display:flex;flex-wrap:wrap;gap:5px 14px;font-size:0.82rem;color:var(--muted);font-weight:600;align-items:center;}
+.evd-badge{font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;background:#f0f0f0;color:var(--muted);padding:3px 9px;border-radius:10px;}
+.evd-body{padding:4px 22px 18px;overflow-y:auto;flex:1;}
+.evd-body::-webkit-scrollbar{width:5px;}
+.evd-body::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px;}
+.evd-section{margin-top:16px;}
+.evd-sec-title{font-family:var(--font-cond);font-size:1.02rem;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--border);}
+.evd-sec-count{font-family:var(--font);font-size:0.7rem;font-weight:700;color:var(--muted);background:#f0f0f0;padding:1px 9px;border-radius:10px;}
+.evd-list{display:flex;flex-direction:column;gap:4px;}
+.evd-item{display:flex;align-items:center;gap:9px;font-size:0.88rem;font-weight:600;padding:6px 10px;background:#f7f7f7;border-radius:5px;border-left:3px solid var(--border);}
+.evd-idot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.evd-empty{font-size:0.82rem;color:#aaa;font-style:italic;padding:3px 2px;}
+.evd-day{margin-top:9px;}
+.evd-day-lbl{font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin-bottom:5px;}
+.evd-logi{display:flex;align-items:center;justify-content:space-between;font-size:0.88rem;font-weight:600;padding:7px 11px;background:#f7f7f7;border-radius:5px;margin-bottom:4px;}
+.evd-logi-val{font-family:var(--font-cond);font-weight:800;font-size:0.95rem;}
+.evd-foot{display:flex;gap:10px;padding:14px 22px;border-top:1px solid var(--border);flex-shrink:0;justify-content:flex-end;}
 
 /* TRUCK PICKER */
 .truck-picker{background:var(--white);border-radius:10px;max-width:520px;width:92%;max-height:84vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.2);overflow:hidden;}
@@ -457,6 +480,11 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- EVENT DETAIL POPUP — volledig overzicht -->
+<div class="overlay hidden" id="evd-overlay" onclick="if(event.target===this)closeEvDetail()">
+  <div class="evd-modal" id="evd-modal"></div>
+</div>
+
 <!-- TRUCK PICKER -->
 <div class="overlay hidden" id="picker-overlay">
   <div class="truck-picker">
@@ -572,6 +600,13 @@ function rebuildTC(){
   GROUPS.forEach(g=>g.trucks.forEach(t=>TC[t]={color:g.color,bg:g.bg}));
 }
 rebuildTC();
+
+// ── Voertuig-info over ALLE tabs (voor de event-detailpopup) ──
+// Elke voertuig-/terminalnaam → kleur, groep en soort (wagens/camions/terminals).
+const TRUCK_INFO = {};
+[['wagens',GROUPS_WAGENS],['camions',GROUPS_CAMIONS],['terminals',GROUPS_TERMINALS]].forEach(([kind,gs])=>{
+  gs.forEach(g => g.trucks.forEach(t => { TRUCK_INFO[t] = {color:g.color, bg:g.bg, label:g.label, kind}; }));
+});
 
 // ── STATE ──────────────────────────────────────────────
 let events = JSON.parse(localStorage.getItem('ft_planning_v1')||'[]');
@@ -1125,7 +1160,7 @@ function renderWeek(){
         const truckPills=ev.trucks.length
           ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<span class="mdev-truck-pill" style="background:${c.bg};color:${c.color}">${t}<span class="at-rm" onclick="event.stopPropagation();rmTruck(${ev.id},'${te(t)}')">✕</span></span>`;}).join('')
           :'';
-        multiBars+=`<div id="mev-${ev.id}" class="${classes}" style="border-left-color:${ev.color};grid-column:${colStart}/${colEnd}"
+        multiBars+=`<div id="mev-${ev.id}" class="${classes}" style="border-left-color:${ev.color};grid-column:${colStart}/${colEnd}" onclick="openEvDetail(${ev.id})"
           ondragover="onDOv(event,${ev.id})" ondragleave="onDLv(${ev.id})" ondrop="onDrp(event,${ev.id})">
           <div class="mdev-top">
             ${startsB?`<span style="opacity:0.5;font-size:0.65rem">◀</span>`:''}
@@ -1176,9 +1211,9 @@ function renderWeek(){
           return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
         }).join('');
         const pickerCall = isPerDay && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
-        areaHtml = `<div class="ev-trucks-area">${tHtml}<button type="button" class="btn-add-trucks" onclick="${pickerCall}">+ Trucks</button></div>`;
+        areaHtml = `<div class="ev-trucks-area">${tHtml}<button type="button" class="btn-add-trucks" onclick="event.stopPropagation();${pickerCall}">+ Trucks</button></div>`;
       }
-      return `<div class="event-card${isMultiDay?' is-multiday':''}" id="${cardId}" style="border-left-color:${ev.color}" ondragover="onDOv(event,${ev.id}${dragArgs})" ondragleave="onDLv(${ev.id}${dragArgs})" ondrop="onDrp(event,${ev.id}${dragArgs})">
+      return `<div class="event-card${isMultiDay?' is-multiday':''}" id="${cardId}" style="border-left-color:${ev.color}" onclick="openEvDetail(${ev.id})" ondragover="onDOv(event,${ev.id}${dragArgs})" ondragleave="onDLv(${ev.id}${dragArgs})" ondrop="onDrp(event,${ev.id}${dragArgs})">
         <div class="event-head">
           <div class="ev-head-left">
             <div class="ev-name" style="color:${ev.color}">${ev.name}</div>
@@ -1186,8 +1221,8 @@ function renderWeek(){
             ${dayBadge}
           </div>
           <div class="ev-btns">
-            <button type="button" class="ev-btn" onclick="editEv(${ev.id})">✏️</button>
-            <button type="button" class="ev-btn del" onclick="delEv(${ev.id})">✕</button>
+            <button type="button" class="ev-btn" onclick="event.stopPropagation();editEv(${ev.id})">✏️</button>
+            <button type="button" class="ev-btn del" onclick="event.stopPropagation();delEv(${ev.id})">✕</button>
           </div>
         </div>
         ${areaHtml}
@@ -1251,6 +1286,113 @@ function delEv(id){
   const ev=events.find(e=>e.id===id);if(!ev)return;
   if(!confirm(`Event "${ev.name}" verwijderen?`))return;
   events=events.filter(e=>e.id!==id);save();renderWeek();
+}
+
+// ── EVENT DETAIL POPUP — volledig overzicht over alle tabs ──
+let evDetailId = null;
+function closeEvDetail(){
+  document.getElementById('evd-overlay').classList.add('hidden');
+  evDetailId = null;
+}
+function openEvDetail(id){
+  const ev = events.find(e=>e.id===id);
+  if(!ev) return;
+  evDetailId = id;
+  const multi = ev.endDate > ev.startDate;
+  const days = [];
+  for(let d=parseD(ev.startDate); toStr(d)<=ev.endDate; d=addD(d,1)) days.push(toStr(d));
+  const asObj = v => (v && typeof v==='object' && !Array.isArray(v)) ? v : {};
+
+  const itemRow = n => {
+    const info = TRUCK_INFO[n] || {color:'#999'};
+    return `<div class="evd-item" style="border-left-color:${info.color}"><span class="evd-idot" style="background:${info.color}"></span>${n}</div>`;
+  };
+  const itemList = arr => `<div class="evd-list">${arr.map(itemRow).join('')}</div>`;
+
+  // De gedeelde trucks-lijst opsplitsen: echte wagens vs camionetten.
+  const wagens = [], camionsFlat = [];
+  (Array.isArray(ev.trucks)?ev.trucks:[]).forEach(n=>{
+    const info = TRUCK_INFO[n];
+    if(info && info.kind==='camions') camionsFlat.push(n);
+    else wagens.push(n);
+  });
+
+  // Sectie voor voertuigen die ook per-dag bewaard kunnen zijn (camionetten / terminals).
+  function vehicleSection(flat, dayField, emptyTxt){
+    if(multi){
+      const dd = asObj(ev[dayField]);
+      const blocks = days
+        .filter(ds => Array.isArray(dd[ds]) && dd[ds].length)
+        .map(ds => `<div class="evd-day"><div class="evd-day-lbl">${fmtL(ds)}</div>${itemList(dd[ds])}</div>`);
+      const all = new Set(flat);
+      days.forEach(ds => { if(Array.isArray(dd[ds])) dd[ds].forEach(n=>all.add(n)); });
+      const html = (flat.length?itemList(flat):'') + blocks.join('');
+      return { count: all.size, html: html || `<div class="evd-empty">${emptyTxt}</div>` };
+    }
+    return { count: flat.length, html: flat.length ? itemList(flat) : `<div class="evd-empty">${emptyTxt}</div>` };
+  }
+
+  const wagenSec = {
+    count: wagens.length,
+    html: wagens.length ? itemList(wagens) : `<div class="evd-empty">— geen wagens toegewezen</div>`
+  };
+  const camSec  = vehicleSection(camionsFlat, 'truckDays', '— geen camionetten toegewezen');
+  const termSec = vehicleSection(Array.isArray(ev.terminals)?ev.terminals:[], 'terminalDays', '— geen betaalterminals toegewezen');
+
+  // Logistiek (hoeveelheden).
+  const logiRows = o => LOGI_ITEMS
+    .map(it => ({it, v:(o && o[it.key]>0)?o[it.key]:0}))
+    .filter(x => x.v>0)
+    .map(x => `<div class="evd-logi"><span>${x.it.icon} ${x.it.label}</span><span class="evd-logi-val">${x.v} ${x.it.unit}</span></div>`)
+    .join('');
+  let logiHtml;
+  if(multi){
+    const ld = asObj(ev.logistiekDays);
+    const blocks = days
+      .map(ds => ({ds, rows:logiRows(asObj(ld[ds]))}))
+      .filter(x => x.rows)
+      .map(x => `<div class="evd-day"><div class="evd-day-lbl">${fmtL(x.ds)}</div>${x.rows}</div>`);
+    logiHtml = blocks.length ? blocks.join('') : `<div class="evd-empty">— geen logistiek ingepland</div>`;
+  } else {
+    logiHtml = logiRows(asObj(ev.logistiek)) || `<div class="evd-empty">— geen logistiek ingepland</div>`;
+  }
+
+  const dateLine = multi
+    ? `📅 ${fmtS(ev.startDate)} → ${fmtS(ev.endDate)}`
+    : `📅 ${fmtL(ev.startDate)}`;
+
+  document.getElementById('evd-modal').innerHTML = `
+    <div class="evd-head">
+      <div class="evd-title"><span class="evd-cdot" style="background:${ev.color}"></span>${ev.name}</div>
+      <div class="evd-meta">
+        ${ev.location?`<span>📍 ${ev.location}</span>`:''}
+        <span>${dateLine}</span>
+        ${multi?`<span class="evd-badge">${days.length} dagen</span>`:''}
+      </div>
+    </div>
+    <div class="evd-body">
+      <div class="evd-section">
+        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${wagenSec.count}</span></div>
+        ${wagenSec.html}
+      </div>
+      <div class="evd-section">
+        <div class="evd-sec-title">🚐 Camionetten <span class="evd-sec-count">${camSec.count}</span></div>
+        ${camSec.html}
+      </div>
+      <div class="evd-section">
+        <div class="evd-sec-title">💳 Betaalterminals <span class="evd-sec-count">${termSec.count}</span></div>
+        ${termSec.html}
+      </div>
+      <div class="evd-section">
+        <div class="evd-sec-title">📦 Logistiek</div>
+        ${logiHtml}
+      </div>
+    </div>
+    <div class="evd-foot">
+      <button type="button" class="btn-cancel" onclick="closeEvDetail()">Sluiten</button>
+      <button type="button" class="btn-primary" onclick="closeEvDetail();editEv(${ev.id})">✏️ Bewerken</button>
+    </div>`;
+  document.getElementById('evd-overlay').classList.remove('hidden');
 }
 
 // ── TRUCK PICKER ────────────────────────────────────────
