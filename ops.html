@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Señor Snacks — Personeelsfiche</title>
+<title>Señor Snacks — Eventfiche</title>
 <!-- Firebase — gedeelde agenda met de Planning -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -135,7 +135,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f3ef;color:#1a1a1
   <aside class="sidebar">
     <div class="logo">
       <div class="logo-main">🌮 Señor Snacks</div>
-      <div class="logo-sub">Personeelsfiche</div>
+      <div class="logo-sub">Eventfiche</div>
     </div>
     <nav class="nav">
       <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">📊 Dashboard</div>
@@ -786,7 +786,7 @@ function renderDetail(){
       <button class="cancel-btn" onclick="goBack()">Annuleer</button>
       <div style="display:flex;align-items:center;gap:10px">
         ${!isNew?`<button class="cancel-btn" onclick="delEvent('${e.id}')" style="color:var(--red);border-color:#f7c1c1">Verwijder</button>`:''}
-        <button class="cancel-btn" onclick="generateWord()" style="color:var(--blue);border-color:#b3d1f0;display:flex;align-items:center;gap:6px">📄 Fiche als Word</button>
+        <button class="cancel-btn" onclick="generateWord()" style="color:var(--blue);border-color:#b3d1f0;display:flex;align-items:center;gap:6px">📄 Eventfiche als Word</button>
         <button class="save-btn" onclick="saveEvent()">💾 Opslaan</button>
       </div>
     </div>
@@ -1070,7 +1070,7 @@ async function generateWord(){
         new Paragraph({
           spacing:{before:0,after:100},
           border:{bottom:{style:BorderStyle.SINGLE,size:6,color:'D4521A',space:1}},
-          children:[new TextRun({text:'PERSONEELSFICHE',bold:true,size:26,color:'1C1917',font:'Arial'})]
+          children:[new TextRun({text:'EVENTFICHE',bold:true,size:26,color:'1C1917',font:'Arial'})]
         }),
         emptyPara(100),
 
@@ -1185,7 +1185,7 @@ async function generateWord(){
     const blob=await Packer.toBlob(doc);
     const safeName=(e.evenement||'event').replace(/[^a-zA-Z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
     const dateStr=(e.datum||'').replace(/-/g,'');
-    saveAs(blob,`Fiche_${safeName}_${dateStr}.docx`);
+    saveAs(blob,`Eventfiche_${safeName}_${dateStr}.docx`);
     toast('✓ Word-fiche gedownload.');
   }catch(err){
     console.error(err);
