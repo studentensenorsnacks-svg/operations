@@ -822,52 +822,80 @@ async function handleBulkUpload(fileList) {
   const pdfs = [...fileList].filter(f => f.type === 'application/pdf');
   if (!pdfs.length) { bulkStatus('Kies één of meer PDF-bestanden.', 'error'); return; }
 
-  let ok = 0;
-  const fails = [];
+  // bestandsnamen die al in het systeem zitten → overslaan, zo krijg je geen dubbels
+  const reedsGeupload = new Set(
+    Object.values(laadlijsten).map(ll => (ll && ll.bestand) || '').filter(Boolean)
+  );
+
+  const resultaten = []; // { naam, status: 'ok' | 'skip' | 'fail', reden? }
+
   for (let i = 0; i < pdfs.length; i++) {
+    const fname = pdfs[i].name;
+
+    // al aanwezig? overslaan zodat je gerust álle PDF's opnieuw mag slepen
+    if (reedsGeupload.has(fname)) {
+      resultaten.push({ naam: fname, status: 'skip' });
+      continue;
+    }
+
     let parsed = null, lastErr = null;
     // tot 3 pogingen met oplopende wachttijd bij tijdelijke fouten (rate limit / overbelast)
     for (let attempt = 1; attempt <= 3; attempt++) {
-      bulkStatus(`<div class="loader-wrap"><div class="spinner"></div>PDF ${i+1}/${pdfs.length}: ${escHtml(pdfs[i].name)}${attempt > 1 ? ` — poging ${attempt}` : ''}…</div>`);
+      bulkStatus(`<div class="loader-wrap"><div class="spinner"></div>PDF ${i+1}/${pdfs.length}: ${escHtml(fname)}${attempt > 1 ? ` — poging ${attempt}` : ''}…</div>`);
       try {
         parsed = await extractOne(pdfs[i]);
         break;
       } catch (e) {
         lastErr = e;
-        console.warn(`Bulk PDF poging ${attempt} mislukt:`, pdfs[i].name, e);
+        console.warn(`Bulk PDF poging ${attempt} mislukt:`, fname, e);
         if (attempt < 3 && isTransient(e)) { await sleep(3000 * attempt); continue; }
         break;
       }
     }
+
     if (parsed) {
       try {
         await db.ref('ft_laadlijsten_v1').push({
-          naam: parsed.naam || pdfs[i].name.replace(/\.pdf$/i, ''),
-          bestand: pdfs[i].name,
+          naam: parsed.naam || fname.replace(/\.pdf$/i, ''),
+          bestand: fname,
           categorieën: parsed.categorieën || {},
           aangemaakt: new Date().toISOString()
         });
-        ok++;
+        reedsGeupload.add(fname);
+        resultaten.push({ naam: fname, status: 'ok' });
       } catch (e) {
-        fails.push({ naam: pdfs[i].name, reden: 'opslaan mislukt — ' + e.message });
+        resultaten.push({ naam: fname, status: 'fail', reden: 'opslaan mislukt — ' + e.message });
       }
     } else {
-      fails.push({ naam: pdfs[i].name, reden: (lastErr && lastErr.message) || 'onbekende fout' });
+      resultaten.push({ naam: fname, status: 'fail', reden: (lastErr && lastErr.message) || 'onbekende fout' });
     }
+
     // korte pauze tussen PDF's om rate limits te vermijden
     if (i < pdfs.length - 1) await sleep(1200);
   }
 
-  let html = `✅ ${ok} PDF${ok !== 1 ? '\'s' : ''} geüpload`;
-  if (fails.length) {
-    html += ` · ⚠️ ${fails.length} mislukt:<ul style="margin:6px 0 0;padding-left:20px;">`
-      + fails.map(f => `<li><strong>${escHtml(f.naam)}</strong> — ${escHtml(f.reden)}</li>`).join('')
-      + '</ul><div style="margin-top:6px;font-size:13px;">Sleep de mislukte PDF\'s gerust opnieuw hierboven.</div>';
-  } else {
-    html += '. Koppel ze hieronder bij stap 3 aan een truck.';
-  }
-  bulkStatus(html, fails.length ? 'error' : 'success');
+  renderBulkResult(resultaten);
   document.getElementById('bulk-input').value = '';
+}
+
+// Volledig overzicht na bulk-upload: per bestand ✅ nieuw / ⏭️ al aanwezig / ❌ mislukt
+function renderBulkResult(resultaten) {
+  const ok   = resultaten.filter(r => r.status === 'ok').length;
+  const skip = resultaten.filter(r => r.status === 'skip').length;
+  const fail = resultaten.filter(r => r.status === 'fail').length;
+  const icoon = { ok: '✅', skip: '⏭️', fail: '❌' };
+  const standaardTekst = { ok: 'nieuw geüpload', skip: 'al aanwezig — overgeslagen', fail: 'mislukt' };
+
+  let html = `<strong>Klaar:</strong> ${ok} nieuw · ${skip} al aanwezig · ${fail} mislukt`;
+  html += '<ul style="margin:8px 0 0;padding-left:20px;line-height:1.7;">'
+    + resultaten.map(r =>
+        `<li>${icoon[r.status]} <strong>${escHtml(r.naam)}</strong> — ${escHtml(r.reden || standaardTekst[r.status])}</li>`
+      ).join('')
+    + '</ul>';
+  html += fail
+    ? '<div style="margin-top:8px;font-size:13px;">Sleep gerust álle PDF\'s opnieuw — wat al binnen is wordt overgeslagen, enkel de mislukte worden opnieuw geprobeerd.</div>'
+    : '<div style="margin-top:8px;font-size:13px;">Koppel ze hieronder bij stap 3 aan een truck.</div>';
+  bulkStatus(html, fail ? 'error' : 'success');
 }
 
 // Een laadlijst is "gekoppeld" als ze zowel een event als een wagen heeft
