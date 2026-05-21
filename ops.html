@@ -199,7 +199,7 @@ function toast(msg, ok=true){
 }
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function emptyMw(){return{naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''};}
+function emptyMw(){return{locatie:'',naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''};}
 
 // ── HERKENNING ─────────────────────────────────────────────────
 // Twee niveaus:
@@ -658,6 +658,7 @@ function renderDetail(){
   for(let i=0;i<e.medewerkers.length;i++){
     const m=e.medewerkers[i];
     staffRows+=`<tr>
+      <td><input value="${esc(m.locatie)}" oninput="updMw(${i},'locatie',this.value)" placeholder="Locatie…" style="width:120px"/></td>
       <td><input value="${esc(m.naam)}" oninput="updMw(${i},'naam',this.value)" placeholder="Naam…" style="width:140px"/></td>
       <td><input value="${esc(m.vertrekSenor)}" oninput="updMw(${i},'vertrekSenor',this.value)" placeholder="9u" style="width:80px"/></td>
       <td><input value="${esc(m.aankomstEvent)}" oninput="updMw(${i},'aankomstEvent',this.value)" placeholder="10u30" style="width:80px"/></td>
@@ -768,6 +769,7 @@ function renderDetail(){
       <div class="section-heading" style="margin-top:0">👥 Medewerkers & uren</div>
       <table class="staff-table">
         <thead><tr>
+          <th style="width:130px">Locatie</th>
           <th style="width:150px">Naam</th>
           <th>Vertrek Senor</th>
           <th>Aankomst event</th>
@@ -836,7 +838,7 @@ async function saveEvent(){
   try{
     await fbdb.ref(PLAN_PATH).set(planningEvents);
     // 2. Operationele laag in ops_details
-    const mw=(e.medewerkers||[]).filter(m=>m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
+    const mw=(e.medewerkers||[]).filter(m=>m.locatie||m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
     await fbdb.ref(OPS_PATH+'/'+detailKey(pid)).set({
       adres:e.adres||'',contact:e.contact||'',gsm:e.gsm||'',
       openingsuren:e.openingsuren||'',aantallen:e.aantallen||'',
@@ -919,11 +921,11 @@ async function generateWord(){
   const bdr={style:BorderStyle.SINGLE,size:4,color:'AAAAAA'};
   const borders={top:bdr,bottom:bdr,left:bdr,right:bdr};
 
-  // Kolombreedtes (A4 met ~10mm marges)
-  const COL=[2200,2071,2072,2072,2071];
+  // Kolombreedtes (A4 met ~10mm marges) — som = 10486
+  const COL=[1800,2086,1650,1650,1650,1650];
 
   // Header van personeelstabel
-  const colLabels=['Medewerkers','Vertrek Señor','Aankomst event','Vertrek event','Aankomst Señor'];
+  const colLabels=['Locatie','Medewerkers','Vertrek Señor','Aankomst event','Vertrek event','Aankomst Señor'];
   const headerRow=new TableRow({
     tableHeader:true,
     children:colLabels.map((h,i)=>new TableCell({
@@ -939,11 +941,11 @@ async function generateWord(){
   });
 
   // Datarijen — minimum 8 rijen
-  const mwLijst=(e.medewerkers||[]).filter(m=>m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
-  while(mwLijst.length<8) mwLijst.push({naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''});
+  const mwLijst=(e.medewerkers||[]).filter(m=>m.locatie||m.naam||m.vertrekSenor||m.aankomstEvent||m.vertrekEvent||m.aankomstSenor);
+  while(mwLijst.length<8) mwLijst.push({locatie:'',naam:'',vertrekSenor:'',aankomstEvent:'',vertrekEvent:'',aankomstSenor:''});
 
   const dataRows=mwLijst.map(m=>new TableRow({
-    children:[m.naam,m.vertrekSenor,m.aankomstEvent,m.vertrekEvent,m.aankomstSenor].map((val,i)=>new TableCell({
+    children:[m.locatie,m.naam,m.vertrekSenor,m.aankomstEvent,m.vertrekEvent,m.aankomstSenor].map((val,i)=>new TableCell({
       borders,
       width:{size:COL[i],type:WidthType.DXA},
       margins:{top:80,bottom:80,left:120,right:120},
