@@ -849,7 +849,14 @@ async function saveEvent(){
     toast('✗ Opslaan mislukt: '+err.message,false);
     return;
   }
-  goBack();
+  // Fiche blijft open na het opslaan.
+  if(isNew){
+    // Een nieuw event heeft nu een vast id — opnieuw renderen zodat een
+    // volgende 'Opslaan' dit event bijwerkt i.p.v. een duplicaat te maken.
+    editing.id=pid;
+    renderDetail();
+    document.getElementById('page-detail').style.display='block';
+  }
 }
 
 async function delEvent(id){
