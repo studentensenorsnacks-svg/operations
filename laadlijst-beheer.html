@@ -145,17 +145,39 @@
       .modal-hdr,.print-actions{display:none!important;}
     }
 
-    /* ── BULK KOPPELEN — dag-weergave ── */
+    /* ── BULK KOPPELEN — drag & drop ── */
     .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:var(--red);color:#fff;border-radius:50%;font-size:12px;font-weight:700;margin-right:7px;}
-    .day-evt{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;}
-    .day-evt-name{background:var(--surface2);padding:9px 13px;font-weight:600;font-size:14px;}
-    .day-evt-meta{font-size:12px;color:var(--text3);font-weight:400;}
-    .slot{display:flex;align-items:center;gap:10px;padding:9px 13px;border-top:1px solid var(--border);}
-    .slot-truck{font-weight:600;font-size:13px;width:185px;flex-shrink:0;}
-    .slot-select{flex:1;padding:7px 9px;border:1px solid var(--border2);border-radius:7px;font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);min-width:0;}
-    .slot-select:focus{outline:none;border-color:var(--red);}
-    .slot.linked{background:rgba(34,197,94,.06);}
-    .slot-ll{flex:1;font-size:13px;color:#166534;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .koppel-grid{display:grid;grid-template-columns:1fr 1.25fr;gap:14px;}
+    @media(max-width:720px){.koppel-grid{grid-template-columns:1fr;}}
+    .koppel-col{border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;background:var(--surface);}
+    .koppel-col-hdr{background:var(--surface2);padding:9px 12px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .koppel-col-hdr .cnt{font-size:12px;font-weight:600;color:var(--text3);}
+    .koppel-date{padding:4px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--font);font-size:12px;background:var(--surface);}
+    .koppel-col-body{padding:10px;min-height:230px;max-height:600px;overflow-y:auto;}
+
+    /* sleepbare PDF-kaartjes (links) */
+    .pdf-card{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--border2);border-radius:9px;background:var(--surface);margin-bottom:7px;cursor:grab;transition:box-shadow .12s,opacity .12s;}
+    .pdf-card:last-child{margin-bottom:0;}
+    .pdf-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.09);}
+    .pdf-card:active{cursor:grabbing;}
+    .pdf-card.dragging{opacity:.4;}
+    .pdf-card-main{flex:1;min-width:0;}
+    .pdf-card-naam{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .pdf-card-meta{font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+    /* events + truck-slots (rechts) */
+    .day-evt{border:1px solid var(--border);border-radius:9px;margin-bottom:9px;overflow:hidden;}
+    .day-evt:last-child{margin-bottom:0;}
+    .day-evt-name{background:var(--surface2);padding:8px 11px;font-weight:600;font-size:13.5px;}
+    .day-evt-meta{font-size:11px;color:var(--text3);font-weight:400;}
+    .slot{display:flex;align-items:center;gap:9px;padding:9px 12px;border-top:1px solid var(--border);transition:background .1s,box-shadow .1s;}
+    .slot-truck{font-weight:600;font-size:12.5px;flex:0 0 145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .slot.droppable{cursor:copy;}
+    .slot.drag-over{background:rgba(232,0,29,.08);box-shadow:inset 0 0 0 2px var(--red);}
+    .slot-hint{font-size:12px;color:var(--text3);font-style:italic;}
+    .slot.drag-over .slot-hint{color:var(--red);font-weight:700;font-style:normal;}
+    .slot.linked{background:rgba(34,197,94,.07);}
+    .slot-ll{flex:1;font-size:12.5px;color:#166534;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   </style>
 </head>
 <body>
@@ -286,22 +308,20 @@
     </div>
 
     <div class="card">
-      <div class="card-hdr">
-        <span class="card-title"><span class="step-num">2</span>Nog te koppelen</span>
-        <span id="pool-count" style="font-size:13px;color:var(--text3);">—</span>
-      </div>
-      <div id="pool-list"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-hdr"><span class="card-title"><span class="step-num">3</span>Koppel aan de planning</span></div>
-      <div class="form-row" style="margin-bottom:14px;">
-        <div class="form-group" style="flex:0 0 220px;">
-          <label class="form-label">Kies een dag</label>
-          <input type="date" class="form-input" id="koppel-date" onchange="renderDay()">
+      <div class="card-hdr"><span class="card-title"><span class="step-num">2</span>Sleep elke PDF naar de juiste truck</span></div>
+      <div class="koppel-grid">
+        <div class="koppel-col">
+          <div class="koppel-col-hdr"><span>📄 Nog te koppelen</span><span class="cnt" id="pool-count">—</span></div>
+          <div class="koppel-col-body" id="pool-list"></div>
+        </div>
+        <div class="koppel-col">
+          <div class="koppel-col-hdr">
+            <span>📅 Planning — kies een dag</span>
+            <input type="date" class="koppel-date" id="koppel-date" onchange="renderDay()">
+          </div>
+          <div class="koppel-col-body" id="day-events"></div>
         </div>
       </div>
-      <div id="day-events"></div>
     </div>
   </div>
 </div>
@@ -769,15 +789,12 @@ function renderPool() {
     list.innerHTML = '<div class="empty"><div class="empty-icon">📄</div><div class="empty-text">Geen losse PDF\'s — upload er hierboven of alles is al gekoppeld.</div></div>';
     return;
   }
-  list.innerHTML = pool.map(({ key, ll }) => `<div class="ll-item">
-    <div class="ll-icon">📄</div>
-    <div class="item-info">
-      <div class="item-naam">${escHtml(ll.naam || ll.bestand || 'PDF')}</div>
-      <div class="item-meta">${llItemCount(ll)} items${ll.bestand ? ' · ' + escHtml(ll.bestand) : ''} · nog niet gekoppeld</div>
+  list.innerHTML = pool.map(({ key, ll }) => `<div class="pdf-card" draggable="true" ondragstart="onDragStart(event,'${key}')" ondragend="onDragEnd(event)">
+    <div class="pdf-card-main">
+      <div class="pdf-card-naam">📄 ${escHtml(ll.naam || ll.bestand || 'PDF')}</div>
+      <div class="pdf-card-meta">${llItemCount(ll)} items${ll.bestand ? ' · ' + escHtml(ll.bestand) : ''}</div>
     </div>
-    <div class="item-actions">
-      <button class="btn btn-outline btn-sm" onclick="deleteLaadlijst('${key}')">🗑</button>
-    </div>
+    <button class="btn btn-outline btn-sm" draggable="false" onclick="deleteLaadlijst('${key}')" title="Verwijder">🗑</button>
   </div>`).join('');
 }
 
@@ -790,11 +807,6 @@ function renderDay() {
   const evs = planningEvents.filter(e => e && (e.startDate || '') <= d && (e.endDate || e.startDate || '') >= d);
   if (!evs.length) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Geen events op deze dag.</div></div>'; return; }
 
-  const pool = unlinkedLaadlijsten();
-  const poolOpts = pool.map(p =>
-    `<option value="${escHtml(p.key)}">${escHtml(p.ll.naam || p.ll.bestand || 'PDF')} (${llItemCount(p.ll)} items)</option>`
-  ).join('');
-
   wrap.innerHTML = evs.map(ev => {
     const trucks = Array.isArray(ev.trucks) ? ev.trucks : [];
     const rows = trucks.length
@@ -805,15 +817,13 @@ function renderDay() {
             <span class="slot-ll">✅ ${escHtml(lk.ll.naam || 'gekoppeld')}</span>
             <button class="btn btn-outline btn-sm" onclick="unlinkPdf('${lk.key}')">✕ ontkoppel</button>
           </div>`;
-          return `<div class="slot">
+          return `<div class="slot droppable" data-event="${escHtml(String(ev.id))}" data-truck="${escHtml(t)}"
+            ondragover="onSlotOver(event,this)" ondragleave="onSlotLeave(this)" ondrop="onSlotDrop(event,this)">
             <span class="slot-truck">🚚 ${escHtml(t)}</span>
-            <select class="slot-select" data-event="${escHtml(String(ev.id))}" data-truck="${escHtml(t)}" onchange="onSlotPick(this)">
-              <option value="">${poolOpts ? '— kies een geüploade PDF —' : '— geen losse PDF\'s —'}</option>
-              ${poolOpts}
-            </select>
+            <span class="slot-hint">sleep hier een PDF…</span>
           </div>`;
         }).join('')
-      : '<div class="slot"><span style="color:var(--text3);font-size:13px;">Geen trucks op dit event</span></div>';
+      : '<div class="slot"><span style="color:var(--text3);font-size:12.5px;">Geen trucks op dit event</span></div>';
     return `<div class="day-evt">
       <div class="day-evt-name">${escHtml(ev.name || ev.naam || '(naamloos event)')}
         <span class="day-evt-meta">· ${trucks.length} truck${trucks.length!==1?'s':''}</span>
@@ -823,10 +833,30 @@ function renderDay() {
   }).join('');
 }
 
-function onSlotPick(sel) {
-  const key = sel.value;
-  if (!key) return;
-  linkPdf(key, sel.dataset.event, sel.dataset.truck);
+// ── Drag & drop: PDF-kaartje (links) → truck-slot (rechts) ──
+let dragKey = null;
+function onDragStart(e, key) {
+  dragKey = key;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', key); } catch (_) {}
+  e.currentTarget.classList.add('dragging');
+}
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  dragKey = null;
+  document.querySelectorAll('.slot.drag-over').forEach(s => s.classList.remove('drag-over'));
+}
+function onSlotOver(e, el) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  el.classList.add('drag-over');
+}
+function onSlotLeave(el) { el.classList.remove('drag-over'); }
+function onSlotDrop(e, el) {
+  e.preventDefault();
+  el.classList.remove('drag-over');
+  const key = dragKey || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+  if (key) linkPdf(key, el.dataset.event, el.dataset.truck);
 }
 
 async function linkPdf(key, eventId, truck) {
