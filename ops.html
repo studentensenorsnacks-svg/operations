@@ -794,9 +794,12 @@ function renderDetail(){
       ${e.agendaInfo?`<div class="agenda-note">
         <div class="agenda-note-label">📅 Uit de Outlook-agenda</div>
         <div class="agenda-note-text">${esc(e.agendaInfo)}</div>
-        <button id="ai-herken-btn" class="ai-herken-btn" onclick="aiHerken()">🪄 Slim invullen met AI</button>
       </div>`:''}
       ${recBlock}
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button id="ai-herken-btn" class="ai-herken-btn" onclick="aiHerken()">🪄 Slim invullen met AI</button>
+        <span style="font-size:12px;color:var(--muted)">Laat AI de agenda-tekst lezen en lege velden automatisch invullen.</span>
+      </div>
 
       <div class="divider"></div>
       <div class="section-heading" style="margin-top:0">⚙️ Operations</div>
