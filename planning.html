@@ -190,6 +190,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .at-name{}
 .at-rm{cursor:pointer;opacity:0.7;font-size:0.85rem;line-height:1;flex-shrink:0;font-weight:900;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,0.08);transition:all 0.12s;}
 .at-rm:hover{opacity:1;background:rgba(220,0,0,0.85);color:#fff;}
+.ll-icon{cursor:pointer;opacity:0.6;font-size:0.74rem;line-height:1;flex-shrink:0;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,0.08);transition:all 0.12s;}
+.ll-icon:hover{opacity:1;background:rgba(29,78,216,0.9);}
 .drop-hint{display:none;}
 .ev-multi-tag{display:inline-block;font-size:0.6rem;font-weight:700;color:var(--muted);background:#f0f0f0;padding:1px 6px;border-radius:3px;margin-top:3px;letter-spacing:0.02em;}
 .event-card.is-multiday{border-left-style:dashed;border-left-width:3px;}
@@ -555,6 +557,23 @@ textarea{resize:vertical;min-height:70px;}
       <button class="btn-cancel" type="button" onclick="closeImport()">Annuleren</button>
       <button type="button" onclick="openScreenshotImport()" style="background:none;border:none;font-family:var(--font);font-size:0.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0" id="btn-screenshot-fallback">📷 Importeer via screenshot</button>
       <button class="btn-primary" type="button" id="btn-import-sel" onclick="importSelected()" style="display:none">✓ Geselecteerde events importeren</button>
+    </div>
+  </div>
+</div>
+
+<!-- LAADLIJST UPLOAD MODAL -->
+<div class="overlay hidden" id="ll-overlay" onclick="if(event.target===this)closeLaadlijst()">
+  <div class="modal" style="max-width:480px">
+    <h3 id="ll-title">📄 Laadlijst uploaden</h3>
+    <div class="drop-zone" id="ll-drop" onclick="document.getElementById('ll-input').click()" ondragover="llDzOver(event)" ondragleave="llDzLeave()" ondrop="llDzDrop(event)">
+      <div class="drop-zone-icon">📄</div>
+      <div class="drop-zone-title">Sleep een laadlijst-PDF hierheen</div>
+      <div class="drop-zone-sub">of klik om een PDF te kiezen · enkel PDF</div>
+    </div>
+    <input type="file" id="ll-input" accept="application/pdf" style="display:none" onchange="llFileSelect(event)">
+    <div class="ai-status" id="ll-status"></div>
+    <div class="modal-foot">
+      <button class="btn-cancel" type="button" onclick="closeLaadlijst()">Sluiten</button>
     </div>
   </div>
 </div>
@@ -1222,7 +1241,7 @@ function renderWeek(){
         const classes=['multiday-event',startsB?'starts-before':'',endsA?'ends-after':''].filter(Boolean).join(' ');
         const te=t=>t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const truckPills=ev.trucks.length
-          ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<span class="mdev-truck-pill" style="background:${c.bg};color:${c.color}">${t}<span class="at-rm" onclick="event.stopPropagation();rmTruck(${ev.id},'${te(t)}')">✕</span></span>`;}).join('')
+          ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<span class="mdev-truck-pill" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon" title="Laadlijst uploaden" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();rmTruck(${ev.id},'${te(t)}')">✕</span></span>`;}).join('')
           :'';
         multiBars+=`<div id="mev-${ev.id}" class="${classes}" style="border-left-color:${ev.color};grid-column:${colStart}/${colEnd}" onclick="openEvDetail(${ev.id})"
           ondragover="onDOv(event,${ev.id})" ondragleave="onDLv(${ev.id})" ondrop="onDrp(event,${ev.id})">
@@ -1272,7 +1291,7 @@ function renderWeek(){
         const tHtml=trucksForDay.map(t=>{
           const c=TC[t]||{color:'#555',bg:'#eee'};
           const rmCall = isPerDay && isMultiDay ? `rmTruck(${ev.id},'${te(t)}','${ds}')` : `rmTruck(${ev.id},'${te(t)}')`;
-          return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
+          return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon" title="Laadlijst uploaden" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
         }).join('');
         const pickerCall = isPerDay && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
         areaHtml = `<div class="ev-trucks-area">${tHtml}<button type="button" class="btn-add-trucks" onclick="event.stopPropagation();${pickerCall}">+ Trucks</button></div>`;
@@ -1477,6 +1496,116 @@ function openEvDetail(id){
       <button type="button" class="btn-primary" onclick="closeEvDetail();editEv(${ev.id})">✏️ Bewerken</button>
     </div>`;
   document.getElementById('evd-overlay').classList.remove('hidden');
+}
+
+// ── LAADLIJST UPLOAD (PDF → AI → Firebase) ─────────────
+// Klik op het 📄-icoon naast een truck → upload een laadlijst-PDF.
+// Claude extraheert de items; resultaat gaat naar ft_laadlijsten_v1.
+let llCtx = null; // {eventId, eventNaam, wagen, datum}
+
+function openLaadlijst(eventId, wagen){
+  const ev = events.find(e=>e.id===eventId);
+  if(!ev){ showToast('⚠️ Event niet gevonden.'); return; }
+  llCtx = { eventId:String(ev.id), eventNaam:ev.name, wagen, datum:ev.startDate };
+  document.getElementById('ll-title').textContent = `📄 Laadlijst uploaden — ${wagen} @ ${ev.name}`;
+  const drop = document.getElementById('ll-drop');
+  drop.style.display = ''; drop.classList.remove('drag-active');
+  const st = document.getElementById('ll-status');
+  st.style.display = 'none'; st.textContent = ''; st.className = 'ai-status';
+  document.getElementById('ll-input').value = '';
+  document.getElementById('ll-overlay').classList.remove('hidden');
+}
+function closeLaadlijst(){ document.getElementById('ll-overlay').classList.add('hidden'); llCtx = null; }
+
+function llDzOver(e){ e.preventDefault(); document.getElementById('ll-drop').classList.add('drag-active'); }
+function llDzLeave(){ document.getElementById('ll-drop').classList.remove('drag-active'); }
+function llDzDrop(e){ e.preventDefault(); llDzLeave(); const f=e.dataTransfer.files[0]; if(f) llHandlePdf(f); }
+function llFileSelect(e){ const f=e.target.files[0]; if(f) llHandlePdf(f); }
+
+function llStatus(msg,type){
+  const st = document.getElementById('ll-status');
+  st.style.display = 'block';
+  st.className = 'ai-status' + (type ? ' '+type : '');
+  st.textContent = msg;
+}
+
+async function llHandlePdf(file){
+  if(!llCtx) return;
+  if(file.type!=='application/pdf'){ llStatus('❌ Kies een geldig PDF-bestand.','error'); return; }
+  const ctx = llCtx; // snapshot — context vasthouden tijdens async werk
+  document.getElementById('ll-drop').style.display = 'none';
+  llStatus('⏳ Claude analyseert de laadlijst... even geduld.','loading');
+  try{
+    const base64 = await new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = ()=>res(r.result.split(',')[1]);
+      r.onerror = ()=>rej(new Error('Bestand kon niet gelezen worden'));
+      r.readAsDataURL(file);
+    });
+    const resp = await fetch('/api/anthropic',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:3000,
+        system:'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES, MATERIALEN. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Formaat: {"naam":"...","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[],"MATERIALEN":[]}}',
+        messages:[{
+          role:'user',
+          content:[
+            {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+            {type:'text',text:'Extraheer alle items uit deze laadlijst. Geef terug als JSON.'}
+          ]
+        }]
+      })
+    });
+    const data = await resp.json();
+    if(!resp.ok||data.error) throw new Error(data.error?.message||('API fout ('+resp.status+')'));
+    const raw = (data.content||[]).map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+    let parsed;
+    try{ parsed = JSON.parse(raw); }
+    catch(_){ throw new Error('AI gaf geen geldige JSON terug'); }
+
+    // Categorieën normaliseren naar de vaste structuur
+    const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
+    const src = parsed.categorieën || {};
+    const categorieën = {};
+    CATS.forEach(c=>{
+      categorieën[c] = Array.isArray(src[c])
+        ? src[c].map(it=>({ naam:String(it&&it.naam||'').trim(), aantal:Number(it&&it.aantal)||0 })).filter(it=>it.naam)
+        : [];
+    });
+
+    const naam = `${ctx.eventNaam} — ${ctx.wagen}`;
+    const record = {
+      naam,
+      eventId: ctx.eventId,
+      eventNaam: ctx.eventNaam,
+      wagen: ctx.wagen,
+      datum: ctx.datum,
+      aangemaakt: new Date().toISOString(),
+      categorieën
+    };
+
+    // Bestaande laadlijst voor deze event+wagen combinatie overschrijven i.p.v. dupliceren
+    const snap = await fbdb.ref('ft_laadlijsten_v1').once('value');
+    const all = snap.val() || {};
+    const existingKey = Object.keys(all).find(k=>{
+      const l = all[k];
+      return l && String(l.eventId)===ctx.eventId && l.wagen===ctx.wagen;
+    });
+    if(existingKey) await fbdb.ref('ft_laadlijsten_v1/'+existingKey).set(record);
+    else            await fbdb.ref('ft_laadlijsten_v1').push(record);
+
+    const totaal = CATS.reduce((s,c)=>s+categorieën[c].length,0);
+    llStatus(`✓ Laadlijst "${naam}" opgeslagen — ${totaal} item${totaal!==1?'s':''}${existingKey?' (bestaande overschreven)':''}.`,'success');
+    showToast(`✓ Laadlijst opgeslagen: ${naam}`);
+    setTimeout(()=>{ if(!document.getElementById('ll-overlay').classList.contains('hidden')) closeLaadlijst(); },2200);
+  }catch(err){
+    console.error(err);
+    llStatus('❌ Fout: '+err.message+' — Probeer opnieuw.','error');
+    const drop = document.getElementById('ll-drop');
+    drop.style.display = ''; drop.classList.remove('drag-active');
+  }
 }
 
 // ── AGENDA-TAB — weekoverzicht van alle events ─────────
@@ -1860,7 +1989,7 @@ function importSelected(){
   document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.add('hidden');});
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')['event-overlay','picker-overlay','pdf-overlay','import-overlay'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  if(e.key==='Escape')['event-overlay','picker-overlay','pdf-overlay','import-overlay','ll-overlay'].forEach(id=>document.getElementById(id).classList.add('hidden'));
 });
 
 // ── PRE-SEED: events uit Outlook agenda (mei-juli 2026) ────
