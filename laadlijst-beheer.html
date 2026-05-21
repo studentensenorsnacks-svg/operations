@@ -343,6 +343,30 @@
   </div>
 </div>
 
+<!-- MODAL LAADLIJST BEKIJKEN/BEWERKEN -->
+<div class="modal-overlay hidden" id="ll-modal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-hdr">
+      <span class="modal-title">Laadlijst bewerken</span>
+      <button class="modal-close" onclick="closeLLModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ll-edit-alert" style="display:none;"></div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label class="form-label">Naam laadlijst</label>
+          <input type="text" class="form-input" id="ll-edit-naam" placeholder="bv. 404 — Miniatuurbeurs Friet">
+        </div>
+      </div>
+      <div id="ll-edit-editor" style="border:1px solid var(--border);border-radius:10px;overflow:hidden;"></div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn btn-gray btn-sm" onclick="closeLLModal()">Annuleren</button>
+        <button class="btn btn-red btn-sm" onclick="saveLaadlijstEdit()">💾 Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Firebase ──────────────────────────────────────────────────
 firebase.initializeApp({
@@ -357,8 +381,8 @@ firebase.initializeApp({
 const db = firebase.database();
 
 // ── State ─────────────────────────────────────────────────────
-const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
-const LL_SYSTEM_PROMPT = 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES, MATERIALEN. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Formaat: {"naam":"korte omschrijving event en type","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[],"MATERIALEN":[]}}';
+const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES'];
+const LL_SYSTEM_PROMPT = 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES. Neem de categorie MATERIALEN NIET over — sla die volledig over. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Voor "naam": zoek bovenaan de laadlijst het veld met label "Wagen" of "Wagen nr." en lees dat ingevulde wagennummer; lees ook de evenementnaam. Het wagennummer kan een getal zijn (bv. 404) of een naam (bv. brascheria). Combineer ze exact zoals ingevuld als "WAGEN — EVENEMENT" (bijvoorbeeld "404 — Miniatuurbeurs Friet"). Het wagennummer staat ALTIJD vooraan. Verzin niets zelf, gebruik letterlijk wat ingevuld is. Vind je het veld "Wagen" echt niet, laat dat deel weg. Formaat: {"naam":"WAGEN — EVENEMENT","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[]}}';
 let laadlijsten = {}, fiches = {}, planningEvents = [];
 
 // Genormaliseerd event-id (leeg → null)
@@ -431,7 +455,7 @@ async function handlePdfUpload(file) {
           role: 'user',
           content: [
             { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-            { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Geef terug als JSON.' }
+            { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Zet als "naam" het nummer uit het veld "Wagen"/"Wagen nr." gevolgd door de evenementnaam. Geef terug als JSON.' }
           ]
         }]
       })
@@ -469,8 +493,9 @@ function showStatus(html, type) {
 }
 
 // ── Items Editor ──────────────────────────────────────────────
-function renderItemsEditor(cats) {
-  const editor = document.getElementById('items-editor');
+function renderItemsEditor(cats, editorId) {
+  editorId = editorId || 'items-editor';
+  const editor = document.getElementById(editorId);
   editor.innerHTML = '';
   for (const cat of CATS) {
     const items = (cats[cat] || []);
@@ -478,51 +503,57 @@ function renderItemsEditor(cats) {
     sec.className = 'cat-section';
     sec.dataset.cat = cat;
     let html = `<div class="cat-label-hdr">${cat} <span style="font-size:12px;font-weight:400;">${items.length} items</span></div>`;
-    items.forEach((item, i) => { html += itemRowHtml(cat, i, item); });
-    html += `<div class="add-item-row"><button class="add-item-btn" onclick="addItem('${cat}')">＋ Item toevoegen</button></div>`;
+    items.forEach((item, i) => { html += itemRowHtml(cat, i, item, editorId); });
+    html += `<div class="add-item-row"><button class="add-item-btn" onclick="addItem('${cat}','${editorId}')">＋ Item toevoegen</button></div>`;
     sec.innerHTML = html;
     editor.appendChild(sec);
   }
 }
 
-function itemRowHtml(cat, idx, item) {
+function itemRowHtml(cat, idx, item, editorId) {
+  editorId = editorId || 'items-editor';
   return `<div class="item-row" data-cat="${cat}" data-idx="${idx}">
     <input class="item-naam-inp" type="text" value="${escHtml(item.naam)}" placeholder="Item naam" data-cat="${cat}" data-idx="${idx}" data-field="naam">
     <input class="item-aantal-inp" type="number" min="0" value="${item.aantal||0}" data-cat="${cat}" data-idx="${idx}" data-field="aantal">
-    <button class="item-del" onclick="delItem('${cat}',${idx})" title="Verwijder">✕</button>
+    <button class="item-del" onclick="delItem('${cat}',${idx},'${editorId}')" title="Verwijder">✕</button>
   </div>`;
 }
 
 function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function addItem(cat) {
-  const sec = document.querySelector(`.cat-section[data-cat="${cat}"]`);
+function addItem(cat, editorId) {
+  editorId = editorId || 'items-editor';
+  const sec = document.getElementById(editorId).querySelector(`.cat-section[data-cat="${cat}"]`);
   const addRow = sec.querySelector('.add-item-row');
   const count = sec.querySelectorAll('.item-row').length;
   const div = document.createElement('div');
-  div.innerHTML = itemRowHtml(cat, count, { naam: '', aantal: 0 });
+  div.innerHTML = itemRowHtml(cat, count, { naam: '', aantal: 0 }, editorId);
   sec.insertBefore(div.firstElementChild, addRow);
-  reindexCat(cat);
+  reindexCat(cat, editorId);
 }
 
-function delItem(cat, idx) {
-  const row = document.querySelector(`.item-row[data-cat="${cat}"][data-idx="${idx}"]`);
+function delItem(cat, idx, editorId) {
+  editorId = editorId || 'items-editor';
+  const row = document.getElementById(editorId).querySelector(`.item-row[data-cat="${cat}"][data-idx="${idx}"]`);
   if (row) row.remove();
-  reindexCat(cat);
+  reindexCat(cat, editorId);
 }
 
-function reindexCat(cat) {
-  document.querySelectorAll(`.item-row[data-cat="${cat}"]`).forEach((r, i) => {
+function reindexCat(cat, editorId) {
+  editorId = editorId || 'items-editor';
+  document.getElementById(editorId).querySelectorAll(`.item-row[data-cat="${cat}"]`).forEach((r, i) => {
     r.dataset.idx = i;
     r.querySelectorAll('[data-idx]').forEach(el => el.dataset.idx = i);
   });
 }
 
-function getEditorData() {
+function getEditorData(editorId) {
+  editorId = editorId || 'items-editor';
+  const editor = document.getElementById(editorId);
   const cats = {};
   for (const cat of CATS) {
     cats[cat] = [];
-    document.querySelectorAll(`.item-row[data-cat="${cat}"]`).forEach(row => {
+    editor.querySelectorAll(`.item-row[data-cat="${cat}"]`).forEach(row => {
       const naam = row.querySelector('[data-field="naam"]').value.trim();
       const aantal = parseFloat(row.querySelector('[data-field="aantal"]').value) || 0;
       if (naam) cats[cat].push({ naam, aantal });
@@ -566,6 +597,7 @@ function renderLaadlijsten() {
         <div class="item-meta">${totaal} items · ${datum}</div>
       </div>
       <div class="item-actions">
+        <button class="btn btn-outline btn-sm" onclick="openLaadlijst('${k}')">📂 Openen</button>
         <button class="btn btn-outline btn-sm" onclick="deleteLaadlijst('${k}')">🗑</button>
       </div>
     </div>`;
@@ -700,6 +732,45 @@ function showFicheModal(fiche) {
 
 function closeFicheModal() { document.getElementById('fiche-modal').classList.add('hidden'); }
 
+// ── Laadlijst bekijken/bewerken ───────────────────────────────
+let editingLLKey = null;
+
+function openLaadlijst(key) {
+  const ll = laadlijsten[key];
+  if (!ll) return;
+  editingLLKey = key;
+  document.getElementById('ll-edit-naam').value = ll.naam || '';
+  document.getElementById('ll-edit-alert').style.display = 'none';
+  renderItemsEditor(ll.categorieën || {}, 'll-edit-editor');
+  document.getElementById('ll-modal').classList.remove('hidden');
+}
+
+function closeLLModal() {
+  document.getElementById('ll-modal').classList.add('hidden');
+  editingLLKey = null;
+}
+
+async function saveLaadlijstEdit() {
+  if (!editingLLKey) return;
+  const naam = document.getElementById('ll-edit-naam').value.trim();
+  const alertEl = document.getElementById('ll-edit-alert');
+  if (!naam) {
+    alertEl.style.display = 'block'; alertEl.className = 'alert alert-error';
+    alertEl.textContent = 'Geef een naam op voor de laadlijst.';
+    return;
+  }
+  try {
+    await db.ref('ft_laadlijsten_v1/' + editingLLKey).update({
+      naam,
+      categorieën: getEditorData('ll-edit-editor')
+    });
+    closeLLModal();
+  } catch (e) {
+    alertEl.style.display = 'block'; alertEl.className = 'alert alert-error';
+    alertEl.textContent = 'Fout bij opslaan: ' + e.message;
+  }
+}
+
 // ══ BULK KOPPELEN — meerdere PDF's uploaden en per dag aan trucks koppelen ══
 
 // AI-extractie van één PDF → { naam, categorieën }
@@ -716,7 +787,7 @@ async function extractOne(file) {
         role: 'user',
         content: [
           { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-          { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Geef terug als JSON.' }
+          { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Zet als "naam" het nummer uit het veld "Wagen"/"Wagen nr." gevolgd door de evenementnaam. Geef terug als JSON.' }
         ]
       }]
     })
@@ -895,4 +966,4 @@ async function unlinkPdf(key) {
 }
 </script>
 </body>
-</html>
+</html
