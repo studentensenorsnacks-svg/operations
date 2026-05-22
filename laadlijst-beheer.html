@@ -1031,6 +1031,16 @@ function resolveTruck(ev, truck) {
   return m || null;
 }
 
+// haalt het JSON-blok uit een AI-antwoord, ook als er tekst omheen staat
+function extractJson(txt) {
+  let s = String(txt || '').replace(/```json|```/g, '').trim();
+  const a = s.indexOf('['), b = s.lastIndexOf(']');
+  const c = s.indexOf('{'), d = s.lastIndexOf('}');
+  if (a >= 0 && b > a && (c < 0 || a < c)) return s.slice(a, b + 1);
+  if (c >= 0 && d > c) return s.slice(c, d + 1);
+  return s;
+}
+
 // stuurt een groep laadlijsten + alle events naar de AI en krijgt de matches terug
 async function aiMatch(lijsten, events) {
   const sys = 'Je koppelt laadlijsten van Señor Snacks foodtrucks aan evenementen uit de planning. '
@@ -1043,7 +1053,8 @@ async function aiMatch(lijsten, events) {
     + '\n\nGeef voor ELKE laadlijst de beste match terug. '
     + 'Formaat: [{"laadlijstId":"...","eventId":"...","truck":"..."}]. '
     + 'De "truck" moet exact een waarde uit de trucks-lijst van dat evenement zijn. '
-    + 'Ben je niet redelijk zeker? Zet dan "eventId":null en "truck":null voor die laadlijst. Verzin geen koppelingen.';
+    + 'Ben je niet redelijk zeker? Zet dan "eventId":null en "truck":null voor die laadlijst. Verzin geen koppelingen. '
+    + 'Antwoord met UITSLUITEND de JSON-array: begin met [ en eindig met ], geen tekst ervoor of erna.';
   const res = await fetch('/api/anthropic', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1057,10 +1068,13 @@ async function aiMatch(lijsten, events) {
   const data = await res.json();
   if (data.error) throw new Error(data.error.message || data.error.type || 'API-fout');
   if (!data.content) throw new Error('Geen antwoord van AI');
-  const raw = data.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+  const ruw = data.content.map(b => b.text || '').join('');
   let parsed;
-  try { parsed = JSON.parse(raw); }
-  catch (e) { throw new Error(data.stop_reason === 'max_tokens' ? 'Antwoord afgekapt — probeer minder laadlijsten ineens' : 'AI gaf geen geldige JSON'); }
+  try { parsed = JSON.parse(extractJson(ruw)); }
+  catch (e) {
+    console.warn('aiMatch — onparseerbaar AI-antwoord:', ruw);
+    throw new Error(data.stop_reason === 'max_tokens' ? 'Antwoord afgekapt — probeer minder laadlijsten ineens' : 'AI gaf geen geldige JSON');
+  }
   return Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.matches) ? parsed.matches : []);
 }
 
@@ -1103,8 +1117,12 @@ async function autoKoppelAlles() {
     }
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '🔗 Auto-koppel'; }
-    bulkStatus('❌ Automatisch koppelen mislukt: ' + escHtml(e.message)
-      + '<br><small>Deze fout komt van de Anthropic-API — controleer het tegoed en de limieten van het account op console.anthropic.com.</small>', 'error');
+    const msg = String((e && e.message) || e);
+    const apiProb = isTransient(e) || /credit|billing|overloaded|rate|limit|529|api-key|auth|tegoed/i.test(msg);
+    bulkStatus('❌ Automatisch koppelen mislukt: ' + escHtml(msg)
+      + (apiProb
+          ? '<br><small>Dit komt van de Anthropic-API — controleer tegoed en limieten op console.anthropic.com.</small>'
+          : '<br><small>De AI gaf een onbruikbaar antwoord — klik gerust opnieuw op Auto-koppel.</small>'), 'error');
     return;
   }
 
