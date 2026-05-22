@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Señor Snacks — Notitie doorgeven</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;--blue:#1d4ed8;
+  --bg:#efefef;--white:#fff;--text:#111;--muted:#666;--border:#d4d4d4;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* HEADER — geen links, dit is een afgeschermde pagina */
+.topbar{flex-shrink:0;height:54px;background:var(--white);border-bottom:3px solid var(--red);padding:0 18px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-sep{font-size:0.82rem;font-weight:700;color:var(--muted);padding-left:12px;border-left:1px solid var(--border);}
+
+/* LAYOUT */
+.wrap{flex:1;max-width:620px;width:100%;margin:0 auto;padding:24px 18px 60px;}
+
+/* CARD / FORM */
+.card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.card h2{font-family:var(--font-cond);font-size:1.5rem;font-weight:800;margin-bottom:4px;}
+.card .sub{font-size:0.85rem;color:var(--muted);margin-bottom:20px;}
+.fg{margin-bottom:16px;}
+.flbl{display:block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.09em;color:var(--muted);margin-bottom:6px;}
+input[type=text],textarea,select{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.95rem;color:var(--text);background:var(--white);}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--red);}
+textarea{resize:vertical;min-height:130px;line-height:1.5;}
+select{cursor:pointer;}
+.form-foot{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;}
+.btn-primary{padding:12px 28px;background:var(--red);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:1rem;font-weight:700;cursor:pointer;transition:background 0.15s;}
+.btn-primary:hover{background:var(--red-dark);}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.form-hint{font-size:0.8rem;color:var(--muted);}
+
+/* TOAST */
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-24px);background:var(--green);color:#fff;padding:13px 26px;border-radius:7px;font-size:0.95rem;font-weight:700;opacity:0;transition:all 0.25s;z-index:500;box-shadow:0 6px 18px rgba(0,0,0,0.2);pointer-events:none;max-width:90vw;text-align:center;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+@media(max-width:560px){
+  .topbar-sep{display:none;}
+  .wrap{padding:16px 12px 50px;}
+  .card{padding:18px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+  <div class="topbar-sep">Notitie doorgeven</div>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>Nieuwe notitie</h2>
+    <div class="sub">Vul je naam, het event en je notitie in. Datum en uur worden automatisch bewaard.</div>
+
+    <div class="fg">
+      <label class="flbl" for="in-name">Jouw naam</label>
+      <input type="text" id="in-name" placeholder="bijv. Jelle" autocomplete="off">
+    </div>
+
+    <div class="fg">
+      <label class="flbl" for="in-event">Welk event</label>
+      <select id="in-event" onchange="onEventChange()">
+        <option value="">— Geen / nog niet bekend —</option>
+      </select>
+    </div>
+
+    <div class="fg" id="custom-wrap" style="display:none;">
+      <label class="flbl" for="in-event-custom">Event zelf invullen</label>
+      <input type="text" id="in-event-custom" placeholder="Typ de naam van het event" autocomplete="off">
+    </div>
+
+    <div class="fg">
+      <label class="flbl" for="in-text">Notitie</label>
+      <textarea id="in-text" placeholder="Schrijf hier je notitie..."></textarea>
+    </div>
+
+    <div class="form-foot">
+      <button class="btn-primary" id="btn-save" onclick="saveNote()">✓ Verstuur notitie</button>
+      <span class="form-hint" id="now-hint"></span>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTEN ─────────────────────────────────
+const FB_PATH = 'ft_notities_v1';
+const MINE_KEY = 'ft_notitie_mine_v1';
+const NAME_KEY = 'ft_notitie_name';
+const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+
+// ── HELPERS ────────────────────────────────────
+const pad = n => String(n).padStart(2,'0');
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function addDaysStr(str,n){
+  const [y,m,d]=str.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  dt.setDate(dt.getDate()+n);
+  return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+}
+function groupLabel(dstr){
+  const [y,m,d]=dstr.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  const base=DAYS[dt.getDay()].slice(0,2).toLowerCase()+' '+d+' '+MONTHS[m-1];
+  const today=todayStr();
+  if(dstr===today)              return 'Vandaag — '+base;
+  if(dstr===addDaysStr(today,1))return 'Morgen — '+base;
+  if(dstr===addDaysStr(today,2))return 'Overmorgen — '+base;
+  return base;
+}
+function toast(msg,color){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=color||'var(--green)';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── LOKALE OPSLAG (notities van dit toestel) ───
+function loadMine(){ try{return JSON.parse(localStorage.getItem(MINE_KEY)||'[]');}catch(e){return [];} }
+function saveMine(a){ localStorage.setItem(MINE_KEY, JSON.stringify(a.slice(0,50))); }
+function markSynced(id){
+  const m=loadMine();
+  const it=m.find(n=>n.id===id);
+  if(it){ it.synced=true; saveMine(m); }
+}
+
+// ── EVENT-KEUZELIJST (vandaag eerst, dan verder) ─
+let planningEvents=[];
+fbdb.ref('ft_planning_v1').on('value', snap=>{
+  const data=snap.val();
+  let arr=[];
+  if(data) arr=Array.isArray(data)?data:Object.values(data);
+  planningEvents=arr.filter(e=>e&&e.name);
+  rebuildEvents();
+}, err=>console.warn('Planning lezen mislukt:',err));
+
+function rebuildEvents(){
+  const sel=document.getElementById('in-event');
+  const prev=sel.value;
+  const today=todayStr();
+  const windowEnd=addDaysStr(today,120);   // tot 120 dagen vooruit tonen
+  const byDate={};
+  const noDate=new Set();
+
+  planningEvents.forEach(ev=>{
+    const name=String(ev.name||'').trim();
+    if(!name) return;
+    const sd=ev.startDate;
+    const ed=ev.endDate||ev.startDate;
+    if(!sd){ noDate.add(name); return; }
+    if(ed<today) return;                         // volledig voorbij
+    let d = sd<today ? today : sd;               // niet vóór vandaag beginnen
+    const stop = ed>windowEnd ? windowEnd : ed;
+    let guard=0;
+    while(d<=stop && guard<400){
+      (byDate[d]=byDate[d]||new Set()).add(name);
+      d=addDaysStr(d,1); guard++;
+    }
+  });
+
+  let html='<option value="">— Geen / nog niet bekend —</option>';
+  Object.keys(byDate).sort().forEach(date=>{
+    const names=[...byDate[date]].sort((a,b)=>a.localeCompare(b));
+    html+='<optgroup label="'+esc(groupLabel(date))+'">';
+    names.forEach(n=>{ html+='<option value="'+esc(n)+'">'+esc(n)+'</option>'; });
+    html+='</optgroup>';
+  });
+  if(noDate.size){
+    html+='<optgroup label="Overige events">';
+    [...noDate].sort((a,b)=>a.localeCompare(b)).forEach(n=>{
+      html+='<option value="'+esc(n)+'">'+esc(n)+'</option>';
+    });
+    html+='</optgroup>';
+  }
+  html+='<option value="__custom__">✏️ Ander event — zelf typen…</option>';
+  sel.innerHTML=html;
+
+  // eerdere keuze herstellen
+  if(prev==='__custom__'){ sel.value='__custom__'; }
+  else if(prev && [...sel.options].some(o=>o.value===prev)){ sel.value=prev; }
+}
+
+function onEventChange(){
+  const sel=document.getElementById('in-event');
+  const wrap=document.getElementById('custom-wrap');
+  if(sel.value==='__custom__'){
+    wrap.style.display='block';
+    document.getElementById('in-event-custom').focus();
+  }else{
+    wrap.style.display='none';
+  }
+}
+function currentEvent(){
+  const sel=document.getElementById('in-event');
+  if(sel.value==='__custom__') return document.getElementById('in-event-custom').value.trim();
+  return sel.value.trim();
+}
+
+// ── NOTITIE OPSLAAN ────────────────────────────
+function saveNote(){
+  const name = document.getElementById('in-name').value.trim();
+  const event = currentEvent();
+  const text = document.getElementById('in-text').value.trim();
+  if(!name){ toast('Vul eerst je naam in','var(--red)'); document.getElementById('in-name').focus(); return; }
+  if(!text){ toast('De notitie is leeg','var(--red)'); document.getElementById('in-text').focus(); return; }
+
+  const now=new Date();
+  const ref=fbdb.ref(FB_PATH).push();
+  const note={
+    id: ref.key,
+    name: name,
+    event: event,
+    text: text,
+    date: now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()),
+    hour: now.getHours(),
+    time: pad(now.getHours())+':'+pad(now.getMinutes()),
+    ts: now.getTime()
+  };
+
+  // meteen lokaal bewaren (overleeft het sluiten van de pagina, geen zichtbare lijst)
+  const mine=loadMine();
+  mine.unshift(Object.assign({synced:false}, note));
+  saveMine(mine);
+
+  const btn=document.getElementById('btn-save');
+  btn.disabled=true;
+
+  // velden direct leegmaken zodat een volgende notitie snel kan
+  localStorage.setItem(NAME_KEY, name);
+  document.getElementById('in-event').value='';
+  document.getElementById('in-event-custom').value='';
+  document.getElementById('custom-wrap').style.display='none';
+  document.getElementById('in-text').value='';
+  toast('✓ Notitie doorgegeven — bedankt!');
+  btn.disabled=false;
+
+  // wegschrijven naar Firebase (status volgt in "Door jou doorgegeven")
+  ref.set(note)
+    .then(()=>markSynced(note.id))
+    .catch(()=>{ /* blijft als ⏳ staan; flushPending stuurt later opnieuw */ });
+}
+
+// ── ONVERZONDEN NOTITIES OPNIEUW VERSTUREN ─────
+function flushPending(){
+  loadMine().filter(n=>!n.synced).forEach(n=>{
+    const clean={id:n.id,name:n.name,event:n.event,text:n.text,date:n.date,hour:n.hour,time:n.time,ts:n.ts};
+    fbdb.ref(FB_PATH+'/'+n.id).set(clean)
+      .then(()=>markSynced(n.id))
+      .catch(()=>{});
+  });
+}
+fbdb.ref('.info/connected').on('value', s=>{ if(s.val()===true) flushPending(); });
+
+// ── INIT ───────────────────────────────────────
+document.getElementById('in-name').value = localStorage.getItem(NAME_KEY) || '';
+(function(){
+  const n=new Date();
+  document.getElementById('now-hint').textContent =
+    'Wordt opgeslagen op ' + DAYS[n.getDay()].toLowerCase() + ' ' + n.getDate() + ' ' +
+    MONTHS[n.getMonth()] + ' om ' + pad(n.getHours()) + ':' + pad(n.getMinutes());
+})();
+document.getElementById('in-text').addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='Enter') saveNote();
+});
+flushPending();
+</script>
+</body>
+</html>
