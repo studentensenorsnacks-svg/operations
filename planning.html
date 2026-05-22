@@ -1260,7 +1260,7 @@ function renderWeek(){
         const classes=['multiday-event',startsB?'starts-before':'',endsA?'ends-after':''].filter(Boolean).join(' ');
         const te=t=>t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
         const truckPills=ev.trucks.length
-          ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};const llk=findLL(String(ev.id),t);return `<span class="mdev-truck-pill" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?'Laadlijst bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();rmTruck(${ev.id},'${te(t)}')">✕</span></span>`;}).join('')
+          ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};const llk=findLLs(String(ev.id),t).length;return `<span class="mdev-truck-pill" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?llk+' laadlijst(en) — klik om te bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();rmTruck(${ev.id},'${te(t)}')">✕</span></span>`;}).join('')
           :'';
         multiBars+=`<div id="mev-${ev.id}" class="${classes}" style="border-left-color:${ev.color};grid-column:${colStart}/${colEnd}" onclick="openEvDetail(${ev.id})"
           ondragover="onDOv(event,${ev.id})" ondragleave="onDLv(${ev.id})" ondrop="onDrp(event,${ev.id})">
@@ -1310,8 +1310,8 @@ function renderWeek(){
         const tHtml=trucksForDay.map(t=>{
           const c=TC[t]||{color:'#555',bg:'#eee'};
           const rmCall = isPerDay && isMultiDay ? `rmTruck(${ev.id},'${te(t)}','${ds}')` : `rmTruck(${ev.id},'${te(t)}')`;
-          const llk = findLL(String(ev.id), t);
-          return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?'Laadlijst bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
+          const llk = findLLs(String(ev.id), t).length;
+          return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?llk+' laadlijst(en) — klik om te bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
         }).join('');
         const pickerCall = isPerDay && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
         areaHtml = `<div class="ev-trucks-area">${tHtml}<button type="button" class="btn-add-trucks" onclick="event.stopPropagation();${pickerCall}">+ Trucks</button></div>`;
@@ -1528,11 +1528,12 @@ fbdb.ref('ft_laadlijsten_v1').on('value', snap => {
   try { renderWeek(); } catch(_){}
 });
 
-function findLL(eventId, wagen){
+function findLLs(eventId, wagen){
+  const out=[];
   for(const [k,l] of Object.entries(laadlijsten)){
-    if(l && String(l.eventId)===String(eventId) && l.wagen===wagen) return {key:k, ll:l};
+    if(l && String(l.eventId)===String(eventId) && l.wagen===wagen) out.push({key:k, ll:l});
   }
-  return null;
+  return out;
 }
 function llItemCount(l){
   return Object.values((l&&l.categorieën)||{}).reduce((s,a)=>s+(Array.isArray(a)?a.length:0),0);
@@ -1541,7 +1542,7 @@ function llEsc(s){
   return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// Klik op 📄 → gekoppelde laadlijst tonen, of er een koppelen / uploaden
+// Klik op 📄 → overzicht van alle laadlijsten van deze truck
 function openLaadlijst(eventId, wagen){
   const ev = events.find(e=>e.id===eventId);
   if(!ev){ showToast('⚠️ Event niet gevonden.'); return; }
@@ -1549,15 +1550,37 @@ function openLaadlijst(eventId, wagen){
   const st = document.getElementById('ll-status');
   st.style.display='none'; st.textContent=''; st.className='ai-status';
   document.getElementById('ll-input').value='';
-  const linked = findLL(llCtx.eventId, wagen);
-  if(linked) llRenderView(linked.key, linked.ll);
-  else       llRenderChooser();
+  llRenderList();
   document.getElementById('ll-overlay').classList.remove('hidden');
 }
 
-// Modus 1: de gekoppelde laadlijst tonen
-function llRenderView(key, ll){
-  document.getElementById('ll-title').textContent = `📄 ${llCtx.wagen} @ ${llCtx.eventNaam}`;
+// Overzicht: alle laadlijsten die aan deze truck hangen (er kunnen er meerdere zijn)
+function llRenderList(){
+  document.getElementById('ll-title').textContent = `📄 Laadlijsten — ${llCtx.wagen} @ ${llCtx.eventNaam}`;
+  document.getElementById('ll-drop').style.display = 'none';
+  const st=document.getElementById('ll-status'); st.style.display='none'; st.textContent='';
+  const linked = findLLs(llCtx.eventId, llCtx.wagen);
+  const html = linked.length
+    ? `<div class="ll-sectlabel">Gekoppelde laadlijsten (${linked.length})</div>
+       <div class="ll-picklist">` + linked.map(({key,ll})=>{
+         const n=llItemCount(ll);
+         return `<div class="ll-pick" onclick="llRenderView('${key}')">
+           <div class="ll-pick-naam">📄 ${llEsc(ll.naam||'Laadlijst')}</div>
+           <div class="ll-pick-meta">${n} item${n!==1?'s':''} · klik om te bekijken</div>
+         </div>`;
+       }).join('') + `</div>`
+    : '<div class="ll-empty">Nog geen laadlijst gekoppeld aan deze truck.</div>';
+  document.getElementById('ll-body').innerHTML = html;
+  document.getElementById('ll-foot').innerHTML =
+    `<button class="btn-primary" type="button" onclick="llRenderChooser()">+ Laadlijst koppelen</button>`
+    + `<button class="btn-cancel" type="button" onclick="closeLaadlijst()">Sluiten</button>`;
+}
+
+// Eén gekoppelde laadlijst bekijken (items per categorie)
+function llRenderView(key){
+  const ll = laadlijsten[key];
+  if(!ll){ llRenderList(); return; }
+  document.getElementById('ll-title').textContent = `📄 ${llEsc(ll.naam||llCtx.wagen)}`;
   document.getElementById('ll-drop').style.display = 'none';
   const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
   const cats = ll.categorieën || {};
@@ -1569,16 +1592,16 @@ function llRenderView(key, ll){
       + `</div>`;
   }).join('');
   document.getElementById('ll-body').innerHTML =
-    `<div class="ll-view-naam">${llEsc(ll.naam||'')}</div>`
-    + (secties || '<div class="ll-empty">Deze laadlijst heeft nog geen items.</div>');
+    secties || '<div class="ll-empty">Deze laadlijst heeft nog geen items.</div>';
   document.getElementById('ll-foot').innerHTML =
-    `<button class="btn-cancel" type="button" onclick="ontkoppelLL('${key}')">Ontkoppelen</button>`
+    `<button class="btn-cancel" type="button" onclick="llRenderList()">← Terug</button>`
+    + `<button class="btn-cancel" type="button" onclick="ontkoppelLL('${key}')">Ontkoppelen</button>`
     + `<button class="btn-cancel" type="button" onclick="closeLaadlijst()">Sluiten</button>`;
 }
 
-// Modus 2: geen laadlijst gekoppeld → kies uit het systeem of upload
+// Een laadlijst aan deze truck koppelen: kies uit het systeem of upload een PDF
 function llRenderChooser(){
-  document.getElementById('ll-title').textContent = `📄 Laadlijst koppelen — ${llCtx.wagen} @ ${llCtx.eventNaam}`;
+  document.getElementById('ll-title').textContent = `📄 Laadlijst koppelen — ${llCtx.wagen}`;
   const los = Object.entries(laadlijsten)
     .filter(([k,l])=> l && !(l.eventId && l.wagen))
     .map(([k,l])=>({k,l}));
@@ -1598,10 +1621,11 @@ function llRenderChooser(){
   const drop = document.getElementById('ll-drop');
   drop.style.display=''; drop.classList.remove('drag-active');
   document.getElementById('ll-foot').innerHTML =
-    `<button class="btn-cancel" type="button" onclick="closeLaadlijst()">Sluiten</button>`;
+    `<button class="btn-cancel" type="button" onclick="llRenderList()">← Terug</button>`
+    + `<button class="btn-cancel" type="button" onclick="closeLaadlijst()">Sluiten</button>`;
 }
 
-// Een bestaande laadlijst uit het systeem aan deze truck koppelen
+// Een bestaande laadlijst uit het systeem aan deze truck koppelen (naam blijft behouden)
 async function koppelBestaande(key){
   if(!llCtx) return;
   const l = laadlijsten[key];
@@ -1611,21 +1635,20 @@ async function koppelBestaande(key){
       eventId: llCtx.eventId,
       eventNaam: llCtx.eventNaam,
       wagen: llCtx.wagen,
-      datum: llCtx.datum,
-      naam: `${llCtx.eventNaam} — ${llCtx.wagen}`
+      datum: llCtx.datum
     });
     showToast('✓ Laadlijst gekoppeld');
-    closeLaadlijst();
+    llRenderList();
   }catch(e){ llStatus('❌ Koppelen mislukt: '+e.message,'error'); }
 }
 
-// De gekoppelde laadlijst losmaken van de truck (blijft in het systeem)
+// Eén laadlijst losmaken van de truck (de laadlijst zelf blijft bewaard)
 async function ontkoppelLL(key){
   if(!confirm('Deze laadlijst ontkoppelen van de truck?\nDe laadlijst zelf blijft bewaard.')) return;
   try{
     await fbdb.ref('ft_laadlijsten_v1/'+key).update({ eventId:'', wagen:'' });
     showToast('Laadlijst ontkoppeld');
-    closeLaadlijst();
+    llRenderList();
   }catch(e){ showToast('❌ Ontkoppelen mislukt'); }
 }
 function closeLaadlijst(){ document.getElementById('ll-overlay').classList.add('hidden'); llCtx = null; }
@@ -1688,7 +1711,7 @@ async function llHandlePdf(file){
         : [];
     });
 
-    const naam = `${ctx.eventNaam} — ${ctx.wagen}`;
+    const naam = (parsed.naam && String(parsed.naam).trim()) || `${ctx.eventNaam} — ${ctx.wagen}`;
     const record = {
       naam,
       eventId: ctx.eventId,
@@ -1699,20 +1722,13 @@ async function llHandlePdf(file){
       categorieën
     };
 
-    // Bestaande laadlijst voor deze event+wagen combinatie overschrijven i.p.v. dupliceren
-    const snap = await fbdb.ref('ft_laadlijsten_v1').once('value');
-    const all = snap.val() || {};
-    const existingKey = Object.keys(all).find(k=>{
-      const l = all[k];
-      return l && String(l.eventId)===ctx.eventId && l.wagen===ctx.wagen;
-    });
-    if(existingKey) await fbdb.ref('ft_laadlijsten_v1/'+existingKey).set(record);
-    else            await fbdb.ref('ft_laadlijsten_v1').push(record);
+    // Altijd als nieuwe laadlijst opslaan — een truck mag meerdere laadlijsten hebben
+    await fbdb.ref('ft_laadlijsten_v1').push(record);
 
     const totaal = CATS.reduce((s,c)=>s+categorieën[c].length,0);
-    llStatus(`✓ Laadlijst "${naam}" opgeslagen — ${totaal} item${totaal!==1?'s':''}${existingKey?' (bestaande overschreven)':''}.`,'success');
+    llStatus(`✓ Laadlijst "${naam}" opgeslagen — ${totaal} item${totaal!==1?'s':''}.`,'success');
     showToast(`✓ Laadlijst opgeslagen: ${naam}`);
-    setTimeout(()=>{ if(!document.getElementById('ll-overlay').classList.contains('hidden')) closeLaadlijst(); },2200);
+    setTimeout(()=>{ if(!document.getElementById('ll-overlay').classList.contains('hidden')) llRenderList(); },1600);
   }catch(err){
     console.error(err);
     llStatus('❌ Fout: '+err.message+' — Probeer opnieuw.','error');

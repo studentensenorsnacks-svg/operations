@@ -178,6 +178,8 @@
     .slot.drag-over .slot-hint{color:var(--red);font-weight:700;font-style:normal;}
     .slot.linked{background:rgba(34,197,94,.07);}
     .slot-ll{flex:1;font-size:12.5px;color:#166534;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .slot-lls{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+    .slot-ll-row{display:flex;align-items:center;gap:8px;}
   </style>
 </head>
 <body>
@@ -988,6 +990,14 @@ function findLinked(eventId, truck) {
   }
   return null;
 }
+// alle laadlijsten gekoppeld aan dit event+truck — een truck mag er meerdere hebben
+function findLinkedAll(eventId, truck) {
+  const out = [];
+  for (const [k, ll] of Object.entries(laadlijsten)) {
+    if (ll && String(ll.eventId) === String(eventId) && ll.wagen === truck) out.push({ key: k, ll });
+  }
+  return out;
+}
 
 // ── Automatisch koppelen: laadlijst ↔ event+truck op wagen, datum en eventnaam ──
 function buildNaam(p) {
@@ -1164,7 +1174,6 @@ async function autoKoppelAlles() {
   const known = knownTrucks();
   koppelPlan = [];
   let nietGematcht = 0, overgeslagen = 0;
-  const slotGebruikt = new Set();
 
   for (const { key, ll } of pool) {
     const eventId = matchMap[key];
@@ -1173,9 +1182,6 @@ async function autoKoppelAlles() {
     const wagen = (laadlijstMatchInfo(ll).wagen || '').trim();
     if (!wagen || normName(wagen) === 'tent') { overgeslagen++; continue; }
     const truck = canonicalTruck(wagen, known);
-    const slot = String(ev.id) + '|' + truck;
-    if (slotGebruikt.has(slot) || findLinked(ev.id, truck)) { overgeslagen++; continue; }
-    slotGebruikt.add(slot);
     koppelPlan.push({
       laadlijstId: key,
       llNaam: ll.naam || ll.bestand || '(naamloos)',
@@ -1272,8 +1278,7 @@ async function pasKoppelPlanToe() {
         eventId: p.eventId,
         wagen: p.truck,
         eventNaam: p.eventNaam,
-        datum: p.datum,
-        naam: p.eventNaam + ' — ' + p.truck
+        datum: p.datum
       });
       gekoppeld++;
     } catch (e) { console.warn('Koppelen mislukt:', p.laadlijstId, e); }
@@ -1347,16 +1352,14 @@ function renderDay() {
     const trucks = Array.isArray(ev.trucks) ? ev.trucks : [];
     const rows = trucks.length
       ? trucks.map(t => {
-          const lk = findLinked(ev.id, t);
-          if (lk) return `<div class="slot linked">
-            <span class="slot-truck">🚚 ${escHtml(t)}</span>
-            <span class="slot-ll">✅ ${escHtml(lk.ll.naam || 'gekoppeld')}</span>
-            <button class="btn btn-outline btn-sm" onclick="unlinkPdf('${lk.key}')">✕ ontkoppel</button>
-          </div>`;
-          return `<div class="slot droppable" data-event="${escHtml(String(ev.id))}" data-truck="${escHtml(t)}"
+          const lks = findLinkedAll(ev.id, t);
+          const inner = lks.length
+            ? lks.map(lk => `<div class="slot-ll-row"><span class="slot-ll">✅ ${escHtml(lk.ll.naam || 'gekoppeld')}</span><button class="btn btn-outline btn-sm" onclick="unlinkPdf('${lk.key}')">✕</button></div>`).join('')
+            : '<span class="slot-hint">sleep hier een PDF…</span>';
+          return `<div class="slot droppable${lks.length ? ' linked' : ''}" data-event="${escHtml(String(ev.id))}" data-truck="${escHtml(t)}"
             ondragover="onSlotOver(event,this)" ondragleave="onSlotLeave(this)" ondrop="onSlotDrop(event,this)">
             <span class="slot-truck">🚚 ${escHtml(t)}</span>
-            <span class="slot-hint">sleep hier een PDF…</span>
+            <div class="slot-lls">${inner}</div>
           </div>`;
         }).join('')
       : '<div class="slot"><span style="color:var(--text3);font-size:12.5px;">Geen trucks op dit event</span></div>';
@@ -1400,20 +1403,13 @@ async function linkPdf(key, eventId, truck) {
   if (!ll) return;
   const ev = planningEvents.find(e => String(e.id) === String(eventId));
   if (!ev) { alert('Event niet gevonden.'); return; }
-
-  const dup = Object.entries(laadlijsten).find(([k, o]) =>
-    k !== key && o && String(o.eventId) === String(eventId) && o.wagen === truck);
-  if (dup && !confirm(truck + ' heeft op dit event al een laadlijst ("' + (dup[1].naam || '') + '").\n\nToch koppelen? Je houdt dan 2 laadlijsten voor die truck.')) {
-    renderDay();
-    return;
-  }
+  // een truck mag meerdere laadlijsten hebben — gewoon koppelen, naam blijft behouden
   try {
     await db.ref('ft_laadlijsten_v1/' + key).update({
       wagen: truck,
       eventId: String(ev.id),
       eventNaam: ev.name || ev.naam || '',
-      datum: ev.startDate || '',
-      naam: (ev.name || ev.naam || '') + ' — ' + truck
+      datum: ev.startDate || ''
     });
   } catch (e) {
     alert('Koppelen mislukt: ' + e.message);
