@@ -314,6 +314,7 @@
           <div class="koppel-col-hdr">
             <span>📄 Nog te koppelen</span>
             <span style="display:flex;align-items:center;gap:8px;">
+              <button class="btn btn-outline btn-sm" onclick="verwijderDubbels()" title="Verwijder dubbel geüploade laadlijsten">🧹 Dubbels</button>
               <button class="btn btn-outline btn-sm" id="btn-autokoppel" onclick="autoKoppelAlles()" title="Koppel alle losse laadlijsten automatisch via AI">🔗 Auto-koppel</button>
               <span class="cnt" id="pool-count">—</span>
             </span>
@@ -1087,13 +1088,21 @@ async function autoKoppelAlles() {
   const btn = document.getElementById('btn-autokoppel');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ AI matcht…'; }
 
-  const events = planningEvents.filter(e => e && e.id != null).map(e => ({
-    id: String(e.id),
-    naam: e.name || e.naam || '',
-    van: e.startDate || '',
-    tot: e.endDate || e.startDate || '',
-    trucks: Array.isArray(e.trucks) ? e.trucks : []
-  }));
+  // enkel events met trucks zijn koppelbaar — scheelt de AI een hoop ruis
+  const events = planningEvents
+    .filter(e => e && e.id != null && Array.isArray(e.trucks) && e.trucks.length)
+    .map(e => ({
+      id: String(e.id),
+      naam: e.name || e.naam || '',
+      van: e.startDate || '',
+      tot: e.endDate || e.startDate || '',
+      trucks: e.trucks
+    }));
+  if (!events.length) {
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 Auto-koppel'; }
+    alert('Geen events met trucks gevonden in de planning — koppelen kan niet.');
+    return;
+  }
 
   const matches = [];
   const BATCH = 30;
@@ -1158,6 +1167,34 @@ async function autoKoppelAlles() {
   bulkStatus(`✅ ${gekoppeld} van ${pool.length} laadlijst${pool.length !== 1 ? 'en' : ''} automatisch gekoppeld via AI.`
     + (rest ? ` &nbsp;⚠️ ${rest} kon de AI niet met zekerheid plaatsen — sleep die hieronder handmatig naar de juiste truck.` : ''),
     rest ? 'error' : 'success');
+}
+
+// dubbel geüploade laadlijsten (zelfde bestandsnaam) opruimen — houd er telkens één
+async function verwijderDubbels() {
+  const groepen = {};
+  Object.entries(laadlijsten).forEach(([k, ll]) => {
+    if (!ll || !ll.bestand) return;
+    (groepen[ll.bestand] = groepen[ll.bestand] || []).push({ k, ll });
+  });
+  const teVerwijderen = [];
+  Object.values(groepen).forEach(arr => {
+    if (arr.length < 2) return;
+    // gekoppelde versie eerst → die houden we, de rest verdwijnt
+    arr.sort((a, b) => {
+      const ag = (eid(a.ll.eventId) && a.ll.wagen) ? 0 : 1;
+      const bg = (eid(b.ll.eventId) && b.ll.wagen) ? 0 : 1;
+      return ag - bg;
+    });
+    teVerwijderen.push(...arr.slice(1).map(x => x.k));
+  });
+  if (!teVerwijderen.length) { alert('Geen dubbele laadlijsten gevonden.'); return; }
+  if (!confirm(teVerwijderen.length + ' dubbele laadlijst(en) verwijderen?\n\nEr blijft telkens één exemplaar per bestand over (de gekoppelde versie krijgt voorrang).')) return;
+  let weg = 0;
+  for (const k of teVerwijderen) {
+    try { await db.ref('ft_laadlijsten_v1/' + k).remove(); weg++; }
+    catch (e) { console.warn('Verwijderen mislukt:', k, e); }
+  }
+  alert(weg + ' dubbele laadlijst(en) verwijderd.');
 }
 
 function renderKoppelen() { renderPool(); renderDay(); }
