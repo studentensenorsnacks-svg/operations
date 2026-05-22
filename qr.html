@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Señor Snacks — Info</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --red:#e8001d;--bg:#efefef;--white:#fff;--text:#141414;--muted:#666;--border:#dcdcdc;
+  --green:#15803d;--orange:#c2410c;--blue:#1d4ed8;--danger:#dc2626;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-mono:'DM Mono',monospace;
+  --accent:#e8001d;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+.topbar{flex-shrink:0;height:54px;background:var(--white);border-bottom:3px solid var(--accent);padding:0 18px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+.logo-img{height:28px;width:auto;display:block;}
+.topbar-sep{font-size:0.8rem;font-weight:700;color:var(--muted);padding-left:12px;border-left:1px solid var(--border);}
+
+.wrap{flex:1;max-width:640px;width:100%;margin:0 auto;padding:20px 16px 64px;}
+
+.qv-head{background:var(--white);border:1px solid var(--border);border-top:5px solid var(--accent);border-radius:12px;padding:24px 22px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,0.05);}
+.qv-icon{font-size:2.4rem;line-height:1;margin-bottom:8px;}
+.qv-title{font-family:var(--font-cond);font-size:1.9rem;font-weight:900;line-height:1.05;letter-spacing:-0.01em;}
+.qv-subtitle{font-size:0.95rem;color:var(--muted);margin-top:6px;line-height:1.45;}
+
+.qv-block{margin-bottom:12px;}
+.qv-heading{font-family:var(--font-cond);font-size:1.25rem;font-weight:800;margin:18px 0 2px;padding-left:11px;border-left:4px solid var(--accent);line-height:1.15;}
+.qv-block:first-child .qv-heading{margin-top:4px;}
+.qv-text{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-size:0.96rem;line-height:1.55;}
+
+.qv-callout{border-radius:10px;padding:14px 16px;display:flex;gap:11px;align-items:flex-start;}
+.qv-callout .ci{font-size:1.2rem;line-height:1.3;flex-shrink:0;}
+.qv-callout .cc{min-width:0;}
+.qv-callout .ct{font-weight:800;font-size:0.97rem;margin-bottom:2px;}
+.qv-callout .cx{font-size:0.92rem;line-height:1.5;}
+.qv-callout.info{background:#eff4ff;border:1px solid #c9d9ff;color:#1e3a8a;}
+.qv-callout.success{background:#ecfdf3;border:1px solid #bbf0ce;color:#14532d;}
+.qv-callout.warning{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;}
+.qv-callout.danger{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;}
+
+.qv-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.qv-card-title{font-weight:800;font-size:0.97rem;margin-bottom:10px;}
+.qv-steps{list-style:none;display:flex;flex-direction:column;gap:9px;}
+.qv-steps li{display:flex;gap:11px;align-items:flex-start;font-size:0.95rem;line-height:1.5;}
+.qv-steps .sn{flex-shrink:0;width:23px;height:23px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;font-size:0.82rem;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);}
+.qv-checks{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.qv-checks li{display:flex;gap:10px;align-items:flex-start;font-size:0.95rem;line-height:1.45;padding:8px 11px;border-radius:8px;}
+.qv-checks li.ok{background:#ecfdf3;border:1px solid #bbf0ce;color:#14532d;}
+.qv-checks li.no{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;}
+.qv-checks .ck{flex-shrink:0;font-weight:800;}
+
+.qv-foot{margin-top:22px;text-align:center;font-size:0.78rem;color:#999;font-family:var(--font-mono);}
+
+.state{text-align:center;padding:60px 20px;color:var(--muted);}
+.state .si{font-size:2.6rem;margin-bottom:12px;}
+.state .st{font-family:var(--font-cond);font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:6px;}
+.state .sx{font-size:0.92rem;}
+
+@media(max-width:560px){
+  .topbar-sep{display:none;}
+  .wrap{padding:14px 12px 50px;}
+  .qv-head{padding:20px 18px;}
+  .qv-title{font-size:1.6rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+  <div class="topbar-sep" id="topbar-label">Info</div>
+</div>
+
+<div class="wrap" id="wrap">
+  <div class="state"><div class="si">⏳</div><div class="st">Laden…</div></div>
+</div>
+
+<script>
+const CALLOUT = {
+  info:    ['ℹ️','info'],
+  success: ['✅','success'],
+  warning: ['⚠️','warning'],
+  danger:  ['⛔','danger'],
+};
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function nl2br(s){ return esc(s).replace(/\n/g,'<br>'); }
+
+function renderBlock(b){
+  if(!b || !b.type) return '';
+  if(b.type==='heading'){
+    if(!b.text) return '';
+    return '<div class="qv-block"><div class="qv-heading">'+esc(b.text)+'</div></div>';
+  }
+  if(b.type==='text'){
+    if(!b.text) return '';
+    return '<div class="qv-block"><div class="qv-text">'+nl2br(b.text)+'</div></div>';
+  }
+  if(b.type==='callout'){
+    const v = CALLOUT[b.variant] ? b.variant : 'info';
+    const ic = CALLOUT[v][0];
+    const title = b.title ? '<div class="ct">'+esc(b.title)+'</div>' : '';
+    const text  = b.text  ? '<div class="cx">'+nl2br(b.text)+'</div>'  : '';
+    if(!title && !text) return '';
+    return '<div class="qv-block"><div class="qv-callout '+v+'">'
+         + '<span class="ci">'+ic+'</span><div class="cc">'+title+text+'</div></div></div>';
+  }
+  if(b.type==='steps'){
+    const items = (b.items||[]).filter(x=>String(x||'').trim());
+    if(!items.length) return '';
+    const title = b.title ? '<div class="qv-card-title">'+esc(b.title)+'</div>' : '';
+    const lis = items.map((x,i)=>'<li><span class="sn">'+(i+1)+'</span><span>'+nl2br(x)+'</span></li>').join('');
+    return '<div class="qv-block"><div class="qv-card">'+title+'<ol class="qv-steps">'+lis+'</ol></div></div>';
+  }
+  if(b.type==='checklist'){
+    const items = (b.items||[]).filter(x=>x && String(x.text||'').trim());
+    if(!items.length) return '';
+    const title = b.title ? '<div class="qv-card-title">'+esc(b.title)+'</div>' : '';
+    const lis = items.map(x=>{
+      const ok = x.ok!==false;
+      return '<li class="'+(ok?'ok':'no')+'"><span class="ck">'+(ok?'✓':'✗')+'</span><span>'+nl2br(x.text)+'</span></li>';
+    }).join('');
+    return '<div class="qv-block"><div class="qv-card">'+title+'<ul class="qv-checks">'+lis+'</ul></div></div>';
+  }
+  return '';
+}
+
+function renderEntry(e){
+  const accent = /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'') ? e.accent : '#e8001d';
+  document.documentElement.style.setProperty('--accent', accent);
+  document.title = 'Señor Snacks — ' + (e.title || 'Info');
+  document.getElementById('topbar-label').textContent = e.title || 'Info';
+
+  const blocks = (e.blocks||[]).map(renderBlock).join('');
+  const upd = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+
+  document.getElementById('wrap').innerHTML =
+    '<div class="qv-head">'
+      + (e.icon ? '<div class="qv-icon">'+esc(e.icon)+'</div>' : '')
+      + '<div class="qv-title">'+esc(e.title||'Info')+'</div>'
+      + (e.subtitle ? '<div class="qv-subtitle">'+nl2br(e.subtitle)+'</div>' : '')
+    + '</div>'
+    + (blocks || '<div class="qv-text" style="color:#999;">Nog geen info ingevuld.</div>')
+    + (upd ? '<div class="qv-foot">Laatst bijgewerkt op '+upd+(e.updatedBy?' · '+esc(e.updatedBy):'')+'</div>' : '');
+}
+
+function showState(icon, title, text){
+  document.getElementById('wrap').innerHTML =
+    '<div class="state"><div class="si">'+icon+'</div><div class="st">'+esc(title)+'</div>'
+    + (text?'<div class="sx">'+esc(text)+'</div>':'') + '</div>';
+}
+
+const id = new URLSearchParams(location.search).get('id');
+if(!id){
+  showState('🔳','Geen QR code','Deze link mist een geldige code. Scan de QR opnieuw.');
+}else{
+  fbdb.ref('ft_qrcodes_v1/'+id).on('value', snap=>{
+    const e = snap.val();
+    if(!e){ showState('🔍','Niet gevonden','Deze QR code bestaat niet (meer).'); return; }
+    renderEntry(e);
+  }, err=>{
+    showState('⚠️','Kan info niet laden', err && err.message ? err.message : 'Controleer je internetverbinding.');
+  });
+}
+</script>
+</body>
+</html>

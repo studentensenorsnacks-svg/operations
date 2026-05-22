@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Señor Snacks — QR codes</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<!-- QR code generator -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<style>
+:root{
+  --red:#e8001d;--bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#22c55e;--orange:#f97316;--blue:#3b82f6;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+  --accent:#e8001d;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOPBAR */
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:14px;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);}
+.nav-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.8rem;font-weight:600;text-decoration:none;transition:all 0.15s;}
+.nav-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+
+/* MAIN */
+.main{max-width:1100px;margin:0 auto;padding:28px 24px 60px;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px;}
+.page-title{font-family:var(--font-cond);font-size:2rem;font-weight:900;line-height:1;}
+.page-subtitle{font-size:0.82rem;color:var(--text3);margin-top:4px;font-family:var(--mono);}
+.btn-add{padding:10px 18px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;transition:background 0.15s;}
+.btn-add:hover{background:#c0001a;}
+
+.intro{font-size:0.88rem;color:var(--text2);line-height:1.55;margin:14px 0 22px;max-width:680px;}
+
+/* QR GRID */
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.qr-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color 0.15s,box-shadow 0.15s;}
+.qr-card:hover{border-color:var(--border2);box-shadow:0 4px 22px rgba(0,0,0,0.07);}
+.qr-card-top{padding:14px 16px;display:flex;gap:11px;align-items:flex-start;border-top:4px solid var(--accent);}
+.qr-card-icon{font-size:1.7rem;line-height:1;flex-shrink:0;}
+.qr-card-tt{min-width:0;}
+.qr-card-title{font-family:var(--font-cond);font-size:1.15rem;font-weight:800;line-height:1.15;}
+.qr-card-sub{font-size:0.76rem;color:var(--text3);margin-top:2px;}
+.qr-thumb{display:flex;justify-content:center;padding:6px 16px 12px;}
+.qr-thumb img{width:170px;height:170px;display:block;border:1px solid var(--border);border-radius:8px;background:#fff;}
+.qr-meta{padding:0 16px 10px;}
+.qr-link{font-family:var(--mono);font-size:0.7rem;color:var(--blue);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px;word-break:break-all;cursor:pointer;line-height:1.4;}
+.qr-link:hover{border-color:var(--blue);}
+.qr-card-actions{margin-top:auto;padding:10px 12px;border-top:1px solid var(--border);background:rgba(0,0,0,0.015);display:flex;flex-wrap:wrap;gap:6px;}
+.act{padding:6px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.act:hover{border-color:var(--red);color:var(--red);}
+.act.primary{background:var(--red);border-color:var(--red);color:#fff;}
+.act.primary:hover{background:#c0001a;color:#fff;}
+.act.danger:hover{border-color:var(--red);color:var(--red);}
+
+.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text3);}
+.empty .ei{font-size:2.6rem;margin-bottom:10px;opacity:0.5;}
+.empty .et{font-size:0.95rem;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;z-index:300;padding:24px 14px;overflow-y:auto;}
+.modal-overlay.hidden{display:none;}
+.modal{background:var(--surface);border-radius:16px;width:100%;max-width:620px;box-shadow:0 24px 64px rgba(0,0,0,0.2);margin:auto;}
+.modal-hd{padding:20px 22px 0;display:flex;justify-content:space-between;align-items:center;}
+.modal-hd h3{font-family:var(--font-cond);font-size:1.4rem;font-weight:800;}
+.modal-close{background:var(--surface2);border:none;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:17px;}
+.modal-bd{padding:16px 22px 22px;}
+
+.fg{margin-bottom:14px;}
+.flbl{display:block;font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.09em;color:var(--text3);margin-bottom:6px;}
+input[type=text],textarea,select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--font);font-size:0.9rem;outline:none;transition:border-color 0.15s;}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--red);}
+textarea{resize:vertical;min-height:62px;line-height:1.5;font-family:var(--font);}
+select{cursor:pointer;}
+.fg-row{display:flex;gap:12px;}
+.fg-row .fg{flex:1;}
+.icon-input{max-width:90px;text-align:center;font-size:1.1rem;}
+
+.swatches{display:flex;gap:8px;flex-wrap:wrap;}
+.sw{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform 0.1s;}
+.sw:hover{transform:scale(1.1);}
+.sw.sel{border-color:var(--text);box-shadow:0 0 0 2px var(--surface) inset;}
+
+/* BLOCK EDITOR */
+.blocks-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.be{border:1px solid var(--border2);border-radius:10px;margin-bottom:9px;background:var(--surface2);overflow:hidden;}
+.be-head{display:flex;align-items:center;gap:6px;padding:7px 8px;background:var(--surface3);}
+.be-head select{width:auto;flex:1;background:var(--surface);font-weight:700;font-size:0.82rem;padding:6px 9px;}
+.be-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-size:0.85rem;color:var(--text2);flex-shrink:0;}
+.be-btn:hover{border-color:var(--red);color:var(--red);}
+.be-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.be-body{padding:9px 10px;display:flex;flex-direction:column;gap:7px;}
+.be-body input[type=text],.be-body textarea,.be-body select{background:var(--surface);font-size:0.86rem;}
+.be-hint{font-size:0.72rem;color:var(--text3);line-height:1.4;}
+.add-blocks{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+.add-blocks button{padding:7px 11px;border-radius:7px;border:1px dashed var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.add-blocks button:hover{border-color:var(--red);color:var(--red);border-style:solid;}
+.blocks-empty{font-size:0.82rem;color:var(--text3);padding:14px;text-align:center;border:1px dashed var(--border2);border-radius:9px;}
+
+/* PREVIEW */
+.preview-wrap{margin-top:18px;border-top:1px solid var(--border);padding-top:14px;}
+.preview-wrap .flbl{margin-bottom:8px;}
+#preview{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.pv-head{background:#fff;border:1px solid var(--border);border-top:4px solid var(--accent);border-radius:10px;padding:14px 16px;margin-bottom:10px;}
+.pv-icon{font-size:1.7rem;line-height:1;}
+.pv-title{font-family:var(--font-cond);font-size:1.4rem;font-weight:900;line-height:1.1;}
+.pv-subtitle{font-size:0.84rem;color:var(--text2);margin-top:3px;line-height:1.4;}
+.pv-block{margin-bottom:9px;}
+.pv-heading{font-family:var(--font-cond);font-size:1.05rem;font-weight:800;margin:12px 0 1px;padding-left:9px;border-left:4px solid var(--accent);}
+.pv-block:first-child .pv-heading{margin-top:0;}
+.pv-text{background:#fff;border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-size:0.86rem;line-height:1.5;}
+.pv-callout{border-radius:9px;padding:11px 13px;display:flex;gap:9px;align-items:flex-start;font-size:0.84rem;}
+.pv-callout .ci{flex-shrink:0;}
+.pv-callout .ct{font-weight:800;margin-bottom:1px;}
+.pv-callout .cx{line-height:1.45;}
+.pv-callout.info{background:#eff4ff;border:1px solid #c9d9ff;color:#1e3a8a;}
+.pv-callout.success{background:#ecfdf3;border:1px solid #bbf0ce;color:#14532d;}
+.pv-callout.warning{background:#fff7ed;border:1px solid #fed7aa;color:#7c2d12;}
+.pv-callout.danger{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;}
+.pv-card{background:#fff;border:1px solid var(--border);border-radius:9px;padding:11px 13px;}
+.pv-card-title{font-weight:800;font-size:0.85rem;margin-bottom:7px;}
+.pv-steps{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.pv-steps li{display:flex;gap:8px;align-items:flex-start;font-size:0.85rem;line-height:1.45;}
+.pv-steps .sn{flex-shrink:0;width:19px;height:19px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;font-size:0.72rem;display:flex;align-items:center;justify-content:center;}
+.pv-checks{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.pv-checks li{display:flex;gap:8px;align-items:flex-start;font-size:0.84rem;line-height:1.4;padding:6px 9px;border-radius:7px;}
+.pv-checks li.ok{background:#ecfdf3;border:1px solid #bbf0ce;color:#14532d;}
+.pv-checks li.no{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;}
+.pv-checks .ck{flex-shrink:0;font-weight:800;}
+
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.btn-primary{padding:10px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
+.btn-primary:hover{background:#c0001a;}
+.btn-cancel{padding:10px 18px;background:transparent;border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font);font-size:0.9rem;font-weight:600;cursor:pointer;}
+.btn-cancel:hover{border-color:var(--text3);}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#fff;padding:12px 22px;border-radius:8px;font-weight:700;font-size:0.88rem;opacity:0;transition:all 0.3s;z-index:999;box-shadow:0 6px 20px rgba(0,0,0,0.2);}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+@media(max-width:560px){
+  .topbar{padding:0 12px;}
+  .topbar-section{display:none;}
+  .main{padding:20px 14px 50px;}
+  .qr-grid{grid-template-columns:1fr;}
+  .modal-bd{padding:14px 16px 20px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-wrap">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">QR codes</div>
+  </div>
+  <a class="nav-link" href="dashboard.html">← Dashboard</a>
+</div>
+
+<div class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">QR codes</div>
+      <div class="page-subtitle" id="subtitle">Laden…</div>
+    </div>
+    <button class="btn-add" onclick="openEditor(null)">+ Nieuwe QR code</button>
+  </div>
+  <div class="intro">
+    Maak een QR code voor om het even welke info — handleidingen, instructies, schema's. Hang de QR
+    op bij de wagen of het toestel; wie hem scant ziet meteen de uitleg. De info pas je hier achteraf
+    gewoon aan, de QR code zelf blijft werken.
+  </div>
+  <div class="qr-grid" id="grid">
+    <div class="empty"><div class="ei">⏳</div><div class="et">Laden…</div></div>
+  </div>
+</div>
+
+<!-- EDITOR MODAL -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h3 id="modal-title">Nieuwe QR code</h3>
+      <button class="modal-close" onclick="closeEditor()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <div class="fg">
+        <label class="flbl">Titel</label>
+        <input type="text" id="f-title" placeholder="bv. Stroom in de frietwagen" oninput="updatePreview()">
+      </div>
+      <div class="fg">
+        <label class="flbl">Ondertitel (optioneel)</label>
+        <input type="text" id="f-subtitle" placeholder="Korte uitleg in één zin" oninput="updatePreview()">
+      </div>
+      <div class="fg-row">
+        <div class="fg" style="flex:0 0 auto;">
+          <label class="flbl">Icoon</label>
+          <input type="text" id="f-icon" class="icon-input" placeholder="⚡" maxlength="4" oninput="updatePreview()">
+        </div>
+        <div class="fg">
+          <label class="flbl">Accentkleur</label>
+          <div class="swatches" id="swatches"></div>
+        </div>
+      </div>
+
+      <div class="fg">
+        <div class="blocks-hd"><label class="flbl" style="margin:0;">Inhoud</label></div>
+        <div id="blocks-list"></div>
+        <div class="add-blocks">
+          <button onclick="addBlock('heading')">+ Kop</button>
+          <button onclick="addBlock('text')">+ Tekst</button>
+          <button onclick="addBlock('callout')">+ Aandachtsblok</button>
+          <button onclick="addBlock('steps')">+ Stappen</button>
+          <button onclick="addBlock('checklist')">+ Checklist</button>
+        </div>
+      </div>
+
+      <div class="fg">
+        <label class="flbl">Bewerkt door (optioneel)</label>
+        <input type="text" id="f-by" placeholder="Jouw naam">
+      </div>
+
+      <div class="preview-wrap">
+        <label class="flbl">Voorbeeld — zo ziet het eruit na het scannen</label>
+        <div id="preview"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeEditor()">Annuleren</button>
+        <button class="btn-primary" onclick="saveEntry()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Opgeslagen</div>
+
+<script>
+// ── CONSTANTEN ─────────────────────────────────────────
+const FB = 'ft_qrcodes_v1';
+const ACCENTS = ['#e8001d','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#0f172a'];
+const CALLOUT = { info:'ℹ️', success:'✅', warning:'⚠️', danger:'⛔' };
+const TYPE_LABEL = { heading:'Kop', text:'Tekst', callout:'Aandachtsblok', steps:'Stappen', checklist:'Checklist' };
+
+// Voorbeeld dat éénmalig wordt aangemaakt: "Stroom in de frietwagen"
+const STROOM = {
+  id:'stroom-frietwagen',
+  title:'Stroom in de frietwagen',
+  subtitle:'Wie steek je waar in? Volg dit schema en je zit altijd goed.',
+  icon:'⚡',
+  accent:'#f97316',
+  blocks:[
+    {type:'heading',text:'Stroomkast — buiten de wagen'},
+    {type:'text',text:'Gebruik ALTIJD aparte zekeringen. Eén toestel, één zekering.'},
+    {type:'callout',variant:'info',title:'Zekering 1 — Frietwagen',text:'Voor de frietwagen zelf. De grote stekker van de wagen gaat hier op.'},
+    {type:'callout',variant:'success',title:'Zekering 2 — Royco koker',text:'Voor de royco koker. Aparte kabel langs de deur naar binnen.'},
+    {type:'callout',variant:'danger',title:'Nooit 2 stopcontacten op dezelfde zekering!',text:'Gebruik altijd een apart gezekerd stopcontact voor de frietwagen ÉN een apart gezekerd stopcontact voor de royco koker.'},
+    {type:'heading',text:'In de frietwagen — Zekering 1'},
+    {type:'checklist',title:'Stopcontact onder de toog — hier mag je op insteken:',items:[
+      {text:'Bain-marie — mag in het stopcontact onder de toog',ok:true},
+      {text:'Broodjes grill — mag ook in de frietwagen',ok:true},
+      {text:'Royco koker — NIET hier insteken!',ok:false}
+    ]},
+    {type:'heading',text:'Royco koker — Zekering 2 (eigen kabel!)'},
+    {type:'steps',title:'Stap voor stap',items:[
+      'Vraag een aparte verlengkabel langs de deur naar binnen.',
+      'Die kabel komt van zekering 2 op de stroomkast.',
+      'Steek de royco koker in die kabel. Nergens anders op insteken.'
+    ]},
+    {type:'callout',variant:'warning',title:'Waarom is dit zo belangrijk?',text:'De royco koker verbruikt heel veel stroom. Als je die samen met de frietwagen op dezelfde zekering steekt, kan die zekering uitvallen — of erger: brand. Eén toestel, één zekering. Altijd.'},
+    {type:'heading',text:'Samengevat'},
+    {type:'checklist',title:'',items:[
+      {text:'Zekering 1 → Frietwagen → Bain-marie + Broodjes grill (stopcontact onder de toog)',ok:true},
+      {text:'Zekering 2 → Verlengkabel langs de deur → Royco koker (aparte kabel!)',ok:true}
+    ]}
+  ]
+};
+
+// ── STATE ──────────────────────────────────────────────
+let entries = [];
+let editId = null, editBlocks = [], editAccent = ACCENTS[0];
+const qrCache = {};
+
+// ── HELPERS ────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function nl2br(s){ return esc(s).replace(/\n/g,'<br>'); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800); }
+
+function siteOrigin(){
+  const o = location.origin;
+  return (o && o.indexOf('http')===0) ? o : 'https://operationssenorsnacks.web.app';
+}
+function viewerUrl(id){ return siteOrigin() + '/qr.html?id=' + encodeURIComponent(id); }
+
+function slugify(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+}
+function makeId(title){
+  const base = slugify(title) || 'qr';
+  const rnd = Math.random().toString(36).slice(2,6);
+  return base + '-' + rnd;
+}
+
+// ── QR GENERATIE ───────────────────────────────────────
+function qrFallback(text){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=512x512&margin=10&data=' + encodeURIComponent(text);
+}
+function genQR(text){
+  return new Promise(resolve=>{
+    if(qrCache[text]){ resolve(qrCache[text]); return; }
+    if(window.QRCode && QRCode.toDataURL){
+      QRCode.toDataURL(text, {width:512, margin:2, color:{dark:'#000000', light:'#ffffff'}})
+        .then(d=>{ qrCache[text]=d; resolve(d); })
+        .catch(()=>{ const f=qrFallback(text); qrCache[text]=f; resolve(f); });
+    } else {
+      const f=qrFallback(text); qrCache[text]=f; resolve(f);
+    }
+  });
+}
+
+// ── RENDER: PUBLIEKE WEERGAVE (preview + later qr.html) ─
+function renderBlockPV(b){
+  if(!b||!b.type) return '';
+  if(b.type==='heading') return b.text ? '<div class="pv-block"><div class="pv-heading">'+esc(b.text)+'</div></div>' : '';
+  if(b.type==='text') return b.text ? '<div class="pv-block"><div class="pv-text">'+nl2br(b.text)+'</div></div>' : '';
+  if(b.type==='callout'){
+    const v = CALLOUT[b.variant] ? b.variant : 'info';
+    const t = b.title ? '<div class="ct">'+esc(b.title)+'</div>' : '';
+    const x = b.text  ? '<div class="cx">'+nl2br(b.text)+'</div>'  : '';
+    if(!t&&!x) return '';
+    return '<div class="pv-block"><div class="pv-callout '+v+'"><span class="ci">'+CALLOUT[v]+'</span><div>'+t+x+'</div></div></div>';
+  }
+  if(b.type==='steps'){
+    const items=(b.items||[]).filter(x=>String(x||'').trim());
+    if(!items.length) return '';
+    const t=b.title?'<div class="pv-card-title">'+esc(b.title)+'</div>':'';
+    const lis=items.map((x,i)=>'<li><span class="sn">'+(i+1)+'</span><span>'+nl2br(x)+'</span></li>').join('');
+    return '<div class="pv-block"><div class="pv-card">'+t+'<ol class="pv-steps">'+lis+'</ol></div></div>';
+  }
+  if(b.type==='checklist'){
+    const items=(b.items||[]).filter(x=>x&&String(x.text||'').trim());
+    if(!items.length) return '';
+    const t=b.title?'<div class="pv-card-title">'+esc(b.title)+'</div>':'';
+    const lis=items.map(x=>{const ok=x.ok!==false;return '<li class="'+(ok?'ok':'no')+'"><span class="ck">'+(ok?'✓':'✗')+'</span><span>'+nl2br(x.text)+'</span></li>';}).join('');
+    return '<div class="pv-block"><div class="pv-card">'+t+'<ul class="pv-checks">'+lis+'</ul></div></div>';
+  }
+  return '';
+}
+
+// ── FIREBASE: LEZEN ────────────────────────────────────
+fbdb.ref(FB).on('value', snap=>{
+  const data = snap.val() || {};
+  entries = Object.keys(data).map(k=>Object.assign({id:k}, data[k])).filter(e=>e.title);
+  entries.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  renderGrid();
+}, err=>{
+  document.getElementById('grid').innerHTML =
+    '<div class="empty"><div class="ei">⚠️</div><div class="et">Kan QR codes niet laden: '+esc(err&&err.message||'fout')+'</div></div>';
+});
+
+// EENMALIG het voorbeeld "Stroom in de frietwagen" aanmaken
+fbdb.ref('ft_qrcodes_meta_v1/seeded').once('value', snap=>{
+  if(snap.val()===true) return;
+  fbdb.ref('ft_qrcodes_meta_v1/seeded').set(true);
+  const e = Object.assign({}, STROOM);
+  delete e.id;
+  e.createdAt = Date.now();
+  e.updatedAt = Date.now();
+  e.updatedBy = 'Voorbeeld';
+  fbdb.ref(FB+'/'+STROOM.id).once('value', s2=>{
+    if(!s2.exists()) fbdb.ref(FB+'/'+STROOM.id).set(e);
+  });
+});
+
+// ── RENDER: GRID ───────────────────────────────────────
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  document.getElementById('subtitle').textContent =
+    entries.length + ' QR code' + (entries.length===1?'':'s');
+
+  if(!entries.length){
+    grid.innerHTML = '<div class="empty"><div class="ei">🔳</div><div class="et">Nog geen QR codes. Klik op <strong>+ Nieuwe QR code</strong> om te starten.</div></div>';
+    return;
+  }
+
+  grid.innerHTML = entries.map(e=>{
+    const accent = /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'') ? e.accent : '#e8001d';
+    const url = viewerUrl(e.id);
+    const nB = (e.blocks||[]).length;
+    const upd = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    return '<div class="qr-card" style="--accent:'+esc(accent)+'">'
+      + '<div class="qr-card-top">'
+        + '<span class="qr-card-icon">'+esc(e.icon||'🔳')+'</span>'
+        + '<div class="qr-card-tt">'
+          + '<div class="qr-card-title">'+esc(e.title)+'</div>'
+          + '<div class="qr-card-sub">'+nB+' blok'+(nB===1?'':'ken')+(upd?' · bijgewerkt '+upd:'')+'</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="qr-thumb"><img id="qrimg-'+esc(e.id)+'" alt="QR code"></div>'
+      + '<div class="qr-meta"><div class="qr-link" onclick="copyLink(\''+e.id+'\')" title="Klik om de link te kopiëren">'+esc(url)+'</div></div>'
+      + '<div class="qr-card-actions">'
+        + '<button class="act primary" onclick="downloadQR(\''+e.id+'\')">⬇ Download</button>'
+        + '<button class="act" onclick="printQR(\''+e.id+'\')">🖨 Print</button>'
+        + '<button class="act" onclick="window.open(viewerUrl(\''+e.id+'\'),\'_blank\')">👁 Bekijk</button>'
+        + '<button class="act" onclick="openEditor(\''+e.id+'\')">✏️ Bewerk</button>'
+        + '<button class="act danger" onclick="deleteEntry(\''+e.id+'\')">🗑</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+
+  // QR-afbeeldingen genereren
+  entries.forEach(e=>{
+    const img = document.getElementById('qrimg-'+e.id);
+    if(img) genQR(viewerUrl(e.id)).then(src=>{ img.src = src; });
+  });
+}
+
+// ── ACTIES OP KAARTEN ──────────────────────────────────
+function copyLink(id){
+  const url = viewerUrl(id);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(()=>toast('🔗 Link gekopieerd')).catch(()=>prompt('Kopieer de link:', url));
+  } else {
+    prompt('Kopieer de link:', url);
+  }
+}
+function downloadQR(id){
+  const e = entries.find(x=>x.id===id); if(!e) return;
+  genQR(viewerUrl(id)).then(src=>{
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = 'qr-' + slugify(e.title || id) + '.png';
+    a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    toast('⬇ QR code gedownload');
+  });
+}
+function printQR(id){
+  const e = entries.find(x=>x.id===id); if(!e) return;
+  genQR(viewerUrl(id)).then(src=>{
+    const w = window.open('', '_blank');
+    if(!w){ toast('⚠️ Pop-up geblokkeerd'); return; }
+    w.document.write(
+      '<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>QR — '+esc(e.title)+'</title>'
+      + '<style>body{font-family:Arial,sans-serif;text-align:center;padding:48px 24px;}'
+      + 'h1{font-size:30px;margin:0 0 6px;}p{color:#555;font-size:16px;margin:0 0 26px;}'
+      + 'img{width:340px;height:340px;border:1px solid #ddd;}'
+      + '.scan{margin-top:22px;font-size:19px;font-weight:bold;}</style></head><body>'
+      + '<h1>'+esc(e.icon||'')+' '+esc(e.title)+'</h1>'
+      + (e.subtitle?'<p>'+esc(e.subtitle)+'</p>':'')
+      + '<img src="'+src+'" alt="QR">'
+      + '<div class="scan">📱 Scan met je telefoon voor de uitleg</div>'
+      + '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>'
+      + '</body></html>'
+    );
+    w.document.close();
+  });
+}
+function deleteEntry(id){
+  const e = entries.find(x=>x.id===id); if(!e) return;
+  if(!confirm('QR code "'+e.title+'" verwijderen?\n\nDe QR code zelf werkt daarna niet meer.')) return;
+  fbdb.ref(FB+'/'+id).remove()
+    .then(()=>toast('🗑 Verwijderd'))
+    .catch(err=>alert('Verwijderen mislukt: '+(err&&err.message||'fout')));
+}
+
+// ── EDITOR ─────────────────────────────────────────────
+function openEditor(id){
+  editId = id;
+  const e = id ? entries.find(x=>x.id===id) : null;
+  document.getElementById('modal-title').textContent = e ? 'QR code bewerken' : 'Nieuwe QR code';
+  document.getElementById('f-title').value = e ? (e.title||'') : '';
+  document.getElementById('f-subtitle').value = e ? (e.subtitle||'') : '';
+  document.getElementById('f-icon').value = e ? (e.icon||'') : '';
+  document.getElementById('f-by').value = '';
+  editAccent = (e && /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'')) ? e.accent : ACCENTS[0];
+  editBlocks = e ? JSON.parse(JSON.stringify(e.blocks||[])) : [];
+  renderSwatches();
+  renderBlocksEditor();
+  updatePreview();
+  document.getElementById('modal').classList.remove('hidden');
+}
+function closeEditor(){ document.getElementById('modal').classList.add('hidden'); }
+document.getElementById('modal').addEventListener('click', ev=>{
+  if(ev.target===document.getElementById('modal')) closeEditor();
+});
+
+function renderSwatches(){
+  document.getElementById('swatches').innerHTML = ACCENTS.map(c=>
+    '<div class="sw'+(c===editAccent?' sel':'')+'" style="background:'+c+'" onclick="pickAccent(\''+c+'\')"></div>'
+  ).join('');
+}
+function pickAccent(c){ editAccent=c; renderSwatches(); updatePreview(); }
+
+// Blokken: standaardwaarden per type
+function newBlock(type){
+  if(type==='heading') return {type,text:''};
+  if(type==='text') return {type,text:''};
+  if(type==='callout') return {type,variant:'info',title:'',text:''};
+  if(type==='steps') return {type,title:'',items:[]};
+  if(type==='checklist') return {type,title:'',items:[]};
+  return {type:'text',text:''};
+}
+
+// itemslijst <-> tekst
+function itemsToText(items){ return (items||[]).join('\n'); }
+function textToItems(t){ return String(t||'').split('\n').map(s=>s.trim()).filter(Boolean); }
+function checklistToText(items){
+  return (items||[]).map(it=>(it.ok===false?'- ':'')+String(it.text||'')).join('\n');
+}
+function textToChecklist(t){
+  return String(t||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+    const m = /^-\s*(.*)$/.exec(l);
+    return m ? {text:m[1].trim(), ok:false} : {text:l, ok:true};
+  });
+}
+
+function beBody(b, idx){
+  if(b.type==='heading'){
+    return '<input type="text" data-f="text" placeholder="Kop tekst" value="'+esc(b.text)+'">';
+  }
+  if(b.type==='text'){
+    return '<textarea data-f="text" placeholder="Tekst…">'+esc(b.text)+'</textarea>';
+  }
+  if(b.type==='callout'){
+    const opts = [['info','ℹ️ Info (blauw)'],['success','✅ Oké (groen)'],['warning','⚠️ Let op (oranje)'],['danger','⛔ Gevaar (rood)']]
+      .map(o=>'<option value="'+o[0]+'"'+(b.variant===o[0]?' selected':'')+'>'+o[1]+'</option>').join('');
+    return '<select data-f="variant">'+opts+'</select>'
+      + '<input type="text" data-f="title" placeholder="Titel" value="'+esc(b.title)+'">'
+      + '<textarea data-f="text" placeholder="Tekst…">'+esc(b.text)+'</textarea>';
+  }
+  if(b.type==='steps'){
+    return '<input type="text" data-f="title" placeholder="Titel (optioneel)" value="'+esc(b.title)+'">'
+      + '<textarea data-f="itemsText" placeholder="Eén stap per lijn…">'+esc(itemsToText(b.items))+'</textarea>'
+      + '<div class="be-hint">Elke lijn = één genummerde stap.</div>';
+  }
+  if(b.type==='checklist'){
+    return '<input type="text" data-f="title" placeholder="Titel (optioneel)" value="'+esc(b.title)+'">'
+      + '<textarea data-f="itemsText" placeholder="Eén item per lijn…">'+esc(checklistToText(b.items))+'</textarea>'
+      + '<div class="be-hint">Elke lijn = één item met een groen vinkje ✓. Zet <strong>-</strong> vooraan voor een rood kruisje ✗ (mag niet).</div>';
+  }
+  return '';
+}
+
+function renderBlocksEditor(){
+  const list = document.getElementById('blocks-list');
+  if(!editBlocks.length){
+    list.innerHTML = '<div class="blocks-empty">Nog geen inhoud. Voeg hieronder een blok toe.</div>';
+    return;
+  }
+  list.innerHTML = editBlocks.map((b,i)=>{
+    const opts = Object.keys(TYPE_LABEL).map(t=>
+      '<option value="'+t+'"'+(b.type===t?' selected':'')+'>'+TYPE_LABEL[t]+'</option>').join('');
+    return '<div class="be" data-type="'+b.type+'">'
+      + '<div class="be-head">'
+        + '<select onchange="changeType('+i+',this.value)">'+opts+'</select>'
+        + '<button class="be-btn" onclick="moveBlock('+i+',-1)" '+(i===0?'disabled':'')+' title="Omhoog">▲</button>'
+        + '<button class="be-btn" onclick="moveBlock('+i+',1)" '+(i===editBlocks.length-1?'disabled':'')+' title="Omlaag">▼</button>'
+        + '<button class="be-btn" onclick="removeBlock('+i+')" title="Verwijderen">✕</button>'
+      + '</div>'
+      + '<div class="be-body">'+beBody(b,i)+'</div>'
+    + '</div>';
+  }).join('');
+}
+
+// Lees de huidige waarden uit de DOM terug naar editBlocks
+function syncBlocks(){
+  const list = document.getElementById('blocks-list');
+  const next = [];
+  list.querySelectorAll('.be').forEach(be=>{
+    const type = be.dataset.type;
+    const get = f => { const el = be.querySelector('[data-f="'+f+'"]'); return el ? el.value : ''; };
+    if(type==='heading') next.push({type,text:get('text')});
+    else if(type==='text') next.push({type,text:get('text')});
+    else if(type==='callout') next.push({type,variant:get('variant')||'info',title:get('title'),text:get('text')});
+    else if(type==='steps') next.push({type,title:get('title'),items:textToItems(get('itemsText'))});
+    else if(type==='checklist') next.push({type,title:get('title'),items:textToChecklist(get('itemsText'))});
+  });
+  editBlocks = next;
+}
+
+function addBlock(type){ syncBlocks(); editBlocks.push(newBlock(type)); renderBlocksEditor(); updatePreview(); }
+function removeBlock(i){ syncBlocks(); editBlocks.splice(i,1); renderBlocksEditor(); updatePreview(); }
+function moveBlock(i,d){
+  syncBlocks();
+  const j=i+d;
+  if(j<0||j>=editBlocks.length) return;
+  const t=editBlocks[i]; editBlocks[i]=editBlocks[j]; editBlocks[j]=t;
+  renderBlocksEditor(); updatePreview();
+}
+function changeType(i,type){
+  syncBlocks();
+  const old = editBlocks[i] || {};
+  const nb = newBlock(type);
+  if('text' in nb && old.text!=null) nb.text = old.text;
+  if('title' in nb && old.title!=null) nb.title = old.title;
+  editBlocks[i] = nb;
+  renderBlocksEditor(); updatePreview();
+}
+
+// Live bijwerken tijdens het typen (zonder de blok-editor te hertekenen)
+document.getElementById('blocks-list').addEventListener('input', updatePreview);
+
+function updatePreview(){
+  syncBlocks();
+  const icon = document.getElementById('f-icon').value.trim();
+  const title = document.getElementById('f-title').value.trim();
+  const subtitle = document.getElementById('f-subtitle').value.trim();
+  const blocks = editBlocks.map(renderBlockPV).join('');
+  document.getElementById('preview').style.setProperty('--accent', editAccent);
+  document.getElementById('preview').innerHTML =
+    '<div class="pv-head">'
+      + (icon?'<div class="pv-icon">'+esc(icon)+'</div>':'')
+      + '<div class="pv-title">'+esc(title||'Titel van de QR code')+'</div>'
+      + (subtitle?'<div class="pv-subtitle">'+esc(subtitle)+'</div>':'')
+    + '</div>'
+    + (blocks || '<div class="pv-text" style="color:#999;">Nog geen inhoud toegevoegd.</div>');
+}
+
+function saveEntry(){
+  syncBlocks();
+  const title = document.getElementById('f-title').value.trim();
+  if(!title){ alert('Vul een titel in.'); document.getElementById('f-title').focus(); return; }
+  const by = document.getElementById('f-by').value.trim();
+  const existing = editId ? entries.find(x=>x.id===editId) : null;
+  const id = editId || makeId(title);
+  const now = Date.now();
+  const entry = {
+    title: title,
+    subtitle: document.getElementById('f-subtitle').value.trim(),
+    icon: document.getElementById('f-icon').value.trim() || '🔳',
+    accent: editAccent,
+    blocks: editBlocks,
+    createdAt: (existing && existing.createdAt) || now,
+    updatedAt: now,
+    updatedBy: by || (existing && existing.updatedBy) || ''
+  };
+  fbdb.ref(FB+'/'+id).set(entry)
+    .then(()=>{ closeEditor(); toast(editId ? '✓ Bijgewerkt' : '✓ QR code aangemaakt'); })
+    .catch(err=>alert('Opslaan mislukt: '+(err&&err.message||'fout')));
+}
+</script>
+</body>
+</html>
