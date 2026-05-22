@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Opslag voor PDF's die aan QR codes gekoppeld worden.
+// Bewust zonder login — net als de rest van deze interne tool —
+// maar afgeschermd: enkel de map qr-pdfs/, enkel PDF's, max 25 MB.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /qr-pdfs/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource == null
+                   || (request.resource.size < 25 * 1024 * 1024
+                       && request.resource.contentType == 'application/pdf');
+    }
+  }
+}

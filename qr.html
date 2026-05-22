@@ -184,8 +184,9 @@ if(!id){
   fbdb.ref('ft_qrcodes_v1/'+id).on('value', snap=>{
     const e = snap.val();
     if(!e){ showState('🔍','Niet gevonden','Deze QR code bestaat niet (meer).'); return; }
-    // "Link"-type: meteen doorsturen naar de gekoppelde pagina
-    if(e.kind==='link' && e.link){ location.replace(resolveLink(e.link)); return; }
+    // "Link"- en "PDF"-type: meteen doorsturen naar de gekoppelde pagina/PDF
+    const dest = e.kind==='link' ? e.link : (e.kind==='pdf' ? e.pdfUrl : '');
+    if(dest){ location.replace(resolveLink(dest)); return; }
     renderEntry(e);
   }, err=>{
     showState('⚠️','Kan info niet laden', err && err.message ? err.message : 'Controleer je internetverbinding.');

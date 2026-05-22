@@ -10,6 +10,7 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <!-- QR code generator -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <script>
@@ -153,12 +154,20 @@ select{cursor:pointer;}
 .pv-checks .ck{flex-shrink:0;font-weight:800;}
 
 /* TYPE-KEUZE + LINK */
-.kind-toggle{display:flex;gap:8px;}
-.kind-toggle button{flex:1;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.kind-toggle{display:flex;gap:8px;flex-wrap:wrap;}
+.kind-toggle button{flex:1 1 120px;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
 .kind-toggle button:hover{border-color:var(--red);}
 .kind-toggle button.sel{background:var(--red);border-color:var(--red);color:#fff;}
 .link-prev{font-size:0.82rem;color:var(--text2);margin-bottom:8px;word-break:break-all;}
 .link-frame{width:100%;height:320px;border:1px solid var(--border);border-radius:9px;background:#fff;}
+#f-pdf-file{display:none;}
+.pdf-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:8px;border:1px dashed var(--border2);background:var(--surface2);color:var(--text2);font-size:0.86rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.pdf-btn:hover{border-color:var(--red);color:var(--red);border-style:solid;}
+.pdf-bar{display:none;height:8px;background:var(--surface3);border-radius:5px;margin-top:10px;overflow:hidden;}
+.pdf-bar-fill{height:100%;width:0;background:var(--green);transition:width 0.2s;}
+.pdf-info{margin-top:9px;font-size:0.85rem;}
+.pdf-file{display:flex;align-items:center;gap:8px;background:#ecfdf3;border:1px solid #bbf0ce;color:#14532d;border-radius:8px;padding:9px 12px;font-weight:600;}
+.pdf-file .pf-x{margin-left:auto;font-size:0.76rem;color:#3f8b3c;font-weight:700;}
 
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
 .btn-primary{padding:10px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
@@ -238,8 +247,9 @@ select{cursor:pointer;}
       <div class="fg">
         <label class="flbl">Wat opent deze QR code?</label>
         <div class="kind-toggle">
-          <button type="button" id="kind-content" onclick="setKind('content')">📄 Info-pagina samenstellen</button>
-          <button type="button" id="kind-link" onclick="setKind('link')">🔗 Naar een bestaande pagina</button>
+          <button type="button" id="kind-content" onclick="setKind('content')">📄 Eigen info-pagina</button>
+          <button type="button" id="kind-link" onclick="setKind('link')">🔗 Bestaande pagina</button>
+          <button type="button" id="kind-pdf" onclick="setKind('pdf')">📎 PDF-bestand</button>
         </div>
       </div>
 
@@ -269,6 +279,17 @@ select{cursor:pointer;}
             <option value="vet.html"></option>
           </datalist>
           <div class="be-hint" style="margin-top:6px;">Geef een pagina van deze site (bv. <strong>stroom-frietwagen.html</strong>) of een volledige link (https://…). Wie de QR scant gaat meteen daarheen.</div>
+        </div>
+      </div>
+
+      <div id="section-pdf">
+        <div class="fg">
+          <label class="flbl">PDF-bestand</label>
+          <label class="pdf-btn" for="f-pdf-file">📎 <span id="pdf-btn-label">Kies een PDF van je toestel</span></label>
+          <input type="file" id="f-pdf-file" accept="application/pdf,.pdf" onchange="onPdfPick(this)">
+          <div class="pdf-bar" id="pdf-bar"><div class="pdf-bar-fill" id="pdf-bar-fill"></div></div>
+          <div class="pdf-info" id="pdf-info"></div>
+          <div class="be-hint" style="margin-top:6px;">Kies een PDF van je toestel (max 25 MB). Hij wordt geüpload en de QR opent hem rechtstreeks.</div>
         </div>
       </div>
 
@@ -315,6 +336,7 @@ const STROOM = {
 // ── STATE ──────────────────────────────────────────────
 let entries = [];
 let editId = null, editBlocks = [], editAccent = ACCENTS[0], editKind = 'content';
+let editPdfUrl = '', editPdfName = '', editPdfPath = '', pdfUploading = false;
 const qrCache = {};
 
 // ── HELPERS ────────────────────────────────────────────
@@ -423,7 +445,9 @@ function renderGrid(){
     const accent = /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'') ? e.accent : '#e8001d';
     const url = viewerUrl(e.id);
     const nB = (e.blocks||[]).length;
-    const desc = e.kind==='link' ? '🔗 verwijst naar een pagina' : (nB+' blok'+(nB===1?'':'ken'));
+    const desc = e.kind==='link' ? '🔗 verwijst naar een pagina'
+               : e.kind==='pdf' ? ('📎 PDF'+(e.pdfName?' · '+esc(e.pdfName):''))
+               : (nB+' blok'+(nB===1?'':'ken'));
     const upd = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}) : '';
     return '<div class="qr-card" style="--accent:'+esc(accent)+'">'
       + '<div class="qr-card-top">'
@@ -496,6 +520,9 @@ function printQR(id){
 function deleteEntry(id){
   const e = entries.find(x=>x.id===id); if(!e) return;
   if(!confirm('QR code "'+e.title+'" verwijderen?\n\nDe QR code zelf werkt daarna niet meer.')) return;
+  if(e.kind==='pdf' && e.pdfPath){
+    try{ firebase.storage().ref(e.pdfPath).delete().catch(()=>{}); }catch(err){}
+  }
   fbdb.ref(FB+'/'+id).remove()
     .then(()=>toast('🗑 Verwijderd'))
     .catch(err=>alert('Verwijderen mislukt: '+(err&&err.message||'fout')));
@@ -511,11 +538,17 @@ function openEditor(id){
   document.getElementById('f-icon').value = e ? (e.icon||'') : '';
   document.getElementById('f-by').value = '';
   document.getElementById('f-link').value = e ? (e.link||'') : '';
+  document.getElementById('f-pdf-file').value = '';
   editAccent = (e && /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'')) ? e.accent : ACCENTS[0];
   editBlocks = e ? JSON.parse(JSON.stringify(e.blocks||[])) : [];
-  editKind = (e && e.kind==='link') ? 'link' : 'content';
+  editKind = (e && (e.kind==='link'||e.kind==='pdf')) ? e.kind : 'content';
+  editPdfUrl = e ? (e.pdfUrl||'') : '';
+  editPdfName = e ? (e.pdfName||'') : '';
+  editPdfPath = e ? (e.pdfPath||'') : '';
+  pdfUploading = false;
   renderSwatches();
   renderBlocksEditor();
+  renderPdfInfo();
   applyKind();
   updatePreview();
   document.getElementById('modal').classList.remove('hidden');
@@ -523,10 +556,72 @@ function openEditor(id){
 
 function setKind(k){ editKind = k; applyKind(); updatePreview(); }
 function applyKind(){
-  document.getElementById('kind-content').classList.toggle('sel', editKind==='content');
-  document.getElementById('kind-link').classList.toggle('sel', editKind==='link');
-  document.getElementById('section-content').style.display = editKind==='content' ? '' : 'none';
-  document.getElementById('section-link').style.display = editKind==='link' ? '' : 'none';
+  ['content','link','pdf'].forEach(k=>{
+    document.getElementById('kind-'+k).classList.toggle('sel', editKind===k);
+    document.getElementById('section-'+k).style.display = editKind===k ? '' : 'none';
+  });
+}
+
+// ── PDF UPLOAD ─────────────────────────────────────────
+function renderPdfInfo(){
+  const info = document.getElementById('pdf-info');
+  const lbl = document.getElementById('pdf-btn-label');
+  if(editPdfUrl){
+    info.innerHTML = '<div class="pdf-file">📄 <span>'+esc(editPdfName||'PDF-bestand')+'</span>'
+      + '<span class="pf-x">geüpload ✓</span></div>';
+    lbl.textContent = 'Andere PDF kiezen';
+  } else {
+    info.innerHTML = '';
+    lbl.textContent = 'Kies een PDF van je toestel';
+  }
+}
+function onPdfPick(input){
+  const file = input.files && input.files[0];
+  input.value = '';
+  if(!file) return;
+  if(file.type!=='application/pdf' && !/\.pdf$/i.test(file.name)){
+    alert('Kies een PDF-bestand.'); return;
+  }
+  if(file.size > 25*1024*1024){
+    alert('De PDF is te groot (max 25 MB).'); return;
+  }
+  uploadPdf(file);
+}
+function uploadPdf(file){
+  const bar = document.getElementById('pdf-bar');
+  const fill = document.getElementById('pdf-bar-fill');
+  const info = document.getElementById('pdf-info');
+  bar.style.display = 'block'; fill.style.width = '0%';
+  info.innerHTML = '<span style="color:var(--text2);">Uploaden…</span>';
+  pdfUploading = true;
+  const uid = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);
+  const safe = (file.name || 'bestand.pdf').replace(/[^\w.\- ]+/g,'_');
+  const path = 'qr-pdfs/' + uid + '/' + safe;
+  let task;
+  try{
+    task = firebase.storage().ref(path).put(file, {contentType:'application/pdf'});
+  }catch(err){
+    pdfUploading = false; bar.style.display = 'none';
+    info.innerHTML = '<span style="color:var(--red);">Upload kon niet starten: '+esc(err&&err.message||'fout')+'</span>';
+    return;
+  }
+  task.on('state_changed',
+    s => { fill.style.width = Math.round(s.bytesTransferred / s.totalBytes * 100) + '%'; },
+    err => {
+      pdfUploading = false; bar.style.display = 'none';
+      info.innerHTML = '<span style="color:var(--red);">Upload mislukt: '+esc(err&&err.message||'fout')+'</span>';
+    },
+    () => {
+      task.snapshot.ref.getDownloadURL().then(url => {
+        pdfUploading = false; bar.style.display = 'none';
+        editPdfUrl = url; editPdfName = file.name; editPdfPath = path;
+        renderPdfInfo(); updatePreview();
+        toast('📎 PDF geüpload');
+      }).catch(err => {
+        pdfUploading = false; bar.style.display = 'none';
+        info.innerHTML = '<span style="color:var(--red);">Kon de link niet ophalen: '+esc(err&&err.message||'fout')+'</span>';
+      });
+    });
 }
 function closeEditor(){ document.getElementById('modal').classList.add('hidden'); }
 document.getElementById('modal').addEventListener('click', ev=>{
@@ -662,6 +757,14 @@ function updatePreview(){
     return;
   }
 
+  if(editKind==='pdf'){
+    prev.innerHTML = editPdfUrl
+      ? '<div class="link-prev">📎 Wie de QR scant opent: <strong>'+esc(editPdfName||'PDF')+'</strong></div>'
+        + '<iframe class="link-frame" src="'+esc(editPdfUrl)+'"></iframe>'
+      : '<div class="pv-text" style="color:#999;">Kies hierboven een PDF-bestand.</div>';
+    return;
+  }
+
   syncBlocks();
   const icon = document.getElementById('f-icon').value.trim();
   const title = document.getElementById('f-title').value.trim();
@@ -681,6 +784,8 @@ function saveEntry(){
   if(!title){ alert('Vul een titel in.'); document.getElementById('f-title').focus(); return; }
   const link = document.getElementById('f-link').value.trim();
   if(editKind==='link' && !link){ alert('Vul de pagina of link in.'); document.getElementById('f-link').focus(); return; }
+  if(editKind==='pdf' && pdfUploading){ alert('Wacht even — de PDF is nog aan het uploaden.'); return; }
+  if(editKind==='pdf' && !editPdfUrl){ alert('Kies en upload eerst een PDF-bestand.'); return; }
   if(editKind==='content') syncBlocks();
   const by = document.getElementById('f-by').value.trim();
   const existing = editId ? entries.find(x=>x.id===editId) : null;
@@ -693,6 +798,9 @@ function saveEntry(){
     accent: editAccent,
     kind: editKind,
     link: editKind==='link' ? link : '',
+    pdfUrl: editKind==='pdf' ? editPdfUrl : '',
+    pdfName: editKind==='pdf' ? editPdfName : '',
+    pdfPath: editKind==='pdf' ? editPdfPath : '',
     blocks: editKind==='content' ? editBlocks : [],
     createdAt: (existing && existing.createdAt) || now,
     updatedAt: now,

@@ -10,7 +10,8 @@
       "**/node_modules/**",
       "functions/**",
       "**/*.md",
-      "*.json"
+      "*.json",
+      "storage.rules"
     ],
     "rewrites": [
       {
@@ -36,5 +37,8 @@
   },
   "functions": {
     "source": "functions"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }
