@@ -374,6 +374,23 @@
   </div>
 </div>
 
+<!-- MODAL KOPPEL-VOORSTEL -->
+<div class="modal-overlay hidden" id="koppel-preview-modal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-hdr">
+      <span class="modal-title">Voorstel — koppelen &amp; trucks aanvullen</span>
+      <button class="modal-close" onclick="sluitKoppelVoorstel()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="koppel-preview-body"></div>
+      <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn btn-gray btn-sm" onclick="sluitKoppelVoorstel()">Annuleren</button>
+        <button class="btn btn-red btn-sm" id="btn-koppel-toepassen" onclick="pasKoppelPlanToe()">✅ Toepassen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Firebase ──────────────────────────────────────────────────
 firebase.initializeApp({
@@ -427,7 +444,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   db.ref('ft_planning_v1').once('value', snap => {
     const all = snap.val() || {};
-    planningEvents = Object.values(all).filter(e => e && e.id != null)
+    planningEvents = Object.entries(all)
+      .filter(([k, e]) => e && e.id != null)
+      .map(([k, e]) => Object.assign({ _key: k }, e))
       .sort((a,b) => (a.startDate||'') > (b.startDate||'') ? 1 : -1);
     populateEventSelect();
     renderKoppelen();
@@ -1024,12 +1043,24 @@ function autoMatch(info) {
   }
   return null; // niets of ambigu → handmatig koppelen
 }
-// een door de AI gekozen truck terugbrengen naar een exacte waarde uit de trucks-lijst
-function resolveTruck(ev, truck) {
-  const trucks = Array.isArray(ev.trucks) ? ev.trucks : [];
-  if (trucks.includes(truck)) return truck;
-  const m = trucks.find(t => wagenMatch(t, truck));
-  return m || null;
+// alle distinct trucks die al ergens in de planning staan
+function knownTrucks() {
+  const s = new Set();
+  planningEvents.forEach(e => (Array.isArray(e.trucks) ? e.trucks : []).forEach(t => { if (t) s.add(t); }));
+  return [...s];
+}
+// een wagennummer omzetten naar de bestaande truck-naam; bestaat die niet → de wagen zelf
+function canonicalTruck(wagen, known) {
+  const w = String(wagen == null ? '' : wagen).trim();
+  if (!w) return '';
+  let hit = known.find(t => wagenMatch(t, w));        // bv. "504" → "Friet Wagen 504"
+  if (hit) return hit;
+  const nw = normName(w);
+  if (nw.length >= 4) {
+    hit = known.find(t => normName(t).includes(nw));  // bv. "brascheria" → "Brascheria 1"
+    if (hit) return hit;
+  }
+  return w;                                           // nieuwe truck
 }
 
 // haalt het JSON-blok uit een AI-antwoord, ook als er tekst omheen staat
@@ -1044,17 +1075,14 @@ function extractJson(txt) {
 
 // stuurt een groep laadlijsten + alle events naar de AI en krijgt de matches terug
 async function aiMatch(lijsten, events) {
-  const sys = 'Je koppelt laadlijsten van Señor Snacks foodtrucks aan evenementen uit de planning. '
-    + 'Elke laadlijst hoort bij precies één evenement en één truck van dat evenement. '
-    + 'Match op wagennummer, eventnaam en datum die in de laadlijst staan. '
-    + 'Een truck kan per evenement maar één laadlijst hebben. '
+  const sys = 'Je koppelt laadlijsten van Señor Snacks foodtrucks aan het juiste evenement uit de planning. '
+    + 'Match op de evenementnaam (en de datum indien aanwezig) die in de laadlijst zit. '
     + 'Geef ALLEEN raw JSON terug, geen uitleg, geen markdown.';
   const usr = 'LAADLIJSTEN (te koppelen):\n' + JSON.stringify(lijsten)
-    + '\n\nEVENEMENTEN (planning, met hun trucks):\n' + JSON.stringify(events)
-    + '\n\nGeef voor ELKE laadlijst de beste match terug. '
-    + 'Formaat: [{"laadlijstId":"...","eventId":"...","truck":"..."}]. '
-    + 'De "truck" moet exact een waarde uit de trucks-lijst van dat evenement zijn. '
-    + 'Ben je niet redelijk zeker? Zet dan "eventId":null en "truck":null voor die laadlijst. Verzin geen koppelingen. '
+    + '\n\nEVENEMENTEN (planning):\n' + JSON.stringify(events)
+    + '\n\nGeef voor ELKE laadlijst het best passende evenement. '
+    + 'Formaat: [{"laadlijstId":"...","eventId":"..."}]. '
+    + 'Ben je niet redelijk zeker welk evenement het is? Zet dan "eventId":null. Verzin niets. '
     + 'Antwoord met UITSLUITEND de JSON-array: begin met [ en eindig met ], geen tekst ervoor of erna.';
   const res = await fetch('/api/anthropic', {
     method: 'POST',
@@ -1079,7 +1107,10 @@ async function aiMatch(lijsten, events) {
   return Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.matches) ? parsed.matches : []);
 }
 
-// alle losse laadlijsten via de AI koppelen aan event + truck
+let koppelPlan = [];                                   // voorstel uit autoKoppelAlles
+let koppelPlanInfo = { nietGematcht: 0, overgeslagen: 0 };
+
+// stap 1: AI matcht elke losse laadlijst aan een event → toon een voorstel ter bevestiging
 async function autoKoppelAlles() {
   const pool = unlinkedLaadlijsten();
   if (!pool.length) { alert('Er zijn geen losse laadlijsten om te koppelen.'); return; }
@@ -1088,21 +1119,13 @@ async function autoKoppelAlles() {
   const btn = document.getElementById('btn-autokoppel');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ AI matcht…'; }
 
-  // enkel events met trucks zijn koppelbaar — scheelt de AI een hoop ruis
-  const events = planningEvents
-    .filter(e => e && e.id != null && Array.isArray(e.trucks) && e.trucks.length)
-    .map(e => ({
-      id: String(e.id),
-      naam: e.name || e.naam || '',
-      van: e.startDate || '',
-      tot: e.endDate || e.startDate || '',
-      trucks: e.trucks
-    }));
-  if (!events.length) {
-    if (btn) { btn.disabled = false; btn.textContent = '🔗 Auto-koppel'; }
-    alert('Geen events met trucks gevonden in de planning — koppelen kan niet.');
-    return;
-  }
+  const events = planningEvents.filter(e => e && e.id != null).map(e => ({
+    id: String(e.id),
+    naam: e.name || e.naam || '',
+    van: e.startDate || '',
+    tot: e.endDate || e.startDate || '',
+    trucks: Array.isArray(e.trucks) ? e.trucks : []
+  }));
 
   const matches = [];
   const BATCH = 30;
@@ -1114,7 +1137,7 @@ async function autoKoppelAlles() {
       });
       let part = null;
       for (let attempt = 1; attempt <= 3; attempt++) {
-        bulkStatus(`<div class="loader-wrap"><div class="spinner"></div>AI koppelt laadlijsten ${i+1}–${Math.min(i+BATCH, pool.length)} van ${pool.length}${attempt > 1 ? ` — poging ${attempt}` : ''}…</div>`);
+        bulkStatus(`<div class="loader-wrap"><div class="spinner"></div>AI matcht laadlijsten ${i+1}–${Math.min(i+BATCH, pool.length)} van ${pool.length}${attempt > 1 ? ` — poging ${attempt}` : ''}…</div>`);
         try { part = await aiMatch(chunk, events); break; }
         catch (e) {
           if (attempt < 3 && isTransient(e)) { await sleep(4000 * attempt); continue; }
@@ -1135,38 +1158,131 @@ async function autoKoppelAlles() {
     return;
   }
 
-  // matches toepassen — geen truck dubbel koppelen
-  let gekoppeld = 0;
-  const gebruikteSlots = new Set();
-  for (const mt of matches) {
-    if (!mt || !mt.laadlijstId || !mt.eventId || !mt.truck) continue;
-    const ll = laadlijsten[mt.laadlijstId];
-    if (!ll) continue;
-    const ev = planningEvents.find(e => String(e.id) === String(mt.eventId));
-    if (!ev) continue;
-    const truck = resolveTruck(ev, mt.truck);
-    if (!truck) continue;
-    const slot = String(mt.eventId) + '|' + truck;
-    if (gebruikteSlots.has(slot) || findLinked(mt.eventId, truck)) continue;
-    const eventNaam = ev.name || ev.naam || '';
-    try {
-      await db.ref('ft_laadlijsten_v1/' + mt.laadlijstId).update({
-        wagen: truck,
-        eventId: String(mt.eventId),
-        eventNaam: eventNaam,
-        datum: ev.startDate || '',
-        naam: buildNaam({ wagen: truck, event: eventNaam })
-      });
-      gebruikteSlots.add(slot);
-      gekoppeld++;
-    } catch (e) { console.warn('Koppelen mislukt:', mt.laadlijstId, e); }
+  // voorstel opbouwen — truck = de wagen van de laadlijst (canoniek genaamd)
+  const matchMap = {};
+  matches.forEach(m => { if (m && m.laadlijstId) matchMap[m.laadlijstId] = m.eventId; });
+  const known = knownTrucks();
+  koppelPlan = [];
+  let nietGematcht = 0, overgeslagen = 0;
+  const slotGebruikt = new Set();
+
+  for (const { key, ll } of pool) {
+    const eventId = matchMap[key];
+    const ev = (eventId != null && eventId !== '') ? planningEvents.find(e => String(e.id) === String(eventId)) : null;
+    if (!ev) { nietGematcht++; continue; }
+    const wagen = (laadlijstMatchInfo(ll).wagen || '').trim();
+    if (!wagen || normName(wagen) === 'tent') { overgeslagen++; continue; }
+    const truck = canonicalTruck(wagen, known);
+    const slot = String(ev.id) + '|' + truck;
+    if (slotGebruikt.has(slot) || findLinked(ev.id, truck)) { overgeslagen++; continue; }
+    slotGebruikt.add(slot);
+    koppelPlan.push({
+      laadlijstId: key,
+      llNaam: ll.naam || ll.bestand || '(naamloos)',
+      eventKey: ev._key,
+      eventId: String(ev.id),
+      eventNaam: ev.name || ev.naam || '',
+      datum: ev.startDate || '',
+      truck: truck,
+      truckNieuw: !(Array.isArray(ev.trucks) ? ev.trucks : []).includes(truck)
+    });
   }
 
   if (btn) { btn.disabled = false; btn.textContent = '🔗 Auto-koppel'; }
-  const rest = pool.length - gekoppeld;
-  bulkStatus(`✅ ${gekoppeld} van ${pool.length} laadlijst${pool.length !== 1 ? 'en' : ''} automatisch gekoppeld via AI.`
-    + (rest ? ` &nbsp;⚠️ ${rest} kon de AI niet met zekerheid plaatsen — sleep die hieronder handmatig naar de juiste truck.` : ''),
-    rest ? 'error' : 'success');
+  koppelPlanInfo = { nietGematcht: nietGematcht, overgeslagen: overgeslagen };
+  toonKoppelVoorstel();
+}
+
+// toont het koppel-voorstel in een venster ter bevestiging
+function toonKoppelVoorstel() {
+  const modal = document.getElementById('koppel-preview-modal');
+  const body = document.getElementById('koppel-preview-body');
+  if (!koppelPlan.length) {
+    if (modal.classList.contains('hidden')) {
+      bulkStatus('De AI kon geen enkele laadlijst eenduidig aan een event koppelen.'
+        + (koppelPlanInfo.nietGematcht ? ` (${koppelPlanInfo.nietGematcht} niet gematcht)` : ''), 'error');
+      return;
+    }
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);">Geen koppelingen meer in het voorstel.</div>';
+    return;
+  }
+  const nieuw = koppelPlan.filter(p => p.truckNieuw).length;
+  let html = '<div style="font-size:13px;color:var(--text2);margin-bottom:12px;">'
+    + '<strong>' + koppelPlan.length + '</strong> laadlijsten worden gekoppeld · '
+    + '<strong>' + nieuw + '</strong> nieuwe truck(s) komen bij de planning-events'
+    + (koppelPlanInfo.nietGematcht ? ' · ' + koppelPlanInfo.nietGematcht + ' niet gematcht' : '')
+    + (koppelPlanInfo.overgeslagen ? ' · ' + koppelPlanInfo.overgeslagen + ' overgeslagen' : '')
+    + '</div>';
+  html += koppelPlan.map((p, idx) =>
+    '<div style="padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;align-items:flex-start;gap:8px;">'
+    + '<div style="flex:1;min-width:0;">'
+    +   '<div style="font-weight:600;">' + escHtml(p.llNaam) + '</div>'
+    +   '<div style="color:var(--text2);margin-top:2px;">→ ' + escHtml(p.eventNaam) + ' · 🚚 ' + escHtml(p.truck)
+    +   (p.truckNieuw ? ' <span class="badge badge-green" style="margin-left:4px;">nieuwe truck</span>' : '')
+    +   '</div>'
+    + '</div>'
+    + '<button class="item-del" onclick="verwijderUitPlan(' + idx + ')" title="Uit voorstel halen">✕</button>'
+    + '</div>'
+  ).join('');
+  body.innerHTML = html;
+  modal.classList.remove('hidden');
+}
+
+function verwijderUitPlan(idx) {
+  koppelPlan.splice(idx, 1);
+  toonKoppelVoorstel();
+}
+
+function sluitKoppelVoorstel() {
+  document.getElementById('koppel-preview-modal').classList.add('hidden');
+  const btn = document.getElementById('btn-koppel-toepassen');
+  if (btn) { btn.disabled = false; btn.textContent = '✅ Toepassen'; }
+}
+
+// stap 2: het voorstel toepassen — trucks aan de events toevoegen + laadlijsten koppelen
+async function pasKoppelPlanToe() {
+  if (!koppelPlan.length) { sluitKoppelVoorstel(); return; }
+  const btn = document.getElementById('btn-koppel-toepassen');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Bezig…'; }
+
+  // 1. nieuwe trucks per event verzamelen en naar de planning schrijven
+  const perEvent = {};
+  koppelPlan.forEach(p => {
+    if (!p.truckNieuw) return;
+    (perEvent[p.eventKey] = perEvent[p.eventKey] || new Set()).add(p.truck);
+  });
+  let eventsAangevuld = 0;
+  for (const [eventKey, nieuwe] of Object.entries(perEvent)) {
+    const ev = planningEvents.find(e => e._key === eventKey);
+    if (!ev) continue;
+    const samen = (Array.isArray(ev.trucks) ? ev.trucks : []).slice();
+    nieuwe.forEach(t => { if (!samen.includes(t)) samen.push(t); });
+    try {
+      await db.ref('ft_planning_v1/' + eventKey).update({ trucks: samen });
+      ev.trucks = samen; // in-memory bijwerken (planning heeft geen live listener)
+      eventsAangevuld++;
+    } catch (e) { console.warn('Trucks toevoegen mislukt:', eventKey, e); }
+  }
+
+  // 2. de laadlijsten koppelen
+  let gekoppeld = 0;
+  for (const p of koppelPlan) {
+    try {
+      await db.ref('ft_laadlijsten_v1/' + p.laadlijstId).update({
+        eventId: p.eventId,
+        wagen: p.truck,
+        eventNaam: p.eventNaam,
+        datum: p.datum,
+        naam: p.eventNaam + ' — ' + p.truck
+      });
+      gekoppeld++;
+    } catch (e) { console.warn('Koppelen mislukt:', p.laadlijstId, e); }
+  }
+
+  koppelPlan = [];
+  sluitKoppelVoorstel();
+  renderKoppelen();
+  bulkStatus('✅ ' + gekoppeld + ' laadlijst(en) gekoppeld · ' + eventsAangevuld + ' event(s) kregen nieuwe trucks.', 'success');
 }
 
 // dubbel geüploade laadlijsten (zelfde bestandsnaam) opruimen — houd er telkens één
