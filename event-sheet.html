@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>EventFlow</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f7f7f5;--bg3:#f0efeb;
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9e9d99;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.2);
+  --info-bg:#e6f1fb;--info-text:#0c447c;--info-border:#b5d4f4;
+  --warn-bg:#faeeda;--warn-text:#633806;--warn-border:#fac775;
+  --ok-bg:#eaf3de;--ok-text:#27500a;--ok-border:#c0dd97;
+  --err-bg:#fcebeb;--err-text:#791f1f;--err-border:#f7c1c1;
+  --r:8px;--rl:12px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a18;--bg2:#242422;--bg3:#2c2c2a;
+    --text:#f0efeb;--text2:#a0a09c;--text3:#6b6b67;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+    --info-bg:#042c53;--info-text:#b5d4f4;--info-border:#0c447c;
+    --warn-bg:#412402;--warn-text:#fac775;--warn-border:#633806;
+    --ok-bg:#173404;--ok-text:#c0dd97;--ok-border:#27500a;
+    --err-bg:#501313;--err-text:#f7c1c1;--err-border:#791f1f;
+  }
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px}
+#root{display:flex;height:100vh;overflow:hidden}
+input,select,textarea{width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-family:var(--font);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--text3);box-shadow:0 0 0 2px rgba(128,128,128,0.15)}
+textarea{resize:vertical;line-height:1.5}
+button{padding:8px 14px;font-size:13px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;color:var(--text);cursor:pointer;font-family:var(--font);display:inline-flex;align-items:center;gap:6px}
+button:hover{background:var(--bg2)}
+button:disabled{opacity:0.4;cursor:not-allowed}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.setup-screen{max-width:560px;margin:4rem auto;padding:2rem;border:1px solid var(--border);border-radius:var(--rl);background:var(--bg2)}
+.setup-screen h1{font-size:22px;margin-bottom:8px}
+.setup-screen p{color:var(--text2);margin-bottom:1rem;line-height:1.6}
+.setup-screen pre{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:1rem;font-size:12px;overflow-x:auto;margin:1rem 0;line-height:1.6;font-family:monospace}
+.setup-screen code{background:var(--bg);padding:2px 6px;border-radius:4px;font-size:13px;font-family:monospace}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+// -------------------------------------------------------------------
+// FIREBASE CONFIG - vervang dit met je eigen Firebase project config
+// Zie README.md voor instructies
+// -------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyA6o5YzXf7Ikzx-4aVIKHvvsGrJUjlI2Ys",
+  authDomain: "event-production-sheet.firebaseapp.com",
+  projectId: "event-production-sheet",
+  storageBucket: "event-production-sheet.firebasestorage.app",
+  messagingSenderId: "305911542157",
+  appId: "1:305911542157:web:3adc500140b379a4da0dc4",
+  measurementId: "G-9858R9LMXW"
+};
+const FIRESTORE_DATABASE_ID = "event"; // jouw database heet "event"
+// -------------------------------------------------------------------
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+let db;
+const configValid = !firebaseConfig.apiKey.includes('VERVANG');
+
+if (configValid) {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app, FIRESTORE_DATABASE_ID);
+}
+
+window.__firebase = { db, configValid, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp };
+</script>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useRef } = React;
+const h = React.createElement;
+
+// -- helpers --------------------------------------------------------
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36);
+const fmt=d=>d?new Date(d).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}):'—';
+const fmtT=d=>d?new Date(d).toLocaleString('nl-BE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+const ini=n=>n?.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'?';
+const CATS=['Catering','Audio/Visual','Decoratie','Transport','Beveiliging','Fotografie','Bloemen','Anders'];
+const code=n=>(n.replace(/[^a-zA-Z]/g,'').toUpperCase().slice(0,3).padEnd(3,'X'))+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+const ST={open:{l:'Open',bg:'var(--warn-bg)',c:'var(--warn-text)',b:'var(--warn-border)'},beantwoord:{l:'Beantwoord',bg:'var(--info-bg)',c:'var(--info-text)',b:'var(--info-border)'},gesloten:{l:'Gesloten',bg:'var(--bg2)',c:'var(--text2)',b:'var(--border2)'}};
+
+// -- Firestore wrapper ----------------------------------------------
+const FB = {
+  watch(col, cb) {
+    const { db, collection, onSnapshot } = window.__firebase;
+    return onSnapshot(collection(db, col), snap => {
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      items.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+      cb(items);
+    });
+  },
+  async save(col, id, data) {
+    const { db, doc, setDoc } = window.__firebase;
+    await setDoc(doc(db, col, id), data, { merge: true });
+  },
+  async del(col, id) {
+    const { db, doc, deleteDoc } = window.__firebase;
+    await deleteDoc(doc(db, col, id));
+  }
+};
+
+// -- Setup screen if Firebase not configured ------------------------
+function SetupScreen() {
+  return h('div', { className: 'setup-screen' },
+    h('h1', null, '⚙️ Setup vereist'),
+    h('p', null, 'Open ', h('code', null, 'index.html'), ' en vervang de Firebase configuratie bovenaan met die van jouw project.'),
+    h('p', null, h('strong', null, 'Stappen:')),
+    h('ol', { style: { paddingLeft: 20, lineHeight: 1.8, color: 'var(--text2)' } },
+      h('li', null, 'Ga naar ', h('a', { href: 'https://console.firebase.google.com', target: '_blank' }, 'console.firebase.google.com')),
+      h('li', null, 'Maak een nieuw project (bv. "eventflow")'),
+      h('li', null, 'Activeer ', h('strong', null, 'Firestore Database'), ' (Build → Firestore → Create database → Test mode)'),
+      h('li', null, 'Ga naar Project settings (⚙️ icoon) → "Your apps" → Web (</> icoon)'),
+      h('li', null, 'Kopieer de ', h('code', null, 'firebaseConfig'), ' en plak die in ', h('code', null, 'index.html'))
+    ),
+    h('p', { style: { marginTop: '1.5rem' } }, 'Zie ', h('code', null, 'README.md'), ' voor volledige uitleg.')
+  );
+}
+
+// -- Main App -------------------------------------------------------
+function App() {
+  const fb = window.__firebase;
+  if (!fb || !fb.configValid) return h(SetupScreen);
+
+  const [ev, sEv] = useState([]);
+  const [su, sSu] = useState([]);
+  const [rq, sRq] = useState([]);
+  const [ld, sLd] = useState(false);
+  const [pg, sPg] = useState('dashboard');
+  const [eid, sEid] = useState(null);
+  const [tb, sTb] = useState('info');
+  const [md, sMd] = useState(null);
+  const [selR, sSelR] = useState(null);
+  const [pCode, sPCode] = useState('');
+  const [actP, sActP] = useState(null);
+  const [ts, sTs] = useState(null);
+  const [pe, sPe] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ef_pending') || '{}'); } catch { return {}; }
+  });
+
+  // Check hash for portal mode on load
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#portal')) {
+      sPg('portal');
+      const c = hash.replace('#portal/', '').replace('#portal', '');
+      if (c) sActP(c.toUpperCase());
+    }
+  }, []);
+
+  useEffect(() => {
+    let loaded = 0;
+    const done = () => { if (++loaded >= 3) sLd(true); };
+    const u1 = FB.watch('events', d => { sEv(d); done(); });
+    const u2 = FB.watch('suppliers', d => { sSu(d); done(); });
+    const u3 = FB.watch('requests', d => { sRq(d); done(); });
+    return () => { u1(); u2(); u3(); };
+  }, []);
+
+  const savePe = v => { sPe(v); localStorage.setItem('ef_pending', JSON.stringify(v)); };
+  const toast = (m, t='ok') => { sTs({m,t}); setTimeout(()=>sTs(null), 3000); };
+  const pCt = Object.values(pe).reduce((a,m)=>a+Object.values(m).reduce((b,c)=>b+c.length,0), 0);
+  const cE = ev.find(e=>e.id===eid);
+  const oR = rq.filter(r=>r.status==='beantwoord').length;
+  const nav = (p,e=null) => { sPg(p); sEid(e); sTb('info'); sMd(null); sSelR(null); };
+
+  const addEv = async d => {
+    const id = uid();
+    const e = { ...d, suppliers: [], documents: [], createdAt: new Date().toISOString() };
+    await FB.save('events', id, e);
+    sMd(null);
+    setTimeout(() => nav('event', id), 100);
+  };
+  const updE = async d => {
+    const e = ev.find(x => x.id===eid);
+    if (e) { await FB.save('events', eid, { ...e, ...d }); toast('Opgeslagen'); }
+  };
+  const delE = async i => { if(!confirm('Verwijderen?'))return; await FB.del('events', i); nav('dashboard'); };
+
+  const addSu = async d => {
+    const id = uid();
+    await FB.save('suppliers', id, { ...d, portalCode: code(d.name), createdAt: new Date().toISOString() });
+    sMd(null); toast('Toegevoegd');
+  };
+  const linkSu = async sid => {
+    const e = ev.find(x=>x.id===eid);
+    if (e && !e.suppliers.includes(sid)) await FB.save('events', eid, { ...e, suppliers: [...e.suppliers, sid] });
+    sMd(null);
+  };
+  const unlinkSu = async sid => {
+    const e = ev.find(x=>x.id===eid);
+    if (e) await FB.save('events', eid, { ...e, suppliers: e.suppliers.filter(i=>i!==sid) });
+  };
+  const upD = async d => {
+    const e = ev.find(x=>x.id===eid);
+    if (!e) return;
+    const doc = { id: uid(), ...d, uploadedAt: new Date().toISOString() };
+    await FB.save('events', eid, { ...e, documents: [...e.documents, doc] });
+    if (d.linkedSuppliers.length) {
+      const np = {...pe};
+      d.linkedSuppliers.forEach(s => {
+        if(!np[s])np[s]={};
+        if(!np[s][eid])np[s][eid]=[];
+        np[s][eid].push({name:doc.name,notes:doc.notes,time:doc.uploadedAt});
+      });
+      savePe(np);
+    }
+    sMd(null);
+    toast(`Geüpload${d.linkedSuppliers.length?` → ${d.linkedSuppliers.length} in wachtrij`:''}`);
+  };
+  const delD = async i => {
+    const e = ev.find(x=>x.id===eid);
+    if (e) await FB.save('events', eid, { ...e, documents: e.documents.filter(d=>d.id!==i) });
+  };
+
+  const newRq = async d => {
+    const id = uid();
+    const r = { ...d, status: 'open', messages: [{id:uid(),from:'organizer',text:d.message,createdAt:new Date().toISOString()}], createdAt: new Date().toISOString() };
+    await FB.save('requests', id, r);
+    sMd(null); toast('Aanvraag verstuurd');
+  };
+  const addMsg = async (id, from, text, att='') => {
+    const r = rq.find(x=>x.id===id);
+    if (!r) return;
+    await FB.save('requests', id, {
+      ...r,
+      status: from==='supplier' ? 'beantwoord' : r.status,
+      messages: [...r.messages, {id:uid(),from,text,attachment:att,createdAt:new Date().toISOString()}]
+    });
+    if (from==='supplier') toast('Antwoord verstuurd');
+  };
+  const closeR = async id => {
+    const r = rq.find(x=>x.id===id);
+    if (r) { await FB.save('requests', id, { ...r, status: 'gesloten' }); toast('Afgesloten'); }
+  };
+
+  const enterP = () => {
+    const c = pCode.trim().toUpperCase();
+    if (rq.some(r => r.portalCode === c) || su.some(s => s.portalCode === c)) {
+      sActP(c);
+      window.location.hash = `portal/${c}`;
+    } else toast('Onbekende code', 'err');
+  };
+
+  const copyPortalLink = sup => {
+    const url = `${window.location.origin}${window.location.pathname}#portal/${sup.portalCode}`;
+    navigator.clipboard.writeText(url).then(()=>toast('Link gekopieerd'));
+  };
+
+  if (!ld) return h('div', { style: { padding: 60, textAlign: 'center', color: 'var(--text2)' } }, 'Verbinden met Firebase...');
+
+  return h('div', { style: { display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' } },
+    pg !== 'portal' && h(Side, { ev, pg, eid, pCt, oR, nav, sMd, sActP }),
+    h('div', { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
+      pg !== 'portal' && h(Top, { pg, e: cE, tb, sTb, pCt, sMd, nav, selR, sSelR, rq }),
+      h('div', { style: { flex: 1, padding: pg === 'portal' ? 0 : '1.25rem', overflowY: 'auto' } },
+        pg === 'dashboard' && h(Dash, { ev, su, pCt, oR, nav, sMd }),
+        pg === 'event' && cE && h(EvDet, { e: cE, tb, su, pe, rq, sMd, updE, delE, unlinkSu, delD, selR, sSelR, addMsg, closeR, copyPortalLink }),
+        pg === 'suppliers' && h(SupP, { su, ev, copyPortalLink }),
+        pg === 'portal' && h(Portal, { rq, addMsg, pCode, sPCode, actP, sActP, enterP, nav })
+      )
+    ),
+    md === 'newEvent' && h(NEv, { c: () => sMd(null), s: addEv }),
+    md === 'newSupplier' && h(NSu, { c: () => sMd(null), s: addSu }),
+    md === 'addSup' && cE && h(ASu, { c: () => sMd(null), su, es: cE.suppliers, a: linkSu, sMd }),
+    md === 'upDoc' && cE && h(UDoc, { c: () => sMd(null), e: cE, su, s: upD }),
+    md === 'newReq' && cE && h(NReq, { c: () => sMd(null), e: cE, su, s: newRq, copyPortalLink }),
+    md === 'mq' && h(MQ, { c: () => sMd(null), pe, su, ev, done: () => { savePe({}); sMd(null); toast('Wachtrij gewist'); } }),
+    ts && h('div', { style: { position: 'fixed', bottom: 16, right: 16, padding: '10px 16px', borderRadius: 'var(--r)', fontSize: 13, fontWeight: 500, zIndex: 9999, background: ts.t==='err'?'var(--err-bg)':'var(--ok-bg)', color: ts.t==='err'?'var(--err-text)':'var(--ok-text)', border: `1px solid ${ts.t==='err'?'var(--err-border)':'var(--ok-border)'}` } }, ts.m)
+  );
+}
+
+function Side({ ev, pg, eid, pCt, oR, nav, sMd, sActP }) {
+  return h('div', { style: { width: 215, background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 } },
+    h('div', { style: { padding: 16, borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 } },
+      h('i', { className: 'ti ti-calendar-event', style: { fontSize: 19 } }), 'EventFlow'
+    ),
+    h('div', { style: { padding: 8 } },
+      NI('ti-layout-dashboard', 'Dashboard', pg==='dashboard', () => nav('dashboard')),
+      NI('ti-users', 'Leveranciers', pg==='suppliers', () => nav('suppliers')),
+      NI('ti-message-circle', 'Leverancier portaal', pg==='portal', () => { sActP(null); window.location.hash = ''; nav('portal'); }, oR)
+    ),
+    h('div', { style: { padding: '6px 16px 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.1em' } }, 'Evenementen'),
+    h('div', { style: { flex: 1, overflowY: 'auto', padding: '0 8px' } },
+      ev.length === 0 && h('div', { style: { padding: 8, fontSize: 12, color: 'var(--text3)', textAlign: 'center' } }, 'Nog geen evenementen'),
+      ev.map(e => h('div', { key: e.id, onClick: () => nav('event', e.id), style: { padding: '7px 10px', cursor: 'pointer', fontSize: 13, color: eid===e.id?'var(--text)':'var(--text2)', background: eid===e.id?'var(--bg)':'transparent', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, borderLeft: eid===e.id?'2px solid var(--text)':'2px solid transparent' } },
+        h('i', { className: 'ti ti-calendar', style: { fontSize: 13 } }),
+        h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 } }, e.name)
+      ))
+    ),
+    h('div', { style: { padding: 8, borderTop: '1px solid var(--border)' } },
+      pCt > 0 && h('div', { style: { marginBottom: 6, padding: '7px 10px', background: 'var(--warn-bg)', border: '1px solid var(--warn-border)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--warn-text)', display: 'flex', alignItems: 'center', gap: 7 } },
+        h('i', { className: 'ti ti-bell', style: { fontSize: 13 } }), `${pCt} mail${pCt!==1?'s':''} klaar`
+      ),
+      h('button', { onClick: () => sMd('newEvent'), style: { width: '100%', justifyContent: 'center', fontSize: 13, padding: 7 } },
+        h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Nieuw evenement'
+      )
+    )
+  );
+}
+
+function NI(ic, lbl, act, cl, bd) {
+  return h('div', { onClick: cl, style: { padding: '7px 10px', cursor: 'pointer', fontSize: 13, color: act?'var(--text)':'var(--text2)', background: act?'var(--bg)':'transparent', fontWeight: act?600:400, display: 'flex', alignItems: 'center', gap: 9, borderRadius: 'var(--r)', marginBottom: 2 } },
+    h('i', { className: `ti ${ic}`, style: { fontSize: 15 } }),
+    h('span', { style: { flex: 1 } }, lbl),
+    bd > 0 && h('span', { style: { fontSize: 11, background: 'var(--info-bg)', color: 'var(--info-text)', padding: '1px 7px', borderRadius: 100, fontWeight: 600 } }, bd)
+  );
+}
+
+function Top({ pg, e, tb, sTb, pCt, sMd, nav, selR, sSelR, rq }) {
+  const tabs = ['info', 'leveranciers', 'documenten', 'aanvragen', 'updates'];
+  const lbls = { info: 'Info', leveranciers: 'Leveranciers', documenten: 'Documenten', aanvragen: 'Aanvragen', updates: 'Updates' };
+  const ar = e ? rq.filter(r => r.eventId===e.id && r.status==='beantwoord').length : 0;
+  return h('div', { style: { borderBottom: '1px solid var(--border)', background: 'var(--bg)', flexShrink: 0 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', padding: '10px 20px', gap: 10 } },
+      h('div', { style: { flex: 1 } },
+        pg==='dashboard' && h('h1', { style: { margin: 0, fontSize: 16, fontWeight: 600 } }, 'Dashboard'),
+        pg==='suppliers' && h('h1', { style: { margin: 0, fontSize: 16, fontWeight: 600 } }, 'Leveranciers'),
+        pg==='event' && e && h('div', null,
+          h('div', { style: { fontSize: 11, color: 'var(--text3)', marginBottom: 2, cursor: 'pointer' }, onClick: () => nav('dashboard') }, '← Dashboard'),
+          h('h1', { style: { margin: 0, fontSize: 16, fontWeight: 600 } }, e.name)
+        )
+      ),
+      pCt > 0 && h('button', { onClick: () => sMd('mq'), style: { background: 'var(--warn-bg)', color: 'var(--warn-text)', border: '1px solid var(--warn-border)', fontWeight: 600, padding: '6px 13px', fontSize: 12 } },
+        h('i', { className: 'ti ti-send', style: { fontSize: 13 } }), `Verstuur (${pCt})`
+      ),
+      pg==='suppliers' && h('button', { onClick: () => sMd('newSupplier'), style: { fontSize: 13, padding: '7px 12px' } }, h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Toevoegen'),
+      pg==='event' && tb==='leveranciers' && h('button', { onClick: () => sMd('addSup'), style: { fontSize: 13, padding: '7px 12px' } }, h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Koppelen'),
+      pg==='event' && tb==='documenten' && h('button', { onClick: () => sMd('upDoc'), style: { fontSize: 13, padding: '7px 12px' } }, h('i', { className: 'ti ti-upload', style: { fontSize: 14 } }), 'Uploaden'),
+      pg==='event' && tb==='aanvragen' && !selR && h('button', { onClick: () => sMd('newReq'), style: { fontSize: 13, padding: '7px 12px' } }, h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Nieuwe aanvraag'),
+      pg==='event' && tb==='aanvragen' && selR && h('button', { onClick: () => sSelR(null), style: { fontSize: 13, padding: '7px 12px' } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 14 } }), 'Terug')
+    ),
+    pg==='event' && h('div', { style: { display: 'flex', padding: '0 20px', gap: 2 } },
+      tabs.map(t => { const bd = t==='aanvragen' ? ar : 0; return h('div', { key: t, onClick: () => { sTb(t); sSelR(null); }, style: { padding: '6px 14px', fontSize: 13, cursor: 'pointer', color: tb===t?'var(--text)':'var(--text2)', fontWeight: tb===t?600:400, borderBottom: tb===t?'2px solid var(--text)':'2px solid transparent', marginBottom: -1, display: 'flex', alignItems: 'center', gap: 6 } },
+        lbls[t], bd > 0 && h('span', { style: { fontSize: 10, background: 'var(--info-bg)', color: 'var(--info-text)', padding: '1px 6px', borderRadius: 100 } }, bd)
+      ); })
+    )
+  );
+}
+
+function Dash({ ev, su, pCt, oR, nav, sMd }) {
+  return h('div', null,
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: '1.25rem' } },
+      SC('ti-calendar-event', 'Evenementen', ev.length),
+      SC('ti-users', 'Leveranciers', su.length),
+      SC('ti-bell', 'Mails klaar', pCt, pCt > 0),
+      SC('ti-message-2', 'Reacties', oR, oR > 0)
+    ),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' } },
+      h('div', null,
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 } },
+          h('h2', { style: { margin: 0, fontSize: 14, fontWeight: 600 } }, 'Evenementen'),
+          h('button', { onClick: () => sMd('newEvent'), style: { fontSize: 12, padding: '4px 10px' } }, h('i', { className: 'ti ti-plus', style: { fontSize: 12 } }), 'Nieuw')
+        ),
+        ev.length === 0 ? Empty('ti-calendar-off', 'Nog geen evenementen') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } }, ev.slice(0, 8).map(e =>
+          h('div', { key: e.id, onClick: () => nav('event', e.id), style: { padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--rl)', cursor: 'pointer', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 10 } },
+            h('div', { style: { width: 32, height: 32, borderRadius: 'var(--r)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: 'ti ti-calendar', style: { fontSize: 14, color: 'var(--text2)' } })),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, e.name),
+              h('div', { style: { fontSize: 11, color: 'var(--text2)' } }, `${fmt(e.date)} · ${e.suppliers.length} lev.`)
+            ),
+            h('i', { className: 'ti ti-chevron-right', style: { fontSize: 13, color: 'var(--text3)' } })
+          )
+        ))
+      ),
+      h('div', null,
+        h('h2', { style: { margin: '0 0 10px', fontSize: 14, fontWeight: 600 } }, 'Leveranciers'),
+        su.length === 0 ? Empty('ti-user-off', 'Nog geen leveranciers') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } }, su.slice(0, 8).map(s =>
+          h('div', { key: s.id, style: { padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--rl)', background: 'var(--bg)', display: 'flex', alignItems: 'center', gap: 10 } },
+            h('div', { style: { width: 32, height: 32, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'var(--info-text)' } }, ini(s.name)),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontWeight: 600, fontSize: 13 } }, s.name),
+              h('div', { style: { fontSize: 11, color: 'var(--text2)' } }, s.company || s.email)
+            ),
+            s.portalCode && h('span', { style: { fontSize: 10, padding: '2px 7px', background: 'var(--bg2)', color: 'var(--text3)', borderRadius: 100, fontFamily: 'monospace' } }, s.portalCode)
+          )
+        ))
+      )
+    )
+  );
+}
+
+function SC(ic, lbl, v, acc) { return h('div', { style: { padding: 14, borderRadius: 'var(--r)', background: acc?'var(--warn-bg)':'var(--bg2)', border: `1px solid ${acc?'var(--warn-border)':'var(--border)'}` } },
+  h('div', { style: { fontSize: 11, color: acc?'var(--warn-text)':'var(--text2)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 } }, h('i', { className: `ti ${ic}`, style: { fontSize: 14 } }), lbl),
+  h('div', { style: { fontSize: 24, fontWeight: 700, color: acc?'var(--warn-text)':'var(--text)' } }, v)
+); }
+
+function Empty(ic, m, s) { return h('div', { style: { padding: '2rem', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: 'var(--rl)' } },
+  h('i', { className: `ti ${ic}`, style: { fontSize: 26, color: 'var(--text3)', display: 'block', marginBottom: 8 } }),
+  h('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--text2)' } }, m),
+  s && h('div', { style: { fontSize: 12, color: 'var(--text3)', marginTop: 4 } }, s)
+); }
+
+function FL(l, ch) { return h('div', null, h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 5 } }, l), ch); }
+
+function EvDet({ e, tb, su, pe, rq, sMd, updE, delE, unlinkSu, delD, selR, sSelR, addMsg, closeR, copyPortalLink }) {
+  if (tb === 'info') return h(EInfo, { e, updE, delE });
+  if (tb === 'leveranciers') {
+    const evS = su.filter(s => e.suppliers.includes(s.id));
+    return evS.length === 0 ? Empty('ti-user-off', 'Geen leveranciers gekoppeld') :
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 10 } }, evS.map(s =>
+      h('div', { key: s.id, style: { padding: 14, border: '1px solid var(--border)', borderRadius: 'var(--rl)', background: 'var(--bg)' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } },
+          h('div', { style: { width: 36, height: 36, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: 'var(--info-text)' } }, ini(s.name)),
+          h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 14 } }, s.name), s.company && h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, s.company)),
+          h('button', { onClick: () => unlinkSu(s.id), style: { padding: '3px 7px', color: 'var(--text3)' } }, h('i', { className: 'ti ti-x', style: { fontSize: 13 } }))
+        ),
+        s.email && h('div', { style: { fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 } }, h('i', { className: 'ti ti-mail', style: { fontSize: 13 } }), s.email),
+        s.portalCode && h('div', { style: { marginTop: 10, padding: '7px 10px', background: 'var(--bg2)', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 8 } },
+          h('i', { className: 'ti ti-key', style: { fontSize: 13, color: 'var(--text3)' } }),
+          h('span', { style: { fontSize: 12, fontFamily: 'monospace', fontWeight: 600, flex: 1 } }, s.portalCode),
+          h('button', { onClick: () => copyPortalLink(s), style: { padding: '3px 7px', fontSize: 11 } }, h('i', { className: 'ti ti-link', style: { fontSize: 12 } }), 'Link')
+        )
+      )
+    ));
+  }
+  if (tb === 'documenten') {
+    const gn = i => su.find(s => s.id === i)?.name || '?';
+    return e.documents.length === 0 ? Empty('ti-file-off', 'Geen documenten') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9 } }, e.documents.map(d =>
+      h('div', { key: d.id, style: { padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 'var(--rl)', background: 'var(--bg)', display: 'flex', alignItems: 'flex-start', gap: 12 } },
+        h('div', { style: { width: 36, height: 36, borderRadius: 'var(--r)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: 'ti ti-file', style: { fontSize: 17, color: 'var(--text2)' } })),
+        h('div', { style: { flex: 1 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14 } }, d.name),
+          h('div', { style: { fontSize: 11, color: 'var(--text3)', marginTop: 2 } }, fmt(d.uploadedAt)),
+          d.notes && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 4, fontStyle: 'italic' } }, `"${d.notes}"`),
+          d.linkedSuppliers?.length > 0 && h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 } }, d.linkedSuppliers.map(s =>
+            h('span', { key: s, style: { fontSize: 11, padding: '2px 8px', background: 'var(--info-bg)', color: 'var(--info-text)', borderRadius: 100 } }, gn(s))
+          ))
+        ),
+        h('button', { onClick: () => delD(d.id), style: { padding: '3px 7px', color: 'var(--text3)' } }, h('i', { className: 'ti ti-trash', style: { fontSize: 14 } }))
+      )
+    ));
+  }
+  if (tb === 'aanvragen') {
+    const evR = rq.filter(r => r.eventId === e.id);
+    if (selR) { const r = evR.find(x => x.id === selR); if (r) return h(Thread, { r, org: true, reply: (t,a) => addMsg(r.id, 'organizer', t, a), close: () => closeR(r.id) }); }
+    return evR.length === 0 ? Empty('ti-message-off', 'Geen aanvragen', 'Klik "Nieuwe aanvraag" om iets te vragen aan een leverancier') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9 } }, evR.map(r => {
+      const st = ST[r.status]; const lm = r.messages[r.messages.length - 1];
+      return h('div', { key: r.id, onClick: () => sSelR(r.id), style: { padding: '12px 14px', border: `1px solid ${r.status==='beantwoord'?'var(--info-border)':'var(--border)'}`, borderRadius: 'var(--rl)', cursor: 'pointer', background: r.status==='beantwoord'?'var(--info-bg)':'var(--bg)', display: 'flex', alignItems: 'center', gap: 12 } },
+        h('div', { style: { width: 36, height: 36, borderRadius: '50%', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: `ti ${r.status==='beantwoord'?'ti-message-check':'ti-message'}`, style: { fontSize: 16, color: r.status==='beantwoord'?'var(--info-text)':'var(--text2)' } })),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14, marginBottom: 2 } }, r.title),
+          h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, `${r.supplierName} · ${fmt(r.createdAt)}`),
+          lm && h('div', { style: { fontSize: 12, color: 'var(--text3)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, `${lm.from==='supplier'?'↩ ':''}${lm.text}`)
+        ),
+        h('span', { style: { fontSize: 11, padding: '3px 9px', background: st.bg, color: st.c, border: `1px solid ${st.b}`, borderRadius: 100, whiteSpace: 'nowrap' } }, st.l)
+      );
+    }));
+  }
+  if (tb === 'updates') {
+    const it = [];
+    Object.entries(pe).forEach(([s, m]) => { if (m[e.id]) { const sup = su.find(x => x.id === s); m[e.id].forEach(c => it.push({ sup, ...c })); } });
+    return it.length === 0 ? Empty('ti-checks', 'Geen updates klaar', 'Alle leveranciers up-to-date') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } }, it.map((x, i) =>
+      h('div', { key: i, style: { padding: '10px 14px', border: '1px solid var(--warn-border)', borderRadius: 'var(--rl)', background: 'var(--warn-bg)', display: 'flex', alignItems: 'center', gap: 10 } },
+        h('i', { className: 'ti ti-bell', style: { fontSize: 15, color: 'var(--warn-text)' } }),
+        h('div', { style: { flex: 1 } }, h('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--warn-text)' } }, `${x.sup?.name||'?'} → ${x.name}`), h('div', { style: { fontSize: 11, color: 'var(--warn-text)', opacity: .8, marginTop: 2 } }, fmt(x.time)))
+      )
+    ));
+  }
+  return null;
+}
+
+function EInfo({ e, updE, delE }) {
+  const [f, sf] = useState({ name: e.name, date: e.date||'', location: e.location||'', description: e.description||'' });
+  const [d, sd] = useState(false);
+  useEffect(() => { sf({ name: e.name, date: e.date||'', location: e.location||'', description: e.description||'' }); sd(false); }, [e.id]);
+  const s = (k, v) => { sf(p => ({ ...p, [k]: v })); sd(true); };
+  return h('div', { style: { maxWidth: 520 } },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Naam *', h('input', { value: f.name, onChange: e => s('name', e.target.value) })),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Datum', h('input', { type: 'date', value: f.date, onChange: e => s('date', e.target.value) })),
+        FL('Locatie', h('input', { value: f.location, onChange: e => s('location', e.target.value) }))
+      ),
+      FL('Omschrijving', h('textarea', { value: f.description, onChange: e => s('description', e.target.value), rows: 4 }))
+    ),
+    h('div', { style: { marginTop: 16, display: 'flex', gap: 10 } },
+      h('button', { onClick: () => { updE(f); sd(false); }, disabled: !d, style: { fontWeight: 600 } }, 'Opslaan'),
+      h('button', { onClick: () => delE(e.id), style: { color: 'var(--err-text)', borderColor: 'var(--err-border)' } }, 'Verwijderen')
+    )
+  );
+}
+
+function Thread({ r, org, reply, close }) {
+  const [t, st] = useState(''), [a, sa] = useState('');
+  const er = useRef();
+  useEffect(() => { er.current?.scrollIntoView({ behavior: 'smooth' }); }, [r.messages.length]);
+  const send = () => { if (!t.trim()) return; reply(t.trim(), a.trim()); st(''); sa(''); };
+  const stt = ST[r.status];
+  return h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '12px 14px', background: 'var(--bg2)', borderRadius: 'var(--rl)' } },
+      h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 15 } }, r.title), h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, org ? r.supplierName : r.eventName)),
+      h('span', { style: { fontSize: 11, padding: '3px 9px', background: stt.bg, color: stt.c, border: `1px solid ${stt.b}`, borderRadius: 100 } }, stt.l),
+      org && r.status !== 'gesloten' && h('button', { onClick: close, style: { fontSize: 12, padding: '5px 10px' } }, h('i', { className: 'ti ti-check', style: { fontSize: 13 } }), 'Afsluiten')
+    ),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, maxHeight: 360, overflowY: 'auto' } },
+      r.messages.map(m => {
+        const mn = (org && m.from==='organizer') || (!org && m.from==='supplier');
+        return h('div', { key: m.id, style: { display: 'flex', justifyContent: mn?'flex-end':'flex-start' } },
+          h('div', { style: { maxWidth: '75%', padding: '10px 13px', borderRadius: 'var(--rl)', background: mn?'var(--info-bg)':'var(--bg2)', border: `1px solid ${mn?'var(--info-border)':'var(--border)'}` } },
+            h('div', { style: { fontSize: 11, color: mn?'var(--info-text)':'var(--text3)', marginBottom: 4, fontWeight: 600 } }, m.from==='organizer'?'Organisatie':'Leverancier'),
+            h('div', { style: { fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, m.text),
+            m.attachment && h('div', { style: { marginTop: 7, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, background: 'var(--bg)', padding: '5px 8px', borderRadius: 'var(--r)' } }, h('i', { className: 'ti ti-paperclip', style: { fontSize: 13 } }), m.attachment),
+            h('div', { style: { fontSize: 10, color: mn?'var(--info-text)':'var(--text3)', marginTop: 5, opacity: .8 } }, fmtT(m.createdAt))
+          )
+        );
+      }),
+      h('div', { ref: er })
+    ),
+    r.status !== 'gesloten' && h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: 12 } },
+      h('textarea', { value: t, onChange: e => st(e.target.value), placeholder: org?'Follow-up vraag...':'Typ uw antwoord...', rows: 3, style: { marginBottom: 8 } }),
+      h('div', { style: { display: 'flex', gap: 10 } },
+        h('input', { value: a, onChange: e => sa(e.target.value), placeholder: 'Naam bijlage (bv. keuring.pdf)', style: { flex: 1 } }),
+        h('button', { onClick: send, disabled: !t.trim(), style: { padding: '8px 16px', fontWeight: 600 } }, h('i', { className: 'ti ti-send', style: { fontSize: 14 } }), org?'Versturen':'Antwoorden')
+      )
+    ),
+    r.status === 'gesloten' && h('div', { style: { padding: '10px 14px', background: 'var(--bg2)', borderRadius: 'var(--r)', fontSize: 13, color: 'var(--text2)', textAlign: 'center' } }, h('i', { className: 'ti ti-lock', style: { fontSize: 14, marginRight: 6, verticalAlign: -2 } }), 'Aanvraag afgesloten.')
+  );
+}
+
+function Portal({ rq, addMsg, pCode, sPCode, actP, sActP, enterP, nav }) {
+  const [sel, setSel] = useState(null);
+  const mine = actP ? rq.filter(r => r.portalCode === actP) : [];
+
+  if (!actP) return h('div', { style: { maxWidth: 400, margin: '3rem auto', textAlign: 'center', padding: '0 1rem' } },
+    h('div', { style: { width: 64, height: 64, borderRadius: '50%', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' } }, h('i', { className: 'ti ti-message-circle', style: { fontSize: 32, color: 'var(--text2)' } })),
+    h('h2', { style: { margin: '0 0 8px', fontSize: 20, fontWeight: 600 } }, 'Leverancier portaal'),
+    h('p', { style: { fontSize: 14, color: 'var(--text2)', marginBottom: '1.5rem', lineHeight: 1.6 } }, 'Voer je portaalcode in om aanvragen te bekijken en te beantwoorden.'),
+    h('div', { style: { display: 'flex', gap: 8, marginBottom: '1rem' } },
+      h('input', { value: pCode, onChange: e => sPCode(e.target.value), placeholder: 'Bijv. JAN-A7K9', style: { textTransform: 'uppercase', fontFamily: 'monospace', fontSize: 15, letterSpacing: '.05em', textAlign: 'center' }, onKeyDown: e => e.key === 'Enter' && enterP() }),
+      h('button', { onClick: enterP, style: { padding: '8px 16px', fontWeight: 600 } }, h('i', { className: 'ti ti-arrow-right', style: { fontSize: 14 } }), 'Open')
+    ),
+    h('p', { style: { fontSize: 12, color: 'var(--text3)' } }, 'Code ontvangen je via de organisatie.'),
+    h('button', { onClick: () => nav('dashboard'), style: { marginTop: 20, fontSize: 12 } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 12 } }), 'Terug')
+  );
+
+  if (sel) { const r = mine.find(x => x.id === sel); if (r) return h('div', { style: { padding: '1.25rem' } },
+    h('button', { onClick: () => setSel(null), style: { marginBottom: 14, fontSize: 13, padding: '6px 12px' } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 14 } }), 'Terug'),
+    h(Thread, { r, org: false, reply: (t, a) => addMsg(r.id, 'supplier', t, a) })
+  ); }
+
+  return h('div', { style: { padding: '1.25rem' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: '1.25rem', padding: '12px 14px', background: 'var(--bg2)', borderRadius: 'var(--rl)' } },
+      h('div', { style: { width: 38, height: 38, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: 'var(--info-text)' } }, ini(mine[0]?.supplierName || '')),
+      h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 14 } }, mine[0]?.supplierName || 'Leverancier'), h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, `${mine.length} aanvraag${mine.length!==1?'en':''}`)),
+      h('button', { onClick: () => { sActP(null); window.location.hash = ''; }, style: { fontSize: 12, padding: '5px 10px' } }, h('i', { className: 'ti ti-logout', style: { fontSize: 13 } }), 'Uitloggen')
+    ),
+    mine.length === 0 ? Empty('ti-inbox', 'Geen aanvragen') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9 } }, mine.map(r => {
+      const st = ST[r.status]; const lo = r.messages.filter(m => m.from === 'organizer').pop();
+      return h('div', { key: r.id, onClick: () => setSel(r.id), style: { padding: 14, border: `1px solid ${r.status==='open'?'var(--warn-border)':'var(--border)'}`, borderRadius: 'var(--rl)', cursor: 'pointer', background: r.status==='open'?'var(--warn-bg)':'var(--bg)' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+          h('i', { className: 'ti ti-message', style: { fontSize: 15, color: r.status==='open'?'var(--warn-text)':'var(--text2)' } }),
+          h('div', { style: { fontWeight: 600, fontSize: 14, flex: 1 } }, r.title),
+          h('span', { style: { fontSize: 11, padding: '2px 8px', background: st.bg, color: st.c, border: `1px solid ${st.b}`, borderRadius: 100 } }, st.l)
+        ),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 5 } }, `${r.eventName} · ${fmt(r.createdAt)}`),
+        lo && h('div', { style: { fontSize: 12, color: r.status==='open'?'var(--warn-text)':'var(--text2)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, `"${lo.text}"`)
+      );
+    }))
+  );
+}
+
+function SupP({ su, ev, copyPortalLink }) {
+  const ec = i => ev.filter(e => e.suppliers.includes(i)).length;
+  return su.length === 0 ? Empty('ti-user-off', 'Geen leveranciers', "Klik 'Toevoegen'") :
+  h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 } }, su.map(s =>
+    h('div', { key: s.id, style: { padding: 14, border: '1px solid var(--border)', borderRadius: 'var(--rl)', background: 'var(--bg)' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } },
+        h('div', { style: { width: 40, height: 40, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: 'var(--info-text)' } }, ini(s.name)),
+        h('div', null, h('div', { style: { fontWeight: 600, fontSize: 14 } }, s.name), s.company && h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, s.company))
+      ),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 5, fontSize: 12, color: 'var(--text2)' } },
+        s.email && h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } }, h('i', { className: 'ti ti-mail', style: { fontSize: 13 } }), s.email),
+        s.phone && h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } }, h('i', { className: 'ti ti-phone', style: { fontSize: 13 } }), s.phone),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } }, h('i', { className: 'ti ti-calendar', style: { fontSize: 13 } }), `${ec(s.id)} evenement${ec(s.id)!==1?'en':''}`)
+      ),
+      s.portalCode && h('div', { style: { marginTop: 10, padding: '8px 10px', background: 'var(--bg2)', borderRadius: 'var(--r)' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+          h('i', { className: 'ti ti-key', style: { fontSize: 13, color: 'var(--text3)' } }),
+          h('span', { style: { fontSize: 11, color: 'var(--text2)' } }, 'Code:'),
+          h('span', { style: { fontSize: 12, fontFamily: 'monospace', fontWeight: 600, flex: 1 } }, s.portalCode)
+        ),
+        h('button', { onClick: () => copyPortalLink(s), style: { width: '100%', fontSize: 11, padding: '5px 10px', justifyContent: 'center' } }, h('i', { className: 'ti ti-link', style: { fontSize: 12 } }), 'Kopieer portaal link')
+      )
+    )
+  ));
+}
+
+function MW({ title, c, children, w=480 }) {
+  return h('div', { style: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 500, padding: '2rem 1rem', overflowY: 'auto' }, onClick: e => { if (e.target === e.currentTarget) c(); } },
+    h('div', { style: { background: 'var(--bg)', borderRadius: 'var(--rl)', border: '1px solid var(--border2)', width: '100%', maxWidth: w, padding: '1.25rem', marginTop: '1rem' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.1rem' } },
+        h('h2', { style: { margin: 0, fontSize: 15, fontWeight: 600 } }, title),
+        h('button', { onClick: c, style: { padding: '3px 7px' } }, h('i', { className: 'ti ti-x', style: { fontSize: 16 } }))
+      ),
+      children
+    )
+  );
+}
+
+function NEv({ c, s }) {
+  const [f, sf] = useState({ name: '', date: '', location: '', description: '' });
+  const st = (k, v) => sf(p => ({ ...p, [k]: v }));
+  return h(MW, { title: 'Nieuw evenement', c },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Naam *', h('input', { value: f.name, onChange: e => st('name', e.target.value), autoFocus: true })),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Datum', h('input', { type: 'date', value: f.date, onChange: e => st('date', e.target.value) })),
+        FL('Locatie', h('input', { value: f.location, onChange: e => st('location', e.target.value) }))
+      ),
+      FL('Omschrijving', h('textarea', { value: f.description, onChange: e => st('description', e.target.value), rows: 3 }))
+    ),
+    h('div', { style: { marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' } },
+      h('button', { onClick: c }, 'Annuleren'),
+      h('button', { onClick: () => f.name && s(f), disabled: !f.name, style: { fontWeight: 600 } }, 'Aanmaken')
+    )
+  );
+}
+
+function NSu({ c, s }) {
+  const [f, sf] = useState({ name: '', company: '', email: '', phone: '', category: '' });
+  const st = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const ok = f.name && f.email;
+  return h(MW, { title: 'Leverancier toevoegen', c },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Naam *', h('input', { value: f.name, onChange: e => st('name', e.target.value), autoFocus: true })),
+        FL('Bedrijf', h('input', { value: f.company, onChange: e => st('company', e.target.value) }))
+      ),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('E-mail *', h('input', { type: 'email', value: f.email, onChange: e => st('email', e.target.value) })),
+        FL('Telefoon', h('input', { value: f.phone, onChange: e => st('phone', e.target.value) }))
+      ),
+      FL('Categorie', h('select', { value: f.category, onChange: e => st('category', e.target.value) }, h('option', { value: '' }, 'Kies...'), CATS.map(x => h('option', { key: x, value: x }, x)))),
+      h('div', { style: { padding: '10px 12px', background: 'var(--bg2)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 8 } }, h('i', { className: 'ti ti-key', style: { fontSize: 14 } }), 'Er wordt automatisch een portaalcode gegenereerd.')
+    ),
+    h('div', { style: { marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' } },
+      h('button', { onClick: c }, 'Annuleren'),
+      h('button', { onClick: () => ok && s(f), disabled: !ok, style: { fontWeight: 600 } }, 'Toevoegen')
+    )
+  );
+}
+
+function ASu({ c, su, es, a, sMd }) {
+  const av = su.filter(x => !es.includes(x.id));
+  return h(MW, { title: 'Leverancier koppelen', c },
+    av.length === 0 ?
+    h('div', null, Empty('ti-user-off', 'Geen beschikbaar'), h('div', { style: { marginTop: 12, textAlign: 'center' } }, h('button', { onClick: () => sMd('newSupplier') }, 'Nieuwe aanmaken'))) :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } }, av.map(s =>
+      h('div', { key: s.id, onClick: () => a(s.id), style: { padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--rl)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg)' } },
+        h('div', { style: { width: 34, height: 34, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--info-text)' } }, ini(s.name)),
+        h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 13 } }, s.name), h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, s.company || s.email)),
+        h('i', { className: 'ti ti-plus', style: { fontSize: 14, color: 'var(--text3)' } })
+      )
+    ))
+  );
+}
+
+function UDoc({ c, e, su, s }) {
+  const [f, sf] = useState({ name: '', size: 0, type: '', notes: '', linkedSuppliers: [] });
+  const [fn, sfn] = useState('');
+  const fr = useRef();
+  const evS = su.filter(x => e.suppliers.includes(x.id));
+  const hf = e => { const fl = e.target.files[0]; if (fl) { sfn(fl.name); sf(p => ({ ...p, name: fl.name, size: fl.size, type: fl.type })); } };
+  const tg = i => sf(p => ({ ...p, linkedSuppliers: p.linkedSuppliers.includes(i) ? p.linkedSuppliers.filter(x => x !== i) : [...p.linkedSuppliers, i] }));
+  return h(MW, { title: 'Document uploaden', c },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', null,
+        h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 5 } }, 'Bestand *'),
+        h('div', { onClick: () => fr.current?.click(), style: { padding: '1.5rem', border: '1px dashed var(--border2)', borderRadius: 'var(--rl)', cursor: 'pointer', textAlign: 'center', background: 'var(--bg2)' } },
+          h('i', { className: 'ti ti-upload', style: { fontSize: 22, color: 'var(--text3)', display: 'block', marginBottom: 6 } }),
+          fn ? h('div', { style: { fontSize: 13, fontWeight: 600 } }, fn) : h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, 'Klik om bestand te kiezen')
+        ),
+        h('input', { ref: fr, type: 'file', onChange: hf, style: { display: 'none' } })
+      ),
+      FL('Nota', h('input', { value: f.notes, onChange: e => sf(p => ({ ...p, notes: e.target.value })) })),
+      h('div', null,
+        h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 8 } }, 'Notificeer leveranciers'),
+        evS.length === 0 ? h('div', { style: { fontSize: 12, color: 'var(--text3)' } }, 'Geen leveranciers gekoppeld') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, evS.map(x => {
+          const ch = f.linkedSuppliers.includes(x.id);
+          return h('label', { key: x.id, style: { display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', padding: '8px 10px', borderRadius: 'var(--r)', background: ch?'var(--info-bg)':'var(--bg2)', border: `1px solid ${ch?'var(--info-border)':'var(--border)'}` } },
+            h('input', { type: 'checkbox', checked: ch, onChange: () => tg(x.id) }),
+            h('div', { style: { fontSize: 13, fontWeight: 600 } }, x.name)
+          );
+        }))
+      )
+    ),
+    h('div', { style: { marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' } },
+      h('button', { onClick: c }, 'Annuleren'),
+      h('button', { onClick: () => f.name && s(f), disabled: !f.name, style: { fontWeight: 600 } }, f.linkedSuppliers.length > 0 ? `Uploaden & ${f.linkedSuppliers.length} notificeren` : 'Uploaden')
+    )
+  );
+}
+
+function NReq({ c, e, su, s, copyPortalLink }) {
+  const evS = su.filter(x => e.suppliers.includes(x.id));
+  const [f, sf] = useState({ supplierId: '', title: '', message: '' });
+  const st = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const ok = f.supplierId && f.title && f.message;
+  const sel = su.find(x => x.id === f.supplierId);
+  return h(MW, { title: 'Nieuwe aanvraag', c, w: 520 },
+    evS.length === 0 ? Empty('ti-user-off', 'Geen leveranciers', 'Koppel eerst leveranciers aan dit evenement') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Aan welke leverancier?', h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, evS.map(x =>
+        h('label', { key: x.id, style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 'var(--r)', border: `1px solid ${f.supplierId===x.id?'var(--info-border)':'var(--border)'}`, background: f.supplierId===x.id?'var(--info-bg)':'var(--bg)' } },
+          h('input', { type: 'radio', name: 'sup', checked: f.supplierId === x.id, onChange: () => sf(p => ({ ...p, supplierId: x.id })) }),
+          h('div', { style: { width: 28, height: 28, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: 'var(--info-text)' } }, ini(x.name)),
+          h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 13 } }, x.name), h('div', { style: { fontSize: 11, color: 'var(--text2)' } }, x.company || x.email))
+        )
+      ))),
+      FL('Onderwerp', h('input', { value: f.title, onChange: e => st('title', e.target.value), placeholder: 'Bijv. Keuring attest foodtruck' })),
+      FL('Bericht', h('textarea', { value: f.message, onChange: e => st('message', e.target.value), rows: 4, placeholder: 'Bijv. Gelieve uw meest recente keuringscertificaat te bezorgen voor 15 december...' })),
+      sel?.portalCode && h('div', { style: { padding: '12px 14px', background: 'var(--bg2)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text2)' } },
+        h('div', { style: { marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } }, h('i', { className: 'ti ti-info-circle', style: { fontSize: 14 } }), h('strong', null, 'Hoe de leverancier antwoordt:')),
+        h('div', { style: { marginBottom: 8, lineHeight: 1.5 } }, 'Stuur ', h('strong', null, sel.name), ' deze link via WhatsApp/mail. Ze hoeven enkel hierop te klikken om hun aanvragen te zien.'),
+        h('button', { onClick: () => copyPortalLink(sel), style: { width: '100%', justifyContent: 'center', fontSize: 12, padding: '7px 12px' } }, h('i', { className: 'ti ti-link', style: { fontSize: 13 } }), 'Kopieer portaal link voor ', sel.name)
+      )
+    ),
+    h('div', { style: { marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' } },
+      h('button', { onClick: c }, 'Annuleren'),
+      h('button', { onClick: () => ok && s({ eventId: e.id, eventName: e.name, supplierId: f.supplierId, supplierName: sel?.name||'', portalCode: sel?.portalCode||'', title: f.title, message: f.message }), disabled: !ok, style: { fontWeight: 600 } }, 'Versturen')
+    )
+  );
+}
+
+function MQ({ c, pe, su, ev, done }) {
+  const en = Object.entries(pe).map(([s, m]) => {
+    const sup = su.find(x => x.id === s);
+    const eN = Object.keys(m).map(eid => ev.find(e => e.id === eid)?.name).filter(Boolean).join(', ');
+    let b = `Beste ${sup?.name||''},\n\nUpdates voor: ${eN}.\n\n`;
+    Object.values(m).forEach(c => c.forEach(x => { b += `- ${x.name}\n`; }));
+    const ml = `mailto:${sup?.email||''}?subject=${encodeURIComponent('Update: '+eN)}&body=${encodeURIComponent(b)}`;
+    return { sid: s, sup, ml };
+  });
+  return h(MW, { title: 'Updates versturen', c, w: 580 },
+    en.length === 0 ? Empty('ti-checks', 'Niets in wachtrij') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto' } }, en.map(({ sid, sup, ml }) =>
+      h('div', { key: sid, style: { padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 'var(--rl)', display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg)' } },
+        h('div', { style: { width: 34, height: 34, borderRadius: '50%', background: 'var(--info-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--info-text)' } }, ini(sup?.name||'?')),
+        h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 14 } }, sup?.name||'?'), h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, sup?.email||'—')),
+        h('a', { href: ml, target: '_blank', style: { textDecoration: 'none' } }, h('button', { style: { fontSize: 12, padding: '6px 12px', fontWeight: 600 } }, h('i', { className: 'ti ti-mail', style: { fontSize: 13 } }), 'Open in mail'))
+      )
+    )),
+    h('div', { style: { marginTop: 16, display: 'flex', gap: 10, justifyContent: 'flex-end' } },
+      h('button', { onClick: c }, 'Annuleren'),
+      h('button', { onClick: done, style: { background: 'var(--ok-bg)', color: 'var(--ok-text)', borderColor: 'var(--ok-border)', fontWeight: 600 } }, h('i', { className: 'ti ti-check', style: { fontSize: 14 } }), 'Verstuurd - wachtrij wissen')
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
+</body>
+</html>
