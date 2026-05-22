@@ -311,7 +311,13 @@
       <div class="card-hdr"><span class="card-title"><span class="step-num">2</span>Sleep elke PDF naar de juiste truck</span></div>
       <div class="koppel-grid">
         <div class="koppel-col">
-          <div class="koppel-col-hdr"><span>📄 Nog te koppelen</span><span class="cnt" id="pool-count">—</span></div>
+          <div class="koppel-col-hdr">
+            <span>📄 Nog te koppelen</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              <button class="btn btn-outline btn-sm" onclick="autoKoppelAlles()" title="Koppel automatisch op wagennummer + datum">🔗 Auto-koppel</button>
+              <span class="cnt" id="pool-count">—</span>
+            </span>
+          </div>
           <div class="koppel-col-body" id="pool-list"></div>
         </div>
         <div class="koppel-col">
@@ -382,8 +388,9 @@ const db = firebase.database();
 
 // ── State ─────────────────────────────────────────────────────
 const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES'];
-const LL_SYSTEM_PROMPT = 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES. Neem de categorie MATERIALEN NIET over — sla die volledig over. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Voor "naam": zoek bovenaan de laadlijst het veld met label "Wagen" of "Wagen nr." en lees dat ingevulde wagennummer; lees ook de evenementnaam. Het wagennummer kan een getal zijn (bv. 404) of een naam (bv. brascheria). Combineer ze exact zoals ingevuld als "WAGEN — EVENEMENT" (bijvoorbeeld "404 — Miniatuurbeurs Friet"). Het wagennummer staat ALTIJD vooraan. Verzin niets zelf, gebruik letterlijk wat ingevuld is. Vind je het veld "Wagen" echt niet, laat dat deel weg. Formaat: {"naam":"WAGEN — EVENEMENT","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[]}}';
+const LL_SYSTEM_PROMPT = 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES. Neem de categorie MATERIALEN NIET over — sla die volledig over. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Lees bovenaan de laadlijst ook deze drie velden, exact zoals ingevuld: "wagen" = het wagennummer (veld "Wagen" of "Wagen nr."; mag een getal zijn zoals 404 of een naam zoals brascheria), "event" = de evenementnaam, "datum" = de datum van het event in formaat JJJJ-MM-DD (zet bv. 01/03/2026 om naar 2026-03-01). Ontbreekt een veld, geef dan een lege string "". Verzin niets zelf, gebruik letterlijk wat ingevuld is. Formaat: {"wagen":"","event":"","datum":"","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[]}}';
 let laadlijsten = {}, fiches = {}, planningEvents = [];
+let lastExtract = {}; // wagen/event/datum uit de laatst geüploade PDF (enkelvoudige upload)
 
 // Genormaliseerd event-id (leeg → null)
 function eid(v){ return (v==null||v==='') ? null : String(v); }
@@ -455,7 +462,7 @@ async function handlePdfUpload(file) {
           role: 'user',
           content: [
             { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-            { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Zet als "naam" het nummer uit het veld "Wagen"/"Wagen nr." gevolgd door de evenementnaam. Geef terug als JSON.' }
+            { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Geef ook de velden wagen, event en datum apart terug zoals ze bovenaan ingevuld staan. Geef terug als JSON.' }
           ]
         }]
       })
@@ -467,7 +474,9 @@ async function handlePdfUpload(file) {
     const raw = data.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(raw);
 
-    if (parsed.naam) document.getElementById('ll-naam').value = parsed.naam;
+    lastExtract = { wagen: parsed.wagen || '', event: parsed.event || '', datum: parsed.datum || '' };
+    const naam = buildNaam(lastExtract);
+    if (naam) document.getElementById('ll-naam').value = naam;
     renderItemsEditor(parsed.categorieën || {});
     document.getElementById('extract-preview').style.display = 'block';
     showStatus('✅ Extractie geslaagd! Controleer de items en sla op.', 'success');
@@ -566,6 +575,7 @@ function cancelExtract() {
   document.getElementById('extract-preview').style.display = 'none';
   document.getElementById('extract-status').style.display = 'none';
   document.getElementById('pdf-input').value = '';
+  lastExtract = {};
 }
 
 // ── Save Laadlijst ────────────────────────────────────────────
@@ -573,8 +583,26 @@ async function saveLaadlijst() {
   const naam = document.getElementById('ll-naam').value.trim();
   if (!naam) { alert('Geef een naam op voor de laadlijst.'); return; }
   try {
-    await db.ref('ft_laadlijsten_v1').push({ naam, aangemaakt: new Date().toISOString(), categorieën: getEditorData() });
-    showStatus('✅ Laadlijst opgeslagen!', 'success');
+    const rec = {
+      naam,
+      aangemaakt: new Date().toISOString(),
+      categorieën: getEditorData(),
+      pdfWagen: lastExtract.wagen || '',
+      pdfEvent: lastExtract.event || '',
+      pdfDatum: lastExtract.datum || ''
+    };
+    // automatisch koppelen aan event + truck als er een eenduidige match is
+    const m = autoMatch(lastExtract);
+    if (m && !findLinked(m.event.id, m.truck)) {
+      rec.wagen = m.truck;
+      rec.eventId = String(m.event.id);
+      rec.eventNaam = m.event.name || m.event.naam || '';
+      rec.datum = m.event.startDate || lastExtract.datum || '';
+    }
+    await db.ref('ft_laadlijsten_v1').push(rec);
+    showStatus(rec.eventId
+      ? '✅ Opgeslagen en automatisch gekoppeld aan ' + escHtml(rec.eventNaam) + ' · ' + escHtml(rec.wagen)
+      : '✅ Laadlijst opgeslagen!', 'success');
     cancelExtract();
     document.getElementById('ll-naam').value = '';
   } catch (e) { showStatus('❌ Fout: ' + e.message, 'error'); }
@@ -794,7 +822,7 @@ async function extractOne(file) {
         role: 'user',
         content: [
           { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-          { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Zet als "naam" het nummer uit het veld "Wagen"/"Wagen nr." gevolgd door de evenementnaam. Geef terug als JSON.' }
+          { type: 'text', text: 'Extraheer alle items uit de LAADLIJST pagina (niet checklijst). Gebruik de getallen uit het Aantal-veld. Geef ook de velden wagen, event en datum apart terug zoals ze bovenaan ingevuld staan. Geef terug als JSON.' }
         ]
       }]
     })
@@ -827,7 +855,8 @@ async function handleBulkUpload(fileList) {
     Object.values(laadlijsten).map(ll => (ll && ll.bestand) || '').filter(Boolean)
   );
 
-  const resultaten = []; // { naam, status: 'ok' | 'skip' | 'fail', reden? }
+  const gebruikteSlots = new Set(); // 'eventId|truck' al gekoppeld in deze ronde
+  const resultaten = []; // { naam, status: 'ok' | 'skip' | 'fail', reden?, gekoppeld? }
 
   for (let i = 0; i < pdfs.length; i++) {
     const fname = pdfs[i].name;
@@ -854,15 +883,35 @@ async function handleBulkUpload(fileList) {
     }
 
     if (parsed) {
+      const info = { wagen: parsed.wagen || '', event: parsed.event || '', datum: parsed.datum || '' };
+      const rec = {
+        naam: buildNaam(info) || fname.replace(/\.pdf$/i, ''),
+        bestand: fname,
+        pdfWagen: info.wagen,
+        pdfEvent: info.event,
+        pdfDatum: info.datum,
+        categorieën: parsed.categorieën || {},
+        aangemaakt: new Date().toISOString()
+      };
+      // automatisch koppelen op basis van wagennummer + datum (+ eventnaam ter verfijning)
+      let gekoppeld = null;
+      const m = autoMatch(info);
+      if (m) {
+        const slot = String(m.event.id) + '|' + m.truck;
+        if (!gebruikteSlots.has(slot) && !findLinked(m.event.id, m.truck)) {
+          rec.wagen = m.truck;
+          rec.eventId = String(m.event.id);
+          rec.eventNaam = m.event.name || m.event.naam || '';
+          rec.datum = m.event.startDate || info.datum || '';
+          rec.naam = buildNaam({ wagen: info.wagen || m.truck, event: rec.eventNaam || info.event });
+          gebruikteSlots.add(slot);
+          gekoppeld = rec.eventNaam + ' · ' + m.truck;
+        }
+      }
       try {
-        await db.ref('ft_laadlijsten_v1').push({
-          naam: parsed.naam || fname.replace(/\.pdf$/i, ''),
-          bestand: fname,
-          categorieën: parsed.categorieën || {},
-          aangemaakt: new Date().toISOString()
-        });
+        await db.ref('ft_laadlijsten_v1').push(rec);
         reedsGeupload.add(fname);
-        resultaten.push({ naam: fname, status: 'ok' });
+        resultaten.push({ naam: fname, status: 'ok', gekoppeld });
       } catch (e) {
         resultaten.push({ naam: fname, status: 'fail', reden: 'opslaan mislukt — ' + e.message });
       }
@@ -878,23 +927,29 @@ async function handleBulkUpload(fileList) {
   document.getElementById('bulk-input').value = '';
 }
 
-// Volledig overzicht na bulk-upload: per bestand ✅ nieuw / ⏭️ al aanwezig / ❌ mislukt
+// Volledig overzicht na bulk-upload: per bestand status + auto-koppeling
 function renderBulkResult(resultaten) {
   const ok   = resultaten.filter(r => r.status === 'ok').length;
   const skip = resultaten.filter(r => r.status === 'skip').length;
   const fail = resultaten.filter(r => r.status === 'fail').length;
+  const auto = resultaten.filter(r => r.status === 'ok' && r.gekoppeld).length;
   const icoon = { ok: '✅', skip: '⏭️', fail: '❌' };
-  const standaardTekst = { ok: 'nieuw geüpload', skip: 'al aanwezig — overgeslagen', fail: 'mislukt' };
 
-  let html = `<strong>Klaar:</strong> ${ok} nieuw · ${skip} al aanwezig · ${fail} mislukt`;
+  function regel(r) {
+    if (r.status === 'fail') return r.reden || 'mislukt';
+    if (r.status === 'skip') return 'al aanwezig — overgeslagen';
+    return r.gekoppeld ? ('automatisch gekoppeld aan ' + r.gekoppeld) : 'geüpload — nog niet gekoppeld';
+  }
+
+  let html = `<strong>Klaar:</strong> ${ok} nieuw (waarvan ${auto} auto-gekoppeld) · ${skip} al aanwezig · ${fail} mislukt`;
   html += '<ul style="margin:8px 0 0;padding-left:20px;line-height:1.7;">'
     + resultaten.map(r =>
-        `<li>${icoon[r.status]} <strong>${escHtml(r.naam)}</strong> — ${escHtml(r.reden || standaardTekst[r.status])}</li>`
+        `<li>${icoon[r.status]} <strong>${escHtml(r.naam)}</strong> — ${escHtml(regel(r))}</li>`
       ).join('')
     + '</ul>';
   html += fail
     ? '<div style="margin-top:8px;font-size:13px;">Sleep gerust álle PDF\'s opnieuw — wat al binnen is wordt overgeslagen, enkel de mislukte worden opnieuw geprobeerd.</div>'
-    : '<div style="margin-top:8px;font-size:13px;">Koppel ze hieronder bij stap 3 aan een truck.</div>';
+    : '<div style="margin-top:8px;font-size:13px;">Niet-gekoppelde lijsten kan je hieronder handmatig naar de juiste truck slepen.</div>';
   bulkStatus(html, fail ? 'error' : 'success');
 }
 
@@ -912,6 +967,90 @@ function findLinked(eventId, truck) {
     if (ll && String(ll.eventId) === String(eventId) && ll.wagen === truck) return { key: k, ll };
   }
   return null;
+}
+
+// ── Automatisch koppelen: laadlijst ↔ event+truck op wagen, datum en eventnaam ──
+function buildNaam(p) {
+  return [String((p && p.wagen) || '').trim(), String((p && p.event) || '').trim()].filter(Boolean).join(' — ');
+}
+function normWagen(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function wagenMatch(a, b) {
+  const na = normWagen(a), nb = normWagen(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  const da = na.replace(/[^0-9]/g, ''), dbn = nb.replace(/[^0-9]/g, '');
+  return !!da && da === dbn; // bv. "Wagen 404" ↔ "404"
+}
+function normName(s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function nameMatch(a, b) {
+  const na = normName(a), nb = normName(b);
+  if (!na || !nb) return false;
+  return na === nb || na.includes(nb) || nb.includes(na);
+}
+// match-info uit een laadlijst halen: PDF-velden, anders de naam "WAGEN — EVENT" splitsen
+function laadlijstMatchInfo(ll) {
+  let wagen = (ll && ll.pdfWagen) || '', event = (ll && ll.pdfEvent) || '', datum = (ll && ll.pdfDatum) || '';
+  if ((!wagen || !event) && ll && ll.naam && ll.naam.indexOf('—') >= 0) {
+    const parts = ll.naam.split('—');
+    if (!wagen) wagen = (parts[0] || '').trim();
+    if (!event) event = parts.slice(1).join('—').trim();
+  }
+  return { wagen, event, datum };
+}
+// zoekt het event + de truck die bij deze laadlijst horen; null als onzeker/ambigu
+function autoMatch(info) {
+  if (!info || !info.wagen) return null;
+  const datum = info.datum || '';
+  // 1. events op de juiste datum (of alle events als de datum ontbreekt)
+  const opDatum = planningEvents.filter(e => {
+    if (!e) return false;
+    if (!datum) return true;
+    const s = e.startDate || '', eind = e.endDate || e.startDate || '';
+    return s && s <= datum && eind >= datum;
+  });
+  // 2. daarvan: events met een truck die overeenkomt met het wagennummer
+  const treffers = [];
+  for (const e of opDatum) {
+    const trucks = Array.isArray(e.trucks) ? e.trucks : [];
+    const truck = trucks.find(t => wagenMatch(t, info.wagen));
+    if (truck) treffers.push({ event: e, truck });
+  }
+  if (treffers.length === 1) return treffers[0];
+  // 3. meerdere kandidaten → verfijnen op eventnaam
+  if (treffers.length > 1 && info.event) {
+    const opNaam = treffers.filter(m => nameMatch(m.event.name || m.event.naam, info.event));
+    if (opNaam.length === 1) return opNaam[0];
+  }
+  return null; // niets of ambigu → handmatig koppelen
+}
+// alle losse laadlijsten in één keer automatisch proberen koppelen
+async function autoKoppelAlles() {
+  const pool = unlinkedLaadlijsten();
+  if (!pool.length) { alert('Er zijn geen losse laadlijsten om te koppelen.'); return; }
+  let gekoppeld = 0;
+  const gebruikteSlots = new Set();
+  for (const { key, ll } of pool) {
+    const info = laadlijstMatchInfo(ll);
+    const m = autoMatch(info);
+    if (!m) continue;
+    const slot = String(m.event.id) + '|' + m.truck;
+    if (gebruikteSlots.has(slot) || findLinked(m.event.id, m.truck)) continue;
+    const eventNaam = m.event.name || m.event.naam || '';
+    try {
+      await db.ref('ft_laadlijsten_v1/' + key).update({
+        wagen: m.truck,
+        eventId: String(m.event.id),
+        eventNaam: eventNaam,
+        datum: m.event.startDate || info.datum || '',
+        naam: buildNaam({ wagen: info.wagen || m.truck, event: eventNaam })
+      });
+      gebruikteSlots.add(slot);
+      gekoppeld++;
+    } catch (e) { console.warn('Auto-koppel mislukt:', key, e); }
+  }
+  const rest = pool.length - gekoppeld;
+  alert(`${gekoppeld} van ${pool.length} laadlijst${pool.length !== 1 ? 'en' : ''} automatisch gekoppeld.`
+    + (rest ? `\n\n${rest} kon niet eenduidig gematcht worden (geen of meerdere mogelijke trucks) — sleep die handmatig naar de juiste truck.` : ''));
 }
 
 function renderKoppelen() { renderPool(); renderDay(); }
