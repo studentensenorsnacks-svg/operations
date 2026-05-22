@@ -171,6 +171,12 @@ function showState(icon, title, text){
     + (text?'<div class="sx">'+esc(text)+'</div>':'') + '</div>';
 }
 
+function resolveLink(link){
+  link = String(link||'').trim();
+  if(/^https?:\/\//i.test(link)) return link;
+  return link.replace(/^\/+/,'');   // relatief t.o.v. de site-root
+}
+
 const id = new URLSearchParams(location.search).get('id');
 if(!id){
   showState('🔳','Geen QR code','Deze link mist een geldige code. Scan de QR opnieuw.');
@@ -178,6 +184,8 @@ if(!id){
   fbdb.ref('ft_qrcodes_v1/'+id).on('value', snap=>{
     const e = snap.val();
     if(!e){ showState('🔍','Niet gevonden','Deze QR code bestaat niet (meer).'); return; }
+    // "Link"-type: meteen doorsturen naar de gekoppelde pagina
+    if(e.kind==='link' && e.link){ location.replace(resolveLink(e.link)); return; }
     renderEntry(e);
   }, err=>{
     showState('⚠️','Kan info niet laden', err && err.message ? err.message : 'Controleer je internetverbinding.');

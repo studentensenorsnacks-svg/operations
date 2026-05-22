@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Stroom in de frietwagen — Señor Snacks</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#2f6cb0;--blue-d:#1d4f8a;--blue-num:#2563eb;
+  --green:#3f8b3c;--green-d:#2f6d2a;
+  --red:#c5322a;--amber:#e0a32a;
+  --ink:#1f2530;--muted:#6b7280;
+  --font:'Barlow',-apple-system,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:#e3e3e3;color:var(--ink);padding:18px 14px 40px;line-height:1.5;}
+
+.sheet{max-width:880px;margin:0 auto;background:#f4f4f3;border:1px solid #dddddd;border-radius:16px;padding:26px 24px 28px;box-shadow:0 6px 28px rgba(0,0,0,0.08);}
+
+/* HEADER */
+.head{text-align:center;margin-bottom:22px;}
+.head h1{font-size:1.95rem;font-weight:900;letter-spacing:-0.01em;}
+.head .lede{color:var(--muted);font-size:0.98rem;margin-top:4px;}
+
+/* GENERIC CARD */
+.block{margin-bottom:14px;}
+
+/* STROOMKAST */
+.kast{background:#e9e9e8;border:1px solid #d7d7d6;border-radius:13px;padding:16px;}
+.kast-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.kast-ic{width:46px;height:46px;flex-shrink:0;background:#2b2d33;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+.kast-tt h2{font-size:1.18rem;font-weight:800;line-height:1.15;}
+.kast-tt p{font-size:0.84rem;color:var(--muted);margin-top:1px;}
+
+.zek-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.zek{border-radius:11px;padding:13px 15px;border:1.5px solid;}
+.zek.blue{background:#e9f1fb;border-color:#bcd6f1;color:var(--blue-d);}
+.zek.green{background:#eef5e6;border-color:#cce0bb;color:var(--green-d);}
+.zek-top{display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+.num{width:25px;height:25px;flex-shrink:0;border-radius:7px;color:#fff;font-weight:800;font-size:0.86rem;display:flex;align-items:center;justify-content:center;}
+.num.blue{background:var(--blue-num);}
+.num.green{background:var(--green);}
+.zek-name{font-size:1.04rem;font-weight:800;}
+.zek p{font-size:0.9rem;line-height:1.45;}
+
+.warn{display:flex;gap:11px;align-items:flex-start;background:#fcecee;border:1.5px solid #f0c3c6;border-radius:11px;padding:13px 15px;margin-top:12px;}
+.warn-ic{font-size:1.3rem;line-height:1.2;flex-shrink:0;}
+.warn-t{font-weight:800;color:#b3261e;font-size:0.97rem;}
+.warn-x{font-size:0.88rem;color:#9c4742;margin-top:2px;line-height:1.45;}
+
+/* CONNECTING ARROWS */
+.arrows{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:4px 0 14px;}
+.arrow{display:flex;flex-direction:column;align-items:center;}
+.arrow .ln{width:4px;height:18px;border-radius:2px;}
+.arrow .tri{font-size:1.1rem;line-height:0.7;margin-top:-1px;}
+.arrow.blue .ln,.arrow.blue .tri{color:var(--blue-num);background:initial;}
+.arrow.blue .ln{background:var(--blue-num);}
+.arrow.green .ln{background:var(--green);}
+.arrow.green .tri{color:var(--green);}
+
+/* DUO PANELS */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.panel{background:#fff;border:1px solid #e2e2e2;border-radius:13px;overflow:hidden;display:flex;flex-direction:column;}
+.panel-head{display:flex;align-items:center;gap:11px;padding:13px 15px;color:#fff;}
+.panel-head.blue{background:var(--blue);}
+.panel-head.green{background:var(--green);}
+.panel-ic{width:34px;height:34px;flex-shrink:0;background:rgba(255,255,255,0.18);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+.panel-tt h3{font-size:1.1rem;font-weight:800;line-height:1.1;}
+.panel-tt span{font-size:0.8rem;opacity:0.9;}
+.panel-body{padding:14px 15px;flex:1;}
+.panel-intro{font-size:0.87rem;color:var(--muted);margin-bottom:11px;}
+
+/* ITEM ROWS */
+.item{display:flex;align-items:center;gap:11px;border:1.5px solid;border-radius:10px;padding:10px 12px;margin-bottom:9px;}
+.item:last-child{margin-bottom:0;}
+.item.ok{background:#eef6e8;border-color:#cce0bb;}
+.item.no{background:#fcecee;border-color:#f0c3c6;}
+.item-ic{font-size:1.35rem;flex-shrink:0;}
+.item-tx{flex:1;min-width:0;}
+.item-t{font-weight:800;font-size:0.96rem;}
+.item.ok .item-t{color:var(--green-d);}
+.item.no .item-t{color:#b3261e;}
+.item-s{font-size:0.82rem;margin-top:1px;}
+.item.ok .item-s{color:#5c7d4d;}
+.item.no .item-s{color:#a3534e;}
+.item-mark{font-size:1.25rem;flex-shrink:0;}
+
+/* STEPS */
+.steps{list-style:none;display:flex;flex-direction:column;gap:11px;}
+.steps li{display:flex;gap:11px;align-items:flex-start;font-size:0.92rem;line-height:1.45;}
+.step-n{width:25px;height:25px;flex-shrink:0;border-radius:50%;background:var(--green);color:#fff;font-weight:800;font-size:0.84rem;display:flex;align-items:center;justify-content:center;}
+.safe{margin-top:13px;background:#e7f3df;border:1.5px solid #c6deb2;border-radius:10px;padding:11px;text-align:center;font-weight:800;color:var(--green-d);font-size:0.96rem;}
+
+/* WHY BOX */
+.why{display:flex;gap:13px;align-items:flex-start;background:#fdf5e1;border:1.5px solid #f0dca0;border-left:6px solid var(--amber);border-radius:11px;padding:15px 17px;}
+.why-ic{font-size:1.5rem;line-height:1.1;flex-shrink:0;}
+.why-t{font-weight:800;font-size:1.02rem;color:#8a6410;}
+.why-x{font-size:0.9rem;color:#6f5a1f;margin-top:3px;line-height:1.5;}
+
+/* SUMMARY */
+.summary{display:flex;flex-direction:column;gap:9px;}
+.sum-row{display:flex;gap:11px;align-items:flex-start;background:#ececeb;border:1px solid #dcdcdb;border-radius:9px;padding:11px 13px;font-size:0.9rem;line-height:1.45;}
+.sum-box{width:18px;height:18px;flex-shrink:0;border-radius:4px;border:2.5px solid;margin-top:1px;}
+.sum-box.blue{border-color:var(--blue-num);}
+.sum-box.green{border-color:var(--green);}
+
+/* FOOTER */
+.foot{text-align:center;margin-top:22px;}
+.foot img{height:22px;width:auto;opacity:0.7;}
+
+@media(max-width:620px){
+  body{padding:12px 10px 32px;}
+  .sheet{padding:20px 16px 22px;border-radius:13px;}
+  .head h1{font-size:1.55rem;}
+  .zek-grid,.duo{grid-template-columns:1fr;}
+  .arrows{grid-template-columns:1fr;}
+  .arrows .arrow:last-child{display:none;}
+  .arrow.blue .ln,.arrow.blue .tri{color:#888;}
+  .arrow.blue .ln{background:#aaa;}
+}
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <div class="head">
+    <h1>⚡ Stroom in de frietwagen</h1>
+    <div class="lede">Wie steek je waar in? Volg dit schema en je zit altijd goed.</div>
+  </div>
+
+  <!-- STROOMKAST -->
+  <div class="block">
+    <div class="kast">
+      <div class="kast-head">
+        <div class="kast-ic">🔌</div>
+        <div class="kast-tt">
+          <h2>Stroomkast</h2>
+          <p>Buiten de frietwagen — gebruik ALTIJD aparte zekeringen</p>
+        </div>
+      </div>
+      <div class="zek-grid">
+        <div class="zek blue">
+          <div class="zek-top"><span class="num blue">1</span><span class="zek-name">Zekering 1</span></div>
+          <p>Voor de <strong>frietwagen</strong> zelf. De grote stekker van de wagen gaat hier op.</p>
+        </div>
+        <div class="zek green">
+          <div class="zek-top"><span class="num green">2</span><span class="zek-name">Zekering 2</span></div>
+          <p>Voor de <strong>royco koker</strong>. Aparte kabel langs de deur naar binnen.</p>
+        </div>
+      </div>
+      <div class="warn">
+        <span class="warn-ic">🚫</span>
+        <div>
+          <div class="warn-t">Nooit 2 stopcontacten op dezelfde zekering gebruiken!</div>
+          <div class="warn-x">Gebruik altijd een apart gezekerd stopcontact voor de frietwagen ÉN een apart gezekerd stopcontact voor de royco koker.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARROWS -->
+  <div class="arrows">
+    <div class="arrow blue"><span class="ln"></span><span class="tri">▼</span></div>
+    <div class="arrow green"><span class="ln"></span><span class="tri">▼</span></div>
+  </div>
+
+  <!-- DUO PANELS -->
+  <div class="block">
+    <div class="duo">
+
+      <div class="panel">
+        <div class="panel-head blue">
+          <span class="panel-ic">🚐</span>
+          <div class="panel-tt"><h3>Frietwagen</h3><span>Zekering 1</span></div>
+        </div>
+        <div class="panel-body">
+          <div class="panel-intro">Stopcontact <strong>onder de toog</strong> — hier mag je op insteken:</div>
+          <div class="item ok">
+            <span class="item-ic">🍲</span>
+            <div class="item-tx"><div class="item-t">Bain-marie</div><div class="item-s">Mag in het stopcontact onder de toog</div></div>
+            <span class="item-mark">✅</span>
+          </div>
+          <div class="item ok">
+            <span class="item-ic">🥖</span>
+            <div class="item-tx"><div class="item-t">Broodjes grill</div><div class="item-s">Mag ook in de frietwagen</div></div>
+            <span class="item-mark">✅</span>
+          </div>
+          <div class="item no">
+            <span class="item-ic">☕</span>
+            <div class="item-tx"><div class="item-t">Royco koker</div><div class="item-s">NIET hier insteken!</div></div>
+            <span class="item-mark">❌</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head green">
+          <span class="panel-ic">☕</span>
+          <div class="panel-tt"><h3>Royco koker</h3><span>Zekering 2 — eigen kabel!</span></div>
+        </div>
+        <div class="panel-body">
+          <div class="panel-intro">Stap voor stap:</div>
+          <ol class="steps">
+            <li><span class="step-n">1</span><span>Vraag een aparte <strong>verlengkabel</strong> langs de deur naar binnen.</span></li>
+            <li><span class="step-n">2</span><span>Die kabel komt van <strong>zekering 2</strong> op de stroomkast.</span></li>
+            <li><span class="step-n">3</span><span>Steek de royco koker in <strong>die kabel</strong>. Nergens anders.</span></li>
+          </ol>
+          <div class="safe">✅ Eigen zekering = veilig!</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- WHY -->
+  <div class="block">
+    <div class="why">
+      <span class="why-ic">⚠️</span>
+      <div>
+        <div class="why-t">Waarom is dit zo belangrijk?</div>
+        <div class="why-x">De royco koker verbruikt <strong>heel veel stroom</strong>. Als je die samen met de frietwagen op dezelfde zekering steekt, kan die zekering uitvallen — of erger: <strong>brand</strong>. Eén toestel, één zekering. Altijd.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary">
+    <div class="sum-row">
+      <span class="sum-box blue"></span>
+      <span><strong>Zekering 1</strong> → Frietwagen → Bain-marie + Broodjes grill (stopcontact onder de toog)</span>
+    </div>
+    <div class="sum-row">
+      <span class="sum-box green"></span>
+      <span><strong>Zekering 2</strong> → Verlengkabel langs de deur → Royco koker (aparte kabel!)</span>
+    </div>
+  </div>
+
+  <div class="foot"><img src="senorsnacks-logo.png" alt="Señor Snacks"></div>
+
+</div>
+
+</body>
+</html>

@@ -152,6 +152,14 @@ select{cursor:pointer;}
 .pv-checks li.no{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;}
 .pv-checks .ck{flex-shrink:0;font-weight:800;}
 
+/* TYPE-KEUZE + LINK */
+.kind-toggle{display:flex;gap:8px;}
+.kind-toggle button{flex:1;padding:9px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font);font-size:0.82rem;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.kind-toggle button:hover{border-color:var(--red);}
+.kind-toggle button.sel{background:var(--red);border-color:var(--red);color:#fff;}
+.link-prev{font-size:0.82rem;color:var(--text2);margin-bottom:8px;word-break:break-all;}
+.link-frame{width:100%;height:320px;border:1px solid var(--border);border-radius:9px;background:#fff;}
+
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
 .btn-primary{padding:10px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
 .btn-primary:hover{background:#c0001a;}
@@ -228,14 +236,39 @@ select{cursor:pointer;}
       </div>
 
       <div class="fg">
-        <div class="blocks-hd"><label class="flbl" style="margin:0;">Inhoud</label></div>
-        <div id="blocks-list"></div>
-        <div class="add-blocks">
-          <button onclick="addBlock('heading')">+ Kop</button>
-          <button onclick="addBlock('text')">+ Tekst</button>
-          <button onclick="addBlock('callout')">+ Aandachtsblok</button>
-          <button onclick="addBlock('steps')">+ Stappen</button>
-          <button onclick="addBlock('checklist')">+ Checklist</button>
+        <label class="flbl">Wat opent deze QR code?</label>
+        <div class="kind-toggle">
+          <button type="button" id="kind-content" onclick="setKind('content')">📄 Info-pagina samenstellen</button>
+          <button type="button" id="kind-link" onclick="setKind('link')">🔗 Naar een bestaande pagina</button>
+        </div>
+      </div>
+
+      <div id="section-content">
+        <div class="fg">
+          <div class="blocks-hd"><label class="flbl" style="margin:0;">Inhoud</label></div>
+          <div id="blocks-list"></div>
+          <div class="add-blocks">
+            <button onclick="addBlock('heading')">+ Kop</button>
+            <button onclick="addBlock('text')">+ Tekst</button>
+            <button onclick="addBlock('callout')">+ Aandachtsblok</button>
+            <button onclick="addBlock('steps')">+ Stappen</button>
+            <button onclick="addBlock('checklist')">+ Checklist</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="section-link">
+        <div class="fg">
+          <label class="flbl">Pagina of link</label>
+          <input type="text" id="f-link" list="known-pages" placeholder="bv. stroom-frietwagen.html of https://…" oninput="updatePreview()">
+          <datalist id="known-pages">
+            <option value="stroom-frietwagen.html"></option>
+            <option value="checkin.html"></option>
+            <option value="planning.html"></option>
+            <option value="poets.html"></option>
+            <option value="vet.html"></option>
+          </datalist>
+          <div class="be-hint" style="margin-top:6px;">Geef een pagina van deze site (bv. <strong>stroom-frietwagen.html</strong>) of een volledige link (https://…). Wie de QR scant gaat meteen daarheen.</div>
         </div>
       </div>
 
@@ -266,43 +299,22 @@ const ACCENTS = ['#e8001d','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#0
 const CALLOUT = { info:'ℹ️', success:'✅', warning:'⚠️', danger:'⛔' };
 const TYPE_LABEL = { heading:'Kop', text:'Tekst', callout:'Aandachtsblok', steps:'Stappen', checklist:'Checklist' };
 
-// Voorbeeld dat éénmalig wordt aangemaakt: "Stroom in de frietwagen"
+// Voorbeeld dat wordt klaargezet: "Stroom in de frietwagen" — verwijst naar de infographic-pagina
+const SEED_VERSION = 2;
 const STROOM = {
   id:'stroom-frietwagen',
   title:'Stroom in de frietwagen',
   subtitle:'Wie steek je waar in? Volg dit schema en je zit altijd goed.',
   icon:'⚡',
   accent:'#f97316',
-  blocks:[
-    {type:'heading',text:'Stroomkast — buiten de wagen'},
-    {type:'text',text:'Gebruik ALTIJD aparte zekeringen. Eén toestel, één zekering.'},
-    {type:'callout',variant:'info',title:'Zekering 1 — Frietwagen',text:'Voor de frietwagen zelf. De grote stekker van de wagen gaat hier op.'},
-    {type:'callout',variant:'success',title:'Zekering 2 — Royco koker',text:'Voor de royco koker. Aparte kabel langs de deur naar binnen.'},
-    {type:'callout',variant:'danger',title:'Nooit 2 stopcontacten op dezelfde zekering!',text:'Gebruik altijd een apart gezekerd stopcontact voor de frietwagen ÉN een apart gezekerd stopcontact voor de royco koker.'},
-    {type:'heading',text:'In de frietwagen — Zekering 1'},
-    {type:'checklist',title:'Stopcontact onder de toog — hier mag je op insteken:',items:[
-      {text:'Bain-marie — mag in het stopcontact onder de toog',ok:true},
-      {text:'Broodjes grill — mag ook in de frietwagen',ok:true},
-      {text:'Royco koker — NIET hier insteken!',ok:false}
-    ]},
-    {type:'heading',text:'Royco koker — Zekering 2 (eigen kabel!)'},
-    {type:'steps',title:'Stap voor stap',items:[
-      'Vraag een aparte verlengkabel langs de deur naar binnen.',
-      'Die kabel komt van zekering 2 op de stroomkast.',
-      'Steek de royco koker in die kabel. Nergens anders op insteken.'
-    ]},
-    {type:'callout',variant:'warning',title:'Waarom is dit zo belangrijk?',text:'De royco koker verbruikt heel veel stroom. Als je die samen met de frietwagen op dezelfde zekering steekt, kan die zekering uitvallen — of erger: brand. Eén toestel, één zekering. Altijd.'},
-    {type:'heading',text:'Samengevat'},
-    {type:'checklist',title:'',items:[
-      {text:'Zekering 1 → Frietwagen → Bain-marie + Broodjes grill (stopcontact onder de toog)',ok:true},
-      {text:'Zekering 2 → Verlengkabel langs de deur → Royco koker (aparte kabel!)',ok:true}
-    ]}
-  ]
+  kind:'link',
+  link:'stroom-frietwagen.html',
+  blocks:[]
 };
 
 // ── STATE ──────────────────────────────────────────────
 let entries = [];
-let editId = null, editBlocks = [], editAccent = ACCENTS[0];
+let editId = null, editBlocks = [], editAccent = ACCENTS[0], editKind = 'content';
 const qrCache = {};
 
 // ── HELPERS ────────────────────────────────────────────
@@ -383,18 +395,17 @@ fbdb.ref(FB).on('value', snap=>{
     '<div class="empty"><div class="ei">⚠️</div><div class="et">Kan QR codes niet laden: '+esc(err&&err.message||'fout')+'</div></div>';
 });
 
-// EENMALIG het voorbeeld "Stroom in de frietwagen" aanmaken
-fbdb.ref('ft_qrcodes_meta_v1/seeded').once('value', snap=>{
-  if(snap.val()===true) return;
-  fbdb.ref('ft_qrcodes_meta_v1/seeded').set(true);
+// Het voorbeeld "Stroom in de frietwagen" klaarzetten (en bijwerken bij een nieuwe SEED_VERSION)
+fbdb.ref('ft_qrcodes_meta_v1/seedVersion').once('value', snap=>{
+  if((snap.val()||0) >= SEED_VERSION) return;
+  fbdb.ref('ft_qrcodes_meta_v1/seedVersion').set(SEED_VERSION);
   const e = Object.assign({}, STROOM);
   delete e.id;
-  e.createdAt = Date.now();
-  e.updatedAt = Date.now();
+  const now = Date.now();
+  e.createdAt = now;
+  e.updatedAt = now;
   e.updatedBy = 'Voorbeeld';
-  fbdb.ref(FB+'/'+STROOM.id).once('value', s2=>{
-    if(!s2.exists()) fbdb.ref(FB+'/'+STROOM.id).set(e);
-  });
+  fbdb.ref(FB+'/'+STROOM.id).set(e);
 });
 
 // ── RENDER: GRID ───────────────────────────────────────
@@ -412,13 +423,14 @@ function renderGrid(){
     const accent = /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'') ? e.accent : '#e8001d';
     const url = viewerUrl(e.id);
     const nB = (e.blocks||[]).length;
+    const desc = e.kind==='link' ? '🔗 verwijst naar een pagina' : (nB+' blok'+(nB===1?'':'ken'));
     const upd = e.updatedAt ? new Date(e.updatedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}) : '';
     return '<div class="qr-card" style="--accent:'+esc(accent)+'">'
       + '<div class="qr-card-top">'
         + '<span class="qr-card-icon">'+esc(e.icon||'🔳')+'</span>'
         + '<div class="qr-card-tt">'
           + '<div class="qr-card-title">'+esc(e.title)+'</div>'
-          + '<div class="qr-card-sub">'+nB+' blok'+(nB===1?'':'ken')+(upd?' · bijgewerkt '+upd:'')+'</div>'
+          + '<div class="qr-card-sub">'+desc+(upd?' · bijgewerkt '+upd:'')+'</div>'
         + '</div>'
       + '</div>'
       + '<div class="qr-thumb"><img id="qrimg-'+esc(e.id)+'" alt="QR code"></div>'
@@ -498,12 +510,23 @@ function openEditor(id){
   document.getElementById('f-subtitle').value = e ? (e.subtitle||'') : '';
   document.getElementById('f-icon').value = e ? (e.icon||'') : '';
   document.getElementById('f-by').value = '';
+  document.getElementById('f-link').value = e ? (e.link||'') : '';
   editAccent = (e && /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'')) ? e.accent : ACCENTS[0];
   editBlocks = e ? JSON.parse(JSON.stringify(e.blocks||[])) : [];
+  editKind = (e && e.kind==='link') ? 'link' : 'content';
   renderSwatches();
   renderBlocksEditor();
+  applyKind();
   updatePreview();
   document.getElementById('modal').classList.remove('hidden');
+}
+
+function setKind(k){ editKind = k; applyKind(); updatePreview(); }
+function applyKind(){
+  document.getElementById('kind-content').classList.toggle('sel', editKind==='content');
+  document.getElementById('kind-link').classList.toggle('sel', editKind==='link');
+  document.getElementById('section-content').style.display = editKind==='content' ? '' : 'none';
+  document.getElementById('section-link').style.display = editKind==='link' ? '' : 'none';
 }
 function closeEditor(){ document.getElementById('modal').classList.add('hidden'); }
 document.getElementById('modal').addEventListener('click', ev=>{
@@ -627,13 +650,24 @@ function changeType(i,type){
 document.getElementById('blocks-list').addEventListener('input', updatePreview);
 
 function updatePreview(){
+  const prev = document.getElementById('preview');
+  prev.style.setProperty('--accent', editAccent);
+
+  if(editKind==='link'){
+    const link = document.getElementById('f-link').value.trim();
+    prev.innerHTML = link
+      ? '<div class="link-prev">🔗 Wie de QR scant gaat meteen naar: <strong>'+esc(link)+'</strong></div>'
+        + '<iframe class="link-frame" src="'+esc(link)+'"></iframe>'
+      : '<div class="pv-text" style="color:#999;">Vul hierboven een pagina of link in.</div>';
+    return;
+  }
+
   syncBlocks();
   const icon = document.getElementById('f-icon').value.trim();
   const title = document.getElementById('f-title').value.trim();
   const subtitle = document.getElementById('f-subtitle').value.trim();
   const blocks = editBlocks.map(renderBlockPV).join('');
-  document.getElementById('preview').style.setProperty('--accent', editAccent);
-  document.getElementById('preview').innerHTML =
+  prev.innerHTML =
     '<div class="pv-head">'
       + (icon?'<div class="pv-icon">'+esc(icon)+'</div>':'')
       + '<div class="pv-title">'+esc(title||'Titel van de QR code')+'</div>'
@@ -643,9 +677,11 @@ function updatePreview(){
 }
 
 function saveEntry(){
-  syncBlocks();
   const title = document.getElementById('f-title').value.trim();
   if(!title){ alert('Vul een titel in.'); document.getElementById('f-title').focus(); return; }
+  const link = document.getElementById('f-link').value.trim();
+  if(editKind==='link' && !link){ alert('Vul de pagina of link in.'); document.getElementById('f-link').focus(); return; }
+  if(editKind==='content') syncBlocks();
   const by = document.getElementById('f-by').value.trim();
   const existing = editId ? entries.find(x=>x.id===editId) : null;
   const id = editId || makeId(title);
@@ -655,7 +691,9 @@ function saveEntry(){
     subtitle: document.getElementById('f-subtitle').value.trim(),
     icon: document.getElementById('f-icon').value.trim() || '🔳',
     accent: editAccent,
-    blocks: editBlocks,
+    kind: editKind,
+    link: editKind==='link' ? link : '',
+    blocks: editKind==='content' ? editBlocks : [],
     createdAt: (existing && existing.createdAt) || now,
     updatedAt: now,
     updatedBy: by || (existing && existing.updatedBy) || ''
