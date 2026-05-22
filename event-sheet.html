@@ -79,6 +79,9 @@ if (configValid) {
 }
 
 window.__firebase = { db, configValid, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp };
+// Firebase is klaar — start de app (de app-code staat in een klassiek script
+// dat al uitgevoerd is voor deze module; daarom roepen we hier de mount aan).
+if (window.__mountApp) window.__mountApp();
 </script>
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -772,7 +775,17 @@ function MQ({ c, pe, su, ev, done }) {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+// Mount pas wanneer Firebase geladen is. Het module-script hierboven is
+// "deferred" en draait dus NA dit script; het roept window.__mountApp aan.
+let __efMounted = false;
+window.__mountApp = () => {
+  if (__efMounted) return;
+  __efMounted = true;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+};
+if (window.__firebase) window.__mountApp();
+// Vangnet: als Firebase niet laadt, toch iets tonen na 6s.
+setTimeout(() => window.__mountApp(), 6000);
 </script>
 </body>
 </html>
