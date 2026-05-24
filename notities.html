@@ -125,7 +125,7 @@ body.selecting .note .note-del{display:none;}
 .note.selected{border-left-color:var(--green);background:#f3fbf6;}
 
 /* PRINT — alleen geselecteerde notities zichtbaar */
-@page{margin:14mm;}
+@page{margin:20mm;}
 @media print{
   html,body{min-height:0 !important;height:auto !important;display:block !important;background:#fff !important;}
   .topbar,.tabs,.stats,.filters,.actions-row,.sel-bar,.note-del,.note-check,.empty{display:none !important;}
@@ -275,14 +275,49 @@ fbdb.ref(FB_PATH).on('value', snap => {
 }, err => console.warn('Firebase lezen mislukt:', err));
 
 // Events uit de planning ophalen als suggesties voor het Event-veld
+// Volgorde: eerstvolgende datum bovenaan (vandaag → morgen → …), events zonder datum onderaan
 fbdb.ref('ft_planning_v1').on('value', snap => {
   const data = snap.val();
   let arr = [];
   if(data) arr = Array.isArray(data) ? data : Object.values(data);
-  const evNames = [...new Set(arr.filter(e=>e&&e.name).map(e=>String(e.name).trim()).filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b));
+  const today = todayStr();
+  const eventDate = new Map();   // naam → eerstvolgende relevante datum ('' = geen datum)
+  arr.forEach(ev=>{
+    if(!ev || !ev.name) return;
+    const name = String(ev.name).trim();
+    if(!name) return;
+    const sd = ev.startDate;
+    const ed = ev.endDate || ev.startDate;
+    if(!sd){ if(!eventDate.has(name)) eventDate.set(name, ''); return; }
+    if(ed < today) return;                        // volledig voorbij → niet tonen
+    const eff = sd < today ? today : sd;          // event loopt al → vandaag
+    const ex = eventDate.get(name);
+    if(!ex || eff < ex) eventDate.set(name, eff);
+  });
+  const evNames = [...eventDate.keys()].sort((a,b)=>{
+    const da = eventDate.get(a), db = eventDate.get(b);
+    if(!da && !db) return a.localeCompare(b);
+    if(!da) return 1;
+    if(!db) return -1;
+    if(da !== db) return da < db ? -1 : 1;
+    return a.localeCompare(b);
+  });
+  const tNow = new Date();
+  const tomorrow = (()=>{ const t=new Date(tNow); t.setDate(t.getDate()+1);
+    return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate()); })();
+  const labelFor = (dstr)=>{
+    if(!dstr) return '';
+    if(dstr === today) return 'vandaag';
+    if(dstr === tomorrow) return 'morgen';
+    const [y,m,d] = dstr.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    return DAYS[dt.getDay()].slice(0,2).toLowerCase()+' '+d+'/'+pad(m);
+  };
   const dl = document.getElementById('events-list');
-  if(dl) dl.innerHTML = evNames.map(e=>'<option value="'+esc(e)+'">').join('');
+  if(dl) dl.innerHTML = evNames.map(e=>{
+    const lbl = labelFor(eventDate.get(e));
+    return '<option value="'+esc(e)+'">'+(lbl?esc(lbl):'')+'</option>';
+  }).join('');
 }, err => console.warn('Planning lezen mislukt:', err));
 
 // ── TAB SWITCH ─────────────────────────────────
