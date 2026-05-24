@@ -102,6 +102,48 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
 .empty .ico{font-size:2.6rem;margin-bottom:10px;}
 .empty .txt{font-size:0.95rem;}
 
+/* SELECTIE-MODUS */
+.actions-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.btn-sel{padding:9px 16px;background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-sel:hover{border-color:var(--red);color:var(--red);}
+.btn-sel.active{background:var(--red);color:#fff;border-color:var(--red);}
+.btn-sel.ghost{background:none;}
+.btn-pdf{padding:9px 16px;background:var(--green);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:background 0.15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-pdf:hover{background:#0f6b32;}
+.btn-pdf:disabled{opacity:0.45;cursor:not-allowed;}
+.sel-bar{display:none;align-items:center;gap:10px;background:#fff7f8;border:1px solid #f4c1c8;border-radius:8px;padding:10px 14px;margin-bottom:14px;flex-wrap:wrap;position:sticky;top:8px;z-index:20;}
+.sel-bar.show{display:flex;}
+.sel-count{font-weight:800;color:var(--red-dark);font-family:var(--font-cond);font-size:1rem;}
+.sel-bar .spacer{flex:1;}
+
+/* Checkbox op notitie */
+.note{position:relative;}
+.note-check{display:none;position:absolute;top:13px;right:13px;width:22px;height:22px;cursor:pointer;accent-color:var(--red);}
+body.selecting .note{cursor:pointer;padding-right:46px;}
+body.selecting .note-check{display:inline-block;}
+body.selecting .note .note-del{display:none;}
+.note.selected{border-left-color:var(--green);background:#f3fbf6;}
+
+/* PRINT — alleen geselecteerde notities zichtbaar */
+@media print{
+  body{background:#fff;}
+  .topbar,.tabs,.stats,.filters,.actions-row,.sel-bar,.note-del,.note-check,.empty{display:none !important;}
+  .wrap{max-width:100%;padding:0;}
+  .day-block{page-break-inside:avoid;margin-bottom:18px;}
+  .day-head{border-bottom:2px solid #000;color:#000;}
+  .hour-head{color:#000;}
+  .note{border:1px solid #000 !important;border-left:4px solid #000 !important;background:#fff !important;padding-right:15px !important;break-inside:avoid;page-break-inside:avoid;margin-bottom:8px;}
+  .note-name{background:#eee !important;color:#000 !important;}
+  .note-event{background:#eee !important;color:#000 !important;}
+  body.print-selection .note:not(.selected){display:none !important;}
+  body.print-selection .day-block:not(.has-selected),
+  body.print-selection .hour-block:not(.has-selected){display:none !important;}
+  .print-head{display:block !important;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #000;}
+  .print-head h1{font-family:var(--font-cond);font-size:1.4rem;}
+  .print-head .meta{font-size:0.8rem;color:#333;margin-top:3px;}
+}
+.print-head{display:none;}
+
 /* TOAST */
 .toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-24px);background:var(--green);color:#fff;padding:13px 26px;border-radius:7px;font-size:0.95rem;font-weight:700;opacity:0;transition:all 0.25s;z-index:500;box-shadow:0 6px 18px rgba(0,0,0,0.2);pointer-events:none;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
@@ -172,6 +214,20 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
       <select id="f-event" onchange="renderBoard()"><option value="">Alle events</option></select>
       <input type="text" id="f-search" placeholder="🔍 Zoek in notities..." oninput="renderBoard()">
     </div>
+    <div class="actions-row">
+      <button class="btn-sel" id="btn-toggle-sel" onclick="toggleSelectMode()">☑️ Selecteer notities</button>
+    </div>
+    <div class="sel-bar" id="sel-bar">
+      <span class="sel-count" id="sel-count">0 geselecteerd</span>
+      <button class="btn-sel ghost" onclick="selectAllVisible()">Selecteer alle zichtbare</button>
+      <button class="btn-sel ghost" onclick="deselectAll()">Wis selectie</button>
+      <span class="spacer"></span>
+      <button class="btn-pdf" id="btn-pdf" onclick="printSelected()" disabled>🖨️ Print selectie als PDF</button>
+    </div>
+    <div class="print-head" id="print-head">
+      <h1>Notities — Señor Snacks</h1>
+      <div class="meta" id="print-meta"></div>
+    </div>
     <div id="board"></div>
   </div>
 
@@ -182,6 +238,8 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
 <script>
 // ── STATE ──────────────────────────────────────
 let notes = JSON.parse(localStorage.getItem('ft_notities_v1') || '[]');
+let selectMode = false;
+const selectedIds = new Set();
 const FB_PATH = 'ft_notities_v1';
 const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
 const MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
@@ -354,12 +412,14 @@ function renderBoard(){
       html += '<div class="hour-block">';
       html += '<div class="hour-head">'+pad(h)+':00 – '+pad((h+1)%24)+':00 uur</div>';
       byHour[h].forEach(n=>{
-        html += '<div class="note">';
+        const isSel = selectedIds.has(n.id);
+        html += '<div class="note'+(isSel?' selected':'')+'" data-id="'+esc(n.id)+'" onclick="onNoteClick(event,\''+esc(n.id)+'\')">';
+        html += '<input type="checkbox" class="note-check" '+(isSel?'checked':'')+' onclick="event.stopPropagation();toggleSelect(\''+esc(n.id)+'\')">';
         html += '<div class="note-top">';
         html += '<span class="note-name">'+esc(n.name||'?')+'</span>';
         if(n.event) html += '<span class="note-event">📌 '+esc(n.event)+'</span>';
         html += '<span class="note-time">🕒 '+esc(n.time||'')+'</span>';
-        html += '<button class="note-del" title="Verwijderen" onclick="deleteNote(\''+esc(n.id)+'\')">✕</button>';
+        html += '<button class="note-del" title="Verwijderen" onclick="event.stopPropagation();deleteNote(\''+esc(n.id)+'\')">✕</button>';
         html += '</div>';
         html += '<div class="note-text">'+esc(n.text||'')+'</div>';
         html += '</div>';
@@ -369,6 +429,85 @@ function renderBoard(){
     html += '</div>';
   });
   board.innerHTML = html;
+}
+
+// ── SELECTIE-MODUS ─────────────────────────────
+function toggleSelectMode(){
+  selectMode = !selectMode;
+  document.body.classList.toggle('selecting', selectMode);
+  const btn = document.getElementById('btn-toggle-sel');
+  const bar = document.getElementById('sel-bar');
+  btn.classList.toggle('active', selectMode);
+  btn.textContent = selectMode ? '✕ Stop selecteren' : '☑️ Selecteer notities';
+  bar.classList.toggle('show', selectMode);
+  if(!selectMode){ selectedIds.clear(); }
+  renderBoard();
+  updateSelCount();
+}
+function onNoteClick(ev, id){
+  if(!selectMode) return;
+  if(ev.target.closest('.note-check, .note-del, a, button')) return;
+  toggleSelect(id);
+}
+function toggleSelect(id){
+  if(selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  const el = document.querySelector('.note[data-id="'+CSS.escape(id)+'"]');
+  if(el){
+    el.classList.toggle('selected', selectedIds.has(id));
+    const cb = el.querySelector('.note-check');
+    if(cb) cb.checked = selectedIds.has(id);
+  }
+  updateSelCount();
+}
+function selectAllVisible(){
+  document.querySelectorAll('#board .note').forEach(el=>{
+    const id = el.getAttribute('data-id');
+    if(id){ selectedIds.add(id); el.classList.add('selected'); const cb=el.querySelector('.note-check'); if(cb) cb.checked=true; }
+  });
+  updateSelCount();
+}
+function deselectAll(){
+  selectedIds.clear();
+  document.querySelectorAll('#board .note.selected').forEach(el=>{
+    el.classList.remove('selected');
+    const cb = el.querySelector('.note-check'); if(cb) cb.checked=false;
+  });
+  updateSelCount();
+}
+function updateSelCount(){
+  const n = selectedIds.size;
+  document.getElementById('sel-count').textContent = n + ' geselecteerd';
+  document.getElementById('btn-pdf').disabled = n===0;
+}
+function printSelected(){
+  if(selectedIds.size===0){ toast('Niets geselecteerd', 'var(--red)'); return; }
+  // Markeer dag- en uur-blokken die geselecteerde notities bevatten
+  document.querySelectorAll('.day-block, .hour-block').forEach(b=>b.classList.remove('has-selected'));
+  document.querySelectorAll('.note.selected').forEach(el=>{
+    const day = el.closest('.day-block'); if(day) day.classList.add('has-selected');
+    const hour = el.closest('.hour-block'); if(hour) hour.classList.add('has-selected');
+  });
+  // Print-header invullen
+  const nameF  = document.getElementById('f-name').value;
+  const eventF = document.getElementById('f-event').value;
+  const searchF= document.getElementById('f-search').value.trim();
+  const bits = [];
+  if(eventF)  bits.push('Event: '+eventF);
+  if(nameF)   bits.push('Persoon: '+nameF);
+  if(searchF) bits.push('Zoekterm: "'+searchF+'"');
+  bits.push(selectedIds.size + ' notitie' + (selectedIds.size>1?'s':''));
+  const d = new Date();
+  bits.push('Afgedrukt op ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear());
+  document.getElementById('print-meta').textContent = bits.join(' • ');
+
+  document.body.classList.add('print-selection');
+  const cleanup = ()=>{
+    document.body.classList.remove('print-selection');
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(()=>window.print(), 50);
 }
 
 // ── INIT ───────────────────────────────────────
