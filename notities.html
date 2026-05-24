@@ -125,11 +125,15 @@ body.selecting .note .note-del{display:none;}
 .note.selected{border-left-color:var(--green);background:#f3fbf6;}
 
 /* PRINT — alleen geselecteerde notities zichtbaar */
+@page{margin:14mm;}
 @media print{
-  body{background:#fff;}
+  html,body{min-height:0 !important;height:auto !important;display:block !important;background:#fff !important;}
   .topbar,.tabs,.stats,.filters,.actions-row,.sel-bar,.note-del,.note-check,.empty{display:none !important;}
-  .wrap{max-width:100%;padding:0;}
-  .day-block{page-break-inside:avoid;margin-bottom:18px;}
+  .wrap{flex:none !important;max-width:100%;padding:0 !important;margin:0 !important;}
+  .view{display:block !important;}
+  .view:not(.active){display:none !important;}
+  .day-block{page-break-inside:auto;margin-bottom:14px;}
+  .day-block:first-of-type,.day-head:first-child{margin-top:0 !important;padding-top:0 !important;}
   .day-head{border-bottom:2px solid #000;color:#000;}
   .hour-head{color:#000;}
   .note{border:1px solid #000 !important;border-left:4px solid #000 !important;background:#fff !important;padding-right:15px !important;break-inside:avoid;page-break-inside:avoid;margin-bottom:8px;}
