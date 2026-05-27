@@ -18,455 +18,201 @@
       --white: #ffffff;
       --gold: #c9a84c;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Outfit', sans-serif;
-      background: var(--cream);
-      color: var(--text);
-      overflow-x: hidden;
-    }
-
-    /* ── NAV ── */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 32px;
-      background: rgba(242,236,224,0.88);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(26,92,53,0.12);
-    }
+    body { font-family: 'Outfit', sans-serif; background: var(--cream); color: var(--text); overflow-x: hidden; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; background: rgba(242,236,224,0.88); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(26,92,53,0.12); }
     nav img { height: 44px; }
-    .nav-tag {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
-      text-transform: uppercase; color: var(--green-dark);
-      background: var(--green-pale);
-      padding: 6px 14px; border-radius: 99px;
-    }
-
-    /* ── HERO ── */
-    .hero {
-      min-height: 100vh;
-      background: var(--green-dark);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-      position: relative; overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: repeating-linear-gradient(
-        -45deg,
-        transparent, transparent 28px,
-        rgba(255,255,255,0.025) 28px, rgba(255,255,255,0.025) 29px
-      );
-    }
-    .hero-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.18em;
-      text-transform: uppercase; color: rgba(255,255,255,0.55);
-      margin-bottom: 20px;
-    }
-    .hero h1 {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(52px, 10vw, 110px);
-      font-weight: 900;
-      color: var(--white);
-      line-height: 1;
-      margin-bottom: 24px;
-    }
-    .hero h1 em {
-      font-style: italic; color: #7dd9a2;
-    }
-    .hero-sub {
-      font-size: clamp(16px, 3vw, 20px);
-      font-weight: 300;
-      color: rgba(255,255,255,0.75);
-      max-width: 560px;
-      line-height: 1.6;
-      margin-bottom: 48px;
-    }
-    .hero-cert {
-      display: inline-flex; align-items: center; gap: 12px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 12px;
-      padding: 14px 24px;
-      color: rgba(255,255,255,0.85);
-      font-size: 13px;
-    }
+    .nav-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green-dark); background: var(--green-pale); padding: 6px 14px; border-radius: 99px; }
+    .hero { min-height: 100vh; background: var(--green-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 120px 24px 80px; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(255,255,255,0.025) 28px, rgba(255,255,255,0.025) 29px); }
+    .hero-label { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 20px; }
+    .hero h1 { font-family: 'Fraunces', serif; font-size: clamp(52px, 10vw, 110px); font-weight: 900; color: var(--white); line-height: 1; margin-bottom: 24px; }
+    .hero h1 em { font-style: italic; color: #7dd9a2; }
+    .hero-sub { font-size: clamp(16px, 3vw, 20px); font-weight: 300; color: rgba(255,255,255,0.75); max-width: 560px; line-height: 1.6; margin-bottom: 48px; }
+    .hero-cert { display: inline-flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 14px 24px; color: rgba(255,255,255,0.85); font-size: 13px; }
     .hero-cert img { height: 28px; filter: brightness(0) invert(1) opacity(0.7); }
-    .scroll-hint {
-      position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
-      color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
-      animation: bounce 2s infinite;
-    }
+    .scroll-hint { position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; animation: bounce 2s infinite; }
     .scroll-hint svg { width: 20px; height: 20px; stroke: currentColor; fill: none; }
-    @keyframes bounce {
-      0%,100% { transform: translateX(-50%) translateY(0); }
-      50% { transform: translateX(-50%) translateY(6px); }
-    }
-
-    /* ── STAT BAND ── */
-    .stat-band {
-      background: var(--green-mid);
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-    }
-    .stat-item {
-      padding: 36px 24px;
-      text-align: center;
-      border-right: 1px solid rgba(255,255,255,0.1);
-      position: relative;
-    }
+    @keyframes bounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(6px); } }
+    .stat-band { background: var(--green-mid); padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); }
+    .stat-item { padding: 36px 24px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); position: relative; }
     .stat-item:last-child { border-right: none; }
-    .stat-num {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(36px, 6vw, 64px);
-      font-weight: 900;
-      color: #7dd9a2;
-      line-height: 1;
-    }
-    .stat-unit {
-      font-size: 16px; font-weight: 400; color: rgba(255,255,255,0.7);
-    }
-    .stat-desc {
-      font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
-      text-transform: uppercase; color: rgba(255,255,255,0.5);
-      margin-top: 8px;
-    }
-
-    /* ── SECTION GENERAL ── */
+    .stat-num { font-family: 'Fraunces', serif; font-size: clamp(36px, 6vw, 64px); font-weight: 900; color: #7dd9a2; line-height: 1; }
+    .stat-unit { font-size: 16px; font-weight: 400; color: rgba(255,255,255,0.7); }
+    .stat-desc { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-top: 8px; }
     section { padding: 96px 24px; }
     .container { max-width: 1100px; margin: 0 auto; }
-    .section-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.16em;
-      text-transform: uppercase; color: var(--green-mid);
-      margin-bottom: 16px;
-    }
-    h2 {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(36px, 5vw, 64px);
-      font-weight: 900;
-      line-height: 1.05;
-      margin-bottom: 24px;
-    }
-    .lead {
-      font-size: 18px; line-height: 1.7;
-      color: var(--text-muted);
-      max-width: 640px;
-      margin-bottom: 48px;
-    }
-
-    /* ── SOLAR ── */
+    .section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--green-mid); margin-bottom: 16px; }
+    h2 { font-family: 'Fraunces', serif; font-size: clamp(36px, 5vw, 64px); font-weight: 900; line-height: 1.05; margin-bottom: 24px; }
+    .lead { font-size: 18px; line-height: 1.7; color: var(--text-muted); max-width: 640px; margin-bottom: 48px; }
     .solar-section { background: var(--cream-light); }
-    .solar-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
-      align-items: center;
-    }
-    .solar-visual {
-      background: var(--green-dark);
-      border-radius: 24px;
-      padding: 48px;
-      text-align: center;
-      position: relative; overflow: hidden;
-    }
-    .solar-visual::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: repeating-linear-gradient(
-        -45deg,
-        transparent, transparent 28px,
-        rgba(255,255,255,0.03) 28px, rgba(255,255,255,0.03) 30px
-      );
-    }
+    .solar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+    .solar-visual { background: var(--green-dark); border-radius: 24px; padding: 48px; text-align: center; position: relative; overflow: hidden; }
+    .solar-visual::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(255,255,255,0.03) 28px, rgba(255,255,255,0.03) 30px); }
     .solar-icon { font-size: 64px; margin-bottom: 16px; }
-    .solar-big {
-      font-family: 'Fraunces', serif;
-      font-size: 96px; font-weight: 900;
-      color: #7dd9a2; line-height: 1;
-    }
+    .solar-big { font-family: 'Fraunces', serif; font-size: 96px; font-weight: 900; color: #7dd9a2; line-height: 1; }
     .solar-big span { font-size: 40px; }
-    .solar-label {
-      font-size: 14px; color: rgba(255,255,255,0.6);
-      letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px;
-    }
+    .solar-label { font-size: 14px; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px; }
     .solar-facts { display: flex; flex-direction: column; gap: 20px; }
-    .solar-fact {
-      display: flex; align-items: flex-start; gap: 16px;
-      background: var(--white);
-      border-radius: 16px; padding: 20px 24px;
-      border-left: 4px solid var(--green-light);
-    }
+    .solar-fact { display: flex; align-items: flex-start; gap: 16px; background: var(--white); border-radius: 16px; padding: 20px 24px; border-left: 4px solid var(--green-light); }
     .fact-icon { font-size: 28px; flex-shrink: 0; }
     .fact-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
     .fact-body { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
-
-    /* ── CO2 STRIP ── */
-    .co2-strip {
-      background: var(--green-dark);
-      padding: 80px 24px;
-      text-align: center;
-      position: relative; overflow: hidden;
-    }
-    .co2-strip::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: repeating-linear-gradient(
-        -45deg,
-        transparent, transparent 28px,
-        rgba(255,255,255,0.025) 28px, rgba(255,255,255,0.025) 29px
-      );
-    }
+    .co2-strip { background: var(--green-dark); padding: 80px 24px; text-align: center; position: relative; overflow: hidden; }
+    .co2-strip::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(255,255,255,0.025) 28px, rgba(255,255,255,0.025) 29px); }
     .co2-label { font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 16px; }
-    .co2-big {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(64px, 14vw, 160px);
-      font-weight: 900;
-      color: var(--white);
-      line-height: 0.9;
-    }
+    .co2-big { font-family: 'Fraunces', serif; font-size: clamp(64px, 14vw, 160px); font-weight: 900; color: var(--white); line-height: 0.9; }
     .co2-big sup { font-size: 0.35em; vertical-align: super; }
     .co2-unit { font-size: clamp(28px, 4vw, 48px); font-weight: 300; color: #7dd9a2; }
     .co2-sub { font-size: 15px; color: rgba(255,255,255,0.55); margin-top: 20px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.6; }
-    .quatra-badge {
-      display: inline-flex; align-items: center; gap: 10px;
-      margin-top: 32px;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 99px;
-      padding: 10px 20px;
-      font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.06em;
-    }
+    .quatra-badge { display: inline-flex; align-items: center; gap: 10px; margin-top: 32px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 99px; padding: 10px 20px; font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 0.06em; }
     .quatra-badge strong { color: rgba(255,255,255,0.9); }
-
-    /* ── PRODUCERS ── */
     .producers-section { background: var(--cream); }
-    .producers-grid {
-      display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px;
-      margin-top: 48px;
-    }
-    .producer-card {
-      background: var(--white);
-      border-radius: 18px;
-      padding: 20px 10px 16px;
-      text-align: center;
-      border: 1px solid rgba(26,92,53,0.08);
-      transition: transform 0.25s, box-shadow 0.25s;
-    }
+    .producers-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; margin-top: 48px; }
+    .producer-card { background: var(--white); border-radius: 18px; padding: 20px 10px 16px; text-align: center; border: 1px solid rgba(26,92,53,0.08); transition: transform 0.25s, box-shadow 0.25s; }
     .producer-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(26,92,53,0.12); }
-    .producer-logo-wrap {
-      width: 80px; height: 60px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 12px;
-      overflow: hidden;
-      background: #f0f5f2;
-    }
+    .producer-logo-wrap { width: 80px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; overflow: hidden; background: #f0f5f2; }
     .producer-logo-wrap img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
-    .producer-logo-wrap.fallback {
-      font-family: 'Fraunces', serif;
-      font-size: 22px; font-weight: 900;
-      color: var(--green-dark);
-      background: var(--green-pale);
-    }
+    .producer-logo-wrap.fallback { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 900; color: var(--green-dark); background: var(--green-pale); }
     .producer-name { font-size: 13px; font-weight: 600; color: var(--text); }
     .producer-type { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-    .nine-of-ten {
-      display: flex; align-items: center; gap: 16px;
-      background: var(--green-pale);
-      border-radius: 16px; padding: 24px 28px;
-      margin-bottom: 40px;
-    }
-    .nine-of-ten-big {
-      font-family: 'Fraunces', serif;
-      font-size: 56px; font-weight: 900;
-      color: var(--green-dark); line-height: 1;
-      flex-shrink: 0;
-    }
+    .nine-of-ten { display: flex; align-items: center; gap: 16px; background: var(--green-pale); border-radius: 16px; padding: 24px 28px; margin-bottom: 40px; }
+    .nine-of-ten-big { font-family: 'Fraunces', serif; font-size: 56px; font-weight: 900; color: var(--green-dark); line-height: 1; flex-shrink: 0; }
     .nine-of-ten-text { font-size: 15px; line-height: 1.6; color: var(--text-muted); }
     .nine-of-ten-text strong { color: var(--text); }
-
-    /* ── TRANSPORT ── */
     .transport-section { background: var(--cream-light); }
     .transport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-    .transport-donut-wrap {
-      position: relative; display: flex;
-      align-items: center; justify-content: center;
-    }
+    .transport-donut-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
     .donut-svg { width: 260px; height: 260px; }
-    .donut-center {
-      position: absolute;
-      text-align: center;
-    }
-    .donut-pct {
-      font-family: 'Fraunces', serif;
-      font-size: 54px; font-weight: 900;
-      color: var(--green-dark); line-height: 1;
-    }
+    .donut-center { position: absolute; text-align: center; }
+    .donut-pct { font-family: 'Fraunces', serif; font-size: 54px; font-weight: 900; color: var(--green-dark); line-height: 1; }
     .donut-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
     .transport-facts { display: flex; flex-direction: column; gap: 16px; }
-    .transport-fact {
-      display: flex; align-items: center; gap: 16px;
-      background: var(--white); border-radius: 14px; padding: 18px 22px;
-    }
+    .transport-fact { display: flex; align-items: center; gap: 16px; background: var(--white); border-radius: 14px; padding: 18px 22px; }
     .t-icon { font-size: 26px; }
     .t-title { font-size: 14px; font-weight: 600; }
     .t-body { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-
-    /* ── COOKING OIL ── */
-    .oil-section {
-      background: var(--green-dark);
-      color: var(--white);
-      text-align: center;
-      padding: 96px 24px;
-      position: relative; overflow: hidden;
-    }
-    .oil-section::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: repeating-linear-gradient(
-        -45deg,
-        transparent, transparent 28px,
-        rgba(255,255,255,0.02) 28px, rgba(255,255,255,0.02) 30px
-      );
-    }
+    .oil-section { background: var(--green-dark); color: var(--white); text-align: center; padding: 96px 24px; position: relative; overflow: hidden; }
+    .oil-section::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, transparent, transparent 28px, rgba(255,255,255,0.02) 28px, rgba(255,255,255,0.02) 30px); }
     .oil-section .section-label { color: #7dd9a2; }
     .oil-section h2 { color: var(--white); }
     .oil-section .lead { color: rgba(255,255,255,0.65); margin: 0 auto 48px; }
-    .oil-steps {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 2px; margin-top: 48px; position: relative; z-index: 1;
-    }
-    .oil-step {
-      background: rgba(255,255,255,0.07);
-      border-radius: 16px; padding: 32px 20px;
-      text-align: center;
-    }
-    .step-num {
-      font-family: 'Fraunces', serif;
-      font-size: 48px; font-weight: 900;
-      color: #7dd9a2; line-height: 1;
-      margin-bottom: 12px;
-    }
+    .oil-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 48px; position: relative; z-index: 1; }
+    .oil-step { background: rgba(255,255,255,0.07); border-radius: 16px; padding: 32px 20px; text-align: center; }
+    .step-num { font-family: 'Fraunces', serif; font-size: 48px; font-weight: 900; color: #7dd9a2; line-height: 1; margin-bottom: 12px; }
     .step-icon { font-size: 32px; margin-bottom: 12px; }
     .step-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
     .step-body { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.5; }
-
-    /* ── EXTRA COMMITMENTS ── */
     .commit-section { background: var(--cream); }
-    .commit-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-      margin-top: 48px;
-    }
-    .commit-card {
-      background: var(--white);
-      border-radius: 20px; padding: 36px 28px;
-      border-top: 4px solid var(--green-dark);
-      transition: transform 0.2s;
-    }
+    .commit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+    .commit-card { background: var(--white); border-radius: 20px; padding: 36px 28px; border-top: 4px solid var(--green-dark); transition: transform 0.2s; }
     .commit-card:hover { transform: translateY(-3px); }
     .commit-emoji { font-size: 40px; margin-bottom: 16px; }
     .commit-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
     .commit-body { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
-    .commit-target {
-      display: inline-block;
-      margin-top: 14px;
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--green-mid);
-      background: var(--green-pale);
-      padding: 5px 12px; border-radius: 99px;
-    }
-
-    /* ── FOOTER BADGE ── */
-    .footer-badge {
-      background: var(--green-mid);
-      padding: 64px 24px;
-      text-align: center;
-    }
+    .commit-target { display: inline-block; margin-top: 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--green-mid); background: var(--green-pale); padding: 5px 12px; border-radius: 99px; }
+    .footer-badge { background: var(--green-mid); padding: 64px 24px; text-align: center; }
     .footer-logo { height: 56px; margin-bottom: 24px; }
     .footer-text { color: rgba(255,255,255,0.65); font-size: 14px; line-height: 1.7; max-width: 480px; margin: 0 auto 28px; }
-    .footer-link {
-      color: #7dd9a2; font-weight: 600; font-size: 14px;
-      text-decoration: none; border-bottom: 1px solid rgba(125,217,162,0.4);
-      padding-bottom: 2px;
-    }
-    .cert-row {
-      display: flex; align-items: center; justify-content: center; gap: 32px;
-      margin-top: 40px; flex-wrap: wrap;
-    }
-    .cert-badge {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 10px; padding: 12px 20px;
-      font-size: 12px; color: rgba(255,255,255,0.6);
-      display: flex; align-items: center; gap: 8px;
-    }
+    .footer-link { color: #7dd9a2; font-weight: 600; font-size: 14px; text-decoration: none; border-bottom: 1px solid rgba(125,217,162,0.4); padding-bottom: 2px; }
+    .cert-row { display: flex; align-items: center; justify-content: center; gap: 32px; margin-top: 40px; flex-wrap: wrap; }
+    .cert-badge { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 12px 20px; font-size: 12px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 8px; }
     .cert-badge span { font-size: 18px; }
-
-    /* ── FADE-IN ON SCROLL ── */
     .reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
     .reveal.visible { opacity: 1; transform: none; }
     .reveal-delay-1 { transition-delay: 0.1s; }
     .reveal-delay-2 { transition-delay: 0.2s; }
     .reveal-delay-3 { transition-delay: 0.3s; }
     .reveal-delay-4 { transition-delay: 0.4s; }
-
-    /* ── DONUT ANIMATION ── */
-    .donut-ring {
-      stroke-dasharray: 502;
-      stroke-dashoffset: 502;
-      transition: stroke-dashoffset 1.6s cubic-bezier(0.4,0,0.2,1);
-    }
+    .donut-ring { stroke-dasharray: 502; stroke-dashoffset: 502; transition: stroke-dashoffset 1.6s cubic-bezier(0.4,0,0.2,1); }
     .donut-ring.animated { stroke-dashoffset: 50; }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {
-      nav { padding: 12px 16px; }
-      .stat-band { grid-template-columns: 1fr; }
-      .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
-      .solar-grid { grid-template-columns: 1fr; }
+    @media (max-width: 900px) {
       .producers-grid { grid-template-columns: repeat(3, 1fr); }
-      .transport-grid { grid-template-columns: 1fr; }
+      .commit-grid { grid-template-columns: repeat(2, 1fr); }
       .oil-steps { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      nav { padding: 10px 16px; }
+      nav img { height: 34px; }
+      .nav-tag { font-size: 10px; padding: 5px 10px; }
+      section { padding: 60px 16px; }
+      .stat-band { grid-template-columns: repeat(3, 1fr); }
+      .stat-item { padding: 20px 10px; }
+      .stat-num { font-size: 28px; }
+      .stat-desc { font-size: 10px; }
+      .solar-grid { grid-template-columns: 1fr; gap: 32px; }
+      .solar-visual { padding: 32px 24px; }
+      .solar-big { font-size: 64px; }
+      .producers-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .producer-card { padding: 16px 8px 12px; border-radius: 12px; }
+      .producer-logo-wrap { width: 56px; height: 50px; }
+      .producer-name { font-size: 11px; }
+      .transport-grid { grid-template-columns: 1fr; }
+      .transport-donut-wrap { order: -1; margin-bottom: 8px; }
+      .donut-svg { width: 200px; height: 200px; }
+      .donut-pct { font-size: 42px; }
+      .oil-steps { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .oil-step { padding: 20px 12px; border-radius: 12px; }
+      .step-num { font-size: 36px; }
       .commit-grid { grid-template-columns: 1fr; }
-      .cert-row { flex-direction: column; align-items: center; gap: 12px; }
+      .nine-of-ten { flex-direction: column; text-align: center; padding: 20px; gap: 8px; }
+      .nine-of-ten-big { font-size: 48px; }
+      .co2-strip { padding: 56px 16px; }
+      .co2-sub { font-size: 13px; }
+      .cert-row { flex-direction: column; align-items: center; gap: 10px; }
+      .cert-badge { font-size: 11px; width: 100%; max-width: 280px; justify-content: center; }
+      .footer-badge { padding: 48px 16px; }
+      .footer-logo { height: 44px; }
+      .hero { padding: 100px 20px 80px; }
+      .hero-sub { font-size: 15px; }
+      .hero-cert { font-size: 11px; padding: 10px 14px; text-align: center; }
+      .quatra-badge { font-size: 11px; padding: 8px 14px; text-align: center; }
     }
     @media (max-width: 480px) {
-      .producers-grid { grid-template-columns: repeat(3, 1fr); }
-      .oil-steps { grid-template-columns: 1fr 1fr; }
+      .stat-band { grid-template-columns: 1fr; }
+      .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 18px 16px; }
+      h2 { font-size: 32px; }
+      .lead { font-size: 15px; }
+      .producers-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .producer-logo-wrap { width: 52px; height: 46px; }
+      .oil-steps { grid-template-columns: 1fr; }
+      .oil-step { padding: 20px 16px; }
+      .solar-big { font-size: 52px; }
+      .solar-big span { font-size: 28px; }
+      .nine-of-ten-big { font-size: 40px; }
+      .nine-of-ten-text { font-size: 13px; }
+      .transport-fact { padding: 14px 16px; gap: 12px; }
+      .t-icon { font-size: 20px; }
+      .commit-card { padding: 24px 20px; }
+      .donut-svg { width: 180px; height: 180px; }
+      .donut-pct { font-size: 38px; }
+    }
+    .hero-cert { max-width: 100%; flex-wrap: wrap; justify-content: center; text-align: center; }
+    @media (max-width: 480px) {
+      .hero-cert { font-size: 10px; padding: 8px 12px; gap: 6px; }
+      .scroll-hint { display: none; }
     }
   </style>
 </head>
 <body>
-
-<!-- ── NAV ── -->
 <nav>
   <img src="https://i0.wp.com/senorsnacks.be/wp-content/uploads/2024/12/logo-senorsnacks.webp" alt="Señor Snacks" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
   <span style="display:none; font-family:'Fraunces',serif; font-weight:900; font-size:22px; color:var(--green-dark);">Señor Snacks</span>
   <span class="nav-tag">🌿 Green Deal 2026</span>
 </nav>
-
-<!-- ── HERO ── -->
 <div class="hero">
   <p class="hero-label">Señor Snacks × Duurzaamheid</p>
   <h1>Onze<br><em>Green Deal</em></h1>
   <p class="hero-sub">Al meer dan 30 jaar verzorgen we catering op festivals, sportevenementen en bedrijfsfeesten. Dat doen we met smaak — én met respect voor de planeet.</p>
-  <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; max-width:600px; padding:0 8px;">
     <div class="hero-cert">
       <span>🏆</span>
-      Gecertificeerd via Quatra & Anthesis Climate Neutral Group — Partners in Sustainability 2026
+      Gecertificeerd via Quatra &amp; Anthesis Climate Neutral Group — Partners in Sustainability 2026
     </div>
-    <div class="hero-cert" style="background:rgba(201,168,76,0.15); border-color:rgba(201,168,76,0.35);">
-      <span style="font-size:20px;">🦌</span>
-      <span style="color:rgba(255,255,255,0.9);"><strong style="color:#e8c96a;">Trends Gazellen Ambassadeur 2026</strong> — Bekroond snelst groeiend Belgisch bedrijf</span>
+    <div class="hero-cert" style="background:rgba(201,168,76,0.12); border-color:rgba(201,168,76,0.3); gap:14px;">
+      <img src="https://trendsgazellen.be/wp-content/uploads/TrendsGazellen_NL_2026_neg.png" alt="Trends Gazellen" style="height:32px; width:auto; filter:none; opacity:1;">
+      <span style="color:rgba(255,255,255,0.85);">Ambassadeur Snelst Groeiend Bedrijf — Provincie Antwerpen</span>
     </div>
   </div>
   <div class="scroll-hint">
@@ -474,8 +220,6 @@
     scroll
   </div>
 </div>
-
-<!-- ── STAT BAND ── -->
 <div class="stat-band">
   <div class="stat-item">
     <div class="stat-num">29.179 <span class="stat-unit">kg</span></div>
@@ -490,8 +234,6 @@
     <div class="stat-desc">Euro 6 voertuigen</div>
   </div>
 </div>
-
-<!-- ── SOLAR ── -->
 <section class="solar-section">
   <div class="container">
     <div class="solar-grid">
@@ -529,8 +271,6 @@
     </div>
   </div>
 </section>
-
-<!-- ── CO2 STRIP ── -->
 <div class="co2-strip">
   <div class="co2-label">Officieel gecertificeerd resultaat 2026</div>
   <div class="co2-big">29.179</div>
@@ -540,77 +280,60 @@
     <span class="quatra-badge">Geverifieerd door <strong>Anthesis Climate Neutral Group</strong> · ISO 14064</span>
   </div>
 </div>
-
-<!-- ── PRODUCERS ── -->
 <section class="producers-section">
   <div class="container">
     <div class="section-label reveal">Belgische ketens</div>
     <h2 class="reveal">9 op 10<br>Belgische producenten</h2>
     <p class="lead reveal">We geloven in korte keten en lokale samenwerking. Meer dan 90% van onze leveranciers is Belgisch. Zo houden we de economische waarde in eigen land, reduceren we transportkilometers en ondersteunen we de Belgische voedingsindustrie.</p>
-
     <div class="nine-of-ten reveal">
       <div class="nine-of-ten-big">9/10</div>
       <div class="nine-of-ten-text">Van onze vaste producenten is <strong>Belgisch of heeft productie in België</strong>. Dat is geen toeval — het is een bewuste keuze die we actief verdedigen bij elke aankoop.</div>
     </div>
-
     <div class="producers-grid">
-      <!-- Aardappelen Nijs -->
       <div class="producer-card reveal reveal-delay-1">
         <div class="producer-logo-wrap">
-          <img src="https://aardappelennijs.be/wp-content/uploads/2024/11/aardappelen_nijs_logo_favicon.png" alt="Aardappelen Nijs"
-               onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='N';">
+          <img src="https://aardappelennijs.be/wp-content/uploads/2024/11/aardappelen_nijs_logo_favicon.png" alt="Aardappelen Nijs" onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='N';">
         </div>
         <div class="producer-name">Aardappelen Nijs</div>
       </div>
-      <!-- Van Reusel -->
       <div class="producer-card reveal reveal-delay-3">
         <div class="producer-logo-wrap">
-          <img src="https://www.vanreusel.eu/wp-content/uploads/2023/04/cropped-favicon-270x270.png" alt="Van Reusel"
-               onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='VR';">
+          <img src="https://www.vanreusel.eu/wp-content/uploads/2023/04/cropped-favicon-270x270.png" alt="Van Reusel" onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='VR';">
         </div>
         <div class="producer-name">Van Reusel</div>
       </div>
-      <!-- Pauwels -->
       <div class="producer-card reveal reveal-delay-1">
         <div class="producer-logo-wrap">
-          <img src="https://www.pauwels-sauces.be/favicon.ico" alt="Pauwels"
-               onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='P';">
+          <img src="https://www.pauwels-sauces.be/favicon.ico" alt="Pauwels" onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='P';">
         </div>
         <div class="producer-name">Pauwels</div>
       </div>
-      <!-- La Lorraine -->
       <div class="producer-card reveal reveal-delay-4">
         <div class="producer-logo-wrap">
-          <img src="https://llbg.com/favicon.ico" alt="La Lorraine"
-               onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='LL';">
+          <img src="https://llbg.com/favicon.ico" alt="La Lorraine" onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='LL';">
         </div>
         <div class="producer-name">La Lorraine</div>
       </div>
       <div class="producer-card reveal reveal-delay-2">
         <div class="producer-logo-wrap">
-          <img src="https://www.ijsboerke.be/storage/images/web/ijsboerke-basis-logo-srgb-1636971178.png" alt="IJsboerke"
-               onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='IJ';">
+          <img src="https://www.ijsboerke.be/storage/images/web/ijsboerke-basis-logo-srgb-1636971178.png" alt="IJsboerke" onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='IJ';">
         </div>
         <div class="producer-name">IJsboerke</div>
       </div>
-      <!-- OVI -->
       <div class="producer-card reveal reveal-delay-2">
         <div class="producer-logo-wrap">
-          <img src="https://www.ovi.be/wp-content/uploads/2022/09/fav-icon.png" alt="OVI"
-               onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='OVI';">
+          <img src="https://www.ovi.be/wp-content/uploads/2022/09/fav-icon.png" alt="OVI" onerror="this.parentElement.classList.add('fallback'); this.parentElement.innerHTML='OVI';">
         </div>
         <div class="producer-name">OVI</div>
       </div>
     </div>
   </div>
 </section>
-
-<!-- ── TRANSPORT ── -->
 <section class="transport-section">
   <div class="container">
     <div class="transport-grid">
       <div>
-        <div class="section-label reveal">Vloot & transport</div>
+        <div class="section-label reveal">Vloot &amp; transport</div>
         <h2 class="reveal">Schoner op<br>de weg</h2>
         <p class="lead reveal">Een vloot van meer dan 100 wagens en stands vraagt om een ambitieus emissiebeleid. We investeren structureel in de modernisering van ons wagenpark.</p>
         <div class="transport-facts">
@@ -647,10 +370,7 @@
       <div class="transport-donut-wrap reveal">
         <svg class="donut-svg" viewBox="0 0 180 180">
           <circle cx="90" cy="90" r="80" fill="none" stroke="#e8f0ea" stroke-width="20"/>
-          <circle class="donut-ring" cx="90" cy="90" r="80" fill="none"
-                  stroke="#1a5c35" stroke-width="20"
-                  stroke-linecap="round"
-                  transform="rotate(-90 90 90)"/>
+          <circle class="donut-ring" cx="90" cy="90" r="80" fill="none" stroke="#1a5c35" stroke-width="20" stroke-linecap="round" transform="rotate(-90 90 90)"/>
         </svg>
         <div class="donut-center">
           <div class="donut-pct">90%</div>
@@ -660,8 +380,6 @@
     </div>
   </div>
 </section>
-
-<!-- ── COOKING OIL ── -->
 <section class="oil-section">
   <div class="container">
     <div class="section-label">Frituurvet recycling</div>
@@ -695,8 +413,6 @@
     </div>
   </div>
 </section>
-
-<!-- ── EXTRA COMMITMENTS ── -->
 <section class="commit-section">
   <div class="container">
     <div class="section-label reveal">Meer dan cijfers</div>
@@ -720,30 +436,12 @@
         <div class="commit-body">Señor Snacks werkt nauw samen met lokale leveranciers en tewerkstellingsinitiatieven in de streek. We geloven dat een gezonde planeet begint bij een gezonde lokale economie.</div>
         <span class="commit-target">30+ jaar lokale verankering in de regio</span>
       </div>
-      <div class="commit-card reveal reveal-delay-1">
-        <div class="commit-emoji">🌡️</div>
-        <div class="commit-title">CO₂-reductieplan</div>
-        <div class="commit-body">We meten onze volledige voetafdruk jaarlijks en stellen concrete reductiedoelstellingen op. We rapporteren transparant over onze vooruitgang en stellen ons open voor externe verificatie.</div>
-        <span class="commit-target">Science-Based Target aanpak</span>
-      </div>
-      <div class="commit-card reveal reveal-delay-2">
-        <div class="commit-emoji">🥗</div>
-        <div class="commit-title">Minder voedselverspilling</div>
-        <div class="commit-body">Via betere eventplanningen, verfijnd stockbeheer en samenwerking met lokale voedselbanken reduceren we voedselverspilling op en na elk event tot een minimum.</div>
-        <span class="commit-target">Nul-verspilling visie 2030</span>
-      </div>
+    </div>
   </div>
 </section>
-
-<!-- ── FOOTER ── -->
 <div class="footer-badge">
-  <img class="footer-logo"
-       src="https://i0.wp.com/senorsnacks.be/wp-content/uploads/2024/12/logo-senorsnacks.webp"
-       alt="Señor Snacks"
-       onerror="this.style.display='none';">
-  <p class="footer-text">
-    Señor Snacks zet zich dag na dag in voor een smakelijkere én duurzamere evenementenwereld. Meer weten over onze aanpak of samenwerken?
-  </p>
+  <img class="footer-logo" src="https://i0.wp.com/senorsnacks.be/wp-content/uploads/2024/12/logo-senorsnacks.webp" alt="Señor Snacks" onerror="this.style.display='none';">
+  <p class="footer-text">Señor Snacks zet zich dag na dag in voor een smakelijkere én duurzamere evenementenwereld. Meer weten over onze aanpak of samenwerken?</p>
   <a href="https://senorsnacks.be/contact/" class="footer-link">Contacteer ons →</a>
   <div class="cert-row">
     <div class="cert-badge"><span>🏆</span> Partners in Sustainability 2026</div>
@@ -751,13 +449,14 @@
     <div class="cert-badge"><span>🚚</span> 90% Euro 6 Vloot</div>
     <div class="cert-badge"><span>🇧🇪</span> 9/10 Belgische Producenten</div>
     <div class="cert-badge"><span>♻️</span> Gecertificeerde CO₂ Reductie</div>
-    <div class="cert-badge" style="border-color:rgba(201,168,76,0.4); background:rgba(201,168,76,0.1);"><span>🦌</span> <span style="color:#e8c96a;">Trends Gazellen Ambassadeur 2026</span></div>
+    <div class="cert-badge" style="border-color:rgba(201,168,76,0.4); background:rgba(201,168,76,0.1); gap:10px;">
+      <img src="https://trendsgazellen.be/wp-content/uploads/cropped-TrendsGazellen_NL_2026_Blue-1-270x270.png" alt="Trends Gazellen" style="height:24px; width:24px; object-fit:contain; border-radius:4px;">
+      <span style="color:#e8c96a;">Ambassadeur 2026 · Antwerpen</span>
+    </div>
   </div>
   <p style="color:rgba(255,255,255,0.3); font-size:11px; margin-top:40px;">© 2026 Señor Snacks BV · senorsnacks.be · quatra.com/sustainability</p>
 </div>
-
 <script>
-  // ── Intersection Observer for reveal animations ──
   const reveals = document.querySelectorAll('.reveal');
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(e => {
@@ -769,7 +468,6 @@
   }, { threshold: 0.12 });
   reveals.forEach(el => observer.observe(el));
 
-  // ── Donut ring animation ──
   const donut = document.querySelector('.donut-ring');
   const donutObs = new IntersectionObserver((entries) => {
     if (entries[0].isIntersecting) {
@@ -779,7 +477,6 @@
   }, { threshold: 0.4 });
   if (donut) donutObs.observe(donut);
 
-  // ── Counter animation for stat-num ──
   function animateCount(el, target, suffix = '') {
     const duration = 1600;
     const start = performance.now();
@@ -793,7 +490,6 @@
     };
     requestAnimationFrame(update);
   }
-
   const statNums = document.querySelectorAll('.stat-num');
   const statData = [
     { target: 29179, suffix: 'kg' },
