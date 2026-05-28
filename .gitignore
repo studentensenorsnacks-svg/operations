@@ -10,3 +10,7 @@ node_modules/
 # OS
 Thumbs.db
 .DS_Store
+
+# Deploy logs
+*.log
+.eventpay-deploy.log

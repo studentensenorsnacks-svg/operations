@@ -14,6 +14,7 @@
         "functions-saas/**",
         "saas/**",
         "greendeal/**",
+        "eventpay/**",
         "**/*.md",
         "*.json",
         "storage.rules",
@@ -77,6 +78,18 @@
           ]
         }
       ]
+    },
+    {
+      "source": "eventpay",
+      "target": "eventpay",
+      "frameworksBackend": {
+        "region": "europe-west1",
+        "memory": "512MiB",
+        "minInstances": 0,
+        "maxInstances": 3,
+        "concurrency": 80,
+        "secrets": ["EVENTPAY_API_KEY", "AUTH_USERNAME", "AUTH_PASSWORD"]
+      }
     },
     {
       "target": "saas",

@@ -6,14 +6,24 @@
   "targets": {
     "operationssenorsnacks": {
       "hosting": {
-        "ops": ["operationssenorsnacks"],
-        "greendeal": ["senorsnacks-greendeal"]
+        "ops": [
+          "operationssenorsnacks"
+        ],
+        "greendeal": [
+          "senorsnacks-greendeal"
+        ],
+        "eventpay": [
+          "senorsnacks-eventpay"
+        ]
       }
     },
     "senorkeuringqr": {
       "hosting": {
-        "saas": ["eventsheet-app"]
+        "saas": [
+          "eventsheet-app"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }
