@@ -106,7 +106,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .pg-zoom-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);font-family:var(--mono);}
 .pg-zoom-btn{width:26px;height:26px;border:1px solid var(--border2);background:#fff;border-radius:6px;cursor:pointer;font-weight:700;color:var(--text);}
 .pg-zoom-btn:hover{background:var(--surface2);}
-.pg-canvas-scroll{position:relative;overflow:auto;max-height:calc(100vh - 230px);background:#fafafb;border:1px solid var(--border);border-radius:8px;}
+.pg-canvas-scroll{position:relative;overflow:auto;max-height:calc(100vh - 230px);background:#fafafb;border:1px solid var(--border);border-radius:8px;padding:0;}
+#canvas-export-wrap{display:inline-block;background:#fff;}
+.canvas-side-label{font-family:var(--font-cond);font-weight:800;letter-spacing:.25em;text-align:center;font-size:13px;padding:7px 12px;color:#fff;background:#1a1a1a;text-transform:uppercase;border:1px solid #1a1a1a;}
+.canvas-top{border-radius:6px 6px 0 0;}
+.canvas-bottom{border-radius:0 0 6px 6px;}
 .pg-canvas{position:relative;background-image:
   linear-gradient(rgba(0,0,0,0.04) 1px,transparent 1px),
   linear-gradient(90deg,rgba(0,0,0,0.04) 1px,transparent 1px),
@@ -304,7 +308,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <button class="btn btn-sm btn-red" id="pdf-btn" onclick="exportPDF()">📄 PDF</button>
         </div>
         <div class="pg-canvas-scroll" id="canvas-scroll">
-          <div class="pg-canvas" id="canvas" tabindex="0"></div>
+          <div id="canvas-export-wrap">
+            <div class="canvas-side-label canvas-top">▲ VERKOOPKANT ▲</div>
+            <div class="pg-canvas" id="canvas" tabindex="0"></div>
+            <div class="canvas-side-label canvas-bottom">▼ ONDERKANT ▼</div>
+          </div>
         </div>
         <div class="pg-inspector" id="inspector">Geen item geselecteerd.</div>
       </div>
@@ -676,7 +684,9 @@ function buildItemEl(id, item, pxScale){
     label = `#${item.nummer || '?'}<br><span style="font-size:10px;font-weight:600;">${cat.amp}A</span>`;
   } else {
     const ico = cat.icon || (cat.kind==='custom' ? '📐' : '');
-    label = `<span style="font-size:14px;">${ico}</span><br>${escapeHTML(cat.name)}`;
+    const naam = item.naam ? escapeHTML(item.naam) : escapeHTML(cat.name);
+    const sub = item.naam ? `<span style="font-size:9px;font-weight:500;opacity:.75;">${escapeHTML(cat.name)}</span>` : '';
+    label = `<span style="font-size:14px;">${ico}</span><br>${naam}${sub?'<br>'+sub:''}`;
   }
   el.innerHTML = `<div class="cv-item-label">${label}</div>`;
   attachItemDrag(el, id);
@@ -758,14 +768,36 @@ function updateInspector(){
   const cat = catalogById(item.catId);
   if(!cat){ insp.innerHTML = 'Onbekend item.'; return; }
   const extra = cat.kind==='stroomkast' ? ` · <b>Nr. ${item.nummer}</b> · ${cat.amp}A` : '';
+  // naam-veld voor niet-stroomkast items
+  const nameRow = cat.kind === 'stroomkast' ? '' : `
+    <div class="pg-inspector-row" style="margin-top:8px;">
+      <label style="font-weight:600;color:var(--text);">Naam:</label>
+      <input type="text" placeholder="bv. Bar links, BBQ-tent…" value="${escapeHTML(item.naam||'')}" style="width:auto;flex:1;min-width:180px;" oninput="setItemNaam(this.value)">
+    </div>`;
   insp.innerHTML = `
-    <b>${cat.name}</b>${extra} · ${cat.w}m × ${cat.h}m
+    <b>${escapeHTML(cat.name)}</b>${extra} · ${cat.w}m × ${cat.h}m
     <div class="pg-inspector-row">
       X: <input type="number" step="0.5" value="${item.x}" onchange="setItemPos('x', this.value)">
       Y: <input type="number" step="0.5" value="${item.y}" onchange="setItemPos('y', this.value)">
       Rotatie: <input type="number" step="90" value="${item.rot||0}" onchange="setItemRot(this.value)">°
     </div>
+    ${nameRow}
   `;
+}
+
+function setItemNaam(val){
+  const item = currentProj().items[selectedItemId]; if(!item) return;
+  item.naam = val;
+  // alleen het canvas-label updaten zonder hele canvas te hertekenen → inspector blijft focus houden
+  const el = document.querySelector(`.cv-item[data-id="${selectedItemId}"]`);
+  if(el){
+    const cat = catalogById(item.catId);
+    const ico = cat.icon || (cat.kind==='custom' ? '📐' : '');
+    const naam = item.naam ? escapeHTML(item.naam) : escapeHTML(cat.name);
+    const sub = item.naam ? `<span style="font-size:9px;font-weight:500;opacity:.75;">${escapeHTML(cat.name)}</span>` : '';
+    el.querySelector('.cv-item-label').innerHTML = `<span style="font-size:14px;">${ico}</span><br>${naam}${sub?'<br>'+sub:''}`;
+  }
+  scheduleSave();
 }
 
 function setItemPos(axis, val){
@@ -1014,25 +1046,31 @@ function renderSamenvatting(){
     </tr>`;
   }).join('');
 
-  // counts per type op plattegrond
+  // counts per type op plattegrond + lijst van genaamde items
   const counts = {};
+  const named = [];
   for(const it of Object.values(p.items||{})){
     const c = catalogById(it.catId); if(!c) continue;
     counts[c.name] = (counts[c.name]||0) + 1;
+    if(c.kind !== 'stroomkast' && it.naam) named.push({ naam: it.naam, type: c.name });
   }
-  const plRows = Object.entries(counts).map(([n,c])=>`<tr><td>${n}</td><td class="num">${c}</td></tr>`).join('');
+  const plRows = Object.entries(counts).map(([n,c])=>`<tr><td>${escapeHTML(n)}</td><td class="num">${c}</td></tr>`).join('');
+  const namedRows = named.map(n=>`<tr><td>${escapeHTML(n.naam)}</td><td>${escapeHTML(n.type)}</td></tr>`).join('');
 
   document.getElementById('summary-card').innerHTML = `
     <div class="summary-meta">
-      <div><div class="summary-meta-label">Aanvraag</div><div class="summary-meta-val">${p.name||'—'}</div></div>
-      <div><div class="summary-meta-label">Event</div><div class="summary-meta-val">${p.event||'—'}</div></div>
-      <div><div class="summary-meta-label">Datum</div><div class="summary-meta-val">${p.datum||'—'}</div></div>
-      <div><div class="summary-meta-label">Plaats</div><div class="summary-meta-val">${p.plaats||'—'}</div></div>
+      <div><div class="summary-meta-label">Aanvraag</div><div class="summary-meta-val">${escapeHTML(p.name||'—')}</div></div>
+      <div><div class="summary-meta-label">Event</div><div class="summary-meta-val">${escapeHTML(p.event||'—')}</div></div>
+      <div><div class="summary-meta-label">Datum</div><div class="summary-meta-val">${escapeHTML(p.datum||'—')}</div></div>
+      <div><div class="summary-meta-label">Plaats</div><div class="summary-meta-val">${escapeHTML(p.plaats||'—')}</div></div>
       <div><div class="summary-meta-label">Veld</div><div class="summary-meta-val">${p.fieldW}m × ${p.fieldH}m</div></div>
     </div>
 
     <div class="summary-h">Plattegrond</div>
     ${plRows ? `<table class="summary-table"><thead><tr><th>Item</th><th style="text-align:right;">Aantal</th></tr></thead><tbody>${plRows}</tbody></table>` : '<div style="color:var(--text2);font-size:13px;">Nog niets geplaatst.</div>'}
+
+    ${namedRows ? `<div class="summary-h">Genaamde items</div>
+    <table class="summary-table"><thead><tr><th>Naam</th><th>Type</th></tr></thead><tbody>${namedRows}</tbody></table>` : ''}
 
     <div class="summary-h">Stroomkasten</div>
     ${rows ? `<table class="summary-table">
@@ -1164,14 +1202,14 @@ async function exportPDF(){
     });
     y += 12;
 
-    // PLATTEGROND als afbeelding
-    const canvasEl = document.getElementById('canvas');
-    if(canvasEl && Object.keys(p.items||{}).length){
+    // PLATTEGROND als afbeelding (inclusief VERKOOPKANT/ONDERKANT-labels)
+    const wrapEl = document.getElementById('canvas-export-wrap');
+    if(wrapEl && Object.keys(p.items||{}).length){
       // tijdelijk deselect zodat selectie-outline niet in PDF zit
       const savedSel = selectedItemId; selectedItemId = null; renderCanvas();
       // wacht op redraw
       await new Promise(r=>requestAnimationFrame(r));
-      const img = await html2canvas(canvasEl, { backgroundColor:'#ffffff', scale:2 });
+      const img = await html2canvas(wrapEl, { backgroundColor:'#ffffff', scale:2 });
       // restore selectie
       selectedItemId = savedSel; renderCanvas();
 
@@ -1209,30 +1247,76 @@ async function exportPDF(){
         ];
       });
 
+      // Kleuren per kolom — herkenbaar per type
+      const grayHdr  = [60, 60, 65];
+      const schucoBg = [120, 120, 130];     // grijs
+      const c32      = [161, 98, 7];        // geel-bruin (32A)
+      const c63      = [194, 65, 12];       // oranje (63A)
+      const c125     = [184, 0, 26];        // rood (125A)
+      const tintSch  = [245, 245, 247];
+      const tint32   = [254, 243, 199];
+      const tint63   = [254, 226, 197];
+      const tint125  = [254, 218, 222];
+
       doc.autoTable({
         startY: y + 2,
         margin: { left: margin, right: margin },
-        head: [['Nr.','Type','Naam','Schuco 220V','CEE 32A','CEE 63A','CEE 125A']],
-        body,
-        foot: [['','','TOTAAL', String(totSchuco), String(tot32), String(tot63), String(tot125)]],
-        theme: 'striped',
-        headStyles: { fillColor: [232,0,29], textColor:255, fontStyle:'bold', fontSize:9 },
-        footStyles: { fillColor:[240,240,242], textColor:0, fontStyle:'bold' },
-        bodyStyles: { fontSize:9.5 },
+        head: [
+          [
+            { content: 'Identificatie', colSpan: 3, styles: { fillColor: grayHdr, textColor: 255, halign:'left', fontSize: 9 } },
+            { content: 'Aansluitingen — aantallen per stroomkast', colSpan: 4, styles: { fillColor: grayHdr, textColor: 255, halign:'center', fontSize: 9 } },
+          ],
+          [
+            { content:'Nr.',      styles:{ fillColor:[40,40,45],  textColor:255, halign:'center' } },
+            { content:'Type',     styles:{ fillColor:[40,40,45],  textColor:255, halign:'center' } },
+            { content:'Naam',     styles:{ fillColor:[40,40,45],  textColor:255, halign:'left'   } },
+            { content:'Schuco\n220V / 16A',  styles:{ fillColor: schucoBg, textColor:255, halign:'center' } },
+            { content:'CEE 32A\n5-pin',      styles:{ fillColor: c32,      textColor:255, halign:'center' } },
+            { content:'CEE 63A\n5-pin',      styles:{ fillColor: c63,      textColor:255, halign:'center' } },
+            { content:'CEE 125A\n5-pin',     styles:{ fillColor: c125,     textColor:255, halign:'center' } },
+          ],
+        ],
+        body: body.map(row => [
+          { content: row[0], styles:{ halign:'center', fontStyle:'bold' } },
+          { content: row[1], styles:{ halign:'center' } },
+          { content: row[2], styles:{ halign:'left' } },
+          { content: row[3], styles:{ halign:'center', fillColor: tintSch, fontStyle:'bold', fontSize: 11 } },
+          { content: row[4], styles:{ halign:'center', fillColor: tint32,  fontStyle:'bold', fontSize: 11 } },
+          { content: row[5], styles:{ halign:'center', fillColor: tint63,  fontStyle:'bold', fontSize: 11 } },
+          { content: row[6], styles:{ halign:'center', fillColor: tint125, fontStyle:'bold', fontSize: 11 } },
+        ]),
+        foot: [[
+          { content:'TOTAAL', colSpan:3, styles:{ halign:'right', fillColor:[40,40,45], textColor:255, fontStyle:'bold' } },
+          { content: String(totSchuco), styles:{ halign:'center', fillColor: schucoBg, textColor:255, fontStyle:'bold', fontSize: 12 } },
+          { content: String(tot32),     styles:{ halign:'center', fillColor: c32,      textColor:255, fontStyle:'bold', fontSize: 12 } },
+          { content: String(tot63),     styles:{ halign:'center', fillColor: c63,      textColor:255, fontStyle:'bold', fontSize: 12 } },
+          { content: String(tot125),    styles:{ halign:'center', fillColor: c125,     textColor:255, fontStyle:'bold', fontSize: 12 } },
+        ]],
+        theme: 'grid',
+        bodyStyles: { fontSize: 9.5, lineColor:[0,0,0], lineWidth: 0.3 },
+        headStyles: { lineColor:[0,0,0], lineWidth: 0.3, fontStyle:'bold' },
+        footStyles: { lineColor:[0,0,0], lineWidth: 0.3 },
+        styles: { cellPadding: 2.5, valign:'middle' },
         columnStyles: {
-          0:{ cellWidth:14, halign:'center', fontStyle:'bold' },
-          1:{ cellWidth:16, halign:'center' },
-          3:{ halign:'right' }, 4:{ halign:'right' }, 5:{ halign:'right' }, 6:{ halign:'right' },
+          0: { cellWidth: 12 },
+          1: { cellWidth: 14 },
+          2: { cellWidth: 'auto' },
+          3: { cellWidth: 24 },
+          4: { cellWidth: 24 },
+          5: { cellWidth: 24 },
+          6: { cellWidth: 26 },
         },
       });
-      y = doc.lastAutoTable.finalY + 6;
+      y = doc.lastAutoTable.finalY + 8;
     }
 
-    // PLATTEGROND-COUNTS
+    // PLATTEGROND-COUNTS + GENAAMDE ITEMS
     const counts = {};
+    const named = [];
     for(const it of Object.values(p.items||{})){
       const c = catalogById(it.catId); if(!c) continue;
       counts[c.name] = (counts[c.name]||0) + 1;
+      if(c.kind !== 'stroomkast' && it.naam) named.push({ naam: it.naam, type: c.name });
     }
     const countEntries = Object.entries(counts);
     if(countEntries.length){
@@ -1248,6 +1332,22 @@ async function exportPDF(){
         headStyles: { fontStyle:'bold', fontSize:9, fillColor:[240,240,242] },
         bodyStyles: { fontSize:9.5 },
         columnStyles: { 1:{ halign:'right', cellWidth:30 } },
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    }
+
+    if(named.length){
+      if(y > pageH - 40){ doc.addPage(); y = margin; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0);
+      doc.text('Genaamde items', margin, y);
+      doc.autoTable({
+        startY: y + 2,
+        margin: { left: margin, right: margin },
+        head: [['Naam','Type']],
+        body: named.map(n => [n.naam, n.type]),
+        theme: 'striped',
+        headStyles: { fontStyle:'bold', fontSize:9, fillColor:[240,240,242], textColor:0 },
+        bodyStyles: { fontSize:9.5 },
       });
     }
 
