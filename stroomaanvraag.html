@@ -1270,16 +1270,51 @@ async function exportPDF(){
     });
     y += 12;
 
-    // PLATTEGROND als afbeelding (inclusief VERKOOPKANT/ONDERKANT-labels)
+    // PLATTEGROND als afbeelding (tight crop rond items + VERKOOPKANT/ONDERKANT-labels)
     const wrapEl = document.getElementById('canvas-export-wrap');
     if(wrapEl && Object.keys(p.items||{}).length){
-      // tijdelijk deselect zodat selectie-outline niet in PDF zit
-      const savedSel = selectedItemId; selectedItemId = null; renderCanvas();
+      // 1) Save originele state
+      const savedSel = selectedItemId; selectedItemId = null;
+      const origFieldW = p.fieldW, origFieldH = p.fieldH;
+      const origPositions = {};
+
+      // 2) Bereken bounding box van alle items
+      let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+      for(const it of Object.values(p.items)){
+        const cat = catalogById(it.catId); if(!cat) continue;
+        const rotated = (it.rot||0) % 180 !== 0;
+        const wM = rotated ? cat.h : cat.w;
+        const hM = rotated ? cat.w : cat.h;
+        minX = Math.min(minX, it.x);
+        minY = Math.min(minY, it.y);
+        maxX = Math.max(maxX, it.x + wM);
+        maxY = Math.max(maxY, it.y + hM);
+      }
+      const crop = 1;  // 1m marge rond items
+      if(isFinite(minX)){
+        // 3) Shift items en krimp veld tijdelijk
+        for(const [id, it] of Object.entries(p.items)){
+          origPositions[id] = { x: it.x, y: it.y };
+          it.x = +(it.x - (minX - crop)).toFixed(2);
+          it.y = +(it.y - (minY - crop)).toFixed(2);
+        }
+        p.fieldW = Math.max(5, Math.ceil(maxX - minX + crop * 2));
+        p.fieldH = Math.max(5, Math.ceil(maxY - minY + crop * 2));
+      }
+
+      renderCanvas();
       // wacht op redraw
       await new Promise(r=>requestAnimationFrame(r));
       const img = await html2canvas(wrapEl, { backgroundColor:'#ffffff', scale:2 });
-      // restore selectie
-      selectedItemId = savedSel; renderCanvas();
+
+      // 4) Restore originele positions + veldgrootte
+      for(const [id, pos] of Object.entries(origPositions)){
+        if(p.items[id]){ p.items[id].x = pos.x; p.items[id].y = pos.y; }
+      }
+      p.fieldW = origFieldW;
+      p.fieldH = origFieldH;
+      selectedItemId = savedSel;
+      renderCanvas();
 
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0);
       doc.text('Plattegrond', margin, y); y += 4;
