@@ -357,6 +357,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <input id="cat-cat" class="form-input" placeholder="bv. Bakapparatuur" list="cat-suggest">
           <datalist id="cat-suggest"></datalist>
         </div>
+        <div class="form-group" style="max-width:100px;flex:0 0 100px;">
+          <label class="form-label">Breedte (cm)</label>
+          <input id="cat-w" type="number" min="0" class="form-input" placeholder="80" style="text-align:right;">
+        </div>
+        <div class="form-group" style="max-width:100px;flex:0 0 100px;">
+          <label class="form-label">Diepte (cm)</label>
+          <input id="cat-d" type="number" min="0" class="form-input" placeholder="60" style="text-align:right;">
+        </div>
         <button class="btn btn-red" onclick="addCatalogItem()">Toevoegen</button>
       </div>
     </div>
@@ -461,6 +469,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <button class="btn btn-ghost" id="mt-delete" onclick="deleteTemplate()" style="margin-right:auto;color:var(--red);">Verwijder</button>
       <button class="btn" onclick="closeModal('modal-template')">Annuleer</button>
       <button class="btn btn-red" onclick="saveTemplate()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Catalog edit modal -->
+<div class="modal-bg" id="modal-catedit">
+  <div class="modal">
+    <div class="modal-title">Catalogusitem bewerken</div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label class="form-label">Naam</label>
+      <input id="ce-name" class="form-input">
+    </div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label class="form-label">Categorie</label>
+      <input id="ce-cat" class="form-input" list="cat-suggest">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Breedte (cm)</label>
+        <input id="ce-w" type="number" min="0" class="form-input" style="text-align:right;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Diepte (cm)</label>
+        <input id="ce-d" type="number" min="0" class="form-input" style="text-align:right;">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="deleteCatalogItem()" style="margin-right:auto;color:var(--red);">Verwijder</button>
+      <button class="btn" onclick="closeModal('modal-catedit')">Annuleer</button>
+      <button class="btn btn-red" onclick="saveCatalogEdit()">Opslaan</button>
     </div>
   </div>
 </div>
@@ -677,9 +715,11 @@ function renderLocationCard(lid, loc){
   const tplName = loc.template && templates[loc.template] ? templates[loc.template].naam : null;
   const itemsHtml = iids.length ? iids.map(iid => {
     const it = items[iid];
+    const dim = dimsForName(it.naam);
     return `
       <div class="item-row">
         <span class="item-name">${esc(it.naam)}</span>
+        ${dim ? `<span class="item-cat" style="text-transform:none;letter-spacing:0;">${dim}</span>` : ''}
         ${it.categorie ? `<span class="item-cat">${esc(it.categorie)}</span>` : ''}
         <div class="item-qty no-print">
           <button class="item-qty-btn" onclick="changeQty('${lid}','${iid}',-1)">−</button>
@@ -815,31 +855,78 @@ function deleteItem(lid, iid){
 // ─────────────────────────────────────────────────────────────
 // CATALOGUS
 // ─────────────────────────────────────────────────────────────
+let editingCatId = null;
+
 function addCatalogItem(){
   const naam = document.getElementById('cat-name').value.trim();
   const categorie = document.getElementById('cat-cat').value.trim();
+  const breedte = parseInt(document.getElementById('cat-w').value) || 0;
+  const diepte = parseInt(document.getElementById('cat-d').value) || 0;
   if(!naam){ toast('Geef een naam in'); return; }
   const dup = Object.values(catalogus).find(c => (c.naam||'').toLowerCase()===naam.toLowerCase());
   if(dup){ toast('Bestaat al'); return; }
   const id = uid();
-  fbdb.ref(`${ROOT}/catalogus/${id}`).set({ naam, categorie }).then(()=>{
+  const data = { naam, categorie };
+  if(breedte > 0) data.breedte = breedte;
+  if(diepte > 0) data.diepte = diepte;
+  fbdb.ref(`${ROOT}/catalogus/${id}`).set(data).then(()=>{
     document.getElementById('cat-name').value = '';
     document.getElementById('cat-cat').value = '';
+    document.getElementById('cat-w').value = '';
+    document.getElementById('cat-d').value = '';
     document.getElementById('cat-name').focus();
     toast('Toegevoegd');
   });
 }
 
-function removeCatalogItem(id){
+function openCatEdit(id){
+  editingCatId = id;
+  const c = catalogus[id] || {};
+  document.getElementById('ce-name').value = c.naam || '';
+  document.getElementById('ce-cat').value = c.categorie || '';
+  document.getElementById('ce-w').value = c.breedte || '';
+  document.getElementById('ce-d').value = c.diepte || '';
+  openModal('modal-catedit');
+  setTimeout(()=>document.getElementById('ce-name').focus(),50);
+}
+
+function saveCatalogEdit(){
+  if(!editingCatId) return;
+  const naam = document.getElementById('ce-name').value.trim();
+  const categorie = document.getElementById('ce-cat').value.trim();
+  const breedte = parseInt(document.getElementById('ce-w').value) || 0;
+  const diepte = parseInt(document.getElementById('ce-d').value) || 0;
+  if(!naam){ toast('Geef een naam in'); return; }
+  const data = { naam, categorie };
+  if(breedte > 0) data.breedte = breedte;
+  if(diepte > 0) data.diepte = diepte;
+  fbdb.ref(`${ROOT}/catalogus/${editingCatId}`).set(data).then(()=>{
+    closeModal('modal-catedit');
+    toast('Opgeslagen');
+  });
+}
+
+function deleteCatalogItem(){
+  if(!editingCatId) return;
   if(!confirm('Verwijder dit catalogusitem? (locaties/templates die het al gebruiken blijven werken.)')) return;
-  fbdb.ref(`${ROOT}/catalogus/${id}`).remove();
+  fbdb.ref(`${ROOT}/catalogus/${editingCatId}`).remove().then(()=>{
+    closeModal('modal-catedit');
+    toast('Verwijderd');
+  });
+}
+
+// look up dimensions for a name (case-insensitive) — used by locatie + template rows
+function dimsForName(naam){
+  if(!naam) return null;
+  const m = Object.values(catalogus).find(c => (c.naam||'').toLowerCase() === naam.toLowerCase());
+  if(!m || (!m.breedte && !m.diepte)) return null;
+  return `${m.breedte||'?'}×${m.diepte||'?'} cm`;
 }
 
 function renderCatalogus(){
   const wrap = document.getElementById('cat-by-cat');
   const ids = Object.keys(catalogus);
   if(!ids.length){ wrap.innerHTML = '<div class="empty">Nog geen catalogusitems.</div>'; return; }
-  // group by categorie
   const groups = {};
   ids.forEach(id => {
     const c = catalogus[id].categorie || 'Overig';
@@ -852,11 +939,15 @@ function renderCatalogus(){
       <div class="card">
         <div class="card-hdr"><div class="card-title">${esc(c)}</div><div class="card-sub">${items.length} item${items.length===1?'':'s'}</div></div>
         <div class="cat-grid">
-          ${items.map(id=>`
-            <div class="cat-chip">
-              <span class="nm">${esc(catalogus[id].naam)}</span>
-              <button class="item-del" onclick="removeCatalogItem('${id}')">✕</button>
-            </div>`).join('')}
+          ${items.map(id=>{
+            const it = catalogus[id];
+            const dim = (it.breedte||it.diepte) ? `${it.breedte||'?'}×${it.diepte||'?'}` : '—';
+            return `
+            <div class="cat-chip" onclick="openCatEdit('${id}')" style="cursor:pointer;" title="Klik om te bewerken">
+              <span class="nm">${esc(it.naam)}</span>
+              <span class="ct" style="font-family:var(--mono);">${dim}</span>
+            </div>`;
+          }).join('')}
         </div>
       </div>`;
   }).join('');
@@ -897,9 +988,11 @@ function renderTplDraftItems(){
   if(!iids.length){ wrap.innerHTML = '<div class="empty" style="padding:8px;">Nog geen items</div>'; return; }
   wrap.innerHTML = iids.map(iid => {
     const it = tplDraftItems[iid];
+    const dim = dimsForName(it.naam);
     return `
       <div class="item-row">
         <span class="item-name">${esc(it.naam)}</span>
+        ${dim ? `<span class="item-cat" style="text-transform:none;letter-spacing:0;">${dim}</span>` : ''}
         ${it.categorie ? `<span class="item-cat">${esc(it.categorie)}</span>` : ''}
         <div class="item-qty">
           <button class="item-qty-btn" onclick="changeTplDraftQty('${iid}',-1)">−</button>
@@ -982,8 +1075,10 @@ function renderTemplates(){
         </div>
         ${iids.length ? iids.map(iid=>{
           const it = items[iid];
+          const dim = dimsForName(it.naam);
           return `<div class="item-row">
             <span class="item-name">${esc(it.naam)}</span>
+            ${dim ? `<span class="item-cat" style="text-transform:none;letter-spacing:0;">${dim}</span>` : ''}
             ${it.categorie ? `<span class="item-cat">${esc(it.categorie)}</span>` : ''}
             <span class="item-qty" style="font-family:var(--mono);font-weight:700;">×${it.aantal||1}</span>
           </div>`;
@@ -1027,7 +1122,11 @@ function renderSugList(elId, inputId, q){
   const el = document.getElementById(elId);
   const matches = matchCatalog(q);
   const exact = q && matches.some(m => (m.naam||'').toLowerCase() === q.toLowerCase());
-  let html = matches.map(m => `<div class="sug-item" onmousedown="event.preventDefault()" onclick="pickSug('${inputId}','${esc(m.naam).replace(/'/g,"\\'")}')"><span>${esc(m.naam)}</span><span class="ct">${esc(m.categorie||'')}</span></div>`).join('');
+  let html = matches.map(m => {
+    const dim = (m.breedte||m.diepte) ? `${m.breedte||'?'}×${m.diepte||'?'}` : '';
+    const meta = [m.categorie||'', dim].filter(Boolean).join(' · ');
+    return `<div class="sug-item" onmousedown="event.preventDefault()" onclick="pickSug('${inputId}','${esc(m.naam).replace(/'/g,"\\'")}')"><span>${esc(m.naam)}</span><span class="ct">${esc(meta)}</span></div>`;
+  }).join('');
   if(q && !exact){
     html += `<div class="sug-item" onmousedown="event.preventDefault()" onclick="pickSug('${inputId}','${esc(q).replace(/'/g,"\\'")}')"><span>"${esc(q)}"</span><span class="new">+ nieuw</span></div>`;
   }
