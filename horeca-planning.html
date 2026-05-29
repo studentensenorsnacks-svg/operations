@@ -10,6 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
@@ -149,6 +150,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sug-item .ct{font-size:11px;color:var(--text3);}
 .sug-item .new{font-size:11px;color:var(--green);font-weight:700;}
 
+/* PLATTEGROND EDITOR */
+.pg-wrap{display:flex;gap:14px;height:calc(100vh - 200px);min-height:520px;}
+.pg-side{width:230px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px;overflow-y:auto;}
+.pg-side-sec{margin-bottom:14px;}
+.pg-side-sec:last-child{margin-bottom:0;}
+.pg-side-h{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.pg-tools{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.pg-tool{width:100%;aspect-ratio:1;border:1px solid var(--border2);background:var(--surface);border-radius:7px;font-size:15px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.pg-tool:hover{background:var(--surface2);}
+.pg-tool.active{background:var(--red);border-color:var(--red);color:#fff;}
+.pg-colors{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+.pg-color{aspect-ratio:1;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .12s;}
+.pg-color:hover{transform:scale(1.1);}
+.pg-color.active{border-color:var(--text);}
+.pg-locs{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;}
+.pg-loc{padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:grab;font-size:12.5px;font-weight:600;user-select:none;transition:all .12s;}
+.pg-loc:hover{background:#fff5f5;border-color:var(--red);color:var(--red);}
+.pg-loc:active{cursor:grabbing;}
+.pg-loc.placed{opacity:.4;}
+.pg-quick{display:flex;flex-direction:column;gap:4px;}
+.pg-quick .btn{justify-content:flex-start;padding:5px 8px;font-size:12px;}
+
+.pg-canvas-wrap{flex:1;background:#fafafa;border:1px solid var(--border);border-radius:11px;overflow:auto;position:relative;background-image:radial-gradient(rgba(0,0,0,.07) 1px,transparent 1px);background-size:22px 22px;background-position:0 0;}
+.pg-canvas-wrap canvas{display:block;}
+#pg-savestate{font-family:var(--mono);font-size:11px;}
+#pg-savestate.saving{color:var(--orange);}
+#pg-savestate.saved{color:var(--green);}
+
 /* PRINT */
 @media print {
   body{background:#fff;}
@@ -221,6 +250,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </div>
         <div class="right no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn" onclick="editProject()">✎ Bewerk</button>
+          <button class="btn btn-blue" onclick="openPlattegrond()">🗺 Plattegrond</button>
           <button class="btn btn-dark" onclick="printProjectTotal()">🖨 PDF totaal</button>
           <button class="btn btn-dark" onclick="printProjectByLoc()">🖨 PDF per locatie</button>
           <button class="btn btn-red" onclick="openNewLocation()">+ Locatie</button>
@@ -229,6 +259,79 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
       <div id="loc-list"></div>
       <div id="loc-empty" class="empty" style="display:none;">Nog geen locaties — klik <strong>+ Locatie</strong>.</div>
+    </div>
+
+    <!-- PROJECT PLATTEGROND -->
+    <div id="view-plattegrond" style="display:none;">
+      <div class="crumb no-print">
+        <a onclick="closePlattegrond()">← Project</a>
+        <span class="sep">/</span>
+        <span id="pg-crumb-name"></span>
+        <span class="sep">/</span>
+        <span>Plattegrond</span>
+      </div>
+
+      <div class="page-hdr">
+        <div>
+          <div class="page-title" id="pg-title"></div>
+          <div class="page-sub"><span id="pg-savestate">opgeslagen</span> — sleep, dubbelklik tekst om aan te passen, klik leeg vlak om deselectie</div>
+        </div>
+        <div class="right no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="pgFitView()">⤢ Pas in</button>
+          <button class="btn btn-dark" onclick="pgPrint()">🖨 Print plattegrond</button>
+          <button class="btn" onclick="pgClearAll()" style="color:var(--red);">🗑 Wis alles</button>
+        </div>
+      </div>
+
+      <div class="pg-wrap">
+        <aside class="pg-side">
+          <div class="pg-side-sec">
+            <div class="pg-side-h">Tools</div>
+            <div class="pg-tools">
+              <button class="pg-tool active" data-tool="select" onclick="pgSetTool('select')" title="Selecteren / verplaatsen (V)">↗</button>
+              <button class="pg-tool" data-tool="draw" onclick="pgSetTool('draw')" title="Vrij tekenen (P)">✏️</button>
+              <button class="pg-tool" data-tool="rect" onclick="pgSetTool('rect')" title="Rechthoek (R)">▭</button>
+              <button class="pg-tool" data-tool="circle" onclick="pgSetTool('circle')" title="Cirkel (C)">○</button>
+              <button class="pg-tool" data-tool="line" onclick="pgSetTool('line')" title="Lijn (L)">─</button>
+              <button class="pg-tool" data-tool="arrow" onclick="pgSetTool('arrow')" title="Pijl (A)">→</button>
+              <button class="pg-tool" data-tool="text" onclick="pgSetTool('text')" title="Tekst (T)">T</button>
+              <button class="pg-tool" data-tool="delete" onclick="pgDeleteSelected()" title="Verwijder geselecteerd (Del)">🗑</button>
+            </div>
+          </div>
+
+          <div class="pg-side-sec">
+            <div class="pg-side-h">Kleur</div>
+            <div class="pg-colors" id="pg-colors"></div>
+          </div>
+
+          <div class="pg-side-sec">
+            <div class="pg-side-h">Lijn-dikte</div>
+            <input id="pg-stroke" type="range" min="1" max="8" value="2" oninput="pgSetStroke(this.value)">
+            <div style="font-size:11px;color:var(--text3);text-align:center;font-family:var(--mono);" id="pg-stroke-val">2 px</div>
+          </div>
+
+          <div class="pg-side-sec">
+            <div class="pg-side-h">Locaties → drop op canvas</div>
+            <div class="pg-locs" id="pg-locs"></div>
+          </div>
+
+          <div class="pg-side-sec">
+            <div class="pg-side-h">Snel toevoegen</div>
+            <div class="pg-quick">
+              <button class="btn btn-sm" onclick="pgAddLabel('🚪 Ingang','#15803d')">🚪 Ingang</button>
+              <button class="btn btn-sm" onclick="pgAddLabel('🅿️ Parking','#1d4ed8')">🅿️ Parking</button>
+              <button class="btn btn-sm" onclick="pgAddLabel('🎤 Podium','#7e22ce')">🎤 Podium</button>
+              <button class="btn btn-sm" onclick="pgAddLabel('🚻 WC','#525252')">🚻 WC</button>
+              <button class="btn btn-sm" onclick="pgAddLabel('⚡ Stroom','#c2410c')">⚡ Stroom</button>
+              <button class="btn btn-sm" onclick="pgAddLabel('🚛 Levering','#1a1a1a')">🚛 Levering</button>
+            </div>
+          </div>
+        </aside>
+
+        <div class="pg-canvas-wrap" id="pg-canvas-wrap">
+          <canvas id="pg-canvas" width="1600" height="1000"></canvas>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1039,6 +1142,330 @@ function printProjectByLoc(){
   if(!any){ toast('Geen items op de locaties'); return; }
   openPrintWindow(body, `${p.naam} — Per locatie`);
 }
+
+// ─────────────────────────────────────────────────────────────
+// PLATTEGROND EDITOR (Fabric.js)
+// ─────────────────────────────────────────────────────────────
+const PG_COLORS = ['#1a1a1a','#e8001d','#1d4ed8','#15803d','#c2410c','#7e22ce','#f59e0b','#06b6d4','#ec4899','#ffffff'];
+let pgCanvas = null;
+let pgTool = 'select';
+let pgColor = '#1a1a1a';
+let pgStroke = 2;
+let pgSaveTimer = null;
+let pgLoading = false;
+let pgPlacedLocs = new Set(); // locatie ids that already have a block on canvas
+
+function renderPgColors(){
+  const wrap = document.getElementById('pg-colors');
+  wrap.innerHTML = PG_COLORS.map(c => `<div class="pg-color${c===pgColor?' active':''}" data-c="${c}" style="background:${c};${c==='#ffffff'?'border:2px solid var(--border2);':''}" onclick="pgSetColor('${c}')"></div>`).join('');
+}
+function pgSetColor(c){
+  pgColor = c;
+  renderPgColors();
+  if(pgCanvas){
+    pgCanvas.freeDrawingBrush.color = c;
+    const obj = pgCanvas.getActiveObject();
+    if(obj){
+      if(obj.type==='textbox' || obj.type==='i-text' || obj.type==='text'){ obj.set('fill', c); }
+      else if(obj.type==='line' || obj.type==='group'){ obj.set('stroke', c); obj.getObjects && obj.getObjects().forEach(o=>o.set('stroke',c).set('fill',c)); }
+      else { obj.set('stroke', c); }
+      pgCanvas.requestRenderAll();
+      pgScheduleSave();
+    }
+  }
+}
+function pgSetStroke(v){
+  pgStroke = parseInt(v)||1;
+  document.getElementById('pg-stroke-val').textContent = pgStroke + ' px';
+  if(pgCanvas){
+    pgCanvas.freeDrawingBrush.width = pgStroke;
+    const obj = pgCanvas.getActiveObject();
+    if(obj && obj.set){
+      obj.set('strokeWidth', pgStroke);
+      pgCanvas.requestRenderAll();
+      pgScheduleSave();
+    }
+  }
+}
+function pgSetTool(t){
+  pgTool = t;
+  document.querySelectorAll('.pg-tool').forEach(b=>b.classList.toggle('active', b.dataset.tool===t));
+  if(!pgCanvas) return;
+  pgCanvas.isDrawingMode = (t==='draw');
+  pgCanvas.selection = (t==='select');
+  pgCanvas.defaultCursor = (t==='select') ? 'default' : 'crosshair';
+}
+
+function openPlattegrond(){
+  if(!currentProject) return;
+  document.getElementById('view-detail').style.display = 'none';
+  document.getElementById('view-plattegrond').style.display = 'block';
+  const p = projecten[currentProject];
+  document.getElementById('pg-crumb-name').textContent = p.naam||'';
+  document.getElementById('pg-title').textContent = (p.naam||'') + ' — Plattegrond';
+
+  renderPgColors();
+  pgInitCanvas();
+  pgRenderLocaties();
+  pgLoad();
+}
+
+function closePlattegrond(){
+  pgFlushSave();
+  if(pgCanvas){ pgCanvas.dispose(); pgCanvas = null; }
+  document.getElementById('view-plattegrond').style.display = 'none';
+  document.getElementById('view-detail').style.display = 'block';
+}
+
+function pgInitCanvas(){
+  if(pgCanvas){ pgCanvas.dispose(); }
+  pgCanvas = new fabric.Canvas('pg-canvas', {
+    backgroundColor: 'transparent',
+    preserveObjectStacking: true,
+    selection: true,
+  });
+  pgCanvas.freeDrawingBrush.color = pgColor;
+  pgCanvas.freeDrawingBrush.width = pgStroke;
+
+  // Click-to-place for shape/text tools
+  pgCanvas.on('mouse:down', opt => {
+    if(pgLoading) return;
+    if(pgTool==='select' || pgTool==='draw' || pgTool==='delete') return;
+    if(opt.target) return; // clicked on an existing object
+    const pt = pgCanvas.getPointer(opt.e);
+    let obj = null;
+    if(pgTool==='rect'){
+      obj = new fabric.Rect({ left: pt.x-50, top: pt.y-30, width:100, height:60, fill:'transparent', stroke:pgColor, strokeWidth:pgStroke });
+    } else if(pgTool==='circle'){
+      obj = new fabric.Circle({ left: pt.x-30, top: pt.y-30, radius:30, fill:'transparent', stroke:pgColor, strokeWidth:pgStroke });
+    } else if(pgTool==='line'){
+      obj = new fabric.Line([pt.x-50, pt.y, pt.x+50, pt.y], { stroke:pgColor, strokeWidth:pgStroke });
+    } else if(pgTool==='arrow'){
+      obj = makeArrow(pt.x-60, pt.y, pt.x+60, pt.y, pgColor, pgStroke);
+    } else if(pgTool==='text'){
+      obj = new fabric.Textbox('Tekst', { left: pt.x, top: pt.y, fontSize: 18, fontFamily:'Barlow', fill: pgColor, width: 140 });
+      setTimeout(()=>{ pgCanvas.setActiveObject(obj); obj.enterEditing(); obj.selectAll(); }, 30);
+    }
+    if(obj){
+      pgCanvas.add(obj);
+      pgCanvas.setActiveObject(obj);
+      pgScheduleSave();
+      // Auto-switch back to select after placing
+      if(pgTool!=='text') pgSetTool('select');
+    }
+  });
+
+  pgCanvas.on('object:modified', pgScheduleSave);
+  pgCanvas.on('object:added', e => { if(!pgLoading) pgScheduleSave(); });
+  pgCanvas.on('object:removed', pgScheduleSave);
+  pgCanvas.on('path:created', pgScheduleSave); // free draw
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', pgKey);
+}
+
+function pgKey(e){
+  if(document.getElementById('view-plattegrond').style.display==='none') return;
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  // Don't intercept while editing text on canvas
+  if(pgCanvas && pgCanvas.getActiveObject() && pgCanvas.getActiveObject().isEditing) return;
+  const k = e.key.toLowerCase();
+  if(k==='delete' || k==='backspace'){ pgDeleteSelected(); e.preventDefault(); }
+  else if(k==='v') pgSetTool('select');
+  else if(k==='p') pgSetTool('draw');
+  else if(k==='r') pgSetTool('rect');
+  else if(k==='c') pgSetTool('circle');
+  else if(k==='l') pgSetTool('line');
+  else if(k==='a') pgSetTool('arrow');
+  else if(k==='t') pgSetTool('text');
+  else if(k==='escape') pgSetTool('select');
+}
+
+function makeArrow(x1,y1,x2,y2,color,sw){
+  const line = new fabric.Line([x1,y1,x2,y2], { stroke:color, strokeWidth:sw, originX:'center', originY:'center' });
+  const ang = Math.atan2(y2-y1, x2-x1);
+  const head = new fabric.Triangle({
+    left: x2, top: y2, originX:'center', originY:'center',
+    angle: (ang*180/Math.PI)+90, width: sw*5+6, height: sw*5+6, fill: color
+  });
+  return new fabric.Group([line, head], { selectable:true });
+}
+
+function pgDeleteSelected(){
+  if(!pgCanvas) return;
+  const objs = pgCanvas.getActiveObjects();
+  objs.forEach(o => {
+    if(o.locId) pgPlacedLocs.delete(o.locId);
+    pgCanvas.remove(o);
+  });
+  pgCanvas.discardActiveObject();
+  pgCanvas.requestRenderAll();
+  pgRenderLocaties();
+}
+
+function pgClearAll(){
+  if(!confirm('Hele plattegrond wissen?')) return;
+  pgCanvas.clear();
+  pgCanvas.backgroundColor = 'transparent';
+  pgPlacedLocs.clear();
+  pgRenderLocaties();
+  pgScheduleSave();
+}
+
+function pgAddLabel(txt, color){
+  // labeled rect — common pattern
+  const rect = new fabric.Rect({ width: 110, height: 50, fill:'transparent', stroke: color, strokeWidth:2, rx:6, ry:6, originX:'center', originY:'center' });
+  const text = new fabric.Textbox(txt, { fontSize:14, fontFamily:'Barlow', fontWeight:'600', fill: color, originX:'center', originY:'center', textAlign:'center', width:100 });
+  const grp = new fabric.Group([rect, text], { left: 200 + Math.random()*200, top: 200 + Math.random()*200 });
+  pgCanvas.add(grp);
+  pgCanvas.setActiveObject(grp);
+  pgScheduleSave();
+}
+
+function pgAddLocatie(lid){
+  const p = projecten[currentProject];
+  const loc = p.locaties && p.locaties[lid];
+  if(!loc) return;
+  const naam = loc.naam || 'Locatie';
+  const items = loc.items ? Object.keys(loc.items).length : 0;
+  const sub = items ? `${items} item${items===1?'':'s'}` : '';
+  const w = Math.max(120, Math.min(180, naam.length * 9 + 30));
+  const rect = new fabric.Rect({ width: w, height: 64, fill:'#fff5f5', stroke:'#e8001d', strokeWidth:2, rx:8, ry:8, originX:'center', originY:'center' });
+  const lab = new fabric.Textbox(naam, { fontSize:14, fontFamily:'Barlow Condensed', fontWeight:'700', fill:'#1a1a1a', originX:'center', originY:'center', top:-10, textAlign:'center', width:w-10 });
+  const sublbl = new fabric.Textbox(sub, { fontSize:11, fontFamily:'Barlow', fill:'#5f5f66', originX:'center', originY:'center', top:14, textAlign:'center', width:w-10 });
+  const grp = new fabric.Group([rect, lab, sublbl], { left: 300 + Math.random()*250, top: 200 + Math.random()*200, locId: lid });
+  grp.toObject = (function(toObj){ return function(propsToInclude){ return toObj.call(this, ['locId'].concat(propsToInclude||[])); }; })(grp.toObject);
+  pgCanvas.add(grp);
+  pgCanvas.setActiveObject(grp);
+  pgPlacedLocs.add(lid);
+  pgRenderLocaties();
+  pgScheduleSave();
+}
+
+function pgRenderLocaties(){
+  if(pgCanvas){
+    pgPlacedLocs = new Set(pgCanvas.getObjects().map(o=>o.locId).filter(Boolean));
+  }
+  const p = projecten[currentProject];
+  const wrap = document.getElementById('pg-locs');
+  const lids = Object.keys(p.locaties||{}).sort((a,b)=>(p.locaties[a].naam||'').localeCompare(p.locaties[b].naam||''));
+  if(!lids.length){ wrap.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic;padding:6px;">Geen locaties in dit project</div>'; return; }
+  wrap.innerHTML = lids.map(lid => {
+    const placed = pgPlacedLocs.has(lid);
+    return `<div class="pg-loc${placed?' placed':''}" onclick="pgAddLocatie('${lid}')" title="${placed?'Reeds geplaatst — klik voor extra':'Klik om toe te voegen'}">${esc(p.locaties[lid].naam||'(zonder naam)')}</div>`;
+  }).join('');
+}
+
+// ─── SAVE / LOAD ───
+function pgScheduleSave(){
+  if(pgLoading) return;
+  document.getElementById('pg-savestate').textContent = 'wijzigen…';
+  document.getElementById('pg-savestate').className = 'saving';
+  clearTimeout(pgSaveTimer);
+  pgSaveTimer = setTimeout(pgFlushSave, 1200);
+}
+function pgFlushSave(){
+  if(!pgCanvas || !currentProject) return;
+  clearTimeout(pgSaveTimer);
+  const json = JSON.stringify(pgCanvas.toJSON(['locId']));
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/plattegrond`).set(json).then(()=>{
+    document.getElementById('pg-savestate').textContent = 'opgeslagen';
+    document.getElementById('pg-savestate').className = 'saved';
+  }).catch(err=>{
+    console.error(err);
+    document.getElementById('pg-savestate').textContent = 'fout bij opslaan';
+    document.getElementById('pg-savestate').className = 'saving';
+  });
+}
+function pgLoad(){
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/plattegrond`).once('value').then(s => {
+    const json = s.val();
+    pgPlacedLocs.clear();
+    if(!json){ pgRenderLocaties(); pgFitView(); return; }
+    pgLoading = true;
+    try {
+      const data = typeof json === 'string' ? JSON.parse(json) : json;
+      pgCanvas.loadFromJSON(data, ()=>{
+        pgCanvas.getObjects().forEach(o => { if(o.locId) pgPlacedLocs.add(o.locId); });
+        pgCanvas.requestRenderAll();
+        pgLoading = false;
+        pgRenderLocaties();
+        pgFitView();
+        document.getElementById('pg-savestate').textContent = 'opgeslagen';
+        document.getElementById('pg-savestate').className = 'saved';
+      });
+    } catch(e){
+      console.error('Plattegrond load failed', e);
+      pgLoading = false;
+    }
+  });
+}
+
+function pgFitView(){
+  // scroll canvas-wrap so content is centered-ish
+  const wrap = document.getElementById('pg-canvas-wrap');
+  if(!wrap) return;
+  if(!pgCanvas || !pgCanvas.getObjects().length){
+    wrap.scrollLeft = 0;
+    wrap.scrollTop = 0;
+    return;
+  }
+  // bounding box of all objects
+  const objs = pgCanvas.getObjects();
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  objs.forEach(o => {
+    const b = o.getBoundingRect(true);
+    minX = Math.min(minX, b.left);
+    minY = Math.min(minY, b.top);
+    maxX = Math.max(maxX, b.left+b.width);
+    maxY = Math.max(maxY, b.top+b.height);
+  });
+  const cx = (minX+maxX)/2, cy = (minY+maxY)/2;
+  wrap.scrollLeft = Math.max(0, cx - wrap.clientWidth/2);
+  wrap.scrollTop = Math.max(0, cy - wrap.clientHeight/2);
+}
+
+function pgPrint(){
+  if(!pgCanvas) return;
+  const p = projecten[currentProject];
+  // crop to content
+  const objs = pgCanvas.getObjects();
+  let opts = {format:'png', quality:1, multiplier:2};
+  if(objs.length){
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    objs.forEach(o => {
+      const b = o.getBoundingRect(true);
+      minX = Math.min(minX, b.left);
+      minY = Math.min(minY, b.top);
+      maxX = Math.max(maxX, b.left+b.width);
+      maxY = Math.max(maxY, b.top+b.height);
+    });
+    const pad = 30;
+    opts.left = Math.max(0, minX-pad);
+    opts.top = Math.max(0, minY-pad);
+    opts.width = (maxX-minX)+pad*2;
+    opts.height = (maxY-minY)+pad*2;
+  }
+  const dataURL = pgCanvas.toDataURL(opts);
+  const meta = [];
+  if(p.plaats) meta.push(esc(p.plaats));
+  if(p.datum) meta.push(esc(fmtDate(p.datum)));
+  const html = `
+    <div class="ph"><h1>${esc(p.naam||'')} — Plattegrond</h1><div class="meta">${meta.join('<br>')}</div></div>
+    <div style="text-align:center;"><img src="${dataURL}" style="max-width:100%;height:auto;border:1px solid #ddd;"></div>
+  `;
+  openPrintWindow(html, `${p.naam} — Plattegrond`);
+}
+
+// Also re-render locaties sidebar when project data changes
+const _origOpenProject = openProject;
+const _origBackToList = backToList;
+backToList = function(){
+  if(document.getElementById('view-plattegrond').style.display !== 'none'){
+    closePlattegrond();
+  }
+  _origBackToList();
+};
 
 // ─────────────────────────────────────────────────────────────
 // CLOSE MODALS ON BACKDROP CLICK

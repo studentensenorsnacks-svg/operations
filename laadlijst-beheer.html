@@ -182,6 +182,54 @@
     .slot-ll{flex:1;font-size:12.5px;color:#166534;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .slot-lls{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
     .slot-ll-row{display:flex;align-items:center;gap:8px;}
+
+    @media(max-width:900px){
+      .topbar{padding:0 14px;height:54px;}
+      .logo-text{display:none;}
+      .nav-links{gap:2px;}
+      .nav-link{padding:6px 10px;font-size:12.5px;}
+      .main{padding:18px 14px;}
+      .page-hdr{flex-direction:column;align-items:stretch;gap:10px;}
+      .page-title{font-size:22px;}
+      .tabs{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+      .tab-btn{padding:9px 14px;font-size:13px;white-space:nowrap;flex-shrink:0;}
+      .card{padding:16px 14px;}
+      .form-row{gap:10px;}
+      .form-group{flex:1 1 100%;}
+      .upload-zone{padding:26px 14px;}
+      .upload-icon{font-size:28px;}
+      .ll-item,.fiche-item{gap:10px;padding:12px 0;flex-wrap:wrap;}
+      .ll-icon,.fiche-icon{width:36px;height:36px;font-size:17px;}
+      .item-info{flex:1 1 60%;min-width:0;}
+      .item-actions{flex:1 1 100%;justify-content:flex-end;}
+      .btn{padding:10px 14px;font-size:13.5px;}
+      .btn-sm{padding:8px 11px;font-size:12.5px;}
+    }
+    @media(max-width:560px){
+      .topbar{padding:0 10px;}
+      .nav-links{overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;flex:1;}
+      .main{padding:14px 10px;}
+      .page-title{font-size:19px;}
+      .card{padding:14px 12px;border-radius:10px;}
+      .card-hdr{flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+      .card-title{font-size:14px;}
+      .upload-zone{padding:22px 12px;}
+      .upload-label{font-size:14px;}
+      .form-input,.form-select{padding:11px 12px;font-size:15px;}
+      .item-naam{font-size:14px;}
+      .item-meta{font-size:12.5px;}
+      .item-row{flex-wrap:wrap;gap:6px;}
+      .item-aantal-inp{width:70px;}
+      .modal-overlay{padding:10px;}
+      .modal{border-radius:12px;max-height:94vh;}
+      .modal-hdr{padding:16px 16px 0;}
+      .modal-title{font-size:18px;}
+      .modal-body{padding:14px 16px 18px;}
+      .koppel-col-body{min-height:160px;max-height:380px;}
+      .slot{flex-wrap:wrap;gap:6px;padding:9px 11px;}
+      .slot-truck{flex:1 1 100%;}
+      .pdf-card{padding:11px 12px;}
+    }
   </style>
 </head>
 <body>

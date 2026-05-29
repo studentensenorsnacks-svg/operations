@@ -146,6 +146,27 @@ const fbdb = firebase.database();
   .confirm-btn{display:inline-block;margin-top:24px;padding:12px 28px;background:var(--red);color:#fff;
     border:none;border-radius:8px;font-family:var(--font);font-size:0.95rem;font-weight:700;cursor:pointer;}
   .confirm-btn:hover{background:var(--red-dark);}
+
+  @media(max-width:560px){
+    .topbar{padding:0 12px;height:50px;}
+    .topbar-title{display:none;}
+    .clock{font-size:0.75rem;}
+    .logo-img{height:26px;}
+    .main{padding:16px 10px;align-items:stretch;}
+    .form-card{padding:20px 16px;border-radius:10px;}
+    .form-card h2{font-size:1.4rem;}
+    .form-card .sub{font-size:0.85rem;margin-bottom:18px;}
+    select,input[type="text"],textarea{padding:13px;font-size:1rem;}
+    .move-pill{padding:14px 8px;font-size:0.92rem;}
+    .check-card{padding:12px;font-size:0.88rem;}
+    .vet-pill{padding:13px 6px;font-size:0.82rem;}
+    .defect-toggle{padding:13px;}
+    .confirm-card h2{font-size:1.6rem;}
+    .confirm-icon{width:72px;height:72px;font-size:2.4rem;}
+  }
+  @media(max-width:360px){
+    .check-grid,.vet-grid{grid-template-columns:1fr;}
+  }
 </style>
 </head>
 <body>

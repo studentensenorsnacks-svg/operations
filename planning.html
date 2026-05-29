@@ -374,16 +374,32 @@ textarea{resize:vertical;min-height:70px;}
   .topbar-sep{display:none;}
   .t-link-label{display:none;}
 }
+@media (max-width:760px){
+  .topbar{padding:0 12px;gap:6px;height:52px;}
+  .topbar-right{gap:6px;}
+  .t-link{padding:7px 10px;font-size:0.8rem;}
+  .btn-top{padding:7px 10px;font-size:0.8rem;}
+  .week-nav{padding:8px 10px;gap:8px;flex-wrap:wrap;}
+  .wnav-btn{padding:8px 12px;font-size:0.85rem;min-height:36px;}
+  .week-label{font-size:1rem;flex:1;text-align:center;}
+  .plan-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .plan-tab{padding:9px 14px;font-size:0.85rem;white-space:nowrap;flex-shrink:0;}
+  /* Week-grid stapelt verticaal: één dag per rij i.p.v. 7 kolommen */
+  .week-grid{grid-template-columns:1fr;overflow-y:auto;}
+  .day-col{border-right:none;border-bottom:1px solid var(--border);min-height:auto;}
+  .day-col:last-child{border-bottom:none;}
+}
 @media (max-width:600px){
   .topbar{padding:0 10px;gap:4px;}
   .topbar-right{gap:4px;}
-  .t-link{padding:5px 8px;font-size:0.72rem;}
-  .btn-top{padding:5px 8px;font-size:0.72rem;}
+  .t-link{padding:6px 9px;font-size:0.78rem;}
+  .btn-top{padding:6px 9px;font-size:0.78rem;}
   .logo-img{height:26px;}
   .week-nav{padding:6px 8px;gap:6px;}
-  .wnav-btn{padding:5px 10px;font-size:0.76rem;}
-  .week-label{font-size:0.9rem;}
-  .plan-tab{padding:7px 12px;font-size:0.8rem;}
+  .wnav-btn{padding:8px 12px;font-size:0.82rem;}
+  .week-label{font-size:0.92rem;}
+  .plan-tab{padding:8px 12px;font-size:0.8rem;}
+  .import-modal{width:96%;max-height:94vh;}
 }
 
 @media print{

@@ -182,10 +182,44 @@ body.selecting .note .note-del{display:none;}
 .toast{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-24px);background:var(--green);color:#fff;padding:13px 26px;border-radius:7px;font-size:0.95rem;font-weight:700;opacity:0;transition:all 0.25s;z-index:500;box-shadow:0 6px 18px rgba(0,0,0,0.2);pointer-events:none;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 
+@media(max-width:760px){
+  .stats{gap:8px;}
+  .stat{padding:10px 12px;min-width:0;flex:1 1 calc(50% - 4px);}
+  .stat .num{font-size:1.45rem;}
+  .stat .lbl{font-size:0.65rem;}
+  .filters{gap:8px;}
+  .filters select,.filters input{flex:1 1 100%;font-size:0.92rem;padding:11px 12px;}
+  .filter-stuk-btn{width:100%;justify-content:center;padding:11px;}
+}
 @media(max-width:560px){
+  .topbar{height:50px;padding:0 12px;}
   .topbar-sep,.t-link-label{display:none;}
-  .wrap{padding:16px 12px 50px;}
-  .card{padding:18px;}
+  .logo-img{height:26px;}
+  .t-link{padding:7px 10px;font-size:0.95rem;}
+  .tabs{padding:0 6px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tab{padding:10px 14px;font-size:0.85rem;white-space:nowrap;}
+  .wrap{padding:14px 10px 40px;}
+  .card{padding:16px 14px;border-radius:8px;}
+  .card h2{font-size:1.25rem;}
+  input[type=text],textarea,select{padding:13px;font-size:1rem;}
+  textarea{min-height:110px;}
+  .broken-toggle{padding:14px;}
+  .broken-toggle .bt-title{font-size:0.88rem;}
+  .form-foot{flex-direction:column;align-items:stretch;gap:10px;}
+  .btn-primary{width:100%;padding:14px;font-size:1rem;}
+  .form-hint{text-align:center;}
+  .stat{flex:1 1 calc(50% - 4px);}
+  .day-head{font-size:1rem;flex-wrap:wrap;}
+  .day-head .day-count{font-size:0.7rem;}
+  .note{padding:11px 12px;}
+  .note-top{gap:6px;}
+  .note-name,.note-event,.note-stuk-tag{font-size:0.72rem;padding:2px 8px;}
+  .note-time{font-size:0.72rem;}
+  .note-text{font-size:0.92rem;}
+  .actions-row .btn-sel{width:100%;justify-content:center;}
+  .sel-bar{padding:9px 11px;gap:8px;flex-direction:column;align-items:stretch;}
+  .sel-bar .btn-sel,.sel-bar .btn-pdf{width:100%;justify-content:center;}
+  .sel-bar .spacer{display:none;}
 }
 </style>
 </head>

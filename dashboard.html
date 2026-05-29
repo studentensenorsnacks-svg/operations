@@ -966,6 +966,21 @@ textarea { resize: vertical; min-height: 72px; }
   .nav-stukken { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
   .nav-stukken .lbl-stuk-full { display:none; }
   .stukken-count { min-width:24px; height:24px; font-size:0.85rem; }
+  .menu-btn { padding:10px 12px; font-size:0.84rem; }
+  .es-modal-overlay { padding:10px; }
+  .es-modal { border-radius:12px; }
+  .es-modal-hdr { padding:16px 16px 0; }
+  .es-modal-body { padding:14px 16px 18px; }
+  .es-item { flex-wrap:wrap; padding:8px 12px; gap:8px; }
+  .es-item-naam { flex:1 1 100%; font-size:13.5px; }
+  .es-item-vals { width:100%; justify-content:space-between; gap:10px; }
+}
+@media (max-width:420px) {
+  .nav-stukken { padding:9px 12px; font-size:0.95rem; }
+  .menu-btn { padding:9px 11px; font-size:0.8rem; }
+  .menu-dropdown { grid-template-columns:1fr; padding:8px; }
+  .stat-num { font-size:1.7rem; }
+  .stat-card { padding:11px 12px; }
 }
 
 .stuk-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:300;

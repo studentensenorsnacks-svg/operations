@@ -71,6 +71,30 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 .formgrid{display:grid;grid-template-columns:1.5fr 1.5fr 1fr 1fr auto;gap:10px;align-items:end}
 @media(max-width:680px){.formgrid{grid-template-columns:1fr 1fr}.formgrid > button{grid-column:span 2}}
+@media(max-width:760px){
+  body{padding:18px 12px 50px;}
+  .topbar{gap:10px;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;}
+  .topbar img{width:32px;}
+  .topbar h1{font-size:18px;}
+  .topbar .who{flex:1 1 100%;font-size:11px;order:3;}
+  .topbar button.logout{padding:7px 11px;font-size:11.5px;}
+  .card{padding:14px 14px;border-radius:10px;}
+  h2{font-size:14px;}
+  input,select{padding:11px 12px;font-size:14.5px;}
+  /* Tabel naar kaartjes per user */
+  table,thead,tbody,tr,td{display:block;width:100%;}
+  thead{display:none;}
+  tr{background:#fff;border:1px solid rgba(120,60,20,.10);border-radius:10px;padding:11px 12px;margin-bottom:9px;}
+  td{padding:6px 0;border:none;}
+  td.role-cell select{min-width:0;width:100%;padding:11px;font-size:14px;}
+  td:has(button[data-act="delete"]){display:flex;justify-content:flex-end;padding-top:8px;}
+  td:has(button[data-act="delete"]) button{padding:9px 14px;font-size:13px;}
+}
+@media(max-width:480px){
+  .formgrid{grid-template-columns:1fr;gap:8px;}
+  .formgrid > button{grid-column:span 1;width:100%;padding:13px;}
+  button{padding:12px 14px;font-size:14px;}
+}
 
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{

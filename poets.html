@@ -130,11 +130,33 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .toast.show{opacity:1;}
 
 @media(max-width:768px){
-  .topbar{padding:0 14px;}
+  .topbar{padding:0 12px;height:54px;}
   .topbar-section{display:none;}
-  .container{padding:20px 12px;}
-  .nav-link{padding:6px 10px;font-size:0.8rem;}
-  .truck-grid{grid-template-columns:1fr;}
+  .container{padding:18px 12px;}
+  .nav-link{padding:7px 11px;font-size:0.85rem;}
+  .page-title{font-size:1.6rem;}
+  .page-subtitle{font-size:0.85rem;}
+  .view-tabs{width:100%;display:flex;}
+  .view-tab{flex:1;padding:10px 14px;font-size:0.85rem;}
+  .search-bar{padding:10px 14px;margin-bottom:14px;}
+  .search-bar input{font-size:1rem;}
+  .stats-row{gap:8px;margin-bottom:18px;}
+  .stat-pill{padding:11px 13px;min-width:0;flex:1 1 calc(33% - 6px);}
+  .stat-num{font-size:1.5rem;}
+  .stat-lbl{font-size:0.7rem;}
+  .section{margin-bottom:22px;}
+  .section-header{font-size:1.15rem;}
+  .truck-grid{grid-template-columns:1fr;gap:10px;}
+  .truck-card{padding:14px;}
+  .btn-clean{padding:12px 14px;font-size:0.92rem;}
+  .recent-row{padding:10px 12px;gap:10px;}
+  .recent-truck{font-size:0.88rem;}
+  .recent-meta{font-size:0.76rem;}
+}
+@media(max-width:420px){
+  .stats-row{flex-wrap:wrap;}
+  .stat-pill{flex:1 1 calc(50% - 4px);}
+  .view-tab{padding:11px 10px;font-size:0.82rem;}
 }
 
 /* Light-theme scrollbar */

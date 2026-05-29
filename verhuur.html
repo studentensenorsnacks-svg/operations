@@ -369,10 +369,46 @@ tbody td { padding: 12px 16px; font-size: 13px; vertical-align: middle; }
 #lightbox-close { position: absolute; top: 20px; right: 24px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  #sidebar { display: none; }
-  #main { padding: 16px; }
-  .fg2, .fg3, .two-col, .three-col { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  body { display: block; overflow: auto; }
+  #sidebar {
+    width: 100%; min-width: 0; height: auto;
+    border-right: none; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .logo { padding: 12px 14px 10px; }
+  nav {
+    flex-direction: row; flex-wrap: nowrap; overflow-x: auto;
+    -webkit-overflow-scrolling: touch; padding: 8px 10px; gap: 4px;
+  }
+  .nav-section { display: none; }
+  .nav-item { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
+  .sidebar-bottom { flex-direction: row; padding: 8px 10px; gap: 8px; }
+  #ms-btn { flex: 1; justify-content: center; }
+  #main { padding: 18px 14px; height: auto; overflow: visible; }
+  .ph { flex-direction: column; align-items: stretch; gap: 12px; }
+  .ph h1 { font-size: 20px; }
+  .ph-actions { flex-wrap: wrap; }
+  .stat-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat { padding: 12px 14px; }
+  .stat-v { font-size: 22px; }
+  .two-col, .three-col { grid-template-columns: 1fr; }
+  .fg2, .fg3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  #main { padding: 14px 10px; }
+  .ph h1 { font-size: 18px; }
+  .stat-row { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat { padding: 11px 12px; }
+  .stat-l { font-size: 10px; }
+  .stat-v { font-size: 19px; }
+  .stat-s { font-size: 11px; }
+  .card-header { padding: 12px 14px; }
+  .card-body { padding: 12px 14px; }
+  .tbl-wrap { -webkit-overflow-scrolling: touch; }
+  thead th { padding: 9px 12px; font-size: 10px; }
+  tbody td { padding: 10px 12px; font-size: 12.5px; }
+  .btn { padding: 10px 14px; font-size: 13px; }
 }
 </style>
 </head>
