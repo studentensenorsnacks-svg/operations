@@ -1,0 +1,108 @@
+rules_version = '2';
+
+// EventSheet SaaS rules.
+// Roles: owner, editor, viewer. Legacy "member"/"admin" count als editor.
+// Portal-toegang gebeurt via de portalAction Cloud Function (admin SDK).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+    function wsDoc(wsId) {
+      return get(/databases/$(database)/documents/workspaces/$(wsId)).data;
+    }
+    function memberData(wsId) {
+      return wsDoc(wsId).members[request.auth.uid];
+    }
+    function isMember(wsId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/workspaces/$(wsId))
+        && memberData(wsId) != null;
+    }
+    function canWrite(wsId) {
+      return isMember(wsId) && memberData(wsId).role in ['owner', 'editor', 'admin', 'member'];
+    }
+    function isOwner(wsId) {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/workspaces/$(wsId))
+        && wsDoc(wsId).ownerId == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isAuthed() && request.auth.uid == uid;
+    }
+
+    match /workspaces/{wsId} {
+      // Alleen leden mogen de workspace-inhoud (incl. ledenlijst) lezen.
+      // Invite-preview leest het invite-document zelf, dat alle nodige
+      // workspace-info gekopieerd bevat.
+      allow read: if isAuthed()
+                  && resource.data.members[request.auth.uid] != null;
+
+      allow create: if isAuthed()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.members[request.auth.uid].role == 'owner';
+
+      // Owner mag alles aanpassen. Niet-leden mogen enkel zichzelf
+      // toevoegen aan members (invite-acceptance) en niets anders raken.
+      // Bovendien mag de zelf-toegevoegde rol nooit 'owner' zijn — anders
+      // kan een willekeurige user zich admin-rechten geven door wsId te
+      // raden. Ownership zelf (ownerId-veld) verandert sowieso niet.
+      allow update: if isAuthed() && (
+        resource.data.ownerId == request.auth.uid ||
+        (
+          resource.data.members[request.auth.uid] == null
+          && request.resource.data.members[request.auth.uid] != null
+          && request.resource.data.members[request.auth.uid].role in ['viewer', 'editor', 'member']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+          && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.ownerId == resource.data.ownerId
+        )
+      );
+
+      allow delete: if isAuthed() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Invites: token in path is het secret. Iedereen mag de invite lezen
+    // (om preview te tonen). Aanmaken/wijzigen kan alleen de workspace-eigenaar.
+    // Verwijderen kan de workspace-eigenaar (revoke) of een bestaand
+    // workspace-lid (post-accept cleanup) — niet zomaar elke auth'd user.
+    match /invites/{token} {
+      allow read: if true;
+      allow create: if isAuthed()
+        && exists(/databases/$(database)/documents/workspaces/$(request.resource.data.wsId))
+        && get(/databases/$(database)/documents/workspaces/$(request.resource.data.wsId)).data.ownerId == request.auth.uid;
+      allow update: if isAuthed()
+        && resource.data.wsId == request.resource.data.wsId
+        && get(/databases/$(database)/documents/workspaces/$(resource.data.wsId)).data.ownerId == request.auth.uid;
+      allow delete: if isAuthed() && (
+        get(/databases/$(database)/documents/workspaces/$(resource.data.wsId)).data.ownerId == request.auth.uid ||
+        get(/databases/$(database)/documents/workspaces/$(resource.data.wsId)).data.members[request.auth.uid] != null
+      );
+    }
+
+    match /events/{id} {
+      allow read: if isMember(resource.data.wsId);
+      allow create: if canWrite(request.resource.data.wsId);
+      allow update, delete: if canWrite(resource.data.wsId);
+    }
+
+    match /suppliers/{id} {
+      allow read: if isMember(resource.data.wsId);
+      allow create: if canWrite(request.resource.data.wsId);
+      allow update, delete: if canWrite(resource.data.wsId);
+    }
+
+    match /requests/{id} {
+      allow read: if isMember(resource.data.wsId);
+      allow create: if canWrite(request.resource.data.wsId);
+      allow update, delete: if canWrite(resource.data.wsId);
+    }
+
+    // Alles wat hierboven niet expliciet toegelaten is, blijft dicht.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

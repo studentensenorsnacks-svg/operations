@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Horeca Planning</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;--orange:#c2410c;--orange-bg:#fdeee2;--blue:#1d4ed8;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOPBAR */
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-sq{width:32px;height:32px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.logo-sq span{color:#fff;font-weight:700;font-size:14px;font-family:var(--font-cond);}
+.logo-text{font-family:var(--font-cond);font-weight:700;font-size:18px;letter-spacing:.01em;}
+.nav-links{display:flex;gap:4px;}
+.nav-link{padding:6px 14px;border-radius:8px;font-size:13.5px;font-weight:600;text-decoration:none;color:var(--text2);transition:background .15s;cursor:pointer;border:none;background:none;font-family:var(--font);}
+.nav-link:hover{background:var(--surface2);color:var(--text);}
+.nav-link.active{background:var(--red);color:#fff;}
+
+/* LAYOUT */
+.main{max-width:1200px;margin:0 auto;padding:22px;}
+.page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--font-cond);font-size:26px;font-weight:800;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+
+/* BUTTONS */
+.btn{padding:8px 15px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;color:var(--text);transition:all .12s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--surface2);}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red);}
+.btn-red:hover{background:var(--red-dark);border-color:var(--red-dark);}
+.btn-dark{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+.btn-dark:hover{background:#333;}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{filter:brightness(1.08);}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--text2);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-sm{padding:5px 10px;font-size:12.5px;}
+.btn-icon{padding:6px 8px;font-size:13px;line-height:1;}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:18px;}
+.tab-btn{padding:8px 18px;border-radius:7px;border:none;background:transparent;font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;color:var(--text2);}
+.tab-btn.active{background:var(--red);color:#fff;}
+.tab-content{display:none;}.tab-content.active{display:block;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+.card-title{font-family:var(--font-cond);font-weight:700;font-size:18px;}
+.card-sub{font-size:12px;color:var(--text2);margin-top:1px;}
+
+/* PROJECT GRID */
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.proj-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:14px;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;gap:6px;}
+.proj-card:hover{border-color:var(--red);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.05);}
+.proj-card .pn{font-family:var(--font-cond);font-size:18px;font-weight:700;}
+.proj-card .pm{font-size:12px;color:var(--text2);}
+.proj-card .pf{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text3);margin-top:6px;padding-top:8px;border-top:1px solid var(--border);}
+
+/* LOCATIE */
+.loc-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;margin-bottom:12px;overflow:hidden;}
+.loc-hdr{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.loc-name{font-family:var(--font-cond);font-size:17px;font-weight:700;}
+.loc-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--surface3);color:var(--text2);}
+.loc-tag.tpl{background:var(--green-bg);color:var(--green);}
+.loc-body{padding:8px 16px 12px;}
+.loc-actions{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ITEM ROW */
+.item-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13.5px;}
+.item-row:last-child{border-bottom:none;}
+.item-name{flex:1;font-weight:500;}
+.item-cat{font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em;}
+.item-qty{display:flex;align-items:center;gap:5px;}
+.item-qty input{width:54px;text-align:center;padding:5px 6px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:13px;}
+.item-qty-btn{width:24px;height:24px;border:1px solid var(--border2);background:var(--surface);border-radius:6px;cursor:pointer;font-weight:700;color:var(--text2);}
+.item-qty-btn:hover{background:var(--surface2);color:var(--text);}
+.item-del{color:var(--text3);background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;}
+.item-del:hover{color:var(--red);}
+.empty{padding:14px;text-align:center;color:var(--text3);font-size:13px;font-style:italic;}
+
+/* FORM */
+.form-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px;}
+.form-label{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
+.form-input,.form-select{padding:8px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:var(--surface);color:var(--text);width:100%;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--red);}
+.form-textarea{padding:8px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;min-height:60px;resize:vertical;width:100%;}
+
+/* CATALOGUS */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;}
+.cat-chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;}
+.cat-chip .nm{font-weight:600;}
+.cat-chip .ct{font-size:11px;color:var(--text3);text-transform:uppercase;}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--surface);border-radius:12px;padding:22px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal-title{font-family:var(--font-cond);font-size:20px;font-weight:700;margin-bottom:14px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;font-weight:600;opacity:0;transition:all .22s;pointer-events:none;z-index:2000;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* BREADCRUMB */
+.crumb{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-bottom:10px;}
+.crumb a{color:var(--text2);text-decoration:none;cursor:pointer;}
+.crumb a:hover{color:var(--red);}
+.crumb .sep{color:var(--text3);}
+
+/* SUGGESTIES (datalist style) */
+.sug-wrap{position:relative;}
+.sug-list{position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-top:none;border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;z-index:50;display:none;box-shadow:0 4px 12px rgba(0,0,0,.08);}
+.sug-list.show{display:block;}
+.sug-item{padding:7px 11px;cursor:pointer;font-size:13.5px;display:flex;justify-content:space-between;}
+.sug-item:hover,.sug-item.active{background:var(--surface2);}
+.sug-item .ct{font-size:11px;color:var(--text3);}
+.sug-item .new{font-size:11px;color:var(--green);font-weight:700;}
+
+/* PRINT */
+@media print {
+  body{background:#fff;}
+  .topbar,.tabs,.no-print,.btn,.page-hdr .right{display:none !important;}
+  .main{max-width:none;padding:0;}
+  .card,.loc-card{box-shadow:none;border:1px solid #ccc;page-break-inside:avoid;}
+  .item-qty input{border:none;background:transparent;}
+  .item-qty-btn,.item-del{display:none !important;}
+  .print-only{display:block !important;}
+}
+.print-only{display:none;}
+.print-hdr{margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #000;}
+.print-hdr h1{font-family:var(--font-cond);font-size:24px;}
+.print-hdr .sub{font-size:13px;color:#444;margin-top:3px;}
+.print-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.print-table th,.print-table td{text-align:left;padding:6px 8px;border-bottom:1px solid #ddd;font-size:13px;}
+.print-table th{background:#f0f0f0;font-family:var(--font-cond);font-size:12px;text-transform:uppercase;letter-spacing:.05em;}
+.print-table .qty{text-align:right;font-family:var(--mono);font-weight:600;width:80px;}
+.print-section{page-break-inside:avoid;margin-bottom:18px;}
+.print-section h2{font-family:var(--font-cond);font-size:17px;margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid #888;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" class="logo-wrap">
+    <div class="logo-sq"><span>SS</span></div>
+    <div class="logo-text">Horeca Planning</div>
+  </a>
+  <div class="nav-links">
+    <button class="nav-link active" data-tab="projecten" onclick="switchTab('projecten')">Projecten</button>
+    <button class="nav-link" data-tab="catalogus" onclick="switchTab('catalogus')">Catalogus</button>
+    <button class="nav-link" data-tab="templates" onclick="switchTab('templates')">Templates</button>
+    <a href="dashboard.html" class="nav-link">← Dashboard</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PROJECTEN TAB -->
+  <div id="tab-projecten" class="tab-content active">
+
+    <!-- PROJECT LIJST -->
+    <div id="view-list">
+      <div class="page-hdr">
+        <div>
+          <div class="page-title">Projecten</div>
+          <div class="page-sub">Maak een project per event en plan de locaties.</div>
+        </div>
+        <div class="right">
+          <button class="btn btn-red" onclick="openNewProject()">+ Nieuw project</button>
+        </div>
+      </div>
+      <div id="proj-grid" class="proj-grid"></div>
+      <div id="proj-empty" class="empty" style="display:none;">Nog geen projecten — klik <strong>+ Nieuw project</strong> om te starten.</div>
+    </div>
+
+    <!-- PROJECT DETAIL -->
+    <div id="view-detail" style="display:none;">
+      <div class="crumb no-print">
+        <a onclick="backToList()">← Projecten</a>
+        <span class="sep">/</span>
+        <span id="crumb-name"></span>
+      </div>
+
+      <div class="page-hdr">
+        <div>
+          <div class="page-title" id="detail-title"></div>
+          <div class="page-sub" id="detail-sub"></div>
+        </div>
+        <div class="right no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn" onclick="editProject()">✎ Bewerk</button>
+          <button class="btn btn-dark" onclick="printProjectTotal()">🖨 PDF totaal</button>
+          <button class="btn btn-dark" onclick="printProjectByLoc()">🖨 PDF per locatie</button>
+          <button class="btn btn-red" onclick="openNewLocation()">+ Locatie</button>
+        </div>
+      </div>
+
+      <div id="loc-list"></div>
+      <div id="loc-empty" class="empty" style="display:none;">Nog geen locaties — klik <strong>+ Locatie</strong>.</div>
+    </div>
+
+  </div>
+
+  <!-- CATALOGUS TAB -->
+  <div id="tab-catalogus" class="tab-content">
+    <div class="page-hdr">
+      <div>
+        <div class="page-title">Materiaal Catalogus</div>
+        <div class="page-sub">Centrale lijst van standaard items. Vrij intypen op een locatie blijft mogelijk.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">Nieuw item</div></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Naam</label>
+          <input id="cat-name" class="form-input" placeholder="bv. Friteuse">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categorie</label>
+          <input id="cat-cat" class="form-input" placeholder="bv. Bakapparatuur" list="cat-suggest">
+          <datalist id="cat-suggest"></datalist>
+        </div>
+        <button class="btn btn-red" onclick="addCatalogItem()">Toevoegen</button>
+      </div>
+    </div>
+
+    <div id="cat-by-cat"></div>
+  </div>
+
+  <!-- TEMPLATES TAB -->
+  <div id="tab-templates" class="tab-content">
+    <div class="page-hdr">
+      <div>
+        <div class="page-title">Locatie Templates</div>
+        <div class="page-sub">Standaard inhoud per locatietype (vb. Hamburgerstand). Bij nieuwe locatie kies je een template en bewerk je per geval.</div>
+      </div>
+      <div class="right">
+        <button class="btn btn-red" onclick="openNewTemplate()">+ Nieuw template</button>
+      </div>
+    </div>
+
+    <div id="tpl-list"></div>
+    <div id="tpl-empty" class="empty" style="display:none;">Nog geen templates.</div>
+  </div>
+
+</div>
+
+<!-- ─── MODALS ─── -->
+
+<!-- Project modal -->
+<div class="modal-bg" id="modal-project">
+  <div class="modal">
+    <div class="modal-title" id="mp-title">Nieuw project</div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label class="form-label">Naam</label>
+      <input id="mp-name" class="form-input" placeholder="bv. Gladiolen">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input id="mp-date" type="date" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plaats</label>
+        <input id="mp-place" class="form-input" placeholder="bv. Vosselaar">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:10px;">
+      <label class="form-label">Notitie</label>
+      <textarea id="mp-note" class="form-textarea" placeholder="optioneel"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="mp-delete" onclick="deleteProject()" style="margin-right:auto;color:var(--red);">Verwijder</button>
+      <button class="btn" onclick="closeModal('modal-project')">Annuleer</button>
+      <button class="btn btn-red" onclick="saveProject()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Locatie modal -->
+<div class="modal-bg" id="modal-locatie">
+  <div class="modal">
+    <div class="modal-title" id="ml-title">Nieuwe locatie</div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label class="form-label">Naam locatie</label>
+      <input id="ml-name" class="form-input" placeholder="bv. Hamburgerstand">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Template (optioneel)</label>
+      <select id="ml-tpl" class="form-select">
+        <option value="">— Geen template (leeg starten) —</option>
+      </select>
+      <div style="font-size:11.5px;color:var(--text3);margin-top:4px;">Items van het template worden gekopieerd; je kan ze per locatie nog aanpassen.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="ml-delete" onclick="deleteLocation()" style="margin-right:auto;color:var(--red);">Verwijder</button>
+      <button class="btn" onclick="closeModal('modal-locatie')">Annuleer</button>
+      <button class="btn btn-red" onclick="saveLocation()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Template modal -->
+<div class="modal-bg" id="modal-template">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-title" id="mt-title">Nieuw template</div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label class="form-label">Naam (locatietype)</label>
+      <input id="mt-name" class="form-input" placeholder="bv. Hamburgerstand">
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Items in template</div>
+    <div id="mt-items" style="margin-bottom:10px;"></div>
+    <div class="form-row">
+      <div class="form-group sug-wrap" style="flex:2;">
+        <input id="mt-item-name" class="form-input" placeholder="Item zoeken of nieuw…" oninput="onTplItemInput()" onfocus="onTplItemInput()" onblur="setTimeout(hideTplSug,150)">
+        <div id="mt-sug" class="sug-list"></div>
+      </div>
+      <div class="form-group" style="flex:0 0 90px;">
+        <input id="mt-item-qty" class="form-input" type="number" min="1" value="1" style="text-align:center;">
+      </div>
+      <button class="btn btn-red" onclick="addTplItem()">+</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="mt-delete" onclick="deleteTemplate()" style="margin-right:auto;color:var(--red);">Verwijder</button>
+      <button class="btn" onclick="closeModal('modal-template')">Annuleer</button>
+      <button class="btn btn-red" onclick="saveTemplate()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add item to locatie modal -->
+<div class="modal-bg" id="modal-additem">
+  <div class="modal">
+    <div class="modal-title">Item toevoegen</div>
+    <div class="form-row" style="align-items:end;">
+      <div class="form-group sug-wrap" style="flex:2;">
+        <label class="form-label">Item</label>
+        <input id="ai-name" class="form-input" placeholder="Zoek of typ nieuw…" oninput="onAiInput()" onfocus="onAiInput()" onblur="setTimeout(hideAiSug,150)">
+        <div id="ai-sug" class="sug-list"></div>
+      </div>
+      <div class="form-group" style="flex:0 0 100px;">
+        <label class="form-label">Aantal</label>
+        <input id="ai-qty" type="number" min="1" value="1" class="form-input" style="text-align:center;">
+      </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-top:6px;">Suggesties komen uit de catalogus. Een vrije naam wordt enkel op deze locatie opgeslagen.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-additem')">Annuleer</button>
+      <button class="btn btn-red" onclick="confirmAddItem()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────
+const ROOT = 'ft_horeca_laadlijst_v1';
+let projecten = {};   // id -> {naam, datum, plaats, notitie, locaties:{lid:{naam,template,items:{iid:{naam,aantal,categorie,fromCatalog}}}}}
+let catalogus = {};   // id -> {naam, categorie}
+let templates = {};   // id -> {naam, items:{iid:{naam,aantal,categorie}}}
+let currentProject = null; // id
+let editingProject = null;
+let editingLocation = null;
+let editingTemplate = null;
+let tplDraftItems = {}; // working copy while editing template
+let addItemLocation = null; // lid waar item naartoe moet
+let toastTimer = null;
+
+// ─────────────────────────────────────────────────────────────
+// FIREBASE LISTENERS
+// ─────────────────────────────────────────────────────────────
+fbdb.ref(ROOT + '/projecten').on('value', s => {
+  projecten = s.val() || {};
+  renderProjList();
+  if (currentProject && projecten[currentProject]) renderProjectDetail();
+  else if (currentProject) backToList();
+});
+fbdb.ref(ROOT + '/catalogus').on('value', s => {
+  catalogus = s.val() || {};
+  renderCatalogus();
+  refreshTplDropdownAndCategories();
+});
+fbdb.ref(ROOT + '/templates').on('value', s => {
+  templates = s.val() || {};
+  renderTemplates();
+  refreshTplDropdownAndCategories();
+});
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+function fmtDate(s){
+  if(!s) return '';
+  const d = new Date(s);
+  if(isNaN(d)) return s;
+  return d.toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+// ─────────────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.nav-link[data-tab]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROJECTEN — LIJST
+// ─────────────────────────────────────────────────────────────
+function renderProjList(){
+  if(currentProject) return; // detail is open
+  const grid = document.getElementById('proj-grid');
+  const ids = Object.keys(projecten).sort((a,b)=>{
+    const da = projecten[a].datum||'', db = projecten[b].datum||'';
+    return db.localeCompare(da) || (projecten[a].naam||'').localeCompare(projecten[b].naam||'');
+  });
+  document.getElementById('proj-empty').style.display = ids.length ? 'none' : 'block';
+  grid.innerHTML = ids.map(id => {
+    const p = projecten[id];
+    const nLoc = p.locaties ? Object.keys(p.locaties).length : 0;
+    return `
+      <div class="proj-card" onclick="openProject('${id}')">
+        <div class="pn">${esc(p.naam||'(zonder naam)')}</div>
+        <div class="pm">${esc(p.plaats||'')} ${p.datum?'· '+fmtDate(p.datum):''}</div>
+        <div class="pf"><span>${nLoc} locatie${nLoc===1?'':'s'}</span><span>→</span></div>
+      </div>`;
+  }).join('');
+}
+
+function openNewProject(){
+  editingProject = null;
+  document.getElementById('mp-title').textContent = 'Nieuw project';
+  document.getElementById('mp-name').value = '';
+  document.getElementById('mp-date').value = '';
+  document.getElementById('mp-place').value = '';
+  document.getElementById('mp-note').value = '';
+  document.getElementById('mp-delete').style.display = 'none';
+  openModal('modal-project');
+  setTimeout(()=>document.getElementById('mp-name').focus(),50);
+}
+
+function editProject(){
+  if(!currentProject) return;
+  editingProject = currentProject;
+  const p = projecten[currentProject];
+  document.getElementById('mp-title').textContent = 'Project bewerken';
+  document.getElementById('mp-name').value = p.naam||'';
+  document.getElementById('mp-date').value = p.datum||'';
+  document.getElementById('mp-place').value = p.plaats||'';
+  document.getElementById('mp-note').value = p.notitie||'';
+  document.getElementById('mp-delete').style.display = 'inline-flex';
+  openModal('modal-project');
+}
+
+function saveProject(){
+  const naam = document.getElementById('mp-name').value.trim();
+  if(!naam){ toast('Geef een naam in'); return; }
+  const data = {
+    naam,
+    datum: document.getElementById('mp-date').value || '',
+    plaats: document.getElementById('mp-place').value.trim(),
+    notitie: document.getElementById('mp-note').value.trim(),
+  };
+  const id = editingProject || uid();
+  const ref = fbdb.ref(`${ROOT}/projecten/${id}`);
+  (editingProject ? ref.update(data) : ref.set(data))
+    .then(()=>{
+      closeModal('modal-project');
+      toast(editingProject ? 'Opgeslagen' : 'Project aangemaakt');
+      if(!editingProject) openProject(id);
+    });
+}
+
+function deleteProject(){
+  if(!editingProject) return;
+  if(!confirm('Project + alle locaties verwijderen?')) return;
+  fbdb.ref(`${ROOT}/projecten/${editingProject}`).remove().then(()=>{
+    closeModal('modal-project');
+    backToList();
+    toast('Project verwijderd');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// PROJECT DETAIL
+// ─────────────────────────────────────────────────────────────
+function openProject(id){
+  currentProject = id;
+  document.getElementById('view-list').style.display = 'none';
+  document.getElementById('view-detail').style.display = 'block';
+  renderProjectDetail();
+}
+function backToList(){
+  currentProject = null;
+  document.getElementById('view-detail').style.display = 'none';
+  document.getElementById('view-list').style.display = 'block';
+  renderProjList();
+}
+
+function renderProjectDetail(){
+  const p = projecten[currentProject];
+  if(!p){ backToList(); return; }
+  document.getElementById('crumb-name').textContent = p.naam||'';
+  document.getElementById('detail-title').textContent = p.naam||'';
+  const subParts = [];
+  if(p.plaats) subParts.push(p.plaats);
+  if(p.datum) subParts.push(fmtDate(p.datum));
+  if(p.notitie) subParts.push(p.notitie);
+  document.getElementById('detail-sub').textContent = subParts.join(' · ');
+
+  const list = document.getElementById('loc-list');
+  const lids = Object.keys(p.locaties||{}).sort((a,b)=>(p.locaties[a].naam||'').localeCompare(p.locaties[b].naam||''));
+  document.getElementById('loc-empty').style.display = lids.length ? 'none' : 'block';
+  list.innerHTML = lids.map(lid => renderLocationCard(lid, p.locaties[lid])).join('');
+}
+
+function renderLocationCard(lid, loc){
+  const items = loc.items || {};
+  const iids = Object.keys(items).sort((a,b)=>{
+    const ca=(items[a].categorie||'zzz'), cb=(items[b].categorie||'zzz');
+    return ca.localeCompare(cb) || (items[a].naam||'').localeCompare(items[b].naam||'');
+  });
+  const tplName = loc.template && templates[loc.template] ? templates[loc.template].naam : null;
+  const itemsHtml = iids.length ? iids.map(iid => {
+    const it = items[iid];
+    return `
+      <div class="item-row">
+        <span class="item-name">${esc(it.naam)}</span>
+        ${it.categorie ? `<span class="item-cat">${esc(it.categorie)}</span>` : ''}
+        <div class="item-qty no-print">
+          <button class="item-qty-btn" onclick="changeQty('${lid}','${iid}',-1)">−</button>
+          <input type="number" min="0" value="${it.aantal||1}" onchange="setQty('${lid}','${iid}',this.value)">
+          <button class="item-qty-btn" onclick="changeQty('${lid}','${iid}',1)">+</button>
+        </div>
+        <span class="item-qty print-only" style="display:none;">×${it.aantal||1}</span>
+        <button class="item-del no-print" onclick="deleteItem('${lid}','${iid}')" title="Verwijder">✕</button>
+      </div>`;
+  }).join('') : '<div class="empty">Nog geen items — klik <strong>+ Item</strong>.</div>';
+
+  return `
+    <div class="loc-card">
+      <div class="loc-hdr">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="loc-name">${esc(loc.naam||'')}</div>
+          ${tplName ? `<span class="loc-tag tpl">tpl: ${esc(tplName)}</span>` : ''}
+          <span class="loc-tag">${iids.length} item${iids.length===1?'':'s'}</span>
+        </div>
+        <div class="loc-actions no-print">
+          <button class="btn btn-sm" onclick="openAddItem('${lid}')">+ Item</button>
+          <button class="btn btn-sm" onclick="editLocation('${lid}')">✎</button>
+          <button class="btn btn-sm btn-dark" onclick="printLocation('${lid}')">🖨 PDF</button>
+        </div>
+      </div>
+      <div class="loc-body">${itemsHtml}</div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOCATIE CRUD
+// ─────────────────────────────────────────────────────────────
+function openNewLocation(){
+  editingLocation = null;
+  document.getElementById('ml-title').textContent = 'Nieuwe locatie';
+  document.getElementById('ml-name').value = '';
+  document.getElementById('ml-tpl').value = '';
+  document.getElementById('ml-delete').style.display = 'none';
+  refreshTplDropdownAndCategories();
+  openModal('modal-locatie');
+  setTimeout(()=>document.getElementById('ml-name').focus(),50);
+}
+
+function editLocation(lid){
+  editingLocation = lid;
+  const loc = projecten[currentProject].locaties[lid];
+  document.getElementById('ml-title').textContent = 'Locatie bewerken';
+  document.getElementById('ml-name').value = loc.naam||'';
+  document.getElementById('ml-tpl').value = loc.template||'';
+  document.getElementById('ml-delete').style.display = 'inline-flex';
+  refreshTplDropdownAndCategories();
+  openModal('modal-locatie');
+}
+
+function saveLocation(){
+  const naam = document.getElementById('ml-name').value.trim();
+  if(!naam){ toast('Geef een naam in'); return; }
+  const tplId = document.getElementById('ml-tpl').value || '';
+
+  if(editingLocation){
+    const updates = { naam, template: tplId };
+    fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${editingLocation}`).update(updates).then(()=>{
+      closeModal('modal-locatie');
+      toast('Locatie opgeslagen');
+    });
+  } else {
+    const lid = uid();
+    const items = {};
+    if(tplId && templates[tplId] && templates[tplId].items){
+      Object.values(templates[tplId].items).forEach(it=>{
+        const iid = uid();
+        items[iid] = { naam: it.naam, aantal: it.aantal||1, categorie: it.categorie||'', fromCatalog: !!it.fromCatalog };
+      });
+    }
+    fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${lid}`).set({ naam, template: tplId, items }).then(()=>{
+      closeModal('modal-locatie');
+      toast('Locatie aangemaakt');
+    });
+  }
+}
+
+function deleteLocation(){
+  if(!editingLocation) return;
+  if(!confirm('Locatie + alle items verwijderen?')) return;
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${editingLocation}`).remove().then(()=>{
+    closeModal('modal-locatie');
+    toast('Locatie verwijderd');
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// ITEMS IN LOCATIE
+// ─────────────────────────────────────────────────────────────
+function openAddItem(lid){
+  addItemLocation = lid;
+  document.getElementById('ai-name').value = '';
+  document.getElementById('ai-qty').value = 1;
+  hideAiSug();
+  openModal('modal-additem');
+  setTimeout(()=>document.getElementById('ai-name').focus(),50);
+}
+
+function confirmAddItem(){
+  const naam = document.getElementById('ai-name').value.trim();
+  const aantal = Math.max(1, parseInt(document.getElementById('ai-qty').value)||1);
+  if(!naam){ toast('Geef een naam in'); return; }
+  const match = Object.values(catalogus).find(c => (c.naam||'').toLowerCase()===naam.toLowerCase());
+  const cat = match ? (match.categorie||'') : '';
+  const iid = uid();
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${addItemLocation}/items/${iid}`).set({
+    naam: match ? match.naam : naam, aantal, categorie: cat, fromCatalog: !!match
+  }).then(()=>{
+    closeModal('modal-additem');
+    toast('Item toegevoegd');
+  });
+}
+
+function changeQty(lid, iid, delta){
+  const it = projecten[currentProject].locaties[lid].items[iid];
+  const nq = Math.max(0, (it.aantal||1) + delta);
+  if(nq===0){ deleteItem(lid, iid); return; }
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${lid}/items/${iid}/aantal`).set(nq);
+}
+function setQty(lid, iid, val){
+  const nq = Math.max(0, parseInt(val)||0);
+  if(nq===0){ deleteItem(lid, iid); return; }
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${lid}/items/${iid}/aantal`).set(nq);
+}
+function deleteItem(lid, iid){
+  fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${lid}/items/${iid}`).remove();
+}
+
+// ─────────────────────────────────────────────────────────────
+// CATALOGUS
+// ─────────────────────────────────────────────────────────────
+function addCatalogItem(){
+  const naam = document.getElementById('cat-name').value.trim();
+  const categorie = document.getElementById('cat-cat').value.trim();
+  if(!naam){ toast('Geef een naam in'); return; }
+  const dup = Object.values(catalogus).find(c => (c.naam||'').toLowerCase()===naam.toLowerCase());
+  if(dup){ toast('Bestaat al'); return; }
+  const id = uid();
+  fbdb.ref(`${ROOT}/catalogus/${id}`).set({ naam, categorie }).then(()=>{
+    document.getElementById('cat-name').value = '';
+    document.getElementById('cat-cat').value = '';
+    document.getElementById('cat-name').focus();
+    toast('Toegevoegd');
+  });
+}
+
+function removeCatalogItem(id){
+  if(!confirm('Verwijder dit catalogusitem? (locaties/templates die het al gebruiken blijven werken.)')) return;
+  fbdb.ref(`${ROOT}/catalogus/${id}`).remove();
+}
+
+function renderCatalogus(){
+  const wrap = document.getElementById('cat-by-cat');
+  const ids = Object.keys(catalogus);
+  if(!ids.length){ wrap.innerHTML = '<div class="empty">Nog geen catalogusitems.</div>'; return; }
+  // group by categorie
+  const groups = {};
+  ids.forEach(id => {
+    const c = catalogus[id].categorie || 'Overig';
+    (groups[c] = groups[c] || []).push(id);
+  });
+  const cats = Object.keys(groups).sort();
+  wrap.innerHTML = cats.map(c => {
+    const items = groups[c].sort((a,b)=>(catalogus[a].naam||'').localeCompare(catalogus[b].naam||''));
+    return `
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">${esc(c)}</div><div class="card-sub">${items.length} item${items.length===1?'':'s'}</div></div>
+        <div class="cat-grid">
+          ${items.map(id=>`
+            <div class="cat-chip">
+              <span class="nm">${esc(catalogus[id].naam)}</span>
+              <button class="item-del" onclick="removeCatalogItem('${id}')">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// TEMPLATES
+// ─────────────────────────────────────────────────────────────
+function openNewTemplate(){
+  editingTemplate = null;
+  tplDraftItems = {};
+  document.getElementById('mt-title').textContent = 'Nieuw template';
+  document.getElementById('mt-name').value = '';
+  document.getElementById('mt-item-name').value = '';
+  document.getElementById('mt-item-qty').value = 1;
+  document.getElementById('mt-delete').style.display = 'none';
+  renderTplDraftItems();
+  openModal('modal-template');
+  setTimeout(()=>document.getElementById('mt-name').focus(),50);
+}
+
+function editTemplate(id){
+  editingTemplate = id;
+  const t = templates[id];
+  tplDraftItems = JSON.parse(JSON.stringify(t.items||{}));
+  document.getElementById('mt-title').textContent = 'Template bewerken';
+  document.getElementById('mt-name').value = t.naam||'';
+  document.getElementById('mt-item-name').value = '';
+  document.getElementById('mt-item-qty').value = 1;
+  document.getElementById('mt-delete').style.display = 'inline-flex';
+  renderTplDraftItems();
+  openModal('modal-template');
+}
+
+function renderTplDraftItems(){
+  const wrap = document.getElementById('mt-items');
+  const iids = Object.keys(tplDraftItems).sort((a,b)=>(tplDraftItems[a].naam||'').localeCompare(tplDraftItems[b].naam||''));
+  if(!iids.length){ wrap.innerHTML = '<div class="empty" style="padding:8px;">Nog geen items</div>'; return; }
+  wrap.innerHTML = iids.map(iid => {
+    const it = tplDraftItems[iid];
+    return `
+      <div class="item-row">
+        <span class="item-name">${esc(it.naam)}</span>
+        ${it.categorie ? `<span class="item-cat">${esc(it.categorie)}</span>` : ''}
+        <div class="item-qty">
+          <button class="item-qty-btn" onclick="changeTplDraftQty('${iid}',-1)">−</button>
+          <input type="number" min="1" value="${it.aantal||1}" onchange="setTplDraftQty('${iid}',this.value)">
+          <button class="item-qty-btn" onclick="changeTplDraftQty('${iid}',1)">+</button>
+        </div>
+        <button class="item-del" onclick="removeTplDraftItem('${iid}')">✕</button>
+      </div>`;
+  }).join('');
+}
+function changeTplDraftQty(iid, delta){
+  const nq = Math.max(1, (tplDraftItems[iid].aantal||1)+delta);
+  tplDraftItems[iid].aantal = nq;
+  renderTplDraftItems();
+}
+function setTplDraftQty(iid, v){
+  tplDraftItems[iid].aantal = Math.max(1, parseInt(v)||1);
+}
+function removeTplDraftItem(iid){
+  delete tplDraftItems[iid];
+  renderTplDraftItems();
+}
+
+function addTplItem(){
+  const naam = document.getElementById('mt-item-name').value.trim();
+  const aantal = Math.max(1, parseInt(document.getElementById('mt-item-qty').value)||1);
+  if(!naam){ toast('Geef een naam in'); return; }
+  const match = Object.values(catalogus).find(c => (c.naam||'').toLowerCase()===naam.toLowerCase());
+  const iid = uid();
+  tplDraftItems[iid] = {
+    naam: match ? match.naam : naam,
+    aantal,
+    categorie: match ? (match.categorie||'') : '',
+    fromCatalog: !!match
+  };
+  document.getElementById('mt-item-name').value = '';
+  document.getElementById('mt-item-qty').value = 1;
+  document.getElementById('mt-item-name').focus();
+  renderTplDraftItems();
+}
+
+function saveTemplate(){
+  const naam = document.getElementById('mt-name').value.trim();
+  if(!naam){ toast('Geef een naam in'); return; }
+  const id = editingTemplate || uid();
+  fbdb.ref(`${ROOT}/templates/${id}`).set({ naam, items: tplDraftItems }).then(()=>{
+    closeModal('modal-template');
+    toast(editingTemplate ? 'Template opgeslagen' : 'Template aangemaakt');
+  });
+}
+
+function deleteTemplate(){
+  if(!editingTemplate) return;
+  if(!confirm('Template verwijderen?')) return;
+  fbdb.ref(`${ROOT}/templates/${editingTemplate}`).remove().then(()=>{
+    closeModal('modal-template');
+    toast('Template verwijderd');
+  });
+}
+
+function renderTemplates(){
+  const wrap = document.getElementById('tpl-list');
+  const ids = Object.keys(templates).sort((a,b)=>(templates[a].naam||'').localeCompare(templates[b].naam||''));
+  document.getElementById('tpl-empty').style.display = ids.length ? 'none' : 'block';
+  wrap.innerHTML = ids.map(id => {
+    const t = templates[id];
+    const items = t.items || {};
+    const iids = Object.keys(items).sort((a,b)=>{
+      const ca=(items[a].categorie||'zzz'), cb=(items[b].categorie||'zzz');
+      return ca.localeCompare(cb) || (items[a].naam||'').localeCompare(items[b].naam||'');
+    });
+    return `
+      <div class="card">
+        <div class="card-hdr">
+          <div>
+            <div class="card-title">${esc(t.naam||'')}</div>
+            <div class="card-sub">${iids.length} item${iids.length===1?'':'s'}</div>
+          </div>
+          <button class="btn btn-sm" onclick="editTemplate('${id}')">✎ Bewerken</button>
+        </div>
+        ${iids.length ? iids.map(iid=>{
+          const it = items[iid];
+          return `<div class="item-row">
+            <span class="item-name">${esc(it.naam)}</span>
+            ${it.categorie ? `<span class="item-cat">${esc(it.categorie)}</span>` : ''}
+            <span class="item-qty" style="font-family:var(--mono);font-weight:700;">×${it.aantal||1}</span>
+          </div>`;
+        }).join('') : '<div class="empty">Geen items</div>'}
+      </div>`;
+  }).join('');
+}
+
+function refreshTplDropdownAndCategories(){
+  // template dropdown in locatie modal
+  const sel = document.getElementById('ml-tpl');
+  const current = sel.value;
+  const opts = ['<option value="">— Geen template (leeg starten) —</option>'];
+  Object.keys(templates).sort((a,b)=>(templates[a].naam||'').localeCompare(templates[b].naam||''))
+    .forEach(id => opts.push(`<option value="${id}">${esc(templates[id].naam)}</option>`));
+  sel.innerHTML = opts.join('');
+  sel.value = current;
+
+  // catalogus categorie datalist
+  const dl = document.getElementById('cat-suggest');
+  const cats = [...new Set(Object.values(catalogus).map(c=>c.categorie).filter(Boolean))].sort();
+  dl.innerHTML = cats.map(c=>`<option value="${esc(c)}">`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUGGESTIES (item zoeken in catalogus)
+// ─────────────────────────────────────────────────────────────
+function matchCatalog(q){
+  q = (q||'').toLowerCase().trim();
+  if(!q) return [];
+  return Object.values(catalogus)
+    .filter(c => (c.naam||'').toLowerCase().includes(q))
+    .sort((a,b)=>{
+      const ai = (a.naam||'').toLowerCase().indexOf(q);
+      const bi = (b.naam||'').toLowerCase().indexOf(q);
+      return ai - bi || (a.naam||'').localeCompare(b.naam||'');
+    })
+    .slice(0,8);
+}
+function renderSugList(elId, inputId, q){
+  const el = document.getElementById(elId);
+  const matches = matchCatalog(q);
+  const exact = q && matches.some(m => (m.naam||'').toLowerCase() === q.toLowerCase());
+  let html = matches.map(m => `<div class="sug-item" onmousedown="event.preventDefault()" onclick="pickSug('${inputId}','${esc(m.naam).replace(/'/g,"\\'")}')"><span>${esc(m.naam)}</span><span class="ct">${esc(m.categorie||'')}</span></div>`).join('');
+  if(q && !exact){
+    html += `<div class="sug-item" onmousedown="event.preventDefault()" onclick="pickSug('${inputId}','${esc(q).replace(/'/g,"\\'")}')"><span>"${esc(q)}"</span><span class="new">+ nieuw</span></div>`;
+  }
+  el.innerHTML = html;
+  el.classList.toggle('show', !!html);
+}
+function pickSug(inputId, naam){
+  document.getElementById(inputId).value = naam;
+  if(inputId==='ai-name') hideAiSug();
+  if(inputId==='mt-item-name') hideTplSug();
+}
+function onAiInput(){ renderSugList('ai-sug','ai-name', document.getElementById('ai-name').value); }
+function hideAiSug(){ document.getElementById('ai-sug').classList.remove('show'); }
+function onTplItemInput(){ renderSugList('mt-sug','mt-item-name', document.getElementById('mt-item-name').value); }
+function hideTplSug(){ document.getElementById('mt-sug').classList.remove('show'); }
+
+// ─────────────────────────────────────────────────────────────
+// PDF / PRINT
+// ─────────────────────────────────────────────────────────────
+function openPrintWindow(html, title){
+  const w = window.open('', '_blank');
+  if(!w){ alert('Pop-up geblokkeerd — sta pop-ups toe voor deze site.'); return; }
+  w.document.write(`<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"><title>${esc(title)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Barlow',sans-serif;color:#1a1a1a;padding:24px;max-width:780px;margin:0 auto;}
+      .ph{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #e8001d;padding-bottom:10px;margin-bottom:18px;}
+      .ph h1{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;}
+      .ph .meta{font-size:13px;color:#555;text-align:right;}
+      h2{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;margin:18px 0 6px;padding-bottom:4px;border-bottom:1px solid #999;}
+      h3{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#666;margin:10px 0 4px;}
+      table{width:100%;border-collapse:collapse;}
+      th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #eee;font-size:13.5px;}
+      th{background:#f3f3f3;font-family:'Barlow Condensed',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.05em;}
+      td.qty,th.qty{text-align:right;font-family:'DM Mono',monospace;font-weight:700;width:80px;}
+      .sec{page-break-inside:avoid;margin-bottom:24px;}
+      .notitie{font-size:12px;color:#666;font-style:italic;margin-top:4px;}
+      .bar{position:fixed;top:10px;right:10px;display:flex;gap:6px;}
+      .bar button{padding:8px 14px;background:#e8001d;color:#fff;border:none;border-radius:6px;font-family:inherit;font-weight:600;cursor:pointer;}
+      .bar button.sec-btn{background:#1a1a1a;}
+      @media print { .bar{display:none;} body{padding:0;} }
+    </style></head><body>
+    <div class="bar"><button onclick="window.print()">🖨 Afdrukken / PDF</button><button class="sec-btn" onclick="window.close()">Sluiten</button></div>
+    ${html}
+    <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>
+    </body></html>`);
+  w.document.close();
+}
+
+function buildHeader(p, extra){
+  const meta = [];
+  if(p.plaats) meta.push(esc(p.plaats));
+  if(p.datum) meta.push(esc(fmtDate(p.datum)));
+  return `<div class="ph"><h1>${esc(p.naam)}${extra ? ' — '+esc(extra) : ''}</h1><div class="meta">${meta.join('<br>')}</div></div>`;
+}
+
+function itemsTable(items){
+  // items is an array of {naam, categorie, aantal}
+  // group by categorie
+  const groups = {};
+  items.forEach(it => {
+    const c = it.categorie || 'Overig';
+    (groups[c] = groups[c] || []).push(it);
+  });
+  const cats = Object.keys(groups).sort();
+  return cats.map(c => {
+    const rows = groups[c].sort((a,b)=>(a.naam||'').localeCompare(b.naam||''))
+      .map(it => `<tr><td>${esc(it.naam)}</td><td class="qty">${it.aantal||1}</td></tr>`).join('');
+    return `<h3>${esc(c)}</h3><table><thead><tr><th>Item</th><th class="qty">Aantal</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+}
+
+function printLocation(lid){
+  const p = projecten[currentProject];
+  const loc = p.locaties[lid];
+  const items = Object.values(loc.items||{});
+  if(!items.length){ toast('Geen items op deze locatie'); return; }
+  const html = buildHeader(p, loc.naam) + '<div class="sec">' + itemsTable(items) + '</div>';
+  openPrintWindow(html, `${p.naam} — ${loc.naam}`);
+}
+
+function printProjectTotal(){
+  const p = projecten[currentProject];
+  const totals = {}; // key = naam|categorie -> sum
+  Object.values(p.locaties||{}).forEach(loc => {
+    Object.values(loc.items||{}).forEach(it => {
+      const key = (it.naam||'').toLowerCase()+'||'+(it.categorie||'');
+      if(!totals[key]) totals[key] = { naam: it.naam, categorie: it.categorie||'', aantal: 0 };
+      totals[key].aantal += (parseInt(it.aantal)||0);
+    });
+  });
+  const items = Object.values(totals).filter(t=>t.aantal>0);
+  if(!items.length){ toast('Project heeft nog geen items'); return; }
+  const html = buildHeader(p, 'Totaal') + '<div class="sec">' + itemsTable(items) + '</div>';
+  openPrintWindow(html, `${p.naam} — Totaal`);
+}
+
+function printProjectByLoc(){
+  const p = projecten[currentProject];
+  const lids = Object.keys(p.locaties||{}).sort((a,b)=>(p.locaties[a].naam||'').localeCompare(p.locaties[b].naam||''));
+  if(!lids.length){ toast('Geen locaties'); return; }
+  let body = buildHeader(p, 'Per locatie');
+  let any = false;
+  lids.forEach(lid => {
+    const loc = p.locaties[lid];
+    const items = Object.values(loc.items||{});
+    if(!items.length) return;
+    any = true;
+    body += `<div class="sec"><h2>${esc(loc.naam)}</h2>${itemsTable(items)}</div>`;
+  });
+  if(!any){ toast('Geen items op de locaties'); return; }
+  openPrintWindow(body, `${p.naam} — Per locatie`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLOSE MODALS ON BACKDROP CLICK
+// ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if(e.target===bg) bg.classList.remove('show'); });
+});
+
+</script>
+</body>
+</html>

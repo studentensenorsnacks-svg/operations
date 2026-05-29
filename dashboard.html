@@ -2,6 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
+<script src="auth.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Señor Snacks — Ops Dashboard</title>
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
@@ -22,6 +23,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
 <style>
 :root {
   --red: #e8001d;
@@ -175,6 +178,62 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   border-top: 1px solid var(--border);
 }
 .sidebar-footer-text { font-size: 0.72rem; color: var(--text3); }
+
+/* ── Sidebar Stukken-sectie ── */
+.sidebar-stuk-section {
+  display:flex; flex-direction:column; min-height:0; flex:1;
+  padding:0 12px 4px;
+}
+.stukken-side-count {
+  margin-left:6px; display:inline-flex; align-items:center; justify-content:center;
+  min-width:18px; padding:1px 7px; border-radius:10px;
+  background:#c2410c; color:#fff;
+  font-family:var(--mono); font-size:0.62rem; font-weight:700;
+}
+.stukken-side-count.zero { background:var(--border2); color:var(--text3); }
+.sidebar-stuk-list {
+  display:flex; flex-direction:column; gap:6px;
+  overflow-y:auto; min-height:0;
+  padding:4px 2px 8px;
+}
+.sidebar-stuk-item {
+  background:#fffaf3; border:1px solid var(--border);
+  border-left:3px solid #c2410c; border-radius:8px;
+  padding:8px 10px; font-size:0.8rem;
+}
+.ssi-who-row { display:flex; align-items:baseline; justify-content:space-between; gap:6px; }
+.ssi-who { font-weight:700; color:var(--text); font-size:0.8rem; }
+.ssi-time { color:var(--text3); font-size:0.68rem; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ssi-ev { display:inline-block; margin-top:2px; color:#1d4ed8; font-size:0.66rem; font-weight:700;
+  background:rgba(29,78,216,0.10); padding:1px 6px; border-radius:8px; }
+.ssi-text {
+  margin-top:5px; color:var(--text); font-size:0.78rem; line-height:1.4;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  word-break:break-word;
+}
+.sidebar-stuk-item.expanded .ssi-text {
+  -webkit-line-clamp:unset; overflow:visible; white-space:pre-wrap;
+}
+.ssi-foot { display:flex; align-items:center; justify-content:space-between; margin-top:7px; gap:6px; }
+.ssi-more {
+  background:transparent; border:none; color:var(--text3); font-size:0.7rem; font-weight:600;
+  cursor:pointer; padding:2px 4px; font-family:var(--font);
+}
+.ssi-more:hover { color:var(--text); }
+.ssi-done {
+  background:#16a34a; color:#fff; border:none; border-radius:6px;
+  padding:4px 10px; font-size:0.72rem; font-weight:700; cursor:pointer;
+  font-family:var(--font); transition:background 0.15s;
+}
+.ssi-done:hover { background:#15803d; }
+.ssi-done:disabled { background:var(--border2); color:var(--text2); cursor:default; }
+.sidebar-stuk-empty {
+  padding:14px 12px; text-align:center; color:var(--text3); font-size:0.78rem;
+  border:1px dashed var(--border); border-radius:8px; margin:4px 2px;
+}
+@media (max-width:900px) {
+  .sidebar-stuk-section { display:none; }  /* mobile: gebruik topbar-modal */
+}
 
 /* MAIN */
 .main { flex: 1; padding: 28px; overflow-y: auto; min-width: 0; }
@@ -835,6 +894,110 @@ textarea { resize: vertical; min-height: 72px; }
 .es-item-val .num { font-family:var(--mono);font-size:14px;font-weight:500; }
 .es-diff-pos { color:#166534; }
 .es-diff-neg { color:var(--red); }
+
+/* ── STUKKEN (notities met broken-flag) ── */
+.nav-stukken {
+  display:inline-flex; align-items:center; gap:12px;
+  background:transparent; border:2px solid var(--border2);
+  font-family:var(--font); font-size:1.2rem; font-weight:800;
+  color:var(--text); padding:13px 26px; border-radius:11px; cursor:pointer;
+  transition:all 0.15s; letter-spacing:0.01em;
+}
+.nav-stukken:hover { background:var(--surface2); }
+.nav-stukken.has-items {
+  background:rgba(194,65,12,0.10); color:#c2410c; border-color:rgba(194,65,12,0.65);
+  box-shadow:0 0 0 4px rgba(194,65,12,0.12);
+}
+.nav-stukken.has-items:hover { background:rgba(194,65,12,0.18); }
+.stukken-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:28px; height:28px; padding:0 9px; border-radius:14px;
+  background:var(--border2); color:var(--text2);
+  font-family:var(--mono); font-size:0.95rem; font-weight:800;
+}
+.nav-stukken.has-items .stukken-count { background:#c2410c; color:#fff; }
+
+/* ── MENU-knop + uitvouw dropdown ── */
+.menu-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  background:transparent; border:1px solid var(--border2);
+  font-family:var(--font); font-size:0.88rem; font-weight:700;
+  color:var(--text); padding:9px 14px; border-radius:8px; cursor:pointer;
+  transition:all 0.15s;
+}
+.menu-btn:hover { background:var(--surface2); }
+.menu-btn.open { background:var(--surface2); border-color:var(--text3); }
+.menu-btn .menu-caret { font-size:0.7rem; transition:transform 0.2s; }
+.menu-btn.open .menu-caret { transform:rotate(180deg); }
+
+.menu-dropdown {
+  position:fixed; top:58px; right:16px; z-index:99;
+  background:var(--surface); border:1px solid var(--border2); border-radius:12px;
+  box-shadow:0 12px 36px rgba(0,0,0,0.14);
+  padding:10px; min-width:280px; max-width:calc(100vw - 32px);
+  display:grid; grid-template-columns:repeat(2,minmax(140px,1fr)); gap:6px;
+  animation:menu-in 0.16s ease-out;
+}
+.menu-dropdown.hidden { display:none; }
+.menu-dropdown a, .menu-dropdown button {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px; border-radius:8px;
+  background:transparent; border:1px solid transparent;
+  color:var(--text); text-decoration:none;
+  font-family:var(--font); font-size:0.86rem; font-weight:600;
+  cursor:pointer; text-align:left; transition:background 0.12s, border-color 0.12s;
+}
+.menu-dropdown a:hover, .menu-dropdown button:hover {
+  background:var(--surface2); border-color:var(--border2);
+}
+.menu-dropdown .menu-sep {
+  grid-column:1/-1; height:1px; background:var(--border); margin:4px 2px;
+}
+.menu-backdrop {
+  position:fixed; inset:0; z-index:98; background:transparent;
+}
+.menu-backdrop.hidden { display:none; }
+@keyframes menu-in {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@media (max-width:600px) {
+  .menu-dropdown { left:8px; right:8px; min-width:0; grid-template-columns:1fr 1fr; top:54px; }
+  .nav-stukken { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
+  .nav-stukken .lbl-stuk-full { display:none; }
+  .stukken-count { min-width:24px; height:24px; font-size:0.85rem; }
+}
+
+.stuk-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:300;
+  display:flex; align-items:center; justify-content:center; padding:20px; }
+.stuk-modal-overlay.hidden { display:none; }
+.stuk-modal { background:var(--surface); border:1px solid var(--border2); border-radius:16px;
+  width:100%; max-width:640px; max-height:85vh; display:flex; flex-direction:column;
+  box-shadow:0 24px 64px rgba(0,0,0,0.18); }
+.stuk-modal-hdr { padding:18px 22px; display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border); }
+.stuk-modal-title { font-family:var(--font-cond); font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:10px; }
+.stuk-modal-close { background:var(--surface2); border:none; width:32px; height:32px; border-radius:8px;
+  cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; color:var(--text2); }
+.stuk-modal-close:hover { background:var(--border2); color:var(--text); }
+.stuk-modal-body { padding:14px 22px 22px; overflow-y:auto; }
+.stuk-empty { text-align:center; padding:36px 20px; color:var(--text2); }
+.stuk-empty-icon { font-size:2.6rem; margin-bottom:8px; }
+.stuk-list { display:flex; flex-direction:column; gap:10px; }
+.stuk-item { border:1px solid var(--border); border-left:3px solid #c2410c; border-radius:10px;
+  padding:12px 14px; background:#fffaf3; }
+.stuk-item-hdr { display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  margin-bottom:6px; flex-wrap:wrap; }
+.stuk-item-who { font-weight:700; font-size:0.92rem; color:var(--text); }
+.stuk-item-when { font-size:0.78rem; color:var(--text2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.stuk-item-ev { display:inline-block; margin-left:8px; padding:1px 8px; border-radius:10px;
+  background:rgba(29,78,216,0.10); color:#1d4ed8; font-size:0.74rem; font-weight:700; }
+.stuk-item-text { font-size:0.92rem; line-height:1.45; color:var(--text); white-space:pre-wrap; margin-bottom:10px; }
+.stuk-item-act { display:flex; gap:8px; justify-content:flex-end; }
+.stuk-btn-done { background:#16a34a; color:#fff; border:none; border-radius:7px; padding:7px 13px;
+  font-family:var(--font); font-size:0.82rem; font-weight:700; cursor:pointer; transition:background 0.15s; }
+.stuk-btn-done:hover { background:#15803d; }
+.stuk-btn-done:disabled { background:var(--border2); color:var(--text2); cursor:default; }
 </style>
 </head>
 <body>
@@ -846,23 +1009,32 @@ textarea { resize: vertical; min-height: 72px; }
     <div class="topbar-section">Ops Dashboard</div>
   </div>
   <div class="topbar-right">
-    <a class="nav-link" href="checkin.html" target="_blank">🚚 Check-in</a>
-    <a class="nav-link nav-poets" href="poets.html" target="_blank">🧼 Poets Dashboard</a>
-    <a class="nav-link nav-vet" href="vet.html" target="_blank">🛢️ Vet Status</a>
-    <a class="nav-link nav-verhuur" href="verhuur.html" target="_blank">🚐 Verhuur</a>
-    <a class="nav-link" href="planning.html" target="_blank">📅 Planning</a>
-    <a class="nav-link" href="notities.html" target="_blank">📝 Notities</a>
-    <a class="nav-link" href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
-    <a class="nav-link" href="ocb.html" target="_blank">✅ OCB</a>
-    <a class="nav-link" href="ops.html" target="_blank">👥 Personeelsfiche</a>
-    <a class="nav-link" href="laadlijst-beheer.html" target="_blank">📦 Laadlijsten</a>
-    <a class="nav-link" href="laadlijst-koppeling.html" target="_blank">🔗 Koppelingen</a>
-    <a class="nav-link" href="qr-codes.html" target="_blank">🔳 QR codes</a>
-    <a class="nav-link" href="event-sheet.html" target="_blank">📋 Event Sheet</a>
-    <a class="nav-link" href="https://senorsnacks-eventpay.web.app/" target="_blank">💳 EventPay</a>
-    <button class="nav-link" id="backup-btn" onclick="downloadBackup()" style="background:transparent;border:1px solid var(--border2);cursor:pointer;font-family:var(--font);font-size:0.85rem;font-weight:600;color:var(--text);">📥 Backup</button>
+    <button type="button" class="nav-stukken" id="btn-stukken" onclick="openStukkenModal()" title="Open de lijst van gemelde stukken">🔧 <span class="lbl-stuk-full">Stukken</span> <span class="stukken-count" id="stukken-count">0</span></button>
+    <button type="button" class="menu-btn" id="menu-btn" onclick="toggleMainMenu()" aria-haspopup="true" aria-expanded="false">≡ Menu <span class="menu-caret">▾</span></button>
     <div class="clock" id="clock">--:--</div>
   </div>
+</div>
+
+<!-- UITVOUWBAAR HOOFDMENU (vouwt onder de topbar open) -->
+<div class="menu-backdrop hidden" id="menu-backdrop" onclick="closeMainMenu()"></div>
+<div class="menu-dropdown hidden" id="menu-dropdown" role="menu" aria-label="Navigatiemenu">
+  <a href="checkin.html" target="_blank">🚚 Check-in</a>
+  <a href="poets.html" target="_blank">🧼 Poets Dashboard</a>
+  <a href="vet.html" target="_blank">🛢️ Vet Status</a>
+  <a href="verhuur.html" target="_blank">🚐 Verhuur</a>
+  <a href="planning.html" target="_blank">📅 Planning</a>
+  <a href="notities.html" target="_blank">📝 Notities</a>
+  <a href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
+  <a href="ocb.html" target="_blank">✅ OCB</a>
+  <a href="ops.html" target="_blank">👥 Personeelsfiche</a>
+  <a href="horeca-planning.html" target="_blank">🍔 Horeca Planning</a>
+  <a href="laadlijst-beheer.html" target="_blank">📦 Laadlijsten</a>
+  <a href="laadlijst-koppeling.html" target="_blank">🔗 Koppelingen</a>
+  <a href="qr-codes.html" target="_blank">🔳 QR codes</a>
+  <a href="event-sheet.html" target="_blank">📋 Event Sheet</a>
+  <a href="https://senorsnacks-eventpay.web.app/" target="_blank">💳 EventPay</a>
+  <div class="menu-sep"></div>
+  <button type="button" id="backup-btn" onclick="downloadBackup(); closeMainMenu();">📥 Backup</button>
 </div>
 
 <div class="layout">
@@ -878,19 +1050,12 @@ textarea { resize: vertical; min-height: 72px; }
     <button class="nav-item" onclick="setFilter('frituur',this)"><span class="nav-icon">🍟</span>Frituurwagens</button>
     <button class="nav-item" onclick="setFilter('hamburger',this)"><span class="nav-icon">🍔</span>Hamburgerwagens</button>
 
-    <div class="nav-label">Navigeer</div>
-    <a class="nav-item" href="checkin.html" target="_blank"><span class="nav-icon">🚚</span>Check-in pagina</a>
-    <a class="nav-item" href="poets.html" target="_blank"><span class="nav-icon">🧼</span>Poets dashboard</a>
-    <a class="nav-item" href="verhuur.html" target="_blank"><span class="nav-icon">🚐</span>Verhuur</a>
-    <a class="nav-item" href="planning.html" target="_blank"><span class="nav-icon">📅</span>Planning</a>
-    <a class="nav-item" href="https://senorkeuringqr.web.app/index.html" target="_blank"><span class="nav-icon">📋</span>QR Keuringen</a>
-    <a class="nav-item" href="ocb.html" target="_blank"><span class="nav-icon">✅</span>OCB keuring</a>
-    <a class="nav-item" href="ops.html" target="_blank"><span class="nav-icon">👥</span>Personeelsfiche</a>
-    <a class="nav-item" href="laadlijst-beheer.html" target="_blank"><span class="nav-icon">📦</span>Laadlijsten</a>
-    <a class="nav-item" href="laadlijst-koppeling.html" target="_blank"><span class="nav-icon">🔗</span>Laadlijst-koppeling</a>
-    <a class="nav-item" href="qr-codes.html" target="_blank"><span class="nav-icon">🔳</span>QR codes</a>
-    <a class="nav-item" href="event-sheet.html" target="_blank"><span class="nav-icon">📋</span>Event Sheet</a>
-    <a class="nav-item" href="https://senorsnacks-eventpay.web.app/" target="_blank"><span class="nav-icon">💳</span>EventPay</a>
+    <div class="nav-label">Stukken <span class="stukken-side-count zero" id="stukken-side-count">0</span></div>
+    <div class="sidebar-stuk-section">
+      <div class="sidebar-stuk-list" id="sidebar-stuk-list">
+        <div class="sidebar-stuk-empty">Laden…</div>
+      </div>
+    </div>
 
     <div class="sidebar-footer">
       <div class="sidebar-footer-text">Auto-refresh elke 30s</div>
@@ -989,6 +1154,19 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 </div>
 
+<!-- STUKKEN MODAL -->
+<div class="stuk-modal-overlay hidden" id="stuk-modal-overlay" onclick="closeStukkenModalIfBackdrop(event)">
+  <div class="stuk-modal" onclick="event.stopPropagation()">
+    <div class="stuk-modal-hdr">
+      <div class="stuk-modal-title">🔧 Stukken — te maken</div>
+      <button type="button" class="stuk-modal-close" onclick="closeStukkenModal()" aria-label="Sluiten">✕</button>
+    </div>
+    <div class="stuk-modal-body" id="stuk-modal-body">
+      <div class="stuk-empty"><div class="stuk-empty-icon">…</div><div>Laden…</div></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast">✓ Opgeslagen!</div>
 
 <script>
@@ -1083,6 +1261,169 @@ fbdb.ref('ft_eindstock_v1').on('value', snap => {
     eindstockData[key].push(es);
   });
   renderDashboard();
+});
+
+// ── STUKKEN: notities die zijn doorgegeven als "kapot / te maken" ──
+let stukNotes = []; // [{ id, name, event, text, date, time, ts, broken }]
+
+fbdb.ref('ft_notities_v1').on('value', snap => {
+  const raw = snap.val() || {};
+  stukNotes = Object.entries(raw)
+    .map(([k, v]) => ({ ...(v || {}), id: (v && v.id) || k }))
+    .filter(n => n.broken === true)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  renderStukkenUI();
+  if (!document.getElementById('stuk-modal-overlay').classList.contains('hidden')) {
+    renderStukkenModal();
+  }
+});
+
+function renderStukkenUI() {
+  // Topbar-knop + counter
+  const btn = document.getElementById('btn-stukken');
+  const cnt = document.getElementById('stukken-count');
+  if (btn && cnt) {
+    cnt.textContent = stukNotes.length;
+    btn.classList.toggle('has-items', stukNotes.length > 0);
+    btn.title = stukNotes.length
+      ? stukNotes.length + ' stuk' + (stukNotes.length === 1 ? '' : 'ken') + ' te maken'
+      : 'Geen stukken gemeld';
+  }
+  // Sidebar telmarker
+  const sideCnt = document.getElementById('stukken-side-count');
+  if (sideCnt) {
+    sideCnt.textContent = stukNotes.length;
+    sideCnt.classList.toggle('zero', stukNotes.length === 0);
+  }
+  // Sidebar lijst
+  const list = document.getElementById('sidebar-stuk-list');
+  if (!list) return;
+  if (!stukNotes.length) {
+    list.innerHTML = '<div class="sidebar-stuk-empty">✨ Geen stukken open.</div>';
+    return;
+  }
+  list.innerHTML = stukNotes.map(n => {
+    const id = escapeHtml(n.id);
+    const who = escapeHtml(n.name || 'Onbekend');
+    const when = escapeHtml(fmtStukWhen(n));
+    const ev = n.event ? '<div><span class="ssi-ev">' + escapeHtml(n.event) + '</span></div>' : '';
+    const text = escapeHtml(n.text || '');
+    return '<div class="sidebar-stuk-item" data-id="' + id + '">' +
+      '<div class="ssi-who-row"><span class="ssi-who">' + who + '</span><span class="ssi-time">' + when + '</span></div>' +
+      ev +
+      '<div class="ssi-text">' + text + '</div>' +
+      '<div class="ssi-foot">' +
+        '<button class="ssi-more" type="button" data-action="toggle-expand">Meer</button>' +
+        '<button class="ssi-done" type="button" data-stuk-id="' + id + '">✓ Opgelost</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Klik op "Meer" → vouwt volledige notitie open in de sidebar
+document.addEventListener('click', ev => {
+  const more = ev.target.closest && ev.target.closest('button[data-action="toggle-expand"]');
+  if (!more) return;
+  const item = more.closest('.sidebar-stuk-item');
+  if (!item) return;
+  const expanded = item.classList.toggle('expanded');
+  more.textContent = expanded ? 'Minder' : 'Meer';
+});
+
+function fmtStukWhen(n) {
+  if (!n.date) return n.time || '';
+  const parts = String(n.date).split('-');
+  if (parts.length !== 3) return n.date + (n.time ? ' · ' + n.time : '');
+  return parts[2] + '/' + parts[1] + '/' + parts[0].slice(2) + (n.time ? ' · ' + n.time : '');
+}
+
+function renderStukkenModal() {
+  const body = document.getElementById('stuk-modal-body');
+  if (!body) return;
+  if (!stukNotes.length) {
+    body.innerHTML = '<div class="stuk-empty"><div class="stuk-empty-icon">✨</div>' +
+      '<div><strong>Geen stukken open.</strong><br>Nieuwe meldingen verschijnen hier automatisch.</div></div>';
+    return;
+  }
+  body.innerHTML = '<div class="stuk-list">' + stukNotes.map(n => {
+    const ev = n.event ? '<span class="stuk-item-ev">' + escapeHtml(n.event) + '</span>' : '';
+    return '<div class="stuk-item">' +
+      '<div class="stuk-item-hdr">' +
+        '<div><span class="stuk-item-who">' + escapeHtml(n.name || 'Onbekend') + '</span>' + ev + '</div>' +
+        '<div class="stuk-item-when">' + escapeHtml(fmtStukWhen(n)) + '</div>' +
+      '</div>' +
+      '<div class="stuk-item-text">' + escapeHtml(n.text || '') + '</div>' +
+      '<div class="stuk-item-act">' +
+        '<button class="stuk-btn-done" type="button" data-stuk-id="' + escapeHtml(n.id) + '">✓ Opgelost</button>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ── Uitvouwbaar hoofdmenu ───────────────────────────────────────
+function toggleMainMenu() {
+  const dd = document.getElementById('menu-dropdown');
+  const bd = document.getElementById('menu-backdrop');
+  const btn = document.getElementById('menu-btn');
+  const open = dd.classList.contains('hidden');
+  dd.classList.toggle('hidden', !open);
+  bd.classList.toggle('hidden', !open);
+  btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeMainMenu() {
+  document.getElementById('menu-dropdown').classList.add('hidden');
+  document.getElementById('menu-backdrop').classList.add('hidden');
+  const btn = document.getElementById('menu-btn');
+  btn.classList.remove('open');
+  btn.setAttribute('aria-expanded', 'false');
+}
+// Klik op een link in het menu → menu sluit (button-clicks regelen zelf hun close())
+document.getElementById('menu-dropdown').addEventListener('click', ev => {
+  const a = ev.target.closest && ev.target.closest('a');
+  if (a) closeMainMenu();
+});
+// Esc sluit het menu (modal-handler hieronder regelt zijn eigen Esc)
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && !document.getElementById('menu-dropdown').classList.contains('hidden')) {
+    closeMainMenu();
+  }
+});
+
+function openStukkenModal() {
+  document.getElementById('stuk-modal-overlay').classList.remove('hidden');
+  renderStukkenModal();
+}
+function closeStukkenModal() {
+  document.getElementById('stuk-modal-overlay').classList.add('hidden');
+}
+function closeStukkenModalIfBackdrop(ev) {
+  if (ev.target.id === 'stuk-modal-overlay') closeStukkenModal();
+}
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape') {
+    const ov = document.getElementById('stuk-modal-overlay');
+    if (ov && !ov.classList.contains('hidden')) closeStukkenModal();
+  }
+});
+
+// Markeer een stuk als opgelost: verwijdert enkel de broken-flag, notitie blijft bewaard
+document.addEventListener('click', ev => {
+  const btn = ev.target.closest && ev.target.closest('button[data-stuk-id]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-stuk-id');
+  if (!id) return;
+  btn.disabled = true;
+  btn.textContent = '… bezig';
+  fbdb.ref('ft_notities_v1/' + id + '/broken').set(null)
+    .then(() => showToast('✓ Stuk opgelost'))
+    .catch(() => { btn.disabled = false; btn.textContent = '✓ Opgelost'; showToast('Kon niet opslaan', true); });
 });
 
 // EENMALIGE MIGRATIE: oude ft_ops_v1 data verplaatsen naar ft_ops_v2

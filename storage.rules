@@ -1,15 +1,40 @@
 rules_version = '2';
 
-// Opslag voor PDF's die aan QR codes gekoppeld worden.
-// Bewust zonder login — net als de rest van deze interne tool —
-// maar afgeschermd: enkel de map qr-pdfs/, enkel PDF's, max 25 MB.
+// Storage voor operations + EventSheet SaaS.
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // QR-PDF's: publiek leesbaar (PDF wordt rechtstreeks gedownload door
+    // wie de QR scant), maar schrijven/verwijderen vereist auth. Alle pagina's
+    // die naar deze map schrijven gebruiken anonymous Firebase Auth.
     match /qr-pdfs/{allPaths=**} {
       allow read: if true;
-      allow write: if request.resource == null
-                   || (request.resource.size < 25 * 1024 * 1024
-                       && request.resource.contentType == 'application/pdf');
+      allow write: if request.auth != null
+                   && (request.resource == null
+                       || (request.resource.size < 25 * 1024 * 1024
+                           && request.resource.contentType == 'application/pdf'));
+    }
+
+    // EventSheet — taakbijlagen. Auth-required: organisators via Firebase Auth,
+    // leveranciers via custom-token in een aparte portal Firebase-app.
+    match /tasks/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && (request.resource == null
+                       || request.resource.size < 25 * 1024 * 1024);
+    }
+
+    // EventSheet — aanvraagbijlagen. Zelfde auth-vereiste.
+    match /requests/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && (request.resource == null
+                       || request.resource.size < 25 * 1024 * 1024);
+    }
+
+    // Alles wat hierbuiten valt: dicht.
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -64,6 +64,69 @@
       ]
     },
     {
+      "target": "ops-login",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        ".git/**",
+        ".firebase/**",
+        ".github/**",
+        "**/node_modules/**",
+        "functions/**",
+        "functions-saas/**",
+        "saas/**",
+        "greendeal/**",
+        "eventpay/**",
+        "**/*.md",
+        "*.json",
+        "storage.rules",
+        "firestore.rules"
+      ],
+      "redirects": [
+        {
+          "source": "/event-sheet.html",
+          "destination": "https://eventsheet-app.web.app/app",
+          "type": 301
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/api/anthropic",
+          "function": {
+            "functionId": "anthropicProxy",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/poets",
+          "function": {
+            "functionId": "poetsApi",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/vet-tonnen",
+          "function": {
+            "functionId": "vetTonnenApi",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
       "target": "greendeal",
       "public": "greendeal",
       "ignore": [],
@@ -121,5 +184,8 @@
   "firestore": {
     "rules": "firestore.rules",
     "database": "event"
+  },
+  "database": {
+    "rules": "database.rules.json"
   }
 }

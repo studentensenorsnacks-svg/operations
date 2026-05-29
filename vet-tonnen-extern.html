@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; script-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>Señor Snacks — Vettonnen (Extern)</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f5;--surface:#ffffff;--surface2:#eeeef0;--border:#e2e2e5;--border2:#d0d0d4;
+  --text:#1a1a1a;--text2:#5f5f66;--red:#e8001d;--orange:#f97316;--green:#22c55e;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:24px;}
+.wrap{width:100%;max-width:600px;}
+
+.brand{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:24px;position:relative;}
+.logo{height:36px;width:auto;}
+.brand-txt{font-family:var(--font-cond);font-size:1.9rem;font-weight:900;text-align:center;letter-spacing:-0.01em;}
+.brand-sub{color:var(--text2);font-size:0.9rem;text-align:center;}
+.extern-badge{display:inline-block;margin-top:4px;padding:3px 9px;border-radius:14px;background:rgba(168,85,247,0.12);
+  color:#7c3aed;font-size:0.7rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;
+  border:1px solid rgba(168,85,247,0.35);}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:34px 20px;text-align:center;border-top:4px solid var(--orange);}
+.card.klein{border-top-color:var(--green);}
+.card-num{font-family:var(--font-cond);font-size:5.5rem;font-weight:900;line-height:1;
+  font-variant-numeric:tabular-nums;color:var(--orange);}
+.card.klein .card-num{color:var(--green);}
+.card-lbl{color:var(--text2);font-size:0.92rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.05em;margin-top:14px;}
+
+.total{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;
+  justify-content:center;gap:12px;}
+.total-num{font-family:var(--font-cond);font-size:2.6rem;font-weight:900;line-height:1;
+  font-variant-numeric:tabular-nums;}
+.total-lbl{color:var(--text2);font-size:0.95rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.05em;}
+
+.updated{text-align:center;color:var(--text2);font-size:0.85rem;font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 3px rgba(34,197,94,0.18);vertical-align:middle;margin-right:6px;}
+.dot.stale{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,0.18);}
+.dot.err{background:var(--red);box-shadow:0 0 0 3px rgba(232,0,29,0.18);}
+.refresh-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:var(--font);
+  font-size:0.78rem;font-weight:600;padding:6px 10px;border-radius:6px;cursor:pointer;transition:background 0.15s;}
+.refresh-btn:hover{background:var(--surface2);color:var(--text);}
+
+@media(max-width:520px){
+  .cards{grid-template-columns:1fr;}
+  .card{padding:28px 20px;}
+  .card-num{font-size:4.6rem;}
+  .brand-txt{font-size:1.55rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="brand">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo">
+    <div class="brand-txt">🛢️ Vettonnen ophaling</div>
+    <div class="brand-sub">Volle tonnen klaar om opgehaald te worden</div>
+    <span class="extern-badge">Extern</span>
+  </div>
+
+  <div class="cards">
+    <div class="card groot">
+      <div class="card-num" id="n-groot">—</div>
+      <div class="card-lbl">Grote tonnen vol</div>
+    </div>
+    <div class="card klein">
+      <div class="card-num" id="n-klein">—</div>
+      <div class="card-lbl">Kleine tonnen vol</div>
+    </div>
+  </div>
+
+  <div class="total">
+    <span class="total-num" id="n-total">—</span>
+    <span class="total-lbl">tonnen in totaal</span>
+  </div>
+
+  <div class="updated">
+    <span><span class="dot" id="dot"></span><span id="updated-text">Verbinden…</span></span>
+    <button class="refresh-btn" id="refresh-btn" type="button">↻ Ververs</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Sandbox: geen Firebase SDK, geen API-key, geen links naar dashboard.
+  // Alle data via /api/vet-tonnen (rate-limited Cloud Function, read-only).
+
+  var API = '/api/vet-tonnen';
+  var POLL_MS = 30000;
+  var POLL_BACKOFF_MS = 120000;
+
+  var pollTimer = null;
+  var inFlight = false;
+  var consecutiveErrors = 0;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function setState(state, label) {
+    var dot = $('dot');
+    var txt = $('updated-text');
+    if (!dot || !txt) return;
+    dot.classList.remove('stale', 'err');
+    if (state === 'stale') dot.classList.add('stale');
+    if (state === 'err') dot.classList.add('err');
+    txt.textContent = label;
+  }
+
+  function render(d) {
+    var groot = Number(d.groot) || 0;
+    var klein = Number(d.klein) || 0;
+    $('n-groot').textContent = groot;
+    $('n-klein').textContent = klein;
+    $('n-total').textContent = groot + klein;
+    if (d.updatedAt) {
+      setState('ok', 'Laatst bijgewerkt: ' + new Date(d.updatedAt).toLocaleString('nl-NL', {
+        weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+      }));
+    } else {
+      setState('stale', 'Nog niet ingevuld');
+    }
+  }
+
+  function refresh() {
+    if (inFlight) return Promise.resolve();
+    inFlight = true;
+    return fetch(API, { method: 'GET', credentials: 'omit', cache: 'no-store' })
+      .then(function (res) {
+        return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+      })
+      .then(function (r) {
+        inFlight = false;
+        if (!r.ok) {
+          consecutiveErrors++;
+          if (r.status === 429) setState('err', 'Te veel verzoeken');
+          else setState('err', 'Verbinding mislukt');
+          return;
+        }
+        consecutiveErrors = 0;
+        render(r.data || {});
+      })
+      .catch(function () {
+        inFlight = false;
+        consecutiveErrors++;
+        setState('err', 'Verbinding mislukt');
+      });
+  }
+
+  function schedulePoll() {
+    if (pollTimer) clearTimeout(pollTimer);
+    var delay = consecutiveErrors > 2 ? POLL_BACKOFF_MS : POLL_MS;
+    pollTimer = setTimeout(function () { refresh().then(schedulePoll); }, delay);
+  }
+
+  $('refresh-btn').addEventListener('click', function () {
+    setState('stale', 'Verversen…');
+    refresh();
+  });
+
+  refresh().then(schedulePoll);
+})();
+</script>
+</body>
+</html>

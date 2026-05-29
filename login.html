@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Inloggen — Señor Snacks Operations</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",sans-serif;
+  background:#fdf8f0;color:#3a2415;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:1rem;
+}
+.card{
+  background:#fff;border:1px solid rgba(120,60,20,.12);
+  border-radius:14px;padding:2rem 1.75rem;max-width:380px;width:100%;
+  box-shadow:0 4px 14px rgba(120,60,20,.08),0 14px 36px rgba(120,60,20,.06);
+}
+.logo{display:block;margin:0 auto 1rem;width:80px;height:auto}
+h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:6px}
+.sub{font-size:13px;color:#7a5a40;text-align:center;margin-bottom:1.5rem;line-height:1.5}
+label{display:block;font-size:12px;font-weight:600;color:#7a5a40;margin:14px 0 5px}
+input{
+  width:100%;padding:11px 13px;font-size:14px;
+  border:1px solid rgba(120,60,20,.22);border-radius:10px;
+  background:#fff;color:#3a2415;font-family:inherit;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+input:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
+button{
+  width:100%;padding:11px 14px;font-size:14px;font-weight:600;
+  border:1px solid rgba(120,60,20,.22);border-radius:10px;
+  background:#fff;color:#3a2415;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:background .12s,border-color .12s,box-shadow .12s;
+}
+button:hover:not(:disabled){background:#fef0e2;border-color:#e8662b}
+button:disabled{opacity:.55;cursor:not-allowed}
+button.primary{
+  background:#e8662b;color:#fff;border-color:#e8662b;
+  box-shadow:0 1px 3px rgba(232,102,43,.3);
+}
+button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
+.actions{margin-top:18px;display:flex;flex-direction:column;gap:9px}
+.divider{display:flex;align-items:center;gap:10px;margin:18px 0;color:#b89878;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:rgba(120,60,20,.12)}
+.error{
+  margin-top:12px;padding:10px 12px;font-size:12px;
+  background:#fde2dd;color:#7a2818;border:1px solid #f0a896;border-radius:8px;
+  display:none;line-height:1.4;
+}
+.error.show{display:block}
+.success{
+  margin-top:12px;padding:10px 12px;font-size:12px;
+  background:#eaf2dc;color:#3f5a18;border:1px solid #bcd28e;border-radius:8px;
+  display:none;line-height:1.4;
+}
+.success.show{display:block}
+.link{
+  background:transparent;border:none;color:#7a5a40;text-decoration:underline;
+  font-size:12px;padding:4px;width:auto;margin:8px auto 0;display:block;
+}
+.link:hover{color:#e8662b;background:transparent}
+.foot{
+  margin-top:1.5rem;text-align:center;font-size:11px;color:#b89878;
+}
+#waiting{display:none}
+#waiting.show{display:block}
+#form{display:block}
+#form.hidden{display:none}
+.googlelogo{width:18px;height:18px;flex-shrink:0}
+.spinner{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo">
+
+  <div id="form">
+    <h1>Operations</h1>
+    <div class="sub">Log in om verder te gaan.</div>
+
+    <button id="btn-google" type="button">
+      <svg class="googlelogo" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.17-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.32A9 9 0 009 18z"/>
+        <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 013.68 9c0-.6.1-1.18.29-1.72V4.96H.96A9 9 0 000 9c0 1.45.35 2.82.96 4.04l3.01-2.32z"/>
+        <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 009 0 9 9 0 00.96 4.96l3.01 2.32C4.68 5.16 6.66 3.58 9 3.58z"/>
+      </svg>
+      Inloggen met Google
+    </button>
+
+    <div class="divider">of</div>
+
+    <label for="email">E-mailadres</label>
+    <input id="email" type="email" autocomplete="email" placeholder="jij@senorsnacks.be">
+    <label for="password">Wachtwoord</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+
+    <div class="actions">
+      <button id="btn-login" class="primary" type="button">Inloggen</button>
+    </div>
+
+    <button id="btn-reset" type="button" class="link">Wachtwoord vergeten?</button>
+
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+  </div>
+
+  <div id="waiting">
+    <h1>Wachten op toegang</h1>
+    <div class="sub">
+      Je bent ingelogd als <b id="waiting-email"></b>, maar er is nog
+      geen rol toegekend. Vraag een admin om je toegang te geven.
+    </div>
+    <div id="bootstrap-row" style="display:none;margin-bottom:10px">
+      <button id="btn-bootstrap" class="primary" type="button">Word eerste admin</button>
+    </div>
+    <button id="btn-refresh" type="button">Opnieuw checken</button>
+    <button id="btn-logout" type="button" style="margin-top:8px">Uitloggen</button>
+    <div id="waiting-error" class="error"></div>
+  </div>
+
+  <div class="foot">Señor Snacks Operations</div>
+</div>
+
+<script>
+(function () {
+  var BOOTSTRAP_EMAIL = 'jelle@senorsnacks.be';
+
+  var auth = firebase.auth();
+  try { auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (e) {}
+
+  var form     = document.getElementById('form');
+  var waiting  = document.getElementById('waiting');
+  var emailIn  = document.getElementById('email');
+  var passIn   = document.getElementById('password');
+  var errEl    = document.getElementById('error');
+  var okEl     = document.getElementById('success');
+  var btnLogin = document.getElementById('btn-login');
+  var btnGoogle= document.getElementById('btn-google');
+  var btnReset = document.getElementById('btn-reset');
+  var waitErr  = document.getElementById('waiting-error');
+
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+    okEl.classList.remove('show');
+  }
+  function showSuccess(msg) {
+    okEl.textContent = msg;
+    okEl.classList.add('show');
+    errEl.classList.remove('show');
+  }
+  function clearMsg() {
+    errEl.classList.remove('show');
+    okEl.classList.remove('show');
+  }
+  function nlError(err) {
+    var c = err && err.code;
+    if (c === 'auth/invalid-email')          return 'Ongeldig e-mailadres.';
+    if (c === 'auth/user-disabled')          return 'Deze account is uitgeschakeld.';
+    if (c === 'auth/user-not-found')         return 'Geen account gevonden voor dit e-mailadres.';
+    if (c === 'auth/wrong-password')         return 'Wachtwoord klopt niet.';
+    if (c === 'auth/invalid-credential')     return 'Inloggegevens kloppen niet.';
+    if (c === 'auth/popup-closed-by-user')   return 'Google-login afgebroken.';
+    if (c === 'auth/popup-blocked')          return 'Pop-up geblokkeerd. Sta pop-ups toe voor deze site.';
+    if (c === 'auth/network-request-failed') return 'Netwerkfout. Controleer je internetverbinding.';
+    if (c === 'auth/too-many-requests')      return 'Te veel pogingen — probeer later opnieuw.';
+    return (err && err.message) || 'Inloggen mislukt.';
+  }
+
+  function nextUrl() {
+    try {
+      var n = new URLSearchParams(location.search).get('next');
+      if (n && n.charAt(0) === '/' && !n.startsWith('//')) return n;
+    } catch (e) {}
+    return '/';
+  }
+
+  function showWaitingScreen(user) {
+    form.classList.add('hidden');
+    waiting.classList.add('show');
+    document.getElementById('waiting-email').textContent = user.email || '(geen e-mail)';
+    document.getElementById('bootstrap-row').style.display =
+      (user.email === BOOTSTRAP_EMAIL) ? 'block' : 'none';
+    setBusy(false);
+  }
+
+  function leaveToApp() {
+    location.replace(nextUrl());
+  }
+
+  function setBusy(busy) {
+    [btnLogin, btnGoogle].forEach(function (b) { if (b) b.disabled = !!busy; });
+    btnLogin.innerHTML = busy
+      ? '<span class="spinner"></span> Inloggen…'
+      : 'Inloggen';
+  }
+
+  function afterSignIn(user) {
+    // Forceer token-refresh om de meest recente custom claims op te halen.
+    user.getIdTokenResult(true).then(function (tokenResult) {
+      var role = tokenResult && tokenResult.claims && tokenResult.claims.role;
+      if (role) {
+        leaveToApp();
+      } else {
+        showWaitingScreen(user);
+      }
+    }).catch(function (e) {
+      showError(nlError(e));
+      setBusy(false);
+    });
+  }
+
+  // Login-handlers ───────────────────────────────────────────────
+  btnLogin.onclick = function () {
+    clearMsg();
+    var email = (emailIn.value || '').trim();
+    var pwd = passIn.value || '';
+    if (!email || !pwd) {
+      showError('Vul e-mailadres en wachtwoord in.');
+      return;
+    }
+    setBusy(true);
+    auth.signInWithEmailAndPassword(email, pwd)
+      .then(function (cred) { afterSignIn(cred.user); })
+      .catch(function (err) {
+        showError(nlError(err));
+        setBusy(false);
+      });
+  };
+
+  btnGoogle.onclick = function () {
+    clearMsg();
+    setBusy(true);
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    auth.signInWithPopup(provider)
+      .then(function (cred) { afterSignIn(cred.user); })
+      .catch(function (err) {
+        showError(nlError(err));
+        setBusy(false);
+      });
+  };
+
+  btnReset.onclick = function () {
+    clearMsg();
+    var email = (emailIn.value || '').trim();
+    if (!email) {
+      showError('Vul eerst je e-mailadres in.');
+      emailIn.focus();
+      return;
+    }
+    auth.sendPasswordResetEmail(email)
+      .then(function () {
+        showSuccess('Reset-link gestuurd naar ' + email + '. Controleer je mailbox.');
+      })
+      .catch(function (err) { showError(nlError(err)); });
+  };
+
+  [emailIn, passIn].forEach(function (el) {
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') btnLogin.click();
+    });
+  });
+
+  // Waiting-screen handlers ──────────────────────────────────────
+  document.getElementById('btn-refresh').onclick = function () {
+    var u = auth.currentUser;
+    if (!u) { location.reload(); return; }
+    waitErr.classList.remove('show');
+    u.getIdToken(true).then(function () {
+      u.getIdTokenResult(false).then(function (tr) {
+        if (tr && tr.claims && tr.claims.role) leaveToApp();
+        else {
+          waitErr.textContent = 'Nog geen rol toegekend.';
+          waitErr.classList.add('show');
+        }
+      });
+    });
+  };
+
+  document.getElementById('btn-logout').onclick = function () {
+    auth.signOut().then(function () {
+      waiting.classList.remove('show');
+      form.classList.remove('hidden');
+      passIn.value = '';
+    });
+  };
+
+  document.getElementById('btn-bootstrap').onclick = function () {
+    var btn = this;
+    waitErr.classList.remove('show');
+    btn.disabled = true;
+    btn.textContent = 'Bezig…';
+    var fn = firebase.app().functions('europe-west1').httpsCallable('bootstrapAdmin');
+    fn({}).then(function () {
+      // Refresh token zodat de nieuwe rol meekomt.
+      return auth.currentUser.getIdToken(true);
+    }).then(function () {
+      location.replace('/users.html');
+    }).catch(function (e) {
+      waitErr.textContent = (e && e.message) || 'Bootstrap mislukt.';
+      waitErr.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Word eerste admin';
+    });
+  };
+
+  // Initial check: als al ingelogd, meteen doorsturen of waiting tonen.
+  auth.onAuthStateChanged(function (user) {
+    if (!user) return;
+    afterSignIn(user);
+  });
+})();
+</script>
+
+</body>
+</html>

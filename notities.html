@@ -2,6 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
+<script src="auth.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Señor Snacks — Notities</title>
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
@@ -22,6 +23,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
 <style>
 :root{
   --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;--blue:#1d4ed8;
@@ -89,13 +92,40 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
 
 /* NOTE CARD */
 .note{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:7px;padding:13px 15px;margin-bottom:9px;}
+.note.broken{border-left-color:var(--orange);background:#fffaf3;}
 .note-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;flex-wrap:wrap;}
 .note-name{background:#fde8ea;color:var(--red-dark);font-weight:800;font-size:0.78rem;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.03em;}
+.note.broken .note-name{background:#fef0e2;color:var(--orange);}
 .note-time{font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);}
 .note-event{background:#e3edff;color:#1d4ed8;font-weight:700;font-size:0.76rem;padding:3px 10px;border-radius:5px;}
-.note-del{margin-left:auto;background:none;border:none;color:#bbb;font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
+.note-stuk-tag{background:#fef0e2;color:var(--orange);font-weight:800;font-size:0.74rem;padding:3px 9px;border-radius:5px;border:1px solid rgba(194,65,12,0.35);}
+.note-acts{margin-left:auto;display:flex;align-items:center;gap:4px;}
+.note-stuk-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.92rem;cursor:pointer;padding:3px 8px;border-radius:5px;line-height:1;font-family:var(--font);font-weight:700;transition:all 0.12s;}
+.note-stuk-btn:hover{border-color:var(--orange);color:var(--orange);}
+.note-stuk-btn.on{background:var(--orange);color:#fff;border-color:var(--orange);}
+.note-stuk-btn.on:hover{background:#9c3409;border-color:#9c3409;}
+.note-del{background:none;border:none;color:#bbb;font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
 .note-del:hover{color:var(--red);background:#fde8ea;}
 .note-text{font-size:0.95rem;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+
+/* STUK-TOGGLE in nieuwe-notitie form */
+.broken-toggle{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;transition:all 0.15s;user-select:none;}
+.broken-toggle:hover{border-color:var(--orange);}
+.broken-toggle.on{background:#fff5ec;border-color:var(--orange);box-shadow:0 0 0 3px rgba(194,65,12,0.12);}
+.broken-toggle .bt-icon{font-size:1.3rem;flex-shrink:0;}
+.broken-toggle .bt-body{flex:1;}
+.broken-toggle .bt-title{font-size:0.92rem;font-weight:700;color:var(--text);}
+.broken-toggle.on .bt-title{color:var(--orange);}
+.broken-toggle .bt-sub{font-size:0.78rem;color:var(--muted);margin-top:2px;}
+.broken-toggle .bt-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:#fff;flex-shrink:0;transition:all 0.15s;}
+.broken-toggle.on .bt-chk{border-color:var(--orange);background:var(--orange);}
+
+/* FILTER-knop voor 'enkel stukken' */
+.filter-stuk-btn{padding:9px 14px;background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.filter-stuk-btn:hover{border-color:var(--orange);color:var(--orange);}
+.filter-stuk-btn.on{background:var(--orange);color:#fff;border-color:var(--orange);}
+.filter-stuk-btn.on:hover{background:#9c3409;border-color:#9c3409;}
+.stat.o .num{color:var(--orange);}
 
 /* EMPTY */
 .empty{text-align:center;padding:60px 20px;color:var(--muted);}
@@ -199,6 +229,16 @@ body.selecting .note .note-del{display:none;}
         <label class="flbl" for="in-text">Notitie</label>
         <textarea id="in-text" placeholder="Schrijf hier je notitie..."></textarea>
       </div>
+      <div class="fg">
+        <div class="broken-toggle" id="broken-toggle" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleBroken()">
+          <div class="bt-icon">🔧</div>
+          <div class="bt-body">
+            <div class="bt-title">Stuk / kapot — moet gemaakt worden</div>
+            <div class="bt-sub">Verschijnt apart op het dashboard onder “Stukken”.</div>
+          </div>
+          <div class="bt-chk" id="broken-chk">✓</div>
+        </div>
+      </div>
       <div class="form-foot">
         <button class="btn-primary" id="btn-save" onclick="saveNote()">💾 Notitie opslaan</button>
         <span class="form-hint" id="now-hint"></span>
@@ -212,11 +252,13 @@ body.selecting .note .note-del{display:none;}
       <div class="stat r"><div class="num" id="st-total">0</div><div class="lbl">Notities totaal</div></div>
       <div class="stat g"><div class="num" id="st-today">0</div><div class="lbl">Vandaag</div></div>
       <div class="stat b"><div class="num" id="st-people">0</div><div class="lbl">Personen</div></div>
+      <div class="stat o"><div class="num" id="st-stukken">0</div><div class="lbl">🔧 Stukken open</div></div>
     </div>
     <div class="filters">
       <select id="f-name" onchange="renderBoard()"><option value="">Alle personen</option></select>
       <select id="f-event" onchange="renderBoard()"><option value="">Alle events</option></select>
       <input type="text" id="f-search" placeholder="🔍 Zoek in notities..." oninput="renderBoard()">
+      <button type="button" class="filter-stuk-btn" id="filter-stuk-btn" onclick="toggleStukFilter()">🔧 Enkel stukken</button>
     </div>
     <div class="actions-row">
       <button class="btn-sel" id="btn-toggle-sel" onclick="toggleSelectMode()">☑️ Selecteer notities</button>
@@ -243,6 +285,7 @@ body.selecting .note .note-del{display:none;}
 // ── STATE ──────────────────────────────────────
 let notes = JSON.parse(localStorage.getItem('ft_notities_v1') || '[]');
 let selectMode = false;
+let stukFilterOn = false;
 const selectedIds = new Set();
 const FB_PATH = 'ft_notities_v1';
 const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
@@ -337,6 +380,7 @@ function saveNote(){
   if(!name){ toast('Vul eerst je naam in', 'var(--red)'); document.getElementById('in-name').focus(); return; }
   if(!text){ toast('De notitie is leeg', 'var(--red)'); document.getElementById('in-text').focus(); return; }
 
+  const broken = isFormBroken();
   const now = new Date();
   const ref = fbdb.ref(FB_PATH).push();
   const note = {
@@ -349,6 +393,7 @@ function saveNote(){
     time: pad(now.getHours())+':'+pad(now.getMinutes()),
     ts: now.getTime()
   };
+  if(broken) note.broken = true;
 
   const btn = document.getElementById('btn-save');
   btn.disabled = true;
@@ -357,7 +402,9 @@ function saveNote(){
       localStorage.setItem('ft_notitie_name', name);   // naam onthouden
       document.getElementById('in-event').value='';
       document.getElementById('in-text').value='';
-      toast('✓ Notitie opgeslagen');
+      const bt=document.getElementById('broken-toggle');
+      bt.classList.remove('on'); bt.setAttribute('aria-checked','false');
+      toast(broken ? '🔧 Stuk opgeslagen' : '✓ Notitie opgeslagen');
     })
     .catch(()=>{
       // Offline fallback — lokaal bewaren
@@ -401,12 +448,48 @@ function refreshAll(){
 
   // Stats
   const today = todayStr();
-  document.getElementById('st-total').textContent  = notes.length;
-  document.getElementById('st-today').textContent  = notes.filter(n=>n.date===today).length;
-  document.getElementById('st-people').textContent = names.length;
+  document.getElementById('st-total').textContent   = notes.length;
+  document.getElementById('st-today').textContent   = notes.filter(n=>n.date===today).length;
+  document.getElementById('st-people').textContent  = names.length;
+  document.getElementById('st-stukken').textContent = notes.filter(n=>n.broken===true).length;
 
   renderBoard();
 }
+
+// ── STUK-FILTER + PER-NOTITIE TOGGLE ───────────
+function toggleStukFilter(){
+  stukFilterOn = !stukFilterOn;
+  document.getElementById('filter-stuk-btn').classList.toggle('on', stukFilterOn);
+  renderBoard();
+}
+function toggleNoteBroken(id, isOn){
+  // Optimistic update in lokaal state zodat de UI niet wacht op Firebase
+  const n = notes.find(x=>x.id===id);
+  if(n){ if(isOn){ delete n.broken; } else { n.broken = true; } }
+  localStorage.setItem(FB_PATH, JSON.stringify(notes));
+  fbdb.ref(FB_PATH+'/'+id+'/broken').set(isOn ? null : true)
+    .then(()=>toast(isOn ? '↩️ Stuk-markering verwijderd' : '🔧 Gemarkeerd als stuk'))
+    .catch(()=>toast('Kon niet opslaan','var(--red)'));
+  refreshAll();
+}
+
+// ── STUK-TOGGLE in nieuwe-notitie form ─────────
+function toggleBroken(){
+  const el=document.getElementById('broken-toggle');
+  const on=!el.classList.contains('on');
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+function isFormBroken(){
+  const el=document.getElementById('broken-toggle');
+  return !!(el && el.classList.contains('on'));
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const bt=document.getElementById('broken-toggle');
+  if(bt) bt.addEventListener('keydown', e=>{
+    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleBroken(); }
+  });
+});
 
 // ── DASHBOARD RENDEREN ─────────────────────────
 function renderBoard(){
@@ -416,9 +499,10 @@ function renderBoard(){
   const searchF = document.getElementById('f-search').value.toLowerCase().trim();
 
   let list = notes.slice();
-  if(nameF)   list = list.filter(n=>n.name===nameF);
-  if(eventF)  list = list.filter(n=>n.event===eventF);
-  if(searchF) list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF) || (n.event||'').toLowerCase().includes(searchF));
+  if(nameF)        list = list.filter(n=>n.name===nameF);
+  if(eventF)       list = list.filter(n=>n.event===eventF);
+  if(searchF)      list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF) || (n.event||'').toLowerCase().includes(searchF));
+  if(stukFilterOn) list = list.filter(n=>n.broken===true);
   list.sort((a,b)=>(b.ts||0)-(a.ts||0));
 
   if(!list.length){
@@ -452,13 +536,19 @@ function renderBoard(){
       html += '<div class="hour-head">'+pad(h)+':00 – '+pad((h+1)%24)+':00 uur</div>';
       byHour[h].forEach(n=>{
         const isSel = selectedIds.has(n.id);
-        html += '<div class="note'+(isSel?' selected':'')+'" data-id="'+esc(n.id)+'" onclick="onNoteClick(event,\''+esc(n.id)+'\')">';
+        const isBroken = n.broken === true;
+        const classes = 'note'+(isSel?' selected':'')+(isBroken?' broken':'');
+        html += '<div class="'+classes+'" data-id="'+esc(n.id)+'" onclick="onNoteClick(event,\''+esc(n.id)+'\')">';
         html += '<input type="checkbox" class="note-check" '+(isSel?'checked':'')+' onclick="event.stopPropagation();toggleSelect(\''+esc(n.id)+'\')">';
         html += '<div class="note-top">';
         html += '<span class="note-name">'+esc(n.name||'?')+'</span>';
         if(n.event) html += '<span class="note-event">📌 '+esc(n.event)+'</span>';
+        if(isBroken) html += '<span class="note-stuk-tag">🔧 STUK</span>';
         html += '<span class="note-time">🕒 '+esc(n.time||'')+'</span>';
+        html += '<div class="note-acts">';
+        html += '<button class="note-stuk-btn'+(isBroken?' on':'')+'" title="'+(isBroken?'Stuk-markering verwijderen':'Markeer als stuk / te maken')+'" onclick="event.stopPropagation();toggleNoteBroken(\''+esc(n.id)+'\','+(isBroken?'true':'false')+')">🔧</button>';
         html += '<button class="note-del" title="Verwijderen" onclick="event.stopPropagation();deleteNote(\''+esc(n.id)+'\')">✕</button>';
+        html += '</div>';
         html += '</div>';
         html += '<div class="note-text">'+esc(n.text||'')+'</div>';
         html += '</div>';

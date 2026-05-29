@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>EventSheet — slim event-management</title>
+<meta name="description" content="Eén plek voor je event-planning, run sheet, taken en leverancier-communicatie. Elke leverancier zijn eigen portaal."/>
+<link rel="icon" type="image/svg+xml" href="eventsheet-logo.svg"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css"/>
+<script>
+// If someone lands here with #portal/... or #invite/... (legacy URLs), bounce to /app.
+(function(){
+  var h = window.location.hash || '';
+  if (h.startsWith('#portal') || h.startsWith('#invite')) {
+    window.location.replace('/app' + h);
+  }
+})();
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fdf8f0;--bg2:#f7ecd8;
+  --text:#3a2415;--text2:#7a5a40;--text3:#b89878;
+  --border:rgba(120,60,20,.12);--border2:rgba(120,60,20,.22);
+  --accent:#e8662b;--accent2:#d05420;--accent-bg:#fef0e2;--accent-border:#f4a560;
+  --r:10px;--rl:14px;--rxl:18px;
+  --font:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(120,60,20,.05),0 2px 6px rgba(120,60,20,.04);
+  --shadow-lg:0 4px 14px rgba(120,60,20,.08),0 14px 36px rgba(120,60,20,.06);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c130b;--bg2:#28190e;
+    --text:#fdf0e0;--text2:#c5a079;--text3:#856042;
+    --border:rgba(255,210,170,.1);--border2:rgba(255,210,170,.2);
+    --accent:#ff8048;--accent2:#ff9560;--accent-bg:#3a2418;--accent-border:#a85020;
+    --shadow:0 1px 3px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.2);
+    --shadow-lg:0 4px 12px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.3);
+  }
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;font-size:16px}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 1.5rem}
+nav{padding:1.4rem 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.01em}
+.brand-icon{width:34px;height:34px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.nav-links{display:flex;align-items:center;gap:.4rem}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;font-size:14px;border-radius:var(--r);font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg);color:var(--text);transition:background .12s,border-color .12s,transform .05s}
+.btn:hover{background:var(--bg2);border-color:var(--accent-border)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 1px 3px rgba(232,102,43,.3)}
+.btn-primary:hover{background:var(--accent2);border-color:var(--accent2);box-shadow:0 2px 8px rgba(232,102,43,.4)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn-ghost:hover{background:var(--bg2)}
+
+/* hero */
+.hero{padding:4rem 0 4rem;text-align:center;position:relative}
+.hero-logo{width:120px;height:120px;border-radius:24px;display:block;margin:0 auto 1.6rem;box-shadow:0 10px 32px rgba(10,14,39,.18)}
+.eyebrow{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--accent-bg);color:var(--accent2);border:1px solid var(--accent-border);border-radius:100px;font-size:12px;font-weight:600;margin-bottom:1.4rem}
+h1{font-size:54px;font-weight:800;letter-spacing:-.02em;line-height:1.05;max-width:780px;margin:0 auto 1.1rem}
+.hero-sub{font-size:18px;color:var(--text2);max-width:580px;margin:0 auto 2.2rem;line-height:1.55}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero-ctas .btn{padding:12px 22px;font-size:15px}
+
+/* sections */
+section{padding:4rem 0;border-top:1px solid var(--border)}
+.section-head{text-align:center;margin-bottom:3rem}
+.section-head h2{font-size:34px;font-weight:800;letter-spacing:-.015em;margin-bottom:.5rem}
+.section-head p{color:var(--text2);font-size:16px;max-width:560px;margin:0 auto;line-height:1.55}
+
+/* features grid */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem}
+.feat{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1.6rem;transition:box-shadow .15s,border-color .15s;box-shadow:var(--shadow)}
+.feat:hover{box-shadow:var(--shadow-lg);border-color:var(--border2)}
+.feat-icon{width:42px;height:42px;border-radius:var(--r);background:var(--accent-bg);color:var(--accent2);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:1rem}
+.feat h3{font-size:17px;font-weight:700;margin-bottom:.5rem}
+.feat p{color:var(--text2);font-size:14px;line-height:1.55}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;counter-reset:step}
+.step{position:relative;padding-left:3rem}
+.step::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:0;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.step h3{font-size:16px;font-weight:700;margin-bottom:.4rem}
+.step p{color:var(--text2);font-size:14px;line-height:1.55}
+
+/* showcase split sections */
+.showcase{display:grid;grid-template-columns:1.1fr 1fr;gap:3rem;align-items:center}
+.showcase.reverse{grid-template-columns:1fr 1.1fr}
+.showcase.reverse .showcase-text{order:2}
+.showcase.reverse .showcase-visual{order:1}
+.showcase-text h3{font-size:14px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem}
+.showcase-text h2{font-size:32px;font-weight:800;letter-spacing:-.015em;line-height:1.15;margin-bottom:1rem}
+.showcase-text p{color:var(--text2);font-size:15px;line-height:1.65;margin-bottom:1.2rem}
+.showcase-text ul{list-style:none;padding:0;margin:1rem 0}
+.showcase-text ul li{display:flex;gap:10px;align-items:flex-start;margin-bottom:.7rem;font-size:14px;color:var(--text)}
+.showcase-text ul li i{color:var(--accent);font-size:18px;flex-shrink:0;margin-top:1px}
+.showcase-visual{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rxl);padding:1.6rem;box-shadow:var(--shadow-lg)}
+.mockup{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.mockup-bar{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center}
+.mockup-dot{width:10px;height:10px;border-radius:50%;background:var(--border2)}
+.mockup-title{margin-left:auto;font-size:11px;color:var(--text3);font-weight:600}
+.mockup-body{padding:1rem}
+.doc-row{display:flex;align-items:center;gap:12px;padding:9px 11px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;font-size:13px;background:var(--bg)}
+.doc-row .doc-ic{width:32px;height:32px;border-radius:8px;background:var(--accent-bg);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.doc-row .doc-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-row .doc-meta{font-size:11px;color:var(--text3)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;font-size:11px;font-weight:600;border-radius:100px;background:var(--accent-bg);color:var(--accent2);border:1px solid var(--accent-border)}
+.tenant-card{padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;display:flex;align-items:center;gap:10px;font-size:13px;background:var(--bg)}
+.tenant-card .ten-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.tenant-card.a .ten-ic{background:#fef0e2;color:#d05420}
+.tenant-card.b .ten-ic{background:#eaf2dc;color:#3f5a18}
+.tenant-card.c .ten-ic{background:#dde6f4;color:#1d4ed8}
+.tenant-meta{display:flex;flex-direction:column;flex:1;min-width:0}
+.tenant-meta strong{font-weight:700}
+.tenant-meta span{font-size:11px;color:var(--text3)}
+.divider-wall{border-top:2px dashed var(--accent-border);margin:8px 0;text-align:center;font-size:10px;color:var(--text3);position:relative;text-transform:uppercase;letter-spacing:.08em;padding-top:6px}
+
+@media(max-width:780px){
+  .showcase{grid-template-columns:1fr;gap:1.5rem}
+  .showcase.reverse{grid-template-columns:1fr}
+  .showcase.reverse .showcase-text{order:1}
+  .showcase.reverse .showcase-visual{order:2}
+  .showcase-text h2{font-size:24px}
+}
+
+/* who */
+.audience{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;max-width:780px;margin:0 auto}
+.audience-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1.2rem;font-size:14px}
+.audience-card i{font-size:22px;color:var(--accent);margin-bottom:.6rem;display:block}
+.audience-card strong{display:block;font-weight:700;margin-bottom:.2rem;font-size:15px}
+.audience-card span{color:var(--text2)}
+
+/* pricing teaser */
+.pricing-box{background:linear-gradient(135deg, var(--accent-bg), var(--bg2));border:1px solid var(--accent-border);border-radius:var(--rxl);padding:2.5rem 2rem;text-align:center;max-width:560px;margin:0 auto}
+.pricing-box h3{font-size:22px;font-weight:800;margin-bottom:.5rem}
+.pricing-box p{color:var(--text2);font-size:15px;margin-bottom:1.4rem;line-height:1.55}
+
+/* final cta */
+.cta{text-align:center;padding:5rem 0}
+.cta h2{font-size:36px;font-weight:800;letter-spacing:-.015em;margin-bottom:1rem}
+.cta p{color:var(--text2);font-size:17px;margin-bottom:2rem}
+.contact-line{font-size:18px;font-weight:600;margin-bottom:1.6rem}
+.contact-line i{color:var(--accent);margin-right:6px}
+
+/* footer */
+footer{padding:2.5rem 0;border-top:1px solid var(--border);font-size:13px;color:var(--text3);display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+footer a{color:var(--text3)}
+footer a:hover{color:var(--accent)}
+
+@media(max-width:640px){
+  h1{font-size:38px}
+  .section-head h2{font-size:26px}
+  .cta h2{font-size:28px}
+  .hero{padding:3rem 0 2.5rem}
+  section{padding:3rem 0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav>
+  <a href="/" class="brand">
+    <img src="/eventsheet-logo.svg" alt="EventSheet" style="height:38px;width:auto;display:block;border-radius:8px"/>
+  </a>
+  <div class="nav-links">
+    <a href="/app" class="btn btn-ghost">Inloggen</a>
+    <a href="https://wa.me/32479625603?text=Hallo!%20Ik%20wil%20graag%20meer%20info%20over%20EventSheet." class="btn btn-primary" target="_blank" rel="noopener">
+      <i class="ti ti-brand-whatsapp"></i> Demo aanvragen
+    </a>
+  </div>
+</nav>
+
+<section class="hero">
+  <img src="/eventsheet-logo.svg" alt="EventSheet" class="hero-logo"/>
+  <span class="eyebrow"><i class="ti ti-sparkles"></i> Beta — gratis tijdens ontwikkeling</span>
+  <h1>Eén plek voor je event-planning, run sheet en leverancier-communicatie</h1>
+  <p class="hero-sub">EventSheet vervangt je losse Excel-files, WhatsApp-groepen en e-mail-spaghetti. Elke leverancier krijgt een persoonlijk portaal — geen account nodig.</p>
+  <div class="hero-ctas">
+    <a href="https://wa.me/32479625603?text=Hallo!%20Ik%20wil%20graag%20meer%20info%20over%20EventSheet." class="btn btn-primary" target="_blank" rel="noopener">
+      <i class="ti ti-brand-whatsapp"></i> Demo via WhatsApp
+    </a>
+    <a href="tel:+32479625603" class="btn">
+      <i class="ti ti-phone"></i> 0479 62 56 03
+    </a>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2>Wat krijg je?</h2>
+    <p>Alles wat je nodig hebt om een event van A tot Z te plannen en je leveranciers mee te krijgen.</p>
+  </div>
+  <div class="features">
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-link"></i></div>
+      <h3>Leveranciers-portaal</h3>
+      <p>Elke leverancier krijgt een unieke privé-link. Geen wachtwoord, geen account aanmaken. Ze zien alleen hun eigen info, taken en kunnen documenten uploaden.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-calendar-event"></i></div>
+      <h3>Eén event-overzicht</h3>
+      <p>Locatie, parking-info, crew-bonnen, contactpersoon, run sheet, taken, documenten en gekoppelde leveranciers — alles op één pagina per event.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-clock-hour-4"></i></div>
+      <h3>Run sheet / tijdslijn</h3>
+      <p>Visuele tijdslijn van het event-verloop met tijd, duur, zone en verantwoordelijke. Iedereen op dezelfde lijn — letterlijk.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-checkbox"></i></div>
+      <h3>Taken met deadline</h3>
+      <p>Wijs taken toe aan een categorie of een specifieke leverancier. Zij zien hun open taken in hun portaal en kunnen ze afvinken of er bijlages bij uploaden.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-send"></i></div>
+      <h3>Update-wachtrij</h3>
+      <p>Pas iets aan? EventSheet houdt bij wat er veranderd is en zet één gebundelde mail naar alle betrokken leveranciers klaar in BCC. Geen versnipperde communicatie.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-users-group"></i></div>
+      <h3>Team & rollen</h3>
+      <p>Werk samen met collega's. Owner, editor en alleen-lezen rollen. Nodig externe stakeholders uit met een invite-link.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-message-circle"></i></div>
+      <h3>Aanvraag-threads</h3>
+      <p>Stuur een specifieke vraag naar één leverancier (bv. "stuur me jullie verzekeringsattest"). Zij antwoorden in hun portaal — alles centraal bijgehouden.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-shield-check"></i></div>
+      <h3>GDPR-bewust</h3>
+      <p>Data in EU (Belgium/Nederland), strict access control per werkruimte, data-export en delete-knoppen ingebouwd. Geen verrassingen.</p>
+    </div>
+
+    <div class="feat">
+      <div class="feat-icon"><i class="ti ti-device-mobile"></i></div>
+      <h3>Werkt op elk toestel</h3>
+      <p>Web-app die werkt op laptop, tablet en telefoon. Donkere modus, geen installatie. Je leveranciers openen hun portaal in hun browser.</p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="showcase">
+    <div class="showcase-text">
+      <h3>Centraal documenten-archief</h3>
+      <h2>Eén digitaal dossier per event. Geen losse mailbijlagen meer.</h2>
+      <p>Upload contracten, keuringsattesten, technische fiches, plannen en menukaarten rechtstreeks op het event. Per document bepaal je wie het mag zien: iedereen, een specifieke leverancier, of een hele categorie.</p>
+      <ul>
+        <li><i class="ti ti-upload"></i> <span>Drag-and-drop upload (max 25 MB per bestand) vanuit organisator <strong>en</strong> leverancier-portaal</span></li>
+        <li><i class="ti ti-shield-lock"></i> <span>Per document instelbare zichtbaarheid — een keuringsattest hoeft niet voor iedereen leesbaar te zijn</span></li>
+        <li><i class="ti ti-history"></i> <span>Tijdstempel + uploader bijgehouden — audit-trail zonder gedoe</span></li>
+        <li><i class="ti ti-search"></i> <span>Doorzoekbaar per event, leverancier of categorie</span></li>
+        <li><i class="ti ti-download"></i> <span>Eén klik om alle documenten van een event als ZIP te exporteren bij afsluiten</span></li>
+      </ul>
+    </div>
+    <div class="showcase-visual">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
+          <span class="mockup-title">Festival Zomer 2026 / Documenten</span>
+        </div>
+        <div class="mockup-body">
+          <div class="doc-row">
+            <div class="doc-ic"><i class="ti ti-file-text"></i></div>
+            <div class="doc-name">Keuringsattest_foodtruck.pdf</div>
+            <div class="doc-meta">Catering · 2.1 MB</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-ic" style="background:#eaf2dc;color:#3f5a18"><i class="ti ti-clipboard-list"></i></div>
+            <div class="doc-name">Inplantingsplan_v3.pdf</div>
+            <div class="doc-meta">Iedereen · 4.8 MB</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-ic" style="background:#dde6f4;color:#1d4ed8"><i class="ti ti-photo"></i></div>
+            <div class="doc-name">Crew_badge_template.png</div>
+            <div class="doc-meta">Productie · 612 KB</div>
+          </div>
+          <div class="doc-row">
+            <div class="doc-ic"><i class="ti ti-file-spreadsheet"></i></div>
+            <div class="doc-name">Drankenbestelling.xlsx</div>
+            <div class="doc-meta">F&amp;B · 87 KB</div>
+          </div>
+          <div class="doc-row" style="border-style:dashed;background:transparent;color:var(--text3);justify-content:center">
+            <i class="ti ti-cloud-upload"></i> Sleep bestanden hierheen
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="showcase reverse">
+    <div class="showcase-text">
+      <h3>Per-tenant geïsoleerd</h3>
+      <h2>Elke organisatie zijn eigen werkruimte. Strikt gescheiden, niets lekt.</h2>
+      <p>Of je nu één event-bureau bent of 50 organisaties beheert: elk team krijgt zijn eigen werkruimte. Events, leveranciers, documenten, run sheets — volledig afgescheiden. Geen vermenging, geen "oh die zag toevallig dat andere event".</p>
+      <ul>
+        <li><i class="ti ti-shield-check"></i> <span>Firestore-rules dwingen op database-niveau af dat je <strong>nooit</strong> data uit een andere werkruimte ziet</span></li>
+        <li><i class="ti ti-users"></i> <span>Nodig collega's uit als <strong>Editor</strong> (lezen + schrijven) of <strong>Viewer</strong> (alleen lezen, ideaal voor klant of stakeholder)</span></li>
+        <li><i class="ti ti-arrows-shuffle"></i> <span>Wissel tussen werkruimtes met één klik — handig voor agencies met meerdere klanten</span></li>
+        <li><i class="ti ti-trash"></i> <span>Werkruimte verwijderen = alles gewist (events, leveranciers, documenten, bestanden) in één klik. GDPR-recht op vergetelheid ingebouwd.</span></li>
+        <li><i class="ti ti-database-export"></i> <span>Data-export per werkruimte als JSON-bestand. Lock-in vermijden.</span></li>
+      </ul>
+    </div>
+    <div class="showcase-visual">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
+          <span class="mockup-title">Mijn werkruimtes</span>
+        </div>
+        <div class="mockup-body">
+          <div class="tenant-card a">
+            <div class="ten-ic">SS</div>
+            <div class="tenant-meta">
+              <strong>Señor Snacks</strong>
+              <span>12 events · 24 leveranciers</span>
+            </div>
+            <span class="chip">Eigenaar</span>
+          </div>
+          <div class="tenant-card b">
+            <div class="ten-ic">KE</div>
+            <div class="tenant-meta">
+              <strong>Klant Events bvba</strong>
+              <span>4 events · 9 leveranciers</span>
+            </div>
+            <span class="chip" style="background:#eaf2dc;color:#3f5a18;border-color:#bcd28e">Editor</span>
+          </div>
+          <div class="tenant-card c">
+            <div class="ten-ic">FX</div>
+            <div class="tenant-meta">
+              <strong>Festival X (stakeholder)</strong>
+              <span>1 event · 18 leveranciers</span>
+            </div>
+            <span class="chip" style="background:#f7ecd8;color:#7a5a40;border-color:#e9b870">Viewer</span>
+          </div>
+          <div class="divider-wall">━━ data-firewall ━━</div>
+          <div class="tenant-card" style="opacity:.45">
+            <div class="ten-ic" style="background:var(--border);color:var(--text3)"><i class="ti ti-lock"></i></div>
+            <div class="tenant-meta">
+              <strong>Andere bedrijven</strong>
+              <span>Geen toegang — strikt afgesloten</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2>Hoe werkt het?</h2>
+    <p>Van leeg blad naar werkende event-coördinatie in een halve dag.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <h3>Maak je werkruimte</h3>
+      <p>Eén account voor jou en je team. Onbeperkt events erin.</p>
+    </div>
+    <div class="step">
+      <h3>Voeg je leveranciers toe</h3>
+      <p>Naam, mail, categorie. Iedereen krijgt automatisch een privé portaal-link.</p>
+    </div>
+    <div class="step">
+      <h3>Maak een event aan</h3>
+      <p>Koppel leveranciers, vul praktische info en run sheet in, maak taken aan.</p>
+    </div>
+    <div class="step">
+      <h3>Verstuur de portaal-links</h3>
+      <p>Elke leverancier krijgt zijn eigen link en ziet enkel wat voor hem relevant is.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2>Voor wie?</h2>
+  </div>
+  <div class="audience">
+    <div class="audience-card">
+      <i class="ti ti-confetti"></i>
+      <strong>Event-organisatoren</strong>
+      <span>Festivals, bedrijfsfeesten, sportevents, beurzen.</span>
+    </div>
+    <div class="audience-card">
+      <i class="ti ti-tools-kitchen-2"></i>
+      <strong>Catering &amp; F&amp;B-bedrijven</strong>
+      <span>Foodtrucks, traiteurs, mobiele bars — die meerdere events tegelijk runnen.</span>
+    </div>
+    <div class="audience-card">
+      <i class="ti ti-building-circus"></i>
+      <strong>Productiebedrijven</strong>
+      <span>Sound &amp; light, structuren, decoratie. Strakke briefings per crew-lid.</span>
+    </div>
+    <div class="audience-card">
+      <i class="ti ti-school"></i>
+      <strong>Verenigingen &amp; comités</strong>
+      <span>Studentenkringen, sportclubs, gemeentelijke events.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <h2>Wat kost het?</h2>
+  </div>
+  <div class="pricing-box">
+    <h3>Beta-fase — gratis</h3>
+    <p>EventSheet is gratis tijdens de ontwikkelfase. Geen creditcard, geen verborgen kosten. Bij launch krijgen beta-gebruikers korting + 30 dagen voorafgaande melding.</p>
+    <a href="https://wa.me/32479625603?text=Hallo!%20Ik%20wil%20EventSheet%20uitproberen." class="btn btn-primary" target="_blank" rel="noopener">
+      <i class="ti ti-brand-whatsapp"></i> Vraag een demo aan
+    </a>
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Klaar om je events op orde te krijgen?</h2>
+  <p>Eén gesprek van 20 minuten en je weet of EventSheet voor jou werkt.</p>
+  <div class="contact-line">
+    <i class="ti ti-phone"></i>
+    <a href="tel:+32479625603">0479 62 56 03</a>
+    &nbsp;&nbsp;·&nbsp;&nbsp;
+    <a href="https://wa.me/32479625603" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i> WhatsApp</a>
+  </div>
+  <a href="/app" class="btn">Bestaande gebruiker? Inloggen <i class="ti ti-arrow-right"></i></a>
+</section>
+
+<footer>
+  <div>© 2026 EventSheet. Gemaakt in België.</div>
+  <div style="display:flex;gap:1.2rem">
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Voorwaarden</a>
+    <a href="https://wa.me/32479625603" target="_blank" rel="noopener">Contact</a>
+  </div>
+</footer>
+</div>
+
+</body>
+</html>

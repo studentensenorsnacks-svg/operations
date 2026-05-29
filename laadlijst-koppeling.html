@@ -2,12 +2,14 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
+<script src="auth.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Señor Snacks — Laadlijst ↔ Truck</title>
   <link rel="icon" type="image/png" href="senorsnacks-logo.png">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <style>
     :root{
       --red:#e8001d;--bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
@@ -172,6 +174,13 @@ firebase.initializeApp({
   messagingSenderId:"526032166243",
   appId:"1:526032166243:web:5af01c6d17aecd56114756"
 });
+try {
+  var __h = (location.hostname || '').toLowerCase();
+  if (__h.indexOf('-login') === -1 && __h.indexOf('-v2') === -1) {
+    firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    firebase.auth().signInAnonymously().catch(function(e){ console.error('[anon-auth]', e); });
+  }
+} catch (e) { console.warn('[anon-auth] auth SDK ontbreekt', e); }
 const db = firebase.database();
 
 const CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];

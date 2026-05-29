@@ -2,11 +2,10 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<script src="auth.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Señor Snacks — Info</title>
-<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<title>EventSheet — Info</title>
+<link rel="icon" type="image/svg+xml" href="/eventsheet-logo.svg">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -91,7 +90,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <body>
 
 <div class="topbar">
-  <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+  <img src="/eventsheet-logo.svg" alt="EventSheet" class="logo-img">
   <div class="topbar-sep" id="topbar-label">Info</div>
 </div>
 
@@ -152,7 +151,7 @@ function renderBlock(b){
 function renderEntry(e){
   const accent = /^#[0-9a-fA-F]{3,8}$/.test(e.accent||'') ? e.accent : '#e8001d';
   document.documentElement.style.setProperty('--accent', accent);
-  document.title = 'Señor Snacks — ' + (e.title || 'Info');
+  document.title = 'EventSheet — ' + (e.title || 'Info');
   document.getElementById('topbar-label').textContent = e.title || 'Info';
 
   const blocks = (e.blocks||[]).map(renderBlock).join('');

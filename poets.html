@@ -2,6 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
+<script src="auth.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Señor Snacks — Poets Dashboard</title>
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
@@ -22,6 +23,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
 <style>
 :root{
   --bg:#f4f4f5;--surface:#ffffff;--surface2:#eeeef0;--border:#e2e2e5;--border2:#d0d0d4;

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Gebruikers — Señor Snacks Operations</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",sans-serif;
+  background:#fdf8f0;color:#3a2415;
+  min-height:100vh;padding:24px 18px 60px;
+}
+.topbar{
+  max-width:880px;margin:0 auto 22px;display:flex;align-items:center;
+  gap:14px;padding-bottom:14px;border-bottom:1px solid rgba(120,60,20,.12);
+}
+.topbar img{width:38px;height:auto}
+.topbar h1{font-size:20px;font-weight:700;flex:1}
+.topbar .who{font-size:12px;color:#7a5a40}
+.topbar button.logout{
+  background:transparent;border:1px solid rgba(120,60,20,.22);
+  border-radius:8px;padding:7px 12px;font-size:12px;color:#7a5a40;
+  cursor:pointer;font-family:inherit;
+}
+.topbar button.logout:hover{background:#fef0e2;border-color:#e8662b;color:#3a2415}
+
+.wrap{max-width:880px;margin:0 auto}
+.card{
+  background:#fff;border:1px solid rgba(120,60,20,.12);
+  border-radius:12px;padding:18px 20px;margin-bottom:18px;
+  box-shadow:0 1px 3px rgba(120,60,20,.04);
+}
+h2{font-size:15px;font-weight:700;margin-bottom:14px;color:#3a2415}
+label{display:block;font-size:11px;font-weight:600;color:#7a5a40;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.3px}
+input,select{
+  width:100%;padding:9px 11px;font-size:13px;
+  border:1px solid rgba(120,60,20,.22);border-radius:8px;
+  background:#fff;color:#3a2415;font-family:inherit;outline:none;
+}
+input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
+button{
+  padding:9px 14px;font-size:13px;font-weight:600;
+  border:1px solid rgba(120,60,20,.22);border-radius:8px;
+  background:#fff;color:#3a2415;cursor:pointer;font-family:inherit;
+}
+button:hover:not(:disabled){background:#fef0e2;border-color:#e8662b}
+button.primary{background:#e8662b;color:#fff;border-color:#e8662b}
+button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
+button.danger{color:#7a2818;border-color:#f0a896}
+button.danger:hover:not(:disabled){background:#fde2dd;border-color:#7a2818}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+.formgrid{display:grid;grid-template-columns:1.5fr 1.5fr 1fr 1fr auto;gap:10px;align-items:end}
+@media(max-width:680px){.formgrid{grid-template-columns:1fr 1fr}.formgrid > button{grid-column:span 2}}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  text-align:left;font-size:11px;font-weight:600;color:#7a5a40;
+  text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;
+  border-bottom:1px solid rgba(120,60,20,.12);
+}
+td{padding:11px 10px;border-bottom:1px solid rgba(120,60,20,.06);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.email{font-weight:600}
+.uid{font-size:11px;color:#b89878;font-family:monospace}
+.providers{font-size:11px;color:#7a5a40}
+.role-cell select{padding:6px 9px;font-size:12px;min-width:120px}
+.badge{
+  display:inline-block;padding:2px 9px;font-size:11px;font-weight:600;
+  border-radius:100px;background:#f7ecd8;color:#7a5a40;
+}
+.badge.admin{background:#fde2dd;color:#7a2818}
+.badge.manager{background:#fdf0d4;color:#7a4d12}
+.badge.medewerker{background:#eaf2dc;color:#3f5a18}
+.badge.viewer{background:#e0ebef;color:#1e4a5c}
+.badge.none{background:#f0e7da;color:#856042}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#3a2415;color:#fdf8f0;padding:11px 18px;border-radius:10px;
+  font-size:13px;font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.2);
+  z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.toast.show{opacity:1}
+.toast.error{background:#7a2818}
+
+.empty{padding:30px;text-align:center;color:#b89878;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="senorsnacks-logo.png" alt="">
+  <h1>Gebruikers</h1>
+  <span class="who" id="who"></span>
+  <button class="logout" id="btn-logout">Uitloggen</button>
+</div>
+
+<div class="wrap">
+  <div class="card" data-role="write" id="add-card">
+    <h2>Nieuwe gebruiker</h2>
+    <div class="formgrid">
+      <div>
+        <label>E-mailadres</label>
+        <input id="new-email" type="email" placeholder="naam@senorsnacks.be" autocomplete="off">
+      </div>
+      <div>
+        <label>Wachtwoord <span style="font-weight:400;text-transform:none;color:#b89878">(optioneel)</span></label>
+        <input id="new-pwd" type="text" placeholder="laat leeg voor Google-only" autocomplete="off">
+      </div>
+      <div>
+        <label>Naam</label>
+        <input id="new-name" type="text" placeholder="optioneel" autocomplete="off">
+      </div>
+      <div>
+        <label>Rol</label>
+        <select id="new-role">
+          <option value="medewerker">medewerker</option>
+          <option value="manager">manager</option>
+          <option value="admin">admin</option>
+          <option value="viewer">alleen-lezen</option>
+        </select>
+      </div>
+      <div>
+        <button class="primary" id="btn-create">Aanmaken</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Alle gebruikers (<span id="count">…</span>)</h2>
+    <div id="users-wrap">
+      <div class="empty">Bezig met laden…</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var ROLES = [
+    { value: 'admin',      label: 'admin' },
+    { value: 'manager',    label: 'manager' },
+    { value: 'medewerker', label: 'medewerker' },
+    { value: 'viewer',     label: 'alleen-lezen' },
+  ];
+
+  var fns       = firebase.app().functions('europe-west1');
+  var fnCreate  = fns.httpsCallable('createUser');
+  var fnSetRole = fns.httpsCallable('setUserRole');
+  var fnList    = fns.httpsCallable('listUsers');
+  var fnDelete  = fns.httpsCallable('deleteUser');
+
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+  function toast(msg, isErr) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('error', !!isErr);
+    toastEl.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3200);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]);
+    });
+  }
+
+  function badge(role) {
+    if (!role) return '<span class="badge none">geen rol</span>';
+    var label = role === 'viewer' ? 'alleen-lezen' : role;
+    return '<span class="badge ' + esc(role) + '">' + esc(label) + '</span>';
+  }
+
+  function providerIcons(list) {
+    if (!list || !list.length) return '';
+    return list.map(function (p) {
+      if (p === 'google.com') return 'Google';
+      if (p === 'password') return 'E-mail';
+      return p;
+    }).join(', ');
+  }
+
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    var d = new Date(ts);
+    return d.toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function renderUsers(users, currentUid) {
+    var wrap = document.getElementById('users-wrap');
+    document.getElementById('count').textContent = users.length;
+    if (!users.length) {
+      wrap.innerHTML = '<div class="empty">Geen gebruikers.</div>';
+      return;
+    }
+    var rows = users.map(function (u) {
+      var roleOpts = ROLES.map(function (r) {
+        return '<option value="' + r.value + '"' + (u.role === r.value ? ' selected' : '') + '>' + r.label + '</option>';
+      }).join('');
+      var self = u.uid === currentUid;
+      var deleteBtn = self
+        ? '<button disabled title="Je kan jezelf niet verwijderen">Verwijder</button>'
+        : '<button class="danger" data-act="delete" data-uid="' + esc(u.uid) + '" data-email="' + esc(u.email) + '">Verwijder</button>';
+      return ''
+        + '<tr data-uid="' + esc(u.uid) + '">'
+        +   '<td>'
+        +     '<div class="email">' + esc(u.email || '(geen e-mail)') + (self ? ' <span style="color:#b89878;font-size:11px">(jij)</span>' : '') + '</div>'
+        +     (u.displayName ? '<div class="providers">' + esc(u.displayName) + '</div>' : '')
+        +     '<div class="uid">' + esc(u.uid) + '</div>'
+        +   '</td>'
+        +   '<td>' + badge(u.role) + '</td>'
+        +   '<td class="role-cell">'
+        +     '<select data-act="role" data-uid="' + esc(u.uid) + '">'
+        +       '<option value="">— geen rol —</option>'
+        +       roleOpts
+        +     '</select>'
+        +   '</td>'
+        +   '<td class="providers">' + esc(providerIcons(u.providers)) + '</td>'
+        +   '<td class="providers">' + esc(fmtDate(u.lastSignInAt)) + '</td>'
+        +   '<td>' + deleteBtn + '</td>'
+        + '</tr>';
+    }).join('');
+    wrap.innerHTML =
+      '<table>'
+      + '<thead><tr>'
+      +   '<th>Gebruiker</th><th>Rol</th><th>Wijzig rol</th><th>Login via</th><th>Laatste login</th><th></th>'
+      + '</tr></thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '</table>';
+  }
+
+  function loadUsers() {
+    document.getElementById('users-wrap').innerHTML = '<div class="empty">Bezig met laden…</div>';
+    return fnList({}).then(function (res) {
+      var users = (res && res.data && res.data.users) || [];
+      renderUsers(users, firebase.auth().currentUser.uid);
+    }).catch(function (e) {
+      document.getElementById('users-wrap').innerHTML =
+        '<div class="empty">Laden mislukt: ' + esc((e && e.message) || String(e)) + '</div>';
+    });
+  }
+
+  function onChangeRole(ev) {
+    var sel = ev.target;
+    if (!sel.matches('select[data-act="role"]')) return;
+    var uid = sel.getAttribute('data-uid');
+    var role = sel.value;
+    if (!role) {
+      toast('Lege rol nog niet ondersteund — kies een rol uit de lijst.', true);
+      return;
+    }
+    sel.disabled = true;
+    fnSetRole({ uid: uid, role: role }).then(function () {
+      toast('Rol gewijzigd.');
+      loadUsers();
+    }).catch(function (e) {
+      toast((e && e.message) || 'Wijzigen mislukt.', true);
+      sel.disabled = false;
+    });
+  }
+
+  function onClick(ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    var uid = btn.getAttribute('data-uid');
+    if (act === 'delete') {
+      var email = btn.getAttribute('data-email') || uid;
+      if (!confirm('Verwijder gebruiker ' + email + '? Dit kan niet ongedaan worden.')) return;
+      btn.disabled = true;
+      fnDelete({ uid: uid }).then(function () {
+        toast('Gebruiker verwijderd.');
+        loadUsers();
+      }).catch(function (e) {
+        toast((e && e.message) || 'Verwijderen mislukt.', true);
+        btn.disabled = false;
+      });
+    }
+  }
+
+  document.getElementById('btn-create').onclick = function () {
+    var btn = this;
+    var email = (document.getElementById('new-email').value || '').trim();
+    var pwd   = (document.getElementById('new-pwd').value || '').trim();
+    var name  = (document.getElementById('new-name').value || '').trim();
+    var role  = document.getElementById('new-role').value;
+    if (!email) { toast('E-mail vereist.', true); return; }
+    btn.disabled = true; btn.textContent = 'Bezig…';
+    fnCreate({ email: email, password: pwd, displayName: name, role: role })
+      .then(function () {
+        document.getElementById('new-email').value = '';
+        document.getElementById('new-pwd').value = '';
+        document.getElementById('new-name').value = '';
+        toast('Gebruiker aangemaakt.');
+        loadUsers();
+      })
+      .catch(function (e) {
+        toast((e && e.message) || 'Aanmaken mislukt.', true);
+      })
+      .then(function () {
+        btn.disabled = false; btn.textContent = 'Aanmaken';
+      });
+  };
+
+  document.addEventListener('change', onChangeRole);
+  document.addEventListener('click', onClick);
+
+  // Wacht op auth.js (die de gate doet) — pas dan zijn we admin én klaar.
+  window.addEventListener('auth-ready', function (e) {
+    var a = e.detail;
+    if (!a.isAdmin) {
+      document.body.innerHTML =
+        '<div style="max-width:380px;margin:80px auto;text-align:center;padding:24px;background:#fff;border:1px solid rgba(120,60,20,.12);border-radius:12px">'
+        + '<h1 style="font-size:18px;margin-bottom:8px">Geen toegang</h1>'
+        + '<p style="color:#7a5a40;font-size:13px;line-height:1.5">Deze pagina is alleen voor admins. Ingelogd als <b>' + esc(a.email) + '</b> (rol: ' + esc(a.role || 'geen') + ').</p>'
+        + '<p style="margin-top:14px"><a href="/" style="color:#e8662b">Naar dashboard →</a></p>'
+        + '</div>';
+      return;
+    }
+    document.getElementById('who').textContent = a.email + ' · admin';
+    document.getElementById('btn-logout').onclick = a.logout;
+    loadUsers();
+  });
+})();
+</script>
+
+</body>
+</html>

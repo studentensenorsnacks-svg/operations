@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; script-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<title>Señor Snacks — Poets (Extern)</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f4f5;--surface:#ffffff;--surface2:#eeeef0;--border:#e2e2e5;--border2:#d0d0d4;
+  --text:#1a1a1a;--text2:#5f5f66;--red:#e8001d;--red-dark:#b8001a;--green:#22c55e;--green-light:#4ade80;
+  --orange:#f97316;--blue:#3b82f6;--purple:#a855f7;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo-area{display:flex;align-items:center;gap:14px;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-section{font-size:0.92rem;font-weight:600;color:var(--text2);padding-left:14px;border-left:1px solid var(--border2);}
+.extern-badge{margin-left:10px;padding:3px 9px;border-radius:14px;background:rgba(168,85,247,0.12);color:#7c3aed;
+  font-size:0.7rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;border:1px solid rgba(168,85,247,0.35);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.refresh-state{display:flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--text2);font-variant-numeric:tabular-nums;}
+.refresh-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,0.18);}
+.refresh-dot.stale{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,0.18);}
+.refresh-dot.err{background:var(--red);box-shadow:0 0 0 3px rgba(232,0,29,0.18);}
+.refresh-btn{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:var(--font);
+  font-size:0.78rem;font-weight:600;padding:6px 10px;border-radius:6px;cursor:pointer;transition:background 0.15s;}
+.refresh-btn:hover{background:var(--surface2);color:var(--text);}
+.refresh-btn:disabled{opacity:0.5;cursor:default;}
+
+.container{max-width:1400px;margin:0 auto;padding:32px 24px;}
+.page-header{margin-bottom:28px;}
+.page-title{font-family:var(--font-cond);font-size:2.2rem;font-weight:900;letter-spacing:-0.01em;margin-bottom:6px;}
+.page-subtitle{color:var(--text2);font-size:0.92rem;}
+
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;padding:10px 16px;margin-bottom:20px;transition:border-color 0.15s;}
+.search-bar:focus-within{border-color:var(--red);}
+.search-icon{color:var(--text2);font-size:1rem;}
+.search-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:0.95rem;}
+.search-bar input::placeholder{color:var(--text2);}
+.search-clear{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;font-size:1rem;border-radius:4px;}
+.search-clear:hover{background:var(--border2);color:var(--text);}
+
+.stats-row{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:140px;}
+.stat-num{font-family:var(--font-cond);font-size:2rem;font-weight:900;line-height:1;}
+.stat-lbl{color:var(--text2);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-top:4px;}
+.stat-pill.red .stat-num{color:#dc2626;}
+.stat-pill.green .stat-num{color:#16a34a;}
+
+.section{margin-bottom:32px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-family:var(--font-cond);font-size:1.4rem;font-weight:800;}
+.section-count{background:var(--surface2);color:var(--text2);font-size:0.78rem;font-family:var(--font);font-weight:700;padding:3px 10px;border-radius:20px;}
+
+.truck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.truck-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;
+  display:flex;flex-direction:column;gap:12px;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.truck-card.dirty{border-left:3px solid var(--red);}
+.truck-card.clean{border-left:3px solid var(--green);}
+.truck-card.has-priority{
+  border:1px solid rgba(249,115,22,0.5);
+  border-left:3px solid #f97316;
+  background:linear-gradient(135deg, rgba(249,115,22,0.08), var(--surface));
+  box-shadow:0 0 0 1px rgba(249,115,22,0.2), 0 4px 16px rgba(249,115,22,0.12);
+}
+.truck-card .truck-name{font-weight:700;font-size:0.96rem;line-height:1.3;}
+.truck-card .truck-meta{color:var(--text2);font-size:0.78rem;}
+.prio-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:12px;
+  background:rgba(249,115,22,0.15);color:#ea580c;font-size:0.72rem;font-weight:800;
+  border:1px solid rgba(249,115,22,0.45);text-transform:uppercase;letter-spacing:0.04em;margin-left:6px;}
+.priority-section{margin-bottom:24px;}
+.priority-section .section-header{color:#ea580c !important;font-size:0.95rem !important;font-weight:800 !important;}
+.priority-section .section-header::before{content:'🔥 ';}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:14px;font-size:0.78rem;font-weight:700;width:fit-content;}
+.status-badge.dirty{background:rgba(232,0,29,0.10);color:#dc2626;}
+.status-badge.clean{background:rgba(34,197,94,0.12);color:#16a34a;}
+.status-badge.unknown{background:var(--surface2);color:var(--text2);}
+
+.btn-clean{background:var(--green);color:#fff;border:none;border-radius:7px;padding:10px 14px;
+  font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:background 0.15s;}
+.btn-clean:hover{background:#16a34a;}
+.btn-clean:disabled{background:var(--surface2);color:var(--text2);cursor:default;}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text2);}
+.empty-icon{font-size:3rem;margin-bottom:10px;}
+
+.recent-list{display:flex;flex-direction:column;gap:6px;}
+.recent-row{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--green);
+  border-radius:8px;padding:9px 14px;}
+.recent-truck{font-weight:700;font-size:0.9rem;line-height:1.3;}
+.recent-meta{color:var(--text2);font-size:0.8rem;white-space:nowrap;font-variant-numeric:tabular-nums;flex-shrink:0;}
+
+.view-tabs{display:inline-flex;gap:4px;margin-bottom:20px;background:var(--surface2);
+  border:1px solid var(--border2);border-radius:10px;padding:4px;}
+.view-tab{background:transparent;border:none;color:var(--text2);font-family:var(--font);
+  font-size:0.88rem;font-weight:700;padding:8px 18px;border-radius:7px;cursor:pointer;
+  transition:background 0.15s,color 0.15s;}
+.view-tab:hover{color:var(--text);}
+.view-tab.active{background:var(--red);color:#fff;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:8px;
+  font-weight:700;font-size:0.9rem;opacity:0;transition:opacity 0.3s;z-index:1000;pointer-events:none;color:#fff;background:var(--green);}
+.toast.show{opacity:1;}
+.toast.err{background:var(--red);}
+
+.skeleton{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);
+  background-size:200% 100%;animation:sk 1.4s infinite;border-radius:8px;height:80px;}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+@media(max-width:768px){
+  .topbar{padding:0 14px;}
+  .topbar-section{display:none;}
+  .container{padding:20px 12px;}
+  .truck-grid{grid-template-columns:1fr;}
+  .refresh-state{display:none;}
+}
+
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:#b0b0b8;}
+
+.stat-pill{box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.topbar{box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-area">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-section">Poets Dashboard <span class="extern-badge">Extern</span></div>
+  </div>
+  <div class="topbar-right">
+    <div class="refresh-state">
+      <span class="refresh-dot" id="refresh-dot"></span>
+      <span id="refresh-text">Verbinden…</span>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" type="button">↻ Ververs</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div class="page-title">🧼 Poets Status</div>
+    <div class="page-subtitle" id="page-subtitle">Laden…</div>
+  </div>
+
+  <div class="view-tabs">
+    <button class="view-tab active" id="vt-todo" type="button" data-view="todo">🧼 Te poetsen</button>
+    <button class="view-tab" id="vt-history" type="button" data-view="history">📋 Geschiedenis</button>
+  </div>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Zoek truck (bv. C103, 502, hamburger…)" autocomplete="off">
+    <button class="search-clear" id="search-clear" type="button" style="display:none;">✕</button>
+  </div>
+
+  <div class="stats-row" id="stats-row">
+    <div class="stat-pill red"><div class="stat-num" id="st-dirty">0</div><div class="stat-lbl">Niet gepoetst</div></div>
+    <div class="stat-pill green"><div class="stat-num" id="st-clean">0</div><div class="stat-lbl">Gepoetst</div></div>
+  </div>
+
+  <div id="content">
+    <div class="skeleton"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────────────────────────
+  // Deze pagina draait volledig sandboxed:
+  //   • geen Firebase SDK, geen API-key in deze bron
+  //   • geen links naar het centrale dashboard of andere paginas
+  //   • alle data loopt via /api/poets (rate-limited Cloud Function)
+  // ─────────────────────────────────────────────────────────────────
+
+  var API = '/api/poets';
+  var POLL_MS = 15000;
+  var POLL_BACKOFF_MS = 60000;
+
+  var CATEGORIES = [
+    { label: '🚛 Wagen Groot', match: function (t) { return /\b(50[1-9]|5[1-9]\d|[6-8]\d\d|901)\b/.test(t) || /[58]0\d/.test(t); } },
+    { label: '📦 Container Groot', match: function (t) { return /C20\d/i.test(t); } },
+    { label: '📦 Container Klein', match: function (t) { return /C10\d|C110/i.test(t); } },
+    { label: '🍟 Frituurwagens (overig)', match: function (t) { return /Friet|Bicky|Snackmuur|Jumper 302/i.test(t) && !/^(Friet Wagen [589])/.test(t); } },
+    { label: '🍔 Hamburgerwagens', match: function (t) { return /Hamburger|Kiosk/i.test(t); } },
+    { label: '🍕 Pizza & Pasta', match: function (t) { return /Pasta|Pizza/i.test(t); } },
+    { label: '🍦 Sweet & Ijs', match: function (t) { return /Sweet|Ijs/i.test(t); } },
+    { label: '🍺 Tap & Dranken', match: function (t) { return /Tap/i.test(t); } },
+    { label: '🚛 Rijdend', match: function (t) { return /Brascheria|Fiat|Jumper/i.test(t); } },
+    { label: '📋 Bureau & Stockage', match: function (t) { return /Bureau|Stockage|Kassa|Koel/i.test(t); } },
+    { label: '❓ Andere', match: function () { return true; } }
+  ];
+
+  var ALL_TRUCKS = [
+    'Bicky Burger Wagen 201','Food Wagen (Snackmuur) 305','Food container (Friet) C201','Food container (Friet-2_Vallen) C203',
+    'Friet Container (Postel) 501','Friet Wagen (HR-ketel) 502','Friet Wagen 304','Friet Wagen 402','Friet Wagen 403',
+    'Friet Wagen 503','Friet Wagen 504','Friet Wagen 801','Friet Wagen 802','Friet Wagen 803','Friet Wagen 804',
+    'Friet Wagen 805','Friet Wagen 806','Friet Wagen 901',
+    'Food container (Hamburger) C202','Hamburger Container 12','Hamburger Container 13','Hamburger Wagen (Kiosk) 14',
+    'Hamburger Wagen 202','Hamburger Wagen 306',
+    'Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105',
+    'Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53',
+    'Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43',
+    'Brascheria 1','Fiat 404','Jumper 302',
+    'Bureau container 71','Bureau container 72','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209',
+    'Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107',
+    'Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208',
+    'Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102',
+    'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C204',
+    'Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102'
+  ];
+
+  var trucksState = {};   // truck -> { status, date, time, employee, timestamp }
+  var priority = {};      // truck -> true
+  var history = [];       // [{ truck, cleanedAt }]
+  var currentView = 'todo';
+  var pollTimer = null;
+  var inFlight = false;
+  var lastOk = 0;
+  var consecutiveErrors = 0;
+  var marking = {};       // truck -> true while POST in flight
+
+  var $ = function (id) { return document.getElementById(id); };
+  var escapeHtml = function (s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  };
+
+  function categorize(truck) {
+    for (var i = 0; i < CATEGORIES.length; i++) {
+      if (CATEGORIES[i].match(truck)) return CATEGORIES[i].label;
+    }
+    return '❓ Andere';
+  }
+
+  function setRefreshState(state, label) {
+    var dot = $('refresh-dot');
+    var txt = $('refresh-text');
+    if (!dot || !txt) return;
+    dot.classList.remove('stale', 'err');
+    if (state === 'stale') dot.classList.add('stale');
+    if (state === 'err') dot.classList.add('err');
+    txt.textContent = label;
+  }
+
+  function showToast(msg, isErr) {
+    var t = $('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 3000);
+  }
+
+  function postJson(payload) {
+    return fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'omit',
+      cache: 'no-store',
+    }).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; })
+        .catch(function () { return { ok: res.ok, status: res.status, data: {} }; });
+    });
+  }
+
+  function refresh() {
+    if (inFlight) return Promise.resolve();
+    inFlight = true;
+    return postJson({ action: 'state' }).then(function (r) {
+      inFlight = false;
+      if (!r.ok) {
+        consecutiveErrors++;
+        if (r.status === 429) {
+          setRefreshState('err', 'Te veel verzoeken');
+        } else {
+          setRefreshState('err', 'Verbinding mislukt');
+        }
+        render();
+        return;
+      }
+      consecutiveErrors = 0;
+      lastOk = Date.now();
+      trucksState = r.data && r.data.trucks ? r.data.trucks : {};
+      priority = r.data && r.data.priority ? r.data.priority : {};
+      history = r.data && Array.isArray(r.data.history) ? r.data.history : [];
+      setRefreshState('ok', 'Live • ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
+      render();
+    }).catch(function () {
+      inFlight = false;
+      consecutiveErrors++;
+      setRefreshState('err', 'Verbinding mislukt');
+      render();
+    });
+  }
+
+  function schedulePoll() {
+    if (pollTimer) clearTimeout(pollTimer);
+    var delay = consecutiveErrors > 2 ? POLL_BACKOFF_MS : POLL_MS;
+    pollTimer = setTimeout(function () { refresh().then(schedulePoll); }, delay);
+  }
+
+  function markClean(truck) {
+    if (marking[truck]) return;
+    if (ALL_TRUCKS.indexOf(truck) === -1) return; // client-side guard, server validates ook
+    marking[truck] = true;
+    render();
+    postJson({ action: 'mark-clean', truck: truck }).then(function (r) {
+      delete marking[truck];
+      if (!r.ok) {
+        var msg = r.status === 429
+          ? 'Even rustig: te veel verzoeken. Probeer zo opnieuw.'
+          : 'Kon ' + truck + ' niet markeren.';
+        showToast(msg, true);
+        render();
+        return;
+      }
+      // Optimistic update: dadelijk volgende refresh haalt definitieve state op
+      trucksState[truck] = {
+        status: 'clean',
+        date: new Date().toLocaleDateString('nl-NL'),
+        time: new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+        employee: 'Poets-sandbox',
+        timestamp: Date.now()
+      };
+      history.unshift({ truck: truck, cleanedAt: Date.now() });
+      showToast('✓ ' + truck + ' gemarkeerd als gepoetst');
+      render();
+      refresh();
+    }).catch(function () {
+      delete marking[truck];
+      showToast('Netwerkfout bij markeren', true);
+      render();
+    });
+  }
+
+  function getDirtyTrucks() {
+    var out = [];
+    for (var i = 0; i < ALL_TRUCKS.length; i++) {
+      var t = ALL_TRUCKS[i];
+      var s = trucksState[t];
+      var status = s ? s.status : 'unknown';
+      if (status === 'dirty') {
+        out.push({
+          truck: t,
+          status: status,
+          latest: s || null,
+          category: categorize(t)
+        });
+      }
+    }
+    return out;
+  }
+
+  function renderCard(t) {
+    var badges = {
+      dirty: '<span class="status-badge dirty">⚠️ Niet gepoetst</span>',
+      clean: '<span class="status-badge clean">✓ Gepoetst</span>',
+      unknown: '<span class="status-badge unknown">? Geen check-in</span>'
+    };
+    var meta = t.latest
+      ? escapeHtml(t.latest.date + ' · ' + t.latest.time + (t.latest.employee ? ' · ' + t.latest.employee : ''))
+      : 'nog geen check-in';
+    var isPrio = !!priority[t.truck];
+    var prioBadge = isPrio ? '<span class="prio-badge">🔥 Prio</span>' : '';
+    var cardCls = (t.status || '') + (isPrio ? ' has-priority' : '');
+    var busy = !!marking[t.truck];
+    var btn;
+    if (t.status === 'clean') {
+      btn = '<button class="btn-clean" type="button" disabled>✓ Al gepoetst</button>';
+    } else if (busy) {
+      btn = '<button class="btn-clean" type="button" disabled>… bezig</button>';
+    } else {
+      btn = '<button class="btn-clean" type="button" data-truck="' + escapeHtml(t.truck) + '">🧼 Markeer als gepoetst</button>';
+    }
+    return '<div class="truck-card ' + cardCls + '">' +
+      '<div>' +
+        '<div class="truck-name">' + escapeHtml(t.truck) + prioBadge + '</div>' +
+        '<div class="truck-meta">' + meta + '</div>' +
+      '</div>' +
+      badges[t.status] +
+      btn +
+    '</div>';
+  }
+
+  function renderTodo() {
+    var searchEl = $('search-input');
+    var search = (searchEl ? searchEl.value : '').trim().toLowerCase();
+    $('search-clear').style.display = search ? 'inline-block' : 'none';
+
+    var visible = getDirtyTrucks();
+    var allDirty = visible.length;
+    var allClean = 0;
+    for (var i = 0; i < ALL_TRUCKS.length; i++) {
+      var s = trucksState[ALL_TRUCKS[i]];
+      if (s && s.status === 'clean') allClean++;
+    }
+    $('st-dirty').textContent = allDirty;
+    $('st-clean').textContent = allClean;
+
+    $('page-subtitle').textContent =
+      allDirty + ' truck' + (allDirty !== 1 ? 's' : '') + ' te poetsen · bijgewerkt ' +
+      new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+    if (search) {
+      visible = visible.filter(function (t) { return t.truck.toLowerCase().indexOf(search) !== -1; });
+    }
+
+    var priorityTrucks = visible.filter(function (t) { return priority[t.truck]; });
+    var normalTrucks = visible.filter(function (t) { return !priority[t.truck]; });
+
+    var byCat = {};
+    CATEGORIES.forEach(function (c) { byCat[c.label] = []; });
+    normalTrucks.forEach(function (t) {
+      if (!byCat[t.category]) byCat[t.category] = [];
+      byCat[t.category].push(t);
+    });
+
+    var html = '';
+    if (priorityTrucks.length) {
+      html += '<div class="section priority-section">' +
+        '<div class="section-header">PRIORITEIT POETSEN <span class="section-count">' + priorityTrucks.length + '</span></div>' +
+        '<div class="truck-grid">' + priorityTrucks.map(renderCard).join('') + '</div>' +
+      '</div>';
+    }
+    CATEGORIES.forEach(function (cat) {
+      var items = byCat[cat.label] || [];
+      if (!items.length) return;
+      html += '<div class="section">' +
+        '<div class="section-header">' + escapeHtml(cat.label) + ' <span class="section-count">' + items.length + '</span></div>' +
+        '<div class="truck-grid">' + items.map(renderCard).join('') + '</div>' +
+      '</div>';
+    });
+    if (!html) {
+      html = search
+        ? '<div class="empty"><div class="empty-icon">🔍</div><div>Geen trucks gevonden voor "' + escapeHtml(search) + '".</div></div>'
+        : '<div class="empty"><div class="empty-icon">✨</div><div><strong>Alles netjes!</strong><br>Geen trucks die nog gepoetst moeten worden.</div></div>';
+    }
+    $('content').innerHTML = html;
+  }
+
+  function dayLabel(d) {
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var day = new Date(d); day.setHours(0, 0, 0, 0);
+    var diff = Math.round((today - day) / 86400000);
+    if (diff === 0) return 'Vandaag · ' + d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+    if (diff === 1) return 'Gisteren · ' + d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+    var datum = d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    return datum.charAt(0).toUpperCase() + datum.slice(1);
+  }
+
+  function renderHistory() {
+    var searchEl = $('search-input');
+    var search = (searchEl ? searchEl.value : '').trim().toLowerCase();
+    $('search-clear').style.display = search ? 'inline-block' : 'none';
+
+    var items = history.slice();
+    if (search) items = items.filter(function (h) { return (h.truck || '').toLowerCase().indexOf(search) !== -1; });
+    items.sort(function (a, b) { return (b.cleanedAt || 0) - (a.cleanedAt || 0); });
+
+    $('page-subtitle').textContent =
+      history.length + ' poetsbeurt' + (history.length !== 1 ? 'en' : '') + ' gelogd (laatste ' + history.length + ')';
+
+    if (!items.length) {
+      $('content').innerHTML = search
+        ? '<div class="empty"><div class="empty-icon">🔍</div><div>Geen poetsbeurten gevonden voor "' + escapeHtml(search) + '".</div></div>'
+        : '<div class="empty"><div class="empty-icon">📋</div><div><strong>Nog geen geschiedenis.</strong><br>Poetsbeurten verschijnen hier zodra je trucks als gepoetst markeert.</div></div>';
+      return;
+    }
+
+    var groups = [];
+    var curKey = null, cur = null;
+    items.forEach(function (h) {
+      var d = new Date(h.cleanedAt || 0);
+      var key = d.toDateString();
+      if (key !== curKey) {
+        curKey = key;
+        cur = { label: dayLabel(d), rows: [] };
+        groups.push(cur);
+      }
+      cur.rows.push(h);
+    });
+
+    $('content').innerHTML = groups.map(function (g) {
+      return '<div class="section">' +
+        '<div class="section-header">' + escapeHtml(g.label) + ' <span class="section-count">' + g.rows.length + '</span></div>' +
+        '<div class="recent-list">' + g.rows.map(function (h) {
+          var time = new Date(h.cleanedAt || 0).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+          return '<div class="recent-row">' +
+            '<span class="recent-truck">' + escapeHtml(h.truck || '—') + '</span>' +
+            '<span class="recent-meta">🧼 ' + time + '</span>' +
+          '</div>';
+        }).join('') + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function render() {
+    var isHistory = currentView === 'history';
+    var sr = $('stats-row');
+    if (sr) sr.style.display = isHistory ? 'none' : 'flex';
+    $('search-input').placeholder = isHistory
+      ? 'Zoek in geschiedenis (bv. C103, 502…)'
+      : 'Zoek truck (bv. C103, 502, hamburger…)';
+    if (isHistory) renderHistory(); else renderTodo();
+  }
+
+  function setView(v) {
+    currentView = v;
+    $('vt-todo').classList.toggle('active', v === 'todo');
+    $('vt-history').classList.toggle('active', v === 'history');
+    render();
+  }
+
+  // ── Event wiring ────────────────────────────────────────────────
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('button[data-truck]');
+    if (btn) {
+      markClean(btn.getAttribute('data-truck'));
+      return;
+    }
+    var tab = e.target.closest && e.target.closest('button[data-view]');
+    if (tab) {
+      setView(tab.getAttribute('data-view'));
+    }
+  });
+
+  $('search-input').addEventListener('input', render);
+  $('search-clear').addEventListener('click', function () {
+    $('search-input').value = '';
+    render();
+  });
+  $('refresh-btn').addEventListener('click', function () {
+    setRefreshState('stale', 'Verversen…');
+    refresh();
+  });
+
+  // Stale-indicator zonder polling te forceren
+  setInterval(function () {
+    if (!lastOk) return;
+    var age = Date.now() - lastOk;
+    if (age > 45000) setRefreshState('stale', 'Verouderd…');
+  }, 5000);
+
+  // Eerste laad + polling
+  refresh().then(schedulePoll);
+})();
+</script>
+</body>
+</html>

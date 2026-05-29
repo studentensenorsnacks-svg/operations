@@ -1,0 +1,2434 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>EventSheet</title>
+<link rel="icon" type="image/svg+xml" href="eventsheet-logo.svg"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fdf8f0;--bg2:#f7ecd8;--bg3:#f0ddbe;
+  --text:#3a2415;--text2:#7a5a40;--text3:#b89878;
+  --border:rgba(120,60,20,.12);--border2:rgba(120,60,20,.22);
+  --accent:#e8662b;--accent2:#d05420;--accent-bg:#fef0e2;--accent-border:#f4a560;
+  --info-bg:#fef0e2;--info-text:#a04510;--info-border:#f4a560;
+  --warn-bg:#fdf0d4;--warn-text:#7a4d12;--warn-border:#e9b870;
+  --ok-bg:#eaf2dc;--ok-text:#3f5a18;--ok-border:#bcd28e;
+  --err-bg:#fde2dd;--err-text:#7a2818;--err-border:#f0a896;
+  --r:10px;--rl:14px;--rxl:18px;
+  --font:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --shadow:0 1px 2px rgba(120,60,20,.05),0 2px 6px rgba(120,60,20,.04);
+  --shadow-lg:0 4px 14px rgba(120,60,20,.08),0 14px 36px rgba(120,60,20,.06);
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c130b;--bg2:#28190e;--bg3:#382412;
+    --text:#fdf0e0;--text2:#c5a079;--text3:#856042;
+    --border:rgba(255,210,170,.1);--border2:rgba(255,210,170,.2);
+    --accent:#ff8048;--accent2:#ff9560;--accent-bg:#3a2418;--accent-border:#a85020;
+    --info-bg:#3a2418;--info-text:#ffa67a;--info-border:#a85020;
+    --warn-bg:#3a2a14;--warn-text:#e9b870;--warn-border:#7a4d12;
+    --ok-bg:#1f3014;--ok-text:#bcd28e;--ok-border:#3f5a18;
+    --err-bg:#3a1e18;--err-text:#f0a896;--err-border:#7a2818;
+    --shadow:0 1px 3px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.2);
+    --shadow-lg:0 4px 12px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c130b;--bg2:#28190e;--bg3:#382412;
+  --text:#fdf0e0;--text2:#c5a079;--text3:#856042;
+  --border:rgba(255,210,170,.1);--border2:rgba(255,210,170,.2);
+  --accent:#ff8048;--accent2:#ff9560;--accent-bg:#3a2418;--accent-border:#a85020;
+  --info-bg:#3a2418;--info-text:#ffa67a;--info-border:#a85020;
+  --warn-bg:#3a2a14;--warn-text:#e9b870;--warn-border:#7a4d12;
+  --ok-bg:#1f3014;--ok-text:#bcd28e;--ok-border:#3f5a18;
+  --err-bg:#3a1e18;--err-text:#f0a896;--err-border:#7a2818;
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.2);
+  --shadow-lg:0 4px 12px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.3);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+input,select,textarea{width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+textarea{resize:vertical;line-height:1.5}
+button{padding:8px 14px;font-size:13px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:background .12s,border-color .12s,transform .05s,box-shadow .12s;font-weight:500}
+button:hover{background:var(--bg2);border-color:var(--accent-border)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;box-shadow:0 1px 3px rgba(232,102,43,.3)}
+button.primary:hover{background:var(--accent2);border-color:var(--accent2);box-shadow:0 2px 8px rgba(232,102,43,.35)}
+button.ghost{background:transparent;border-color:transparent}
+button.ghost:hover{background:var(--bg2)}
+button.danger{color:var(--err-text);border-color:var(--err-border)}
+button.danger:hover{background:var(--err-bg)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;font-size:11px;font-weight:600;border-radius:100px;background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.chip.accent{background:var(--accent-bg);color:var(--accent2);border-color:var(--accent-border)}
+.chip.ok{background:var(--ok-bg);color:var(--ok-text);border-color:var(--ok-border)}
+.chip.warn{background:var(--warn-bg);color:var(--warn-text);border-color:var(--warn-border)}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);box-shadow:var(--shadow);transition:box-shadow .15s,border-color .15s}
+.card:hover{box-shadow:var(--shadow-lg);border-color:var(--border2)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+.setup-screen{max-width:560px;margin:4rem auto;padding:2rem;border:1px solid var(--border);border-radius:var(--rl);background:var(--bg2)}
+.setup-screen h1{font-size:22px;margin-bottom:8px}
+.setup-screen p{color:var(--text2);margin-bottom:1rem;line-height:1.6}
+.setup-screen pre{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:1rem;font-size:12px;overflow-x:auto;margin:1rem 0;line-height:1.6;font-family:monospace}
+.setup-screen code{background:var(--bg);padding:2px 6px;border-radius:4px;font-size:13px;font-family:monospace}
+.fade-in{animation:fadeIn .25s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+  .responsive-grid-2{grid-template-columns:1fr !important}
+  .hide-sm{display:none !important}
+}
+</style>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('ef_theme');
+    if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+  } catch(e){}
+})();
+</script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+const firebaseConfig = {
+  apiKey: "AIzaSyDnR_P-N-hto2Ft6lMs9dx6ZKWGCh5p19Q",
+  authDomain: "senorkeuringqr.firebaseapp.com",
+  projectId: "senorkeuringqr",
+  storageBucket: "senorkeuringqr.firebasestorage.app",
+  messagingSenderId: "805915489553",
+  appId: "1:805915489553:web:050773fe3744112f63c8b0",
+  measurementId: "G-MF2MC8SBTL"
+};
+const FIRESTORE_DATABASE_ID = "event";
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail, signInWithCustomToken, updatePassword, reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+let db, storage, auth, portalApp, portalAuth, portalStorage;
+const configValid = !firebaseConfig.apiKey.includes('VERVANG');
+if (configValid) {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app, FIRESTORE_DATABASE_ID);
+  storage = getStorage(app);
+  auth = getAuth(app);
+  // Separate Firebase app instance for the supplier portal session — so it
+  // doesn't conflict with the SaaS user's auth state in the same browser.
+  portalApp = initializeApp(firebaseConfig, 'portal');
+  portalAuth = getAuth(portalApp);
+  portalStorage = getStorage(portalApp);
+}
+window.__firebase = { db, storage, auth, portalAuth, portalStorage, configValid, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, orderBy, serverTimestamp, sRef, uploadBytes, getDownloadURL, deleteObject, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile, sendPasswordResetEmail, signInWithCustomToken, updatePassword, reauthenticateWithCredential, EmailAuthProvider, sendEmailVerification };
+if (window.__mountApp) window.__mountApp();
+</script>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
+<script>
+const { useState, useEffect, useRef, useMemo } = React;
+const h = React.createElement;
+
+// ============ helpers ============
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36);
+const fmt = d => d ? new Date(d).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fmtT = d => d ? new Date(d).toLocaleString('nl-BE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+const fmtDur = m => !m ? '' : (m >= 60 ? Math.floor(m/60)+'u'+(m%60?(' '+(m%60)+'m'):'') : m+'m');
+const ini = n => n?.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) || '?';
+
+const CATS = ['F&B','Personeel','Veiligheidsdiensten','Logistiek','Support on site','Productie','Structuren','Sound & Light'];
+const CAT_ICON = {
+  'F&B':'ti-tools-kitchen-2',
+  'Personeel':'ti-users-group',
+  'Veiligheidsdiensten':'ti-shield-check',
+  'Logistiek':'ti-truck-delivery',
+  'Support on site':'ti-headset',
+  'Productie':'ti-bulb',
+  'Structuren':'ti-building-bridge-2',
+  'Sound & Light':'ti-volume'
+};
+const CAT_MAP = {
+  'Catering':'F&B','Audio/Visual':'Sound & Light','Decoratie':'Productie',
+  'Transport':'Logistiek','Beveiliging':'Veiligheidsdiensten','Fotografie':'Productie',
+  'Bloemen':'Productie','Anders':'Productie'
+};
+const normCat = c => CAT_MAP[c] || c || '';
+
+const code = () => { const a = new Uint8Array(16); crypto.getRandomValues(a); return Array.from(a, b => b.toString(16).padStart(2,'0')).join(''); };
+const normCode = c => (c||'').trim().toLowerCase();
+const shortCode = c => c && c.length > 12 ? c.slice(0,4)+'…'+c.slice(-4) : c;
+
+const ST = {
+  open: {l:'Open', bg:'var(--warn-bg)', c:'var(--warn-text)', b:'var(--warn-border)'},
+  beantwoord: {l:'Beantwoord', bg:'var(--info-bg)', c:'var(--info-text)', b:'var(--info-border)'},
+  gesloten: {l:'Gesloten', bg:'var(--bg2)', c:'var(--text2)', b:'var(--border2)'}
+};
+const TST = {
+  open: {l:'Open', bg:'var(--bg2)', c:'var(--text2)', b:'var(--border)'},
+  done: {l:'Klaar', bg:'var(--ok-bg)', c:'var(--ok-text)', b:'var(--ok-border)'}
+};
+
+// Visibility: { mode: 'all' | 'cats' | 'sups', cats?: [...], sups?: [...] }
+const VIS_ALL = { mode: 'all' };
+const visMatches = (vis, sup) => {
+  if (!vis || vis.mode === 'all') return true;
+  if (vis.mode === 'cats') return vis.cats?.includes(normCat(sup.category));
+  if (vis.mode === 'sups') return vis.sups?.includes(sup.id);
+  return true;
+};
+const visLabel = vis => {
+  if (!vis || vis.mode === 'all') return 'Alle leveranciers';
+  if (vis.mode === 'cats') return `${vis.cats?.length || 0} categorie${vis.cats?.length === 1 ? '' : 'ën'}`;
+  if (vis.mode === 'sups') return `${vis.sups?.length || 0} leverancier${vis.sups?.length === 1 ? '' : 's'}`;
+  return '';
+};
+// Old document compat
+const docVis = d => d.visibility || (d.linkedSuppliers?.length ? { mode:'sups', sups:d.linkedSuppliers } : VIS_ALL);
+
+// Vaste velden definities
+const FIXED = [
+  { key:'location', label:'Locatie + adres', icon:'ti-map-pin', placeholder:'Bv. Sportpark De Bres, Hoofdweg 12, 9000 Gent' },
+  { key:'parking', label:'Parking-info', icon:'ti-parking', placeholder:'Bv. Crew parking aan gate B, gratis met deze badge' },
+  { key:'crew', label:'Crew bonnen', icon:'ti-receipt', placeholder:'Bv. 4 maaltijdbonnen per crewlid, af te halen bij infodesk' },
+  { key:'contact', label:'Verantwoordelijke + telefoon', icon:'ti-user-circle', placeholder:'Bv. Jelle Verboven · 0470 12 34 56' }
+];
+
+// ============ Firestore ============
+const FB = {
+  watch(col, cb) {
+    const { db, collection, onSnapshot } = window.__firebase;
+    return onSnapshot(collection(db, col), snap => {
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      items.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+      cb(items);
+    });
+  },
+  watchWs(col, wsId, cb) {
+    const { db, collection, query, where, onSnapshot } = window.__firebase;
+    return onSnapshot(query(collection(db, col), where('wsId', '==', wsId)), snap => {
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      items.sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+      cb(items);
+    });
+  },
+  watchDoc(col, id, cb) {
+    const { db, doc, onSnapshot } = window.__firebase;
+    return onSnapshot(doc(db, col, id), snap => cb(snap.exists() ? { id: snap.id, ...snap.data() } : null));
+  },
+  async getDoc(col, id) {
+    const { db, doc, getDoc } = window.__firebase;
+    const s = await getDoc(doc(db, col, id));
+    return s.exists() ? { id: s.id, ...s.data() } : null;
+  },
+  async queryFirst(col, field, value) {
+    const { db, collection, query, where, getDocs } = window.__firebase;
+    const snap = await getDocs(query(collection(db, col), where(field, '==', value)));
+    let result = null;
+    snap.forEach(d => { if (!result) result = { id: d.id, ...d.data() }; });
+    return result;
+  },
+  async save(col, id, data) {
+    const { db, doc, setDoc } = window.__firebase;
+    await setDoc(doc(db, col, id), data, { merge: true });
+  },
+  async del(col, id) {
+    const { db, doc, deleteDoc } = window.__firebase;
+    await deleteDoc(doc(db, col, id));
+  },
+  async upload(path, file, opts = {}) {
+    const { storage, portalStorage, sRef, uploadBytes, getDownloadURL } = window.__firebase;
+    const st = opts.portal ? portalStorage : storage;
+    const safe = file.name.replace(/[^\w.\-]+/g, '_');
+    const full = `${path}/${Date.now()}-${safe}`;
+    const r = sRef(st, full);
+    await uploadBytes(r, file);
+    const url = await getDownloadURL(r);
+    return { name: file.name, url, size: file.size, type: file.type, path: full };
+  },
+  async delFile(path) {
+    const { storage, sRef, deleteObject } = window.__firebase;
+    try { await deleteObject(sRef(storage, path)); } catch {}
+  }
+};
+
+// ============ Portal API (Cloud Function) ============
+const PORTAL_API = 'https://europe-west1-senorkeuringqr.cloudfunctions.net/portalAction';
+async function portalAPI(action, data) {
+  const res = await fetch(PORTAL_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...data })
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+  return j;
+}
+
+// Authenticated SaaS-side endpoints (GDPR rights, workspace mgmt).
+const ACCOUNT_API = 'https://europe-west1-senorkeuringqr.cloudfunctions.net/accountAction';
+async function accountAPI(action, data) {
+  const auth = window.__firebase?.auth;
+  const user = auth?.currentUser;
+  if (!user) throw new Error('Niet ingelogd');
+  const idToken = await user.getIdToken();
+  const res = await fetch(ACCOUNT_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+    body: JSON.stringify({ action, ...data })
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+  return j;
+}
+
+// ============ Export helpers (PDF + Word) ============
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('nl-BE', { day: '2-digit', month: 'long', year: 'numeric' }) : ''; }
+function safeFilename(s) { return String(s||'event').replace(/[^\w\-]+/g, '_').slice(0,60); }
+
+function newPdf() {
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) throw new Error('PDF library niet geladen');
+  return new jsPDF({ unit: 'mm', format: 'a4' });
+}
+
+function pdfHeader(doc, title, subtitle) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.text(title || '', 14, 18);
+  if (subtitle) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(120);
+    doc.text(subtitle, 14, 25);
+    doc.setTextColor(0);
+  }
+  doc.setDrawColor(232, 102, 43);
+  doc.setLineWidth(0.6);
+  doc.line(14, 29, 196, 29);
+}
+
+function pdfFooter(doc) {
+  const pages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`EventSheet · ${new Date().toLocaleDateString('nl-BE')} · pagina ${i}/${pages}`, 14, 290);
+    doc.setTextColor(0);
+  }
+}
+
+function exportEventPDF(event, suppliers) {
+  const doc = newPdf();
+  const evSups = (suppliers||[]).filter(s => event.suppliers?.includes(s.id));
+  pdfHeader(doc, event.name || 'Event', [event.date && fmtDate(event.date), event.location].filter(Boolean).join(' · '));
+  let y = 36;
+
+  if (event.description) {
+    doc.setFontSize(10); doc.setTextColor(80);
+    const lines = doc.splitTextToSize(event.description, 182);
+    doc.text(lines, 14, y); y += lines.length * 5 + 4;
+    doc.setTextColor(0);
+  }
+
+  // Vaste velden / praktische info
+  const fixedLabels = { location: 'Locatie + adres', parking: 'Parking-info', crew: 'Crew bonnen', contact: 'Verantwoordelijke + telefoon' };
+  const fixedRows = Object.entries(fixedLabels).map(([k,l]) => {
+    const v = event.fixed?.[k];
+    const text = v?.text || (v?.variants?.length ? v.variants.map(x => `[${x.cat}] ${x.text}`).join(' / ') : '');
+    return text ? [l, text] : null;
+  }).filter(Boolean);
+  if (fixedRows.length) {
+    doc.autoTable({ startY: y, head: [['Praktische info', '']], body: fixedRows, theme: 'grid', headStyles: { fillColor: [232,102,43], textColor: 255 }, columnStyles: { 0: { cellWidth: 50, fontStyle: 'bold' }, 1: { cellWidth: 132 } } });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+
+  // Run sheet
+  const tl = (event.timeline||[]).slice().sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  if (tl.length) {
+    doc.autoTable({ startY: y, head: [['Tijd', 'Wat', 'Duur', 'Zone', 'Verantw.']], body: tl.map(t => [t.time||'', t.text||'', fmtDur(t.duration), t.zone||'', t.responsible||'']), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255 }, styles: { fontSize: 9 } });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+
+  // Tasks
+  const tasks = event.tasks || [];
+  if (tasks.length) {
+    doc.autoTable({ startY: y, head: [['Taak', 'Deadline', 'Status', 'Voor']], body: tasks.map(t => [t.title||'', t.deadline ? fmtDate(t.deadline) : '', t.status==='done'?'Klaar':'Open', t.visibility?.mode==='internal'?'Intern':(t.visibility?.mode==='all'?'Iedereen':(t.visibility?.mode==='cats'?'Cat: '+(t.visibility.cats||[]).join(', '):'Specifiek'))]), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255 }, styles: { fontSize: 9 } });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+
+  // Suppliers
+  if (evSups.length) {
+    doc.autoTable({ startY: y, head: [['Leverancier', 'Bedrijf', 'E-mail', 'Telefoon', 'Categorie']], body: evSups.map(s => [s.name||'', s.company||'', s.email||'', s.phone||'', s.category||'']), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255 }, styles: { fontSize: 9 } });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+
+  // Documents
+  const docs = event.documents || [];
+  if (docs.length) {
+    doc.autoTable({ startY: y, head: [['Document', 'Notitie']], body: docs.map(d => [d.name||'', d.notes||'']), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255 }, styles: { fontSize: 9 } });
+  }
+
+  pdfFooter(doc);
+  doc.save(`eventsheet-${safeFilename(event.name)}.pdf`);
+}
+
+function exportRunSheetPDF(event) {
+  const doc = newPdf();
+  pdfHeader(doc, 'Draaiboek — ' + (event.name||''), [event.date && fmtDate(event.date), event.location].filter(Boolean).join(' · '));
+  const tl = (event.timeline||[]).slice().sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  if (!tl.length) {
+    doc.setFontSize(11); doc.text('Geen tijdslijn-items.', 14, 40);
+  } else {
+    doc.autoTable({ startY: 36, head: [['Tijd', 'Wat gebeurt er', 'Duur', 'Zone', 'Verantwoordelijke']], body: tl.map(t => [t.time||'', t.text||'', fmtDur(t.duration), t.zone||'', t.responsible||'']), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255, fontSize: 10 }, styles: { fontSize: 10, cellPadding: 3 }, columnStyles: { 0: { cellWidth: 18, fontStyle: 'bold' }, 2: { cellWidth: 18 }, 3: { cellWidth: 28 }, 4: { cellWidth: 35 } } });
+  }
+  pdfFooter(doc);
+  doc.save(`draaiboek-${safeFilename(event.name)}.pdf`);
+}
+
+function exportRunSheetDoc(event) {
+  const tl = (event.timeline||[]).slice().sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const rows = tl.map(t => `<tr><td><b>${esc(t.time)}</b></td><td>${esc(t.text)}</td><td>${esc(fmtDur(t.duration))}</td><td>${esc(t.zone)}</td><td>${esc(t.responsible)}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Draaiboek ${esc(event.name||'')}</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>body{font-family:Calibri,Arial,sans-serif;color:#1a1a1a}h1{font-size:24pt;margin-bottom:6pt;color:#0a0e27}.meta{color:#666;margin-bottom:18pt}table{width:100%;border-collapse:collapse;font-size:11pt}th{background:#0a0e27;color:#fff;padding:8pt;text-align:left}td{border-bottom:1pt solid #ddd;padding:6pt;vertical-align:top}tr:nth-child(even) td{background:#f6f6f6}</style></head><body>
+<h1>Draaiboek — ${esc(event.name||'')}</h1>
+<div class="meta">${esc([event.date && fmtDate(event.date), event.location].filter(Boolean).join(' · '))}</div>
+${tl.length ? `<table><thead><tr><th style="width:60pt">Tijd</th><th>Wat gebeurt er</th><th style="width:50pt">Duur</th><th style="width:80pt">Zone</th><th style="width:110pt">Verantwoordelijke</th></tr></thead><tbody>${rows}</tbody></table>` : '<p>Geen tijdslijn-items.</p>'}
+<p style="margin-top:24pt;font-size:9pt;color:#999">Geëxporteerd uit EventSheet — ${new Date().toLocaleDateString('nl-BE')}</p>
+</body></html>`;
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `draaiboek-${safeFilename(event.name)}.doc`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportDashboardPDF(events) {
+  const doc = newPdf();
+  pdfHeader(doc, 'Events overzicht', `${events.length} event${events.length===1?'':'s'} · ${new Date().toLocaleDateString('nl-BE')}`);
+  doc.autoTable({ startY: 36, head: [['Naam', 'Datum', 'Locatie', '# Leveranciers', '# Taken']], body: events.map(e => [e.name||'', e.date ? fmtDate(e.date) : '', e.location||'', String((e.suppliers||[]).length), String((e.tasks||[]).length)]), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255 }, styles: { fontSize: 9 } });
+  pdfFooter(doc);
+  doc.save('eventsheet-dashboard.pdf');
+}
+
+function exportSuppliersPDF(suppliers) {
+  const doc = newPdf();
+  pdfHeader(doc, 'Leveranciers', `${suppliers.length} leverancier${suppliers.length===1?'':'s'}`);
+  doc.autoTable({ startY: 36, head: [['Naam', 'Bedrijf', 'E-mail', 'Telefoon', 'Categorie']], body: suppliers.map(s => [s.name||'', s.company||'', s.email||'', s.phone||'', s.category||'']), theme: 'striped', headStyles: { fillColor: [232,102,43], textColor: 255 }, styles: { fontSize: 9 } });
+  pdfFooter(doc);
+  doc.save('eventsheet-leveranciers.pdf');
+}
+
+// ============ SETUP ============
+function SetupScreen() {
+  return h('div', { className: 'setup-screen' },
+    h('h1', null, '⚙️ Setup vereist'),
+    h('p', null, 'Open ', h('code', null, 'eventsheet.html'), ' en vervang de Firebase configuratie bovenaan met die van jouw project.')
+  );
+}
+
+// ============ ROOT / AUTH SHELL ============
+function CenterCard({ title, subtitle, children }) {
+  return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', background: 'var(--bg)' } },
+    h('div', { style: { width: '100%', maxWidth: 420 } },
+      h('div', { style: { textAlign: 'center', marginBottom: 24 } },
+        h('img', { src: '/eventsheet-logo.svg', alt: 'EventSheet', style: { width: 72, height: 72, borderRadius: 18, display: 'inline-block', marginBottom: 14, boxShadow: '0 6px 20px rgba(10,14,39,.25)', objectFit: 'cover' } }),
+        h('h1', { style: { fontSize: 24, fontWeight: 800, letterSpacing: '-.01em' } }, title),
+        subtitle && h('div', { style: { fontSize: 13, color: 'var(--text2)', marginTop: 6 } }, subtitle)
+      ),
+      h('div', { className: 'card', style: { padding: '24px 22px' } }, children),
+      h('div', { style: { textAlign: 'center', marginTop: 16, fontSize: 11, color: 'var(--text3)' } },
+        h('a', { href: '/privacy.html', style: { color: 'var(--text3)', textDecoration: 'none' } }, 'Privacy'),
+        ' · ',
+        h('a', { href: '/terms.html', style: { color: 'var(--text3)', textDecoration: 'none' } }, 'Voorwaarden')
+      )
+    )
+  );
+}
+
+function CookieBanner() {
+  const [seen, setSeen] = useState(() => { try { return localStorage.getItem('ef_cookie_seen') === '1'; } catch { return true; } });
+  if (seen) return null;
+  const dismiss = () => { try { localStorage.setItem('ef_cookie_seen', '1'); } catch {} setSeen(true); };
+  return h('div', { style: { position: 'fixed', bottom: 16, left: 16, right: 16, maxWidth: 480, margin: '0 auto', padding: '14px 16px', background: 'var(--bg)', border: '1px solid var(--border2)', borderRadius: 'var(--rl)', boxShadow: 'var(--shadow-lg)', zIndex: 9000, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' } },
+    h('i', { className: 'ti ti-cookie', style: { fontSize: 18, color: 'var(--accent)', flexShrink: 0, marginTop: 1 } }),
+    h('div', { style: { flex: 1, minWidth: 200, lineHeight: 1.5 } },
+      h('div', { style: { fontWeight: 600, marginBottom: 2 } }, 'Strikt noodzakelijke cookies'),
+      h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, 'EventSheet gebruikt enkel auth-cookies (Firebase) en localStorage voor je voorkeuren. Geen tracking, geen marketing. ',
+        h('a', { href: '/privacy.html', style: { color: 'var(--accent2)' } }, 'Meer info')
+      )
+    ),
+    h('button', { className: 'primary', onClick: dismiss, style: { fontSize: 12, padding: '6px 12px' } }, 'Begrepen')
+  );
+}
+
+function AuthScreen({ inviteCtx }) {
+  const [mode, setMode] = useState(inviteCtx ? 'signup' : 'login');
+  const [email, setEmail] = useState(''), [pwd, setPwd] = useState(''), [name, setName] = useState('');
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const submit = async () => {
+    if (busy) return;
+    setErr(''); setBusy(true);
+    try {
+      const fb = window.__firebase;
+      if (mode === 'signup') {
+        const cred = await fb.createUserWithEmailAndPassword(fb.auth, email.trim(), pwd);
+        if (name.trim()) await fb.updateProfile(cred.user, { displayName: name.trim() });
+        await fb.setDoc(fb.doc(fb.db, 'users', cred.user.uid), { email: cred.user.email, displayName: name.trim() || cred.user.email, workspaceIds: [], createdAt: new Date().toISOString() }, { merge: true });
+        try { await fb.sendEmailVerification(cred.user); } catch (e) { console.warn('verify mail failed', e); }
+      } else {
+        await fb.signInWithEmailAndPassword(fb.auth, email.trim(), pwd);
+      }
+    } catch (e) { setErr(e?.code === 'auth/invalid-credential' ? 'Verkeerde inloggegevens.' : e?.code === 'auth/email-already-in-use' ? 'Dit e-mailadres bestaat al.' : e?.code === 'auth/weak-password' ? 'Wachtwoord te kort (min. 6 tekens).' : (e?.message || 'Mislukt')); }
+    finally { setBusy(false); }
+  };
+  const reset = async () => {
+    if (!email.trim()) { setErr('Vul eerst je e-mailadres in.'); return; }
+    try { await window.__firebase.sendPasswordResetEmail(window.__firebase.auth, email.trim()); setErr('Reset-link verstuurd naar ' + email.trim()); }
+    catch (e) { setErr(e?.message || 'Mislukt'); }
+  };
+  return h(CenterCard, { title: mode === 'signup' ? 'Account aanmaken' : 'Inloggen', subtitle: inviteCtx ? `Je werd uitgenodigd voor ${inviteCtx.wsName || 'een werkruimte'}. Maak een account of log in om te accepteren.` : 'EventSheet voor jouw events.' },
+    h('div', { style: { display: 'flex', gap: 6, marginBottom: 16 } },
+      h('button', { onClick: () => setMode('login'), style: { flex: 1, justifyContent: 'center', background: mode==='login'?'var(--accent-bg)':'var(--bg)', borderColor: mode==='login'?'var(--accent-border)':'var(--border)', color: mode==='login'?'var(--accent2)':'var(--text)', fontWeight: mode==='login'?600:500 } }, 'Inloggen'),
+      h('button', { onClick: () => setMode('signup'), style: { flex: 1, justifyContent: 'center', background: mode==='signup'?'var(--accent-bg)':'var(--bg)', borderColor: mode==='signup'?'var(--accent-border)':'var(--border)', color: mode==='signup'?'var(--accent2)':'var(--text)', fontWeight: mode==='signup'?600:500 } }, 'Registreren')
+    ),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      mode === 'signup' && h('div', null,
+        h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 5 } }, 'Naam'),
+        h('input', { value: name, onChange: e => setName(e.target.value), placeholder: 'Jouw naam', autoFocus: true })
+      ),
+      h('div', null,
+        h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 5 } }, 'E-mail'),
+        h('input', { type: 'email', value: email, onChange: e => setEmail(e.target.value), placeholder: 'jij@bedrijf.be', autoFocus: mode==='login' })
+      ),
+      h('div', null,
+        h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 5 } }, 'Wachtwoord'),
+        h('input', { type: 'password', value: pwd, onChange: e => setPwd(e.target.value), placeholder: 'Minimum 6 tekens', onKeyDown: e => e.key === 'Enter' && submit() })
+      ),
+      err && h('div', { style: { fontSize: 12, padding: '8px 11px', background: 'var(--err-bg)', color: 'var(--err-text)', border: '1px solid var(--err-border)', borderRadius: 'var(--r)' } }, err),
+      h('button', { className: 'primary', onClick: submit, disabled: !email.trim() || !pwd || busy, style: { width: '100%', justifyContent: 'center', padding: '10px 14px' } }, busy ? 'Bezig...' : (mode === 'signup' ? 'Account aanmaken' : 'Inloggen')),
+      mode === 'login' && h('button', { className: 'ghost', onClick: reset, style: { width: '100%', justifyContent: 'center', fontSize: 12 } }, 'Wachtwoord vergeten?')
+    )
+  );
+}
+
+function WorkspaceSetup({ user, userDoc }) {
+  const [wsName, setWsName] = useState('');
+  const [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  const create = async () => {
+    if (!wsName.trim() || busy) return;
+    setBusy(true); setErr('');
+    try {
+      const fb = window.__firebase;
+      const wsId = uid();
+      const now = new Date().toISOString();
+      await fb.setDoc(fb.doc(fb.db, 'workspaces', wsId), {
+        name: wsName.trim(),
+        ownerId: user.uid,
+        members: { [user.uid]: { role: 'owner', email: user.email, displayName: user.displayName || user.email, joinedAt: now } },
+        createdAt: now
+      });
+      await fb.setDoc(fb.doc(fb.db, 'users', user.uid), {
+        workspaceIds: [...((userDoc?.workspaceIds)||[]), wsId],
+        defaultWorkspaceId: wsId
+      }, { merge: true });
+    } catch (e) { setErr(e?.message || 'Mislukt'); }
+    finally { setBusy(false); }
+  };
+  const signOutUser = () => window.__firebase.signOut(window.__firebase.auth);
+  return h(CenterCard, { title: 'Werkruimte aanmaken', subtitle: 'Geef je werkruimte een naam — meestal je bedrijfs- of teamnaam.' },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      h('input', { value: wsName, onChange: e => setWsName(e.target.value), placeholder: 'Bv. Señor Snacks', autoFocus: true, onKeyDown: e => e.key === 'Enter' && create() }),
+      err && h('div', { style: { fontSize: 12, padding: '8px 11px', background: 'var(--err-bg)', color: 'var(--err-text)', borderRadius: 'var(--r)' } }, err),
+      h('button', { className: 'primary', onClick: create, disabled: !wsName.trim() || busy, style: { width: '100%', justifyContent: 'center', padding: '10px 14px' } }, busy ? 'Aanmaken...' : 'Werkruimte aanmaken'),
+      h('button', { className: 'ghost', onClick: signOutUser, style: { width: '100%', justifyContent: 'center', fontSize: 12 } }, 'Uitloggen')
+    )
+  );
+}
+
+function InviteRedeem({ token, user }) {
+  const [invite, setInvite] = useState(undefined);
+  const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
+  useEffect(() => { (async () => {
+    const i = await FB.getDoc('invites', token);
+    setInvite(i);
+  })(); }, [token]);
+  const accept = async () => {
+    if (!user || !invite || busy) return;
+    setBusy(true); setMsg('');
+    try {
+      const fb = window.__firebase;
+      const ws = await FB.getDoc('workspaces', invite.wsId);
+      if (!ws) throw new Error('Werkruimte bestaat niet meer');
+      const now = new Date().toISOString();
+      const members = { ...(ws.members||{}), [user.uid]: { role: invite.role || 'member', email: user.email, displayName: user.displayName || user.email, joinedAt: now } };
+      await fb.setDoc(fb.doc(fb.db, 'workspaces', invite.wsId), { members }, { merge: true });
+      const userDoc = await FB.getDoc('users', user.uid);
+      const wsIds = Array.from(new Set([...((userDoc?.workspaceIds)||[]), invite.wsId]));
+      await fb.setDoc(fb.doc(fb.db, 'users', user.uid), { workspaceIds: wsIds, defaultWorkspaceId: invite.wsId }, { merge: true });
+      await fb.deleteDoc(fb.doc(fb.db, 'invites', token));
+      window.location.hash = '';
+    } catch (e) { setMsg(e?.message || 'Mislukt'); }
+    finally { setBusy(false); }
+  };
+  if (invite === undefined) return h(CenterCard, { title: 'Uitnodiging laden...' });
+  if (!invite) return h(CenterCard, { title: 'Uitnodiging ongeldig', subtitle: 'Deze link bestaat niet meer of is al gebruikt.' },
+    h('button', { className: 'primary', onClick: () => { window.location.hash = ''; }, style: { width: '100%', justifyContent: 'center' } }, 'Naar inlog')
+  );
+  if (!user) return h(AuthScreen, { inviteCtx: invite });
+  return h(CenterCard, { title: `Word lid van ${invite.wsName||'werkruimte'}`, subtitle: invite.email ? `Uitgenodigd als ${invite.email} (${invite.role||'member'}).` : `Rol: ${invite.role||'member'}.` },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      msg && h('div', { style: { fontSize: 12, padding: '8px 11px', background: 'var(--err-bg)', color: 'var(--err-text)', borderRadius: 'var(--r)' } }, msg),
+      h('button', { className: 'primary', onClick: accept, disabled: busy, style: { width: '100%', justifyContent: 'center', padding: '10px 14px' } }, busy ? 'Bezig...' : 'Uitnodiging accepteren'),
+      h('button', { className: 'ghost', onClick: () => window.__firebase.signOut(window.__firebase.auth), style: { width: '100%', justifyContent: 'center', fontSize: 12 } }, 'Uitloggen als andere gebruiker')
+    )
+  );
+}
+
+function Root() {
+  const fb = window.__firebase;
+  if (!fb || !fb.configValid) return h(SetupScreen);
+
+  const [user, setUser] = useState(undefined);
+  const [userDoc, setUserDoc] = useState(undefined);
+  const [currentWs, setCurrentWs] = useState(() => { try { return localStorage.getItem('ef_ws') || null; } catch { return null; } });
+  const [wsDoc, setWsDoc] = useState(undefined);
+  const [hash, setHash] = useState(() => window.location.hash || '');
+
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash || '');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  useEffect(() => fb.onAuthStateChanged(fb.auth, u => setUser(u || null)), []);
+
+  useEffect(() => {
+    if (user === null) { setUserDoc(null); return; }
+    if (!user) return;
+    return FB.watchDoc('users', user.uid, d => setUserDoc(d));
+  }, [user?.uid]);
+
+  useEffect(() => {
+    if (!userDoc) return;
+    if (currentWs && userDoc.workspaceIds?.includes(currentWs)) return;
+    const next = userDoc.defaultWorkspaceId || userDoc.workspaceIds?.[0] || null;
+    setCurrentWs(next);
+    try { if (next) localStorage.setItem('ef_ws', next); else localStorage.removeItem('ef_ws'); } catch {}
+  }, [userDoc]);
+
+  useEffect(() => {
+    if (!currentWs) { setWsDoc(null); return; }
+    return FB.watchDoc('workspaces', currentWs, d => setWsDoc(d));
+  }, [currentWs]);
+
+  const switchWs = wsId => {
+    setCurrentWs(wsId);
+    try { localStorage.setItem('ef_ws', wsId); } catch {}
+    if (user) fb.setDoc(fb.doc(fb.db, 'users', user.uid), { defaultWorkspaceId: wsId }, { merge: true });
+  };
+  const signOutUser = async () => {
+    try { localStorage.removeItem('ef_ws'); } catch {}
+    setCurrentWs(null);
+    await fb.signOut(fb.auth);
+  };
+
+  let content;
+  if (hash.startsWith('#portal')) {
+    content = h(App, { portalMode: true, user: null, userDoc: null, wsId: null, wsDoc: null, switchWs, signOutUser });
+  } else if (hash.startsWith('#invite/')) {
+    content = h(InviteRedeem, { token: hash.replace('#invite/', ''), user });
+  } else if (user === undefined || (user && userDoc === undefined)) {
+    content = h(CenterCard, { title: 'EventSheet', subtitle: 'Laden...' });
+  } else if (!user) {
+    content = h(AuthScreen);
+  } else if (!userDoc?.workspaceIds?.length) {
+    content = h(WorkspaceSetup, { user, userDoc });
+  } else if (currentWs && wsDoc === undefined) {
+    content = h(CenterCard, { title: 'Werkruimte laden...' });
+  } else if (!currentWs) {
+    content = h(WorkspaceSetup, { user, userDoc });
+  } else {
+    const myRole = wsDoc?.members?.[user.uid]?.role || 'editor';
+    const canEdit = myRole !== 'viewer';
+    content = h(App, { portalMode: false, user, userDoc, wsId: currentWs, wsDoc, switchWs, signOutUser, canEdit, myRole });
+  }
+  return h(React.Fragment, null, content, h(CookieBanner));
+}
+
+// ============ APP ============
+function App({ portalMode, user, userDoc, wsId, wsDoc, switchWs, signOutUser, canEdit = true, myRole }) {
+  const fb = window.__firebase;
+  if (!fb || !fb.configValid) return h(SetupScreen);
+
+  const [ev, sEv] = useState([]);
+  const [su, sSu] = useState([]);
+  const [rq, sRq] = useState([]);
+  const [ld, sLd] = useState(false);
+  const [pg, sPg] = useState('dashboard');
+  const [eid, sEid] = useState(null);
+  const [tb, sTb] = useState('overzicht');
+  const [md, sMd] = useState(null);
+  const [selR, sSelR] = useState(null);
+  const [pCode, sPCode] = useState('');
+  const [actP, sActP] = useState(null);
+  const [ts, sTs] = useState(null);
+  const [pe, sPe] = useState(() => { try { return JSON.parse(localStorage.getItem('ef_pending') || '{}'); } catch { return {}; } });
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#portal')) {
+      sPg('portal');
+      const c = hash.replace('#portal/','').replace('#portal','');
+      if (c) sActP(c);
+    }
+  }, []);
+
+  const reloadPortal = async (code) => {
+    try {
+      const res = await portalAPI('load', { portalCode: code });
+      if (res.customToken && fb.portalAuth) {
+        try { await fb.signInWithCustomToken(fb.portalAuth, res.customToken); }
+        catch (e) { console.error('portal signin failed', e); }
+      }
+      sSu(res.supplier ? [res.supplier] : []);
+      sEv(res.events || []);
+      sRq(res.requests || []);
+    } catch (err) { console.error('portal load', err); sSu([]); sEv([]); sRq([]); }
+    finally { sLd(true); }
+  };
+
+  useEffect(() => {
+    if (portalMode) {
+      const hash = window.location.hash;
+      const code = hash.replace('#portal/','').replace('#portal','');
+      if (!code) { sLd(true); return; }
+      reloadPortal(code);
+      return;
+    }
+    if (!wsId) return;
+    let loaded = 0;
+    const done = () => { if (++loaded >= 3) sLd(true); };
+    const u1 = FB.watchWs('events', wsId, d => { sEv(d); done(); });
+    const u2 = FB.watchWs('suppliers', wsId, d => { sSu(d); done(); });
+    const u3 = FB.watchWs('requests', wsId, d => { sRq(d); done(); });
+    return () => { u1(); u2(); u3(); };
+  }, [wsId, portalMode]);
+
+  const savePe = v => { sPe(v); localStorage.setItem('ef_pending', JSON.stringify(v)); };
+  const toast = (m, t='ok') => { sTs({m,t}); setTimeout(() => sTs(null), 3500); };
+  const pCt = Object.values(pe).reduce((a,m) => a + Object.values(m).reduce((b,c) => b+c.length, 0), 0);
+  const cE = ev.find(e => e.id === eid);
+  const oR = rq.filter(r => r.status === 'beantwoord').length;
+  const nav = (p, e=null) => { sPg(p); sEid(e); sTb('overzicht'); sMd(null); sSelR(null); };
+
+  const queueUpdate = (event, itemName, visibility) => {
+    if (!visibility) return;
+    const targetSups = su.filter(s => event.suppliers?.includes(s.id) && visMatches(visibility, s));
+    if (!targetSups.length) return;
+    const np = { ...pe };
+    targetSups.forEach(s => {
+      if (!np[s.id]) np[s.id] = {};
+      if (!np[s.id][event.id]) np[s.id][event.id] = [];
+      np[s.id][event.id].push({ name: itemName, time: new Date().toISOString() });
+    });
+    savePe(np);
+  };
+
+  // --- Event mutations
+  const addEv = async d => {
+    if (!wsId) { toast('Geen werkruimte actief', 'err'); return; }
+    const id = uid();
+    const e = { ...d, wsId, suppliers: [], documents: [], infoBlocks: [], timeline: [], tasks: [], fixed: {}, createdAt: new Date().toISOString(), createdBy: user?.uid || null };
+    try { await FB.save('events', id, e); sMd(null); setTimeout(() => nav('event', id), 100); }
+    catch (err) { toast('Opslaan mislukt: '+(err?.message||'onbekend'), 'err'); }
+  };
+  const updE = async patch => {
+    if (!cE) return;
+    try { await FB.save('events', eid, { ...cE, ...patch }); toast('Opgeslagen'); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const delE = async i => { if (!confirm('Verwijderen?')) return; try { await FB.del('events', i); nav('dashboard'); } catch (err) { toast('Mislukt: '+err?.message, 'err'); } };
+
+  // --- Supplier mutations
+  const addSu = async d => {
+    if (!wsId) { toast('Geen werkruimte actief', 'err'); return; }
+    const id = uid();
+    try {
+      await FB.save('suppliers', id, { ...d, wsId, portalCode: code(), createdAt: new Date().toISOString(), createdBy: user?.uid || null });
+      sMd(null); toast('Toegevoegd');
+    } catch (err) { console.error(err); toast('Opslaan mislukt: '+(err?.message||'onbekend'), 'err'); }
+  };
+  const updSu = async (id, patch) => {
+    const s = su.find(x => x.id === id);
+    if (!s) return;
+    try { await FB.save('suppliers', id, { ...s, ...patch }); sMd(null); toast('Opgeslagen'); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const delSu = async id => { if (!confirm('Leverancier definitief verwijderen?')) return; try { await FB.del('suppliers', id); toast('Verwijderd'); } catch (err) { toast('Mislukt: '+err?.message, 'err'); } };
+
+  // --- Event-supplier linking
+  const linkSu = async sid => {
+    if (!cE) return;
+    if (!cE.suppliers.includes(sid)) await FB.save('events', eid, { ...cE, suppliers: [...cE.suppliers, sid] });
+    sMd(null);
+  };
+  const unlinkSu = async sid => {
+    if (!cE) return;
+    await FB.save('events', eid, { ...cE, suppliers: cE.suppliers.filter(i => i !== sid) });
+  };
+
+  // --- Fixed fields
+  const saveFixed = async (key, value) => {
+    if (!cE) return;
+    const next = { ...(cE.fixed || {}), [key]: value };
+    try { await FB.save('events', eid, { ...cE, fixed: next }); toast('Opgeslagen'); queueUpdate(cE, FIXED.find(f=>f.key===key)?.label || 'Info', value?.visibility); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+
+  // --- Info blocks
+  const saveBlock = async block => {
+    if (!cE) return;
+    const list = cE.infoBlocks || [];
+    const idx = list.findIndex(b => b.id === block.id);
+    const next = idx >= 0 ? list.map((b,i) => i===idx ? block : b) : [...list, block];
+    try { await FB.save('events', eid, { ...cE, infoBlocks: next }); sMd(null); toast('Opgeslagen'); queueUpdate(cE, block.title || 'Info', block.visibility); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const delBlock = async bid => {
+    if (!cE) return;
+    try { await FB.save('events', eid, { ...cE, infoBlocks: (cE.infoBlocks||[]).filter(b => b.id !== bid) }); toast('Verwijderd'); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+
+  // --- Documents
+  const upD = async d => {
+    if (!cE) return;
+    const doc = { id: uid(), ...d, uploadedAt: new Date().toISOString() };
+    try {
+      await FB.save('events', eid, { ...cE, documents: [...(cE.documents||[]), doc] });
+      sMd(null); queueUpdate(cE, doc.name, d.visibility); toast('Geüpload');
+    } catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const delD = async i => { if (!cE) return; await FB.save('events', eid, { ...cE, documents: (cE.documents||[]).filter(d => d.id !== i) }); };
+
+  // --- Timeline
+  const saveTl = async item => {
+    if (!cE) return;
+    const list = cE.timeline || [];
+    const idx = list.findIndex(t => t.id === item.id);
+    const next = idx >= 0 ? list.map((t,i) => i===idx ? item : t) : [...list, item];
+    next.sort((a,b) => (a.time||'').localeCompare(b.time||''));
+    try { await FB.save('events', eid, { ...cE, timeline: next }); sMd(null); toast('Opgeslagen'); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const delTl = async tid => { if (!cE) return; try { await FB.save('events', eid, { ...cE, timeline: (cE.timeline||[]).filter(t => t.id !== tid) }); } catch (err) { toast('Mislukt: '+err?.message, 'err'); } };
+
+  // --- Tasks
+  const saveTask = async task => {
+    if (!cE) return;
+    const list = cE.tasks || [];
+    const idx = list.findIndex(t => t.id === task.id);
+    const next = idx >= 0 ? list.map((t,i) => i===idx ? task : t) : [...list, task];
+    try {
+      await FB.save('events', eid, { ...cE, tasks: next });
+      sMd(null); toast('Opgeslagen');
+      if (task.visibility && task.visibility.mode !== 'internal') queueUpdate(cE, `Taak: ${task.title}`, task.visibility);
+    } catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const delTask = async tid => { if (!cE) return; try { await FB.save('events', eid, { ...cE, tasks: (cE.tasks||[]).filter(t => t.id !== tid) }); } catch (err) { toast('Mislukt: '+err?.message, 'err'); } };
+  const toggleTask = async (eId, tid) => {
+    if (portalMode) {
+      try { await portalAPI('toggleTask', { portalCode: actP, eventId: eId, taskId: tid }); await reloadPortal(actP); }
+      catch (err) { console.error(err); toast('Mislukt: '+err?.message, 'err'); }
+      return;
+    }
+    const e = ev.find(x => x.id === eId);
+    if (!e) return;
+    const next = (e.tasks||[]).map(t => t.id === tid ? { ...t, status: t.status === 'done' ? 'open' : 'done' } : t);
+    try { await FB.save('events', eId, { ...e, tasks: next }); }
+    catch (err) { console.error(err); }
+  };
+  const addTaskResponse = async (eId, tid, sup, text, attachment) => {
+    if (portalMode) {
+      try { await portalAPI('addTaskResponse', { portalCode: actP, eventId: eId, taskId: tid, text, attachment }); await reloadPortal(actP); }
+      catch (err) { console.error(err); toast('Mislukt: '+err?.message, 'err'); }
+      return;
+    }
+    const e = ev.find(x => x.id === eId);
+    if (!e) return;
+    const resp = { id: uid(), supplierId: sup?.id || null, supplierName: sup?.name || 'Leverancier', text: text || '', attachment: attachment || null, createdAt: new Date().toISOString() };
+    const next = (e.tasks||[]).map(t => t.id === tid ? { ...t, responses: [...(t.responses||[]), resp] } : t);
+    try { await FB.save('events', eId, { ...e, tasks: next }); }
+    catch (err) { console.error(err); }
+  };
+
+  // --- Requests
+  const newRq = async d => {
+    if (!wsId) { toast('Geen werkruimte actief', 'err'); return; }
+    const id = uid();
+    const r = { ...d, wsId, status:'open', messages: [{id:uid(), from:'organizer', text:d.message, createdAt:new Date().toISOString()}], createdAt: new Date().toISOString(), createdBy: user?.uid || null };
+    try { await FB.save('requests', id, r); sMd(null); toast('Aanvraag verstuurd'); }
+    catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const addMsg = async (id, from, text, att=null) => {
+    const r = rq.find(x => x.id === id);
+    if (!r) return;
+    try {
+      if (portalMode && from === 'supplier') {
+        await portalAPI('addMessage', { portalCode: actP, requestId: id, text, attachment: att });
+        await reloadPortal(actP);
+        toast('Antwoord verstuurd');
+      } else {
+        await FB.save('requests', id, { ...r, status: from === 'supplier' ? 'beantwoord' : r.status, messages: [...r.messages, {id:uid(), from, text, attachment:att, createdAt:new Date().toISOString()}] });
+        if (from === 'supplier') toast('Antwoord verstuurd');
+      }
+    } catch (err) { toast('Mislukt: '+err?.message, 'err'); }
+  };
+  const closeR = async id => { const r = rq.find(x => x.id === id); if (!r) return; try { await FB.save('requests', id, { ...r, status:'gesloten' }); toast('Afgesloten'); } catch (err) { toast('Mislukt: '+err?.message, 'err'); } };
+
+  const enterP = async () => {
+    const c = normCode(pCode);
+    if (!c) { toast('Voer een code in', 'err'); return; }
+    try {
+      await portalAPI('load', { portalCode: c });
+      sActP(c); window.location.hash = `portal/${c}`;
+    } catch (err) { toast('Onbekende code', 'err'); }
+  };
+  const copyPortalLink = sup => {
+    const url = `${window.location.origin}${window.location.pathname}#portal/${sup.portalCode}`;
+    navigator.clipboard.writeText(url).then(() => toast('Link gekopieerd'));
+  };
+
+  if (!ld) return h('div', { style: { padding: 60, textAlign: 'center', color: 'var(--text2)' } }, 'Verbinden met Firebase...');
+
+  return h('div', { style: { display: 'flex', height: '100vh', overflow: 'hidden' } },
+    pg !== 'portal' && h(Side, { ev, pg, eid, pCt, oR, nav, sMd, sActP, user, userDoc, wsDoc, switchWs, signOutUser, canEdit, myRole }),
+    h('div', { style: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
+      pg !== 'portal' && h(Top, { pg, e: cE, tb, sTb, pCt, sMd, nav, selR, sSelR, rq, canEdit }),
+      h('div', { style: { flex: 1, padding: pg === 'portal' ? 0 : '1.5rem 1.75rem', overflowY: 'auto', background: 'var(--bg)' } },
+        pg === 'dashboard' && h(Dash, { ev, su, pCt, oR, nav, sMd, canEdit }),
+        pg === 'event' && cE && h(EvDet, { e: cE, tb, su, pe, rq, sMd, updE, delE, unlinkSu, delD, selR, sSelR, addMsg, closeR, copyPortalLink, saveBlock, delBlock, saveTl, delTl, saveTask, delTask, saveFixed, canEdit }),
+        pg === 'suppliers' && h(SupP, { su, ev, copyPortalLink, sMd, delSu, canEdit }),
+        pg === 'portal' && h(Portal, { rq, su, ev, addMsg, pCode, sPCode, actP, sActP, enterP, nav, toggleTask, addTaskResponse })
+      )
+    ),
+    md === 'newEvent' && h(NEv, { c: () => sMd(null), s: addEv }),
+    md === 'newSupplier' && h(NSu, { c: () => sMd(null), s: addSu }),
+    md === 'addSup' && cE && h(ASu, { c: () => sMd(null), su, es: cE.suppliers, a: linkSu, sMd }),
+    md === 'upDoc' && cE && h(UDoc, { c: () => sMd(null), e: cE, su, s: upD }),
+    md === 'newReq' && cE && h(NReq, { c: () => sMd(null), e: cE, su, s: newRq, copyPortalLink }),
+    md === 'mq' && h(MQ, { c: () => sMd(null), pe, su, ev, done: () => { savePe({}); sMd(null); toast('Wachtrij gewist'); } }),
+    md === 'team' && wsDoc && h(TeamModal, { c: () => sMd(null), user, wsId, wsDoc, toast }),
+    md === 'account' && h(AccountModal, { c: () => sMd(null), user, userDoc, signOutUser, toast }),
+    md === 'wsSettings' && wsDoc && h(WsSettingsModal, { c: () => sMd(null), user, wsId, wsDoc, toast, switchWs }),
+    md === 'exportEvent' && cE && h(ExportEventModal, { c: () => sMd(null), e: cE, su, toast }),
+    md?.type === 'block' && cE && h(BlockEdit, { c: () => sMd(null), e: cE, su, b: md.block, save: saveBlock, del: md.block?.id ? () => { delBlock(md.block.id); sMd(null); } : null }),
+    md?.type === 'task' && cE && h(TaskEdit, { c: () => sMd(null), e: cE, su, t: md.task, save: saveTask, del: md.task?.id ? () => { delTask(md.task.id); sMd(null); } : null }),
+    md?.type === 'tl' && cE && h(TlEdit, { c: () => sMd(null), e: cE, item: md.item, save: saveTl, del: md.item?.id ? () => { delTl(md.item.id); sMd(null); } : null }),
+    md?.type === 'editSup' && h(EditSu, { c: () => sMd(null), s: md.sup, save: (patch) => updSu(md.sup.id, patch), del: () => { delSu(md.sup.id); sMd(null); } }),
+    md?.type === 'fixed' && cE && h(FixedEdit, { c: () => sMd(null), e: cE, su, field: md.field, value: cE.fixed?.[md.field.key], save: (v) => { saveFixed(md.field.key, v); sMd(null); } }),
+    ts && h('div', { className:'fade-in', style: { position: 'fixed', bottom: 20, right: 20, padding: '12px 18px', borderRadius: 'var(--rl)', fontSize: 13, fontWeight: 500, zIndex: 9999, background: ts.t==='err'?'var(--err-bg)':'var(--ok-bg)', color: ts.t==='err'?'var(--err-text)':'var(--ok-text)', border: `1px solid ${ts.t==='err'?'var(--err-border)':'var(--ok-border)'}`, boxShadow: 'var(--shadow-lg)' } }, ts.m)
+  );
+}
+
+// ============ SIDEBAR ============
+function Side({ ev, pg, eid, pCt, oR, nav, sMd, sActP, user, userDoc, wsDoc, switchWs, signOutUser, canEdit, myRole }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const wsName = wsDoc?.name || 'Werkruimte';
+  const userName = user?.displayName || user?.email || '';
+  const otherWs = (userDoc?.workspaceIds || []).filter(id => id !== wsDoc?.id);
+  const isViewer = !canEdit;
+  return h('div', { style: { width: 230, background: 'var(--bg2)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'relative' } },
+    h('div', { onClick: () => setMenuOpen(o => !o), style: { padding: '14px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: menuOpen ? 'var(--bg)' : 'transparent' } },
+      h('img', { src: '/eventsheet-logo.svg', alt: 'EventSheet', style: { width: 34, height: 34, borderRadius: 'var(--r)', flexShrink: 0, objectFit: 'cover' } }),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { fontSize: 13, fontWeight: 700, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, wsName),
+        h('div', { style: { fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, userName)
+      ),
+      h('i', { className: `ti ti-chevron-${menuOpen?'up':'down'}`, style: { fontSize: 14, color: 'var(--text3)' } })
+    ),
+    menuOpen && h('div', { style: { position: 'absolute', top: 64, left: 8, right: 8, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', boxShadow: 'var(--shadow-lg)', zIndex: 100, padding: 6 } },
+      h('div', { style: { padding: '8px 10px', fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' } }, 'Werkruimte'),
+      h('div', { onClick: () => { setMenuOpen(false); sMd('team'); }, style: { padding: '8px 10px', fontSize: 13, cursor: 'pointer', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 9 } }, h('i', { className: 'ti ti-users-group', style: { fontSize: 15, color: 'var(--text3)' } }), 'Team beheren'),
+      h('div', { onClick: () => { setMenuOpen(false); sMd('wsSettings'); }, style: { padding: '8px 10px', fontSize: 13, cursor: 'pointer', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 9 } }, h('i', { className: 'ti ti-settings', style: { fontSize: 15, color: 'var(--text3)' } }), 'Werkruimte-instellingen'),
+      h('div', { onClick: () => { setMenuOpen(false); sMd('account'); }, style: { padding: '8px 10px', fontSize: 13, cursor: 'pointer', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 9 } }, h('i', { className: 'ti ti-user-circle', style: { fontSize: 15, color: 'var(--text3)' } }), 'Mijn account'),
+      otherWs.length > 0 && h('div', { style: { padding: '8px 10px 4px', fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', borderTop: '1px solid var(--border)', marginTop: 4 } }, 'Wisselen'),
+      otherWs.map(wid => h(WsSwitchItem, { key: wid, wid, onClick: () => { setMenuOpen(false); switchWs(wid); } })),
+      h('div', { onClick: () => { setMenuOpen(false); signOutUser(); }, style: { padding: '8px 10px', fontSize: 13, cursor: 'pointer', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 9, color: 'var(--err-text)', borderTop: '1px solid var(--border)', marginTop: 4 } }, h('i', { className: 'ti ti-logout', style: { fontSize: 15 } }), 'Uitloggen')
+    ),
+    h('div', { style: { padding: 10 } },
+      NI('ti-layout-dashboard', 'Dashboard', pg==='dashboard', () => nav('dashboard')),
+      NI('ti-users', 'Leveranciers', pg==='suppliers', () => nav('suppliers')),
+      NI('ti-message-circle', 'Leverancier portaal', pg==='portal', () => { sActP(null); window.location.hash=''; nav('portal'); }, oR),
+      NI('ti-qrcode', 'QR-codes', false, () => window.open('/qr-codes.html', '_blank'))
+    ),
+    h('div', { style: { padding: '14px 16px 4px', fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em' } }, 'Evenementen'),
+    h('div', { style: { flex: 1, overflowY: 'auto', padding: '0 8px' } },
+      ev.length === 0 && h('div', { style: { padding: 14, fontSize: 12, color: 'var(--text3)', textAlign: 'center' } }, 'Nog geen evenementen'),
+      ev.map(e => h('div', { key: e.id, onClick: () => nav('event', e.id), style: { padding: '8px 10px', cursor: 'pointer', fontSize: 13, color: eid===e.id?'var(--text)':'var(--text2)', background: eid===e.id?'var(--bg)':'transparent', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 9, marginBottom: 2, borderLeft: eid===e.id?'3px solid var(--accent)':'3px solid transparent', fontWeight: eid===e.id ? 600 : 400 } },
+        h('i', { className: 'ti ti-calendar', style: { fontSize: 13, color: eid===e.id?'var(--accent)':'var(--text3)' } }),
+        h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 } }, e.name)
+      ))
+    ),
+    h('div', { style: { padding: 10, borderTop: '1px solid var(--border)' } },
+      pCt > 0 && h('div', { onClick: () => sMd('mq'), style: { cursor: 'pointer', marginBottom: 8, padding: '9px 11px', background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--accent2)', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 } },
+        h('i', { className: 'ti ti-bell', style: { fontSize: 14 } }), `${pCt} update${pCt!==1?'s':''} klaar`
+      ),
+      canEdit ?
+        h('button', { className: 'primary', onClick: () => sMd('newEvent'), style: { width: '100%', justifyContent: 'center' } },
+          h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Nieuw evenement'
+        ) :
+        h('div', { style: { padding: '8px 11px', fontSize: 11, background: 'var(--bg)', borderRadius: 'var(--r)', color: 'var(--text3)', textAlign: 'center', border: '1px dashed var(--border2)' } }, h('i', { className: 'ti ti-eye', style: { fontSize: 12, marginRight: 5, verticalAlign: -1 } }), 'Alleen-lezen toegang')
+    )
+  );
+}
+
+function NI(ic, lbl, act, cl, bd) {
+  return h('div', { onClick: cl, style: { padding: '9px 11px', cursor: 'pointer', fontSize: 13, color: act?'var(--text)':'var(--text2)', background: act?'var(--bg)':'transparent', fontWeight: act?600:400, display: 'flex', alignItems: 'center', gap: 10, borderRadius: 'var(--r)', marginBottom: 2, boxShadow: act ? 'var(--shadow)' : 'none' } },
+    h('i', { className: `ti ${ic}`, style: { fontSize: 16, color: act?'var(--accent)':'var(--text3)' } }),
+    h('span', { style: { flex: 1 } }, lbl),
+    bd > 0 && h('span', { className: 'chip accent' }, bd)
+  );
+}
+
+function WsSwitchItem({ wid, onClick }) {
+  const [name, setName] = useState('Werkruimte...');
+  useEffect(() => { (async () => { const w = await FB.getDoc('workspaces', wid); if (w) setName(w.name); })(); }, [wid]);
+  return h('div', { onClick, style: { padding: '8px 10px', fontSize: 13, cursor: 'pointer', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 9 } }, h('i', { className: 'ti ti-arrow-right', style: { fontSize: 14, color: 'var(--text3)' } }), name);
+}
+
+function TeamModal({ c, user, wsId, wsDoc, toast }) {
+  const [email, setEmail] = useState(''), [role, setRole] = useState('editor'), [busy, setBusy] = useState(false), [link, setLink] = useState('');
+  const isOwner = wsDoc.ownerId === user.uid;
+  const members = Object.entries(wsDoc.members || {});
+  const roleLabel = r => r === 'owner' ? 'Eigenaar' : r === 'viewer' ? 'Alleen lezen' : 'Editor';
+  const createInvite = async () => {
+    if (busy) return;
+    setBusy(true); setLink('');
+    try {
+      const token = uid() + uid();
+      const fb = window.__firebase;
+      await fb.setDoc(fb.doc(fb.db, 'invites', token), {
+        wsId, wsName: wsDoc.name, email: email.trim() || null, role, createdBy: user.uid, createdAt: new Date().toISOString()
+      });
+      const url = `${window.location.origin}${window.location.pathname}#invite/${token}`;
+      setLink(url);
+      navigator.clipboard.writeText(url).catch(()=>{});
+      toast && toast('Uitnodigingslink gekopieerd');
+    } catch (e) { toast && toast('Mislukt: '+(e?.message||'onbekend'), 'err'); }
+    finally { setBusy(false); }
+  };
+  const removeMember = async uid2 => {
+    if (uid2 === wsDoc.ownerId) { toast && toast('Eigenaar kan niet verwijderd worden', 'err'); return; }
+    if (!confirm('Lid verwijderen uit werkruimte?')) return;
+    const fb = window.__firebase;
+    const newMembers = { ...wsDoc.members };
+    delete newMembers[uid2];
+    await fb.setDoc(fb.doc(fb.db, 'workspaces', wsId), { members: newMembers }, { merge: true });
+    const u = await FB.getDoc('users', uid2);
+    if (u) await fb.setDoc(fb.doc(fb.db, 'users', uid2), { workspaceIds: (u.workspaceIds||[]).filter(x => x !== wsId) }, { merge: true });
+    toast && toast('Verwijderd');
+  };
+  const changeRole = async (uid2, newRole) => {
+    if (uid2 === wsDoc.ownerId) return;
+    const fb = window.__firebase;
+    const newMembers = { ...wsDoc.members, [uid2]: { ...wsDoc.members[uid2], role: newRole } };
+    await fb.setDoc(fb.doc(fb.db, 'workspaces', wsId), { members: newMembers }, { merge: true });
+    toast && toast('Rol aangepast');
+  };
+  return h(MW, { title: 'Team', c, w: 560 },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 16 } },
+      h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, `Leden (${members.length})`),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, members.map(([uid2, m]) =>
+          h('div', { key: uid2, className: 'card', style: { padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 11 } },
+            h('div', { style: { width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--accent2)' } }, ini(m.displayName || m.email)),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, m.displayName || m.email),
+              h('div', { style: { fontSize: 11, color: 'var(--text3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, m.email)
+            ),
+            (isOwner && uid2 !== wsDoc.ownerId) ?
+              h('select', { value: m.role === 'viewer' ? 'viewer' : (m.role === 'owner' ? 'owner' : 'editor'), onChange: e => changeRole(uid2, e.target.value), style: { width: 'auto', fontSize: 12, padding: '4px 8px' } },
+                h('option', { value: 'editor' }, 'Editor'),
+                h('option', { value: 'viewer' }, 'Alleen lezen')
+              ) :
+              h('span', { className: m.role==='owner'?'chip accent':(m.role==='viewer'?'chip':'chip ok') }, roleLabel(m.role)),
+            isOwner && uid2 !== user.uid && h('button', { className:'ghost', onClick: () => removeMember(uid2), style: { padding: '4px 6px' }, title:'Verwijderen' }, h('i', { className: 'ti ti-x', style: { fontSize: 14, color: 'var(--err-text)' } }))
+          )
+        ))
+      ),
+      isOwner && h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: 16 } },
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Uitnodigen'),
+        h('div', { style: { display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' } },
+          h('input', { value: email, onChange: e => setEmail(e.target.value), placeholder: 'E-mail (optioneel)', style: { flex: 1, minWidth: 200 } }),
+          h('select', { value: role, onChange: e => setRole(e.target.value), style: { width: 'auto' } },
+            h('option', { value: 'editor' }, 'Editor (lezen + schrijven)'),
+            h('option', { value: 'viewer' }, 'Viewer (alleen lezen)')
+          ),
+          h('button', { className: 'primary', onClick: createInvite, disabled: busy }, h('i', { className: 'ti ti-link', style: { fontSize: 14 } }), busy ? 'Bezig...' : 'Link maken')
+        ),
+        link && h('div', { style: { fontSize: 11, padding: '8px 11px', background: 'var(--bg2)', borderRadius: 'var(--r)', wordBreak: 'break-all', color: 'var(--text2)' } }, h('i', { className: 'ti ti-check', style: { color: 'var(--ok-text)', marginRight: 6 } }), link)
+      ),
+      !isOwner && h('div', { style: { fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: 10 } }, 'Enkel de eigenaar kan teamleden uitnodigen en rollen wijzigen.')
+    )
+  );
+}
+
+function AccountModal({ c, user, userDoc, signOutUser, toast }) {
+  const [pwd, setPwd] = useState(''), [newPwd, setNewPwd] = useState(''), [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  const fb = window.__firebase;
+  const changePassword = async () => {
+    if (!pwd || newPwd.length < 6) { setMsg('Nieuw wachtwoord moet min. 6 tekens zijn'); return; }
+    setBusy(true); setMsg('');
+    try {
+      const cred = fb.EmailAuthProvider.credential(user.email, pwd);
+      await fb.reauthenticateWithCredential(user, cred);
+      await fb.updatePassword(user, newPwd);
+      setPwd(''); setNewPwd(''); setMsg('Wachtwoord aangepast');
+      toast && toast('Wachtwoord aangepast');
+    } catch (e) { setMsg(e?.code === 'auth/invalid-credential' ? 'Huidig wachtwoord klopt niet' : (e?.message || 'Mislukt')); }
+    finally { setBusy(false); }
+  };
+  const sendVerify = async () => {
+    try { await fb.sendEmailVerification(user); toast && toast('Verificatie-mail verstuurd'); }
+    catch (e) { toast && toast('Mislukt: '+(e?.message||'onbekend'), 'err'); }
+  };
+  const exportAll = async () => {
+    setBusy(true);
+    try {
+      const all = [];
+      for (const wsId of (userDoc?.workspaceIds || [])) {
+        const data = await accountAPI('exportWorkspace', { wsId });
+        all.push(data);
+      }
+      const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `eventsheet-export-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+      toast && toast('Export gedownload');
+    } catch (e) { toast && toast('Mislukt: '+(e?.message||'onbekend'), 'err'); }
+    finally { setBusy(false); }
+  };
+  const deleteAccount = async () => {
+    if (confirmText !== 'VERWIJDER') { setMsg('Typ "VERWIJDER" om te bevestigen'); return; }
+    if (!confirm('Definitief? Alle werkruimtes waarvan jij eigenaar bent worden volledig gewist (events, leveranciers, documenten). Je account zelf wordt ook verwijderd.')) return;
+    setBusy(true); setMsg('');
+    try {
+      await accountAPI('deleteAccount', {});
+      try { localStorage.removeItem('ef_ws'); } catch {}
+      await fb.signOut(fb.auth);
+      window.location.hash = '';
+      window.location.reload();
+    } catch (e) { setMsg(e?.message || 'Mislukt'); setBusy(false); }
+  };
+  return h(MW, { title: 'Mijn account', c, w: 540 },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 18 } },
+      h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Gegevens'),
+        h('div', { style: { padding: '10px 12px', background: 'var(--bg2)', borderRadius: 'var(--r)', fontSize: 13 } },
+          h('div', null, h('strong', null, 'Naam: '), user.displayName || '—'),
+          h('div', { style: { marginTop: 4 } }, h('strong', null, 'E-mail: '), user.email),
+          h('div', { style: { marginTop: 4, fontSize: 12, color: user.emailVerified ? 'var(--ok-text)' : 'var(--warn-text)' } },
+            user.emailVerified ? h('span', null, h('i', { className: 'ti ti-check', style: { fontSize: 12, marginRight: 4 } }), 'E-mail geverifieerd') :
+            h('span', null, h('i', { className: 'ti ti-alert-circle', style: { fontSize: 12, marginRight: 4 } }), 'E-mail nog niet geverifieerd ',
+              h('button', { onClick: sendVerify, className: 'ghost', style: { fontSize: 11, padding: '2px 6px', marginLeft: 6 } }, 'Verificatie-mail sturen'))
+          )
+        )
+      ),
+      h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Wachtwoord wijzigen'),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+          h('input', { type: 'password', value: pwd, onChange: e => setPwd(e.target.value), placeholder: 'Huidig wachtwoord' }),
+          h('input', { type: 'password', value: newPwd, onChange: e => setNewPwd(e.target.value), placeholder: 'Nieuw wachtwoord (min. 6 tekens)' }),
+          h('button', { className: 'primary', onClick: changePassword, disabled: busy || !pwd || newPwd.length < 6, style: { justifyContent: 'center' } }, busy ? 'Bezig...' : 'Wachtwoord aanpassen')
+        )
+      ),
+      h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Mijn data'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 8, lineHeight: 1.5 } }, 'Download alle data uit werkruimtes waar jij lid van bent als JSON-bestand (recht op dataportabiliteit, GDPR art. 20).'),
+        h('button', { onClick: exportAll, disabled: busy, style: { justifyContent: 'center' } }, h('i', { className: 'ti ti-download', style: { fontSize: 14 } }), 'Data exporteren')
+      ),
+      h('div', { style: { borderTop: '1px solid var(--err-border)', paddingTop: 16 } },
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--err-text)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Gevarenzone'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 10, lineHeight: 1.5 } }, 'Account verwijderen wist je login én alle werkruimtes waarvan jij eigenaar bent (cascade: events, leveranciers, bestanden). In werkruimtes waar jij gewoon lid bent, wordt je lidmaatschap ingetrokken — die werkruimtes blijven verder bestaan.'),
+        h('input', { value: confirmText, onChange: e => setConfirmText(e.target.value), placeholder: 'Typ VERWIJDER om te bevestigen', style: { marginBottom: 8 } }),
+        msg && h('div', { style: { fontSize: 12, padding: '8px 11px', background: 'var(--err-bg)', color: 'var(--err-text)', borderRadius: 'var(--r)', marginBottom: 8 } }, msg),
+        h('button', { className: 'danger', onClick: deleteAccount, disabled: busy || confirmText !== 'VERWIJDER', style: { width: '100%', justifyContent: 'center' } }, h('i', { className: 'ti ti-trash', style: { fontSize: 14 } }), busy ? 'Bezig...' : 'Account definitief verwijderen')
+      )
+    )
+  );
+}
+
+function WsSettingsModal({ c, user, wsId, wsDoc, toast, switchWs }) {
+  const [name, setName] = useState(wsDoc.name || '');
+  const [newOwner, setNewOwner] = useState('');
+  const [busy, setBusy] = useState(false), [msg, setMsg] = useState('');
+  const [confirmText, setConfirmText] = useState('');
+  const isOwner = wsDoc.ownerId === user.uid;
+  const otherMembers = Object.entries(wsDoc.members || {}).filter(([uid2]) => uid2 !== user.uid);
+  const renameWs = async () => {
+    if (!name.trim()) return;
+    setBusy(true); setMsg('');
+    try { await accountAPI('renameWorkspace', { wsId, name: name.trim() }); toast && toast('Hernoemd'); }
+    catch (e) { setMsg(e?.message || 'Mislukt'); }
+    finally { setBusy(false); }
+  };
+  const transferOwn = async () => {
+    if (!newOwner) return;
+    if (!confirm('Eigenaarschap overdragen? Jij wordt editor en kan de werkruimte niet meer verwijderen of beheren.')) return;
+    setBusy(true); setMsg('');
+    try { await accountAPI('transferOwnership', { wsId, newOwnerUid: newOwner }); toast && toast('Overgedragen'); c(); }
+    catch (e) { setMsg(e?.message || 'Mislukt'); }
+    finally { setBusy(false); }
+  };
+  const exportWs = async () => {
+    setBusy(true);
+    try {
+      const data = await accountAPI('exportWorkspace', { wsId });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `eventsheet-${wsDoc.name||'workspace'}-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+      toast && toast('Export gedownload');
+    } catch (e) { toast && toast('Mislukt: '+(e?.message||'onbekend'), 'err'); }
+    finally { setBusy(false); }
+  };
+  const deleteWs = async () => {
+    if (confirmText !== wsDoc.name) { setMsg('Typ de exacte werkruimte-naam'); return; }
+    if (!confirm('Definitief? Alle events, leveranciers, aanvragen, taken en bestanden van deze werkruimte worden gewist. Andere leden verliezen toegang.')) return;
+    setBusy(true); setMsg('');
+    try {
+      await accountAPI('deleteWorkspace', { wsId });
+      try { localStorage.removeItem('ef_ws'); } catch {}
+      toast && toast('Werkruimte verwijderd');
+      window.location.reload();
+    } catch (e) { setMsg(e?.message || 'Mislukt'); setBusy(false); }
+  };
+  return h(MW, { title: 'Werkruimte-instellingen', c, w: 540 },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 18 } },
+      h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Naam'),
+        h('div', { style: { display: 'flex', gap: 8 } },
+          h('input', { value: name, onChange: e => setName(e.target.value), disabled: !isOwner, style: { flex: 1 } }),
+          isOwner && h('button', { className: 'primary', onClick: renameWs, disabled: busy || !name.trim() || name === wsDoc.name }, 'Opslaan')
+        )
+      ),
+      h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Werkruimte-data'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 8 } }, 'Download alle data van deze werkruimte als JSON.'),
+        h('button', { onClick: exportWs, disabled: busy, style: { justifyContent: 'center' } }, h('i', { className: 'ti ti-download', style: { fontSize: 14 } }), 'Exporteren')
+      ),
+      isOwner && otherMembers.length > 0 && h('div', null,
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Eigenaarschap overdragen'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 8 } }, 'Maak een ander lid eigenaar. Jij wordt editor.'),
+        h('div', { style: { display: 'flex', gap: 8 } },
+          h('select', { value: newOwner, onChange: e => setNewOwner(e.target.value), style: { flex: 1 } },
+            h('option', { value: '' }, '— kies lid —'),
+            otherMembers.map(([uid2, m]) => h('option', { key: uid2, value: uid2 }, m.displayName || m.email))
+          ),
+          h('button', { onClick: transferOwn, disabled: busy || !newOwner }, 'Overdragen')
+        )
+      ),
+      isOwner && h('div', { style: { borderTop: '1px solid var(--err-border)', paddingTop: 16 } },
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--err-text)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 } }, 'Gevarenzone'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 10, lineHeight: 1.5 } }, `Deze werkruimte ("${wsDoc.name}") en alle data erin worden permanent gewist. Niet ongedaan te maken.`),
+        h('input', { value: confirmText, onChange: e => setConfirmText(e.target.value), placeholder: `Typ "${wsDoc.name}" om te bevestigen`, style: { marginBottom: 8 } }),
+        msg && h('div', { style: { fontSize: 12, padding: '8px 11px', background: 'var(--err-bg)', color: 'var(--err-text)', borderRadius: 'var(--r)', marginBottom: 8 } }, msg),
+        h('button', { className: 'danger', onClick: deleteWs, disabled: busy || confirmText !== wsDoc.name, style: { width: '100%', justifyContent: 'center' } }, h('i', { className: 'ti ti-trash', style: { fontSize: 14 } }), busy ? 'Bezig...' : 'Werkruimte verwijderen')
+      ),
+      !isOwner && h('div', { style: { fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: 10 } }, 'Enkel de eigenaar kan werkruimte-instellingen wijzigen.')
+    )
+  );
+}
+
+function ExportEventModal({ c, e, su, toast }) {
+  const wrap = (fn, label) => () => {
+    try { fn(); toast && toast(`${label} gedownload`); c(); }
+    catch (err) { toast && toast('Mislukt: '+(err?.message||'onbekend'), 'err'); }
+  };
+  const Row = (icon, title, desc, onClick) => h('div', { onClick, className: 'card', style: { padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' } },
+    h('div', { style: { width: 40, height: 40, borderRadius: 'var(--r)', background: 'var(--accent-bg)', color: 'var(--accent2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 } }, h('i', { className: `ti ${icon}` })),
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontWeight: 700, fontSize: 14 } }, title),
+      h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, desc)
+    ),
+    h('i', { className: 'ti ti-chevron-right', style: { fontSize: 16, color: 'var(--text3)' } })
+  );
+  return h(MW, { title: 'Exporteren', c, w: 520 },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 } },
+      Row('ti-file-text', 'Volledig event-sheet (PDF)', 'Alle info: praktisch, run sheet, taken, leveranciers, documenten.', wrap(() => exportEventPDF(e, su), 'Event-sheet')),
+      Row('ti-clock-hour-4', 'Draaiboek (PDF)', 'Enkel de tijdslijn — klaar om te printen of mee te geven aan crew.', wrap(() => exportRunSheetPDF(e), 'Draaiboek PDF')),
+      Row('ti-file-type-doc', 'Draaiboek (Word)', 'Bewerkbaar .doc-bestand met de tijdslijn voor de organisatie.', wrap(() => exportRunSheetDoc(e), 'Draaiboek Word'))
+    )
+  );
+}
+
+// ============ TOP BAR ============
+function ThemeToggle() {
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem('ef_theme') || 'system'; } catch { return 'system'; } });
+  const apply = next => {
+    setTheme(next);
+    try {
+      if (next === 'system') { localStorage.removeItem('ef_theme'); document.documentElement.removeAttribute('data-theme'); }
+      else { localStorage.setItem('ef_theme', next); document.documentElement.setAttribute('data-theme', next); }
+    } catch {}
+  };
+  const cycle = () => apply(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system');
+  const icon = theme === 'dark' ? 'ti-moon' : theme === 'light' ? 'ti-sun' : 'ti-device-desktop';
+  const label = theme === 'dark' ? 'Donker' : theme === 'light' ? 'Licht' : 'Systeem';
+  return h('button', { onClick: cycle, className: 'ghost', title: `Thema: ${label} (klik om te wisselen)`, style: { padding: '7px 10px' } }, h('i', { className: `ti ${icon}`, style: { fontSize: 15 } }));
+}
+
+function Top({ pg, e, tb, sTb, pCt, sMd, nav, selR, sSelR, rq, canEdit = true }) {
+  const tabs = [
+    {k:'overzicht', l:'Overzicht', ic:'ti-info-circle'},
+    {k:'tijdslijn', l:'Tijdslijn', ic:'ti-clock'},
+    {k:'taken', l:'Taken', ic:'ti-checkbox'},
+    {k:'leveranciers', l:'Leveranciers', ic:'ti-users'},
+    {k:'documenten', l:'Documenten', ic:'ti-file'},
+    {k:'aanvragen', l:'Aanvragen', ic:'ti-message'}
+  ];
+  const ar = e ? rq.filter(r => r.eventId === e.id && r.status === 'beantwoord').length : 0;
+  const ot = e ? (e.tasks||[]).filter(t => t.status !== 'done').length : 0;
+
+  return h('div', { style: { borderBottom: '1px solid var(--border)', background: 'var(--bg)', flexShrink: 0 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', padding: '14px 24px', gap: 12 } },
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        pg==='dashboard' && h('h1', { style: { margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-.01em' } }, 'Dashboard'),
+        pg==='suppliers' && h('h1', { style: { margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-.01em' } }, 'Leveranciers'),
+        pg==='event' && e && h('div', null,
+          h('div', { onClick: () => nav('dashboard'), style: { fontSize: 11, color: 'var(--text3)', marginBottom: 4, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 } }, h('i', {className:'ti ti-arrow-left', style:{fontSize:11}}), 'Dashboard'),
+          h('h1', { style: { margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, e.name),
+          (e.date || e.location) && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2, display: 'flex', gap: 12 } },
+            e.date && h('span', null, h('i', {className:'ti ti-calendar', style:{fontSize:12, marginRight:4}}), fmt(e.date)),
+            e.location && h('span', { className:'hide-sm' }, h('i', {className:'ti ti-map-pin', style:{fontSize:12, marginRight:4}}), e.location)
+          )
+        )
+      ),
+      pCt > 0 && h('button', { onClick: () => sMd('mq'), style: { background: 'var(--accent-bg)', color: 'var(--accent2)', borderColor: 'var(--accent-border)', fontWeight: 600 } },
+        h('i', { className: 'ti ti-send', style: { fontSize: 14 } }), `Verstuur (${pCt})`
+      ),
+      pg==='event' && e && h('button', { onClick: () => sMd('exportEvent'), title: 'Exporteren als PDF of Word' }, h('i', { className: 'ti ti-file-download', style: { fontSize: 14 } }), 'Exporteer'),
+      h(ThemeToggle),
+      canEdit && pg==='suppliers' && h('button', { className:'primary', onClick: () => sMd('newSupplier') }, h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Nieuwe leverancier')
+    ),
+    pg==='event' && h('div', { style: { display: 'flex', padding: '0 24px', gap: 2, overflowX: 'auto' } },
+      tabs.map(t => {
+        const bd = t.k==='aanvragen' ? ar : (t.k==='taken' ? ot : 0);
+        const act = tb === t.k;
+        return h('div', { key: t.k, onClick: () => { sTb(t.k); sSelR(null); }, style: { padding: '10px 14px', fontSize: 13, cursor: 'pointer', color: act?'var(--text)':'var(--text2)', fontWeight: act?600:500, borderBottom: act?'2px solid var(--accent)':'2px solid transparent', marginBottom: -1, display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap' } },
+          h('i', { className: `ti ${t.ic}`, style: { fontSize: 14, color: act?'var(--accent)':'var(--text3)' } }),
+          t.l,
+          bd > 0 && h('span', { className: act?'chip accent':'chip' }, bd)
+        );
+      })
+    )
+  );
+}
+
+// ============ DASHBOARD ============
+function Dash({ ev, su, pCt, oR, nav, sMd, canEdit = true }) {
+  return h('div', { className:'fade-in' },
+    h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: '1.75rem' } },
+      SC('ti-calendar-event', 'Evenementen', ev.length, false),
+      SC('ti-users', 'Leveranciers', su.length, false),
+      SC('ti-bell', 'Updates klaar', pCt, pCt > 0),
+      SC('ti-message-2', 'Open reacties', oR, oR > 0)
+    ),
+    h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' } },
+      h('div', null,
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 8 } },
+          h('h2', { style: { margin: 0, fontSize: 15, fontWeight: 700, flex: 1 } }, 'Evenementen'),
+          ev.length > 0 && h('button', { onClick: () => exportDashboardPDF(ev), style: { fontSize: 12, padding: '5px 10px' }, title: 'Download als PDF' }, h('i', { className: 'ti ti-file-download', style: { fontSize: 12 } }), 'PDF'),
+          canEdit && h('button', { onClick: () => sMd('newEvent'), style: { fontSize: 12, padding: '5px 10px' } }, h('i', { className: 'ti ti-plus', style: { fontSize: 12 } }), 'Nieuw')
+        ),
+        ev.length === 0 ? Empty('ti-calendar-off', 'Nog geen evenementen') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } }, ev.slice(0, 8).map(e =>
+          h('div', { key: e.id, className: 'card', onClick: () => nav('event', e.id), style: { padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 } },
+            h('div', { style: { width: 38, height: 38, borderRadius: 'var(--r)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: 'ti ti-calendar', style: { fontSize: 16, color: 'var(--accent)' } })),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, e.name),
+              h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, `${fmt(e.date)} · ${e.suppliers?.length || 0} leverancier${e.suppliers?.length===1?'':'s'}`)
+            ),
+            h('i', { className: 'ti ti-chevron-right', style: { fontSize: 14, color: 'var(--text3)' } })
+          )
+        ))
+      ),
+      h('div', null,
+        h('h2', { style: { margin: '0 0 12px', fontSize: 15, fontWeight: 700 } }, 'Leveranciers'),
+        su.length === 0 ? Empty('ti-user-off', 'Nog geen leveranciers') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } }, su.slice(0, 8).map(s => {
+          const cat = normCat(s.category);
+          return h('div', { key: s.id, className: 'card', style: { padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 } },
+            h('div', { style: { width: 38, height: 38, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--accent2)' } }, ini(s.name)),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.name),
+              h('div', { style: { fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.company || s.email)
+            ),
+            cat && h('span', { className: 'chip' }, h('i', { className: `ti ${CAT_ICON[cat]||'ti-tag'}`, style: { fontSize: 11 } }), cat)
+          );
+        }))
+      )
+    )
+  );
+}
+
+function SC(ic, lbl, v, acc) {
+  return h('div', { className: 'card', style: { padding: 16, background: acc ? 'var(--accent-bg)' : 'var(--bg)', borderColor: acc ? 'var(--accent-border)' : 'var(--border)' } },
+    h('div', { style: { fontSize: 11, color: acc ? 'var(--accent2)' : 'var(--text2)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.04em' } },
+      h('i', { className: `ti ${ic}`, style: { fontSize: 14 } }), lbl
+    ),
+    h('div', { style: { fontSize: 28, fontWeight: 800, color: acc ? 'var(--accent2)' : 'var(--text)', letterSpacing: '-.02em' } }, v)
+  );
+}
+
+function Empty(ic, m, s) {
+  return h('div', { style: { padding: '3rem 1rem', textAlign: 'center', border: '1px dashed var(--border2)', borderRadius: 'var(--rl)', background: 'var(--bg2)' } },
+    h('i', { className: `ti ${ic}`, style: { fontSize: 32, color: 'var(--text3)', display: 'block', marginBottom: 10 } }),
+    h('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--text2)' } }, m),
+    s && h('div', { style: { fontSize: 12, color: 'var(--text3)', marginTop: 6 } }, s)
+  );
+}
+
+function FL(l, ch, hint) {
+  return h('div', null,
+    h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 } }, l),
+    ch,
+    hint && h('div', { style: { fontSize: 11, color: 'var(--text3)', marginTop: 4 } }, hint)
+  );
+}
+
+// ============ EVENT DETAIL ============
+function EvDet(p) {
+  const canEdit = p.canEdit !== false;
+  const { e, tb, su, pe, rq, sMd, updE, delE, unlinkSu, delD, selR, sSelR, addMsg, closeR, copyPortalLink, saveTl, delTl, saveTask, delTask } = p;
+  if (tb === 'overzicht') return h(Overview, { ...p, canEdit });
+  if (tb === 'tijdslijn') return h(TimelineTab, { e, sMd, saveTl, delTl, canEdit });
+  if (tb === 'taken') return h(TasksTab, { e, su, sMd, saveTask, delTask, canEdit });
+  if (tb === 'leveranciers') return h(LinkedSuppliers, { e, su, sMd, unlinkSu, copyPortalLink, canEdit });
+  if (tb === 'documenten') return h(DocsTab, { e, su, sMd, delD, canEdit });
+  if (tb === 'aanvragen') return h(RequestsTab, { e, rq, selR, sSelR, sMd, addMsg, closeR, canEdit });
+  return null;
+}
+
+// ============ OVERVIEW TAB ============
+function Overview({ e, su, sMd, updE, delE }) {
+  return h('div', { className:'fade-in', style: { display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: 1100 } },
+    h(EInfo, { e, updE, delE }),
+    h(FixedFieldsCards, { e, su, sMd }),
+    h(InfoBlocksSection, { e, su, sMd })
+  );
+}
+
+function EInfo({ e, updE, delE }) {
+  const [f, sf] = useState({ name: e.name, date: e.date || '', location: e.location || '', description: e.description || '' });
+  const [d, sd] = useState(false);
+  useEffect(() => { sf({ name: e.name, date: e.date || '', location: e.location || '', description: e.description || '' }); sd(false); }, [e.id]);
+  const upd = (k, v) => { sf(p => ({ ...p, [k]: v })); sd(true); };
+  return h('div', { className: 'card', style: { padding: 18 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 } },
+      h('i', { className: 'ti ti-info-square-rounded', style: { fontSize: 18, color: 'var(--accent)' } }),
+      h('h2', { style: { margin: 0, fontSize: 15, fontWeight: 700 } }, 'Basisgegevens')
+    ),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      FL('Naam *', h('input', { value: f.name, onChange: ev => upd('name', ev.target.value) })),
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Datum', h('input', { type: 'date', value: f.date, onChange: ev => upd('date', ev.target.value) })),
+        FL('Locatie (kort)', h('input', { value: f.location, onChange: ev => upd('location', ev.target.value), placeholder:'Bv. Gent' }))
+      ),
+      FL('Omschrijving', h('textarea', { value: f.description, onChange: ev => upd('description', ev.target.value), rows: 3, placeholder: 'Korte omschrijving van het event...' }))
+    ),
+    h('div', { style: { marginTop: 14, display: 'flex', gap: 10 } },
+      h('button', { className: 'primary', onClick: () => { updE(f); sd(false); }, disabled: !d }, h('i', { className: 'ti ti-device-floppy', style: { fontSize: 14 } }), 'Opslaan'),
+      h('button', { className: 'danger ghost', onClick: () => delE(e.id), style: { marginLeft: 'auto' } }, h('i', { className: 'ti ti-trash', style: { fontSize: 14 } }), 'Event verwijderen')
+    )
+  );
+}
+
+function FixedFieldsCards({ e, su, sMd }) {
+  return h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 } },
+      h('i', { className: 'ti ti-pin', style: { fontSize: 18, color: 'var(--accent)' } }),
+      h('h2', { style: { margin: 0, fontSize: 15, fontWeight: 700 } }, 'Praktische info'),
+      h('span', { style: { fontSize: 12, color: 'var(--text3)' } }, '· vaste velden, per categorie aanpasbaar')
+    ),
+    h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 } }, FIXED.map(field => {
+      const val = e.fixed?.[field.key];
+      const hasContent = val?.text || val?.variants?.length;
+      return h('div', { key: field.key, className: 'card', onClick: () => sMd({ type:'fixed', field }), style: { padding: 14, cursor: 'pointer', minHeight: 130, display: 'flex', flexDirection: 'column' } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 } },
+          h('div', { style: { width: 32, height: 32, borderRadius: 'var(--r)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: `ti ${field.icon}`, style: { fontSize: 16, color: 'var(--accent)' } })),
+          h('div', { style: { fontWeight: 600, fontSize: 14, flex: 1 } }, field.label),
+          h('i', { className: hasContent?'ti ti-edit':'ti ti-plus', style: { fontSize: 14, color: 'var(--text3)' } })
+        ),
+        hasContent ? h('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', gap: 6 } },
+          val.text && h('div', { style: { fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, val.text),
+          val.variants?.length > 0 && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 } }, val.variants.map((v, i) =>
+            h('div', { key: i, style: { fontSize: 12, padding: '5px 8px', background: 'var(--bg2)', borderRadius: 6 } },
+              h('span', { style: { fontWeight: 600, color: 'var(--accent2)' } }, v.cat + ': '),
+              h('span', { style: { color: 'var(--text2)' } }, v.text)
+            )
+          )),
+          h('div', { style: { marginTop: 'auto', paddingTop: 8, fontSize: 11, color: 'var(--text3)' } }, h('i', { className:'ti ti-eye', style: { fontSize: 11, marginRight: 4 } }), visLabel(val.visibility))
+        ) : h('div', { style: { flex: 1, fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '12px 0', fontStyle:'italic' } }, 'Klik om in te vullen')
+      );
+    }))
+  );
+}
+
+function InfoBlocksSection({ e, su, sMd }) {
+  const blocks = e.infoBlocks || [];
+  return h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 } },
+      h('i', { className: 'ti ti-stack-2', style: { fontSize: 18, color: 'var(--accent)' } }),
+      h('h2', { style: { margin: 0, fontSize: 15, fontWeight: 700, flex: 1 } }, 'Extra info'),
+      h('button', { onClick: () => sMd({ type:'block', block:null }) }, h('i', { className:'ti ti-plus', style: { fontSize: 14 } }), 'Blok toevoegen')
+    ),
+    blocks.length === 0 ? Empty('ti-notes', 'Nog geen extra info-blokken', 'Voeg toe wat leveranciers moeten weten') :
+    h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 } }, blocks.map(b =>
+      h('div', { key: b.id, className: 'card', onClick: () => sMd({ type:'block', block: b }), style: { padding: 14, cursor: 'pointer' } },
+        h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 } },
+          h('div', { style: { width: 30, height: 30, borderRadius: 'var(--r)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, h('i', { className: `ti ${b.icon || 'ti-note'}`, style: { fontSize: 14, color: 'var(--text2)' } })),
+          h('div', { style: { flex: 1, fontWeight: 600, fontSize: 14 } }, b.title || 'Zonder titel')
+        ),
+        b.text && h('div', { style: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, whiteSpace: 'pre-wrap', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' } }, b.text),
+        h('div', { style: { marginTop: 10, fontSize: 11, color: 'var(--text3)' } }, h('i', { className:'ti ti-eye', style: { fontSize: 11, marginRight: 4 } }), visLabel(b.visibility))
+      )
+    ))
+  );
+}
+
+// ============ TIMELINE TAB ============
+function TimelineTab({ e, sMd, canEdit = true }) {
+  const items = (e.timeline || []).slice().sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  return h('div', { className:'fade-in' },
+    h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 16 } },
+      h('div', { style: { flex: 1 } },
+        h('h2', { style: { margin: 0, fontSize: 18, fontWeight: 700 } }, 'Run sheet'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, 'Tijdslijn voor de hele dag — alle leveranciers zien dit')
+      ),
+      canEdit && h('button', { className: 'primary', onClick: () => sMd({ type:'tl', item:null }) }, h('i', { className:'ti ti-plus', style: { fontSize: 14 } }), 'Item toevoegen')
+    ),
+    items.length === 0 ? Empty('ti-clock-off', 'Nog geen tijdslijn', 'Voeg de eerste tijdslot toe (bv. "14:00 — Catering aankomst")') :
+    h('div', { style: { position: 'relative', maxWidth: 800 } },
+      h('div', { style: { position: 'absolute', left: 64, top: 8, bottom: 8, width: 2, background: 'var(--border)' } }),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, items.map(it => h(TlItem, { key: it.id, it, sMd })))
+    )
+  );
+}
+
+function TlItem({ it, sMd }) {
+  return h('div', { onClick: () => sMd({ type:'tl', item: it }), style: { display: 'flex', gap: 14, cursor: 'pointer', padding: '8px 0', alignItems: 'flex-start' } },
+    h('div', { style: { width: 52, fontSize: 13, fontWeight: 700, color: 'var(--accent2)', textAlign: 'right', paddingTop: 12, flexShrink: 0 } }, it.time || '--:--'),
+    h('div', { style: { width: 16, height: 16, borderRadius: '50%', background: 'var(--bg)', border: '3px solid var(--accent)', flexShrink: 0, marginTop: 13, zIndex: 1 } }),
+    h('div', { className: 'card', style: { flex: 1, padding: 12, marginLeft: 4 } },
+      h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 8 } },
+        h('div', { style: { flex: 1 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14, color: 'var(--text)' } }, it.text || '(zonder beschrijving)'),
+          (it.zone || it.responsible || it.duration) && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 12 } },
+            it.duration && h('span', null, h('i', {className:'ti ti-hourglass', style:{fontSize:12, marginRight:4}}), fmtDur(it.duration)),
+            it.zone && h('span', null, h('i', {className:'ti ti-map-pin', style:{fontSize:12, marginRight:4}}), it.zone),
+            it.responsible && h('span', null, h('i', {className:'ti ti-user', style:{fontSize:12, marginRight:4}}), it.responsible)
+          )
+        ),
+        h('i', { className: 'ti ti-edit', style: { fontSize: 13, color: 'var(--text3)' } })
+      )
+    )
+  );
+}
+
+// ============ TASKS TAB ============
+function TasksTab({ e, su, sMd, canEdit = true }) {
+  const tasks = e.tasks || [];
+  const open = tasks.filter(t => t.status !== 'done');
+  const done = tasks.filter(t => t.status === 'done');
+  const supName = sid => su.find(s => s.id === sid)?.name;
+  return h('div', { className:'fade-in' },
+    h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 16 } },
+      h('div', { style: { flex: 1 } },
+        h('h2', { style: { margin: 0, fontSize: 18, fontWeight: 700 } }, 'Taken'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, `${open.length} open · ${done.length} klaar`)
+      ),
+      canEdit && h('button', { className: 'primary', onClick: () => sMd({ type:'task', task:null }) }, h('i', { className:'ti ti-plus', style: { fontSize: 14 } }), 'Taak toevoegen')
+    ),
+    tasks.length === 0 ? Empty('ti-checks', 'Geen taken', 'Voeg interne taken of taken voor leveranciers toe') :
+    h('div', { style: { maxWidth: 800, display: 'flex', flexDirection: 'column', gap: 8 } }, [
+      ...open.map(t => h(TaskCard, { key: t.id, t, su, sMd, supName })),
+      done.length > 0 && h('div', { key:'done-hdr', style: { fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 12, marginBottom: 4 } }, 'Voltooid'),
+      ...done.map(t => h(TaskCard, { key: t.id, t, su, sMd, supName }))
+    ])
+  );
+}
+
+function TaskCard({ t, su, sMd, supName }) {
+  const st = TST[t.status || 'open'];
+  const overdue = t.deadline && t.status !== 'done' && new Date(t.deadline) < new Date();
+  return h('div', { className: 'card', onClick: () => sMd({ type:'task', task: t }), style: { padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 12, opacity: t.status==='done' ? .65 : 1 } },
+    h('div', { style: { width: 22, height: 22, borderRadius: 6, border: `2px solid ${t.status==='done' ? 'var(--ok-border)' : 'var(--border2)'}`, background: t.status==='done' ? 'var(--ok-bg)' : 'transparent', flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, t.status==='done' && h('i', { className: 'ti ti-check', style: { fontSize: 14, color: 'var(--ok-text)' } })),
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontWeight: 600, fontSize: 14, textDecoration: t.status==='done' ? 'line-through' : 'none' } }, t.title || '(zonder titel)'),
+      t.description && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 4, whiteSpace: 'pre-wrap' } }, t.description),
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8, alignItems: 'center' } },
+        t.deadline && h('span', { className: overdue ? 'chip warn' : 'chip' }, h('i', { className:'ti ti-calendar', style:{fontSize:11} }), fmt(t.deadline)),
+        t.visibility && t.visibility.mode === 'internal' ? h('span', { className: 'chip' }, h('i', { className:'ti ti-lock', style:{fontSize:11} }), 'Intern') :
+          (t.visibility && h('span', { className: 'chip accent' }, h('i', { className:'ti ti-users', style:{fontSize:11} }), visLabel(t.visibility))),
+        t.responses?.length > 0 && h('span', { className: 'chip ok' }, h('i', { className:'ti ti-message', style:{fontSize:11} }), `${t.responses.length} reactie${t.responses.length===1?'':'s'}`)
+      )
+    ),
+    h('i', { className: 'ti ti-edit', style: { fontSize: 13, color: 'var(--text3)', marginTop: 4 } })
+  );
+}
+
+// ============ LINKED SUPPLIERS TAB ============
+function LinkedSuppliers({ e, su, sMd, unlinkSu, copyPortalLink, canEdit = true }) {
+  const evS = su.filter(s => e.suppliers?.includes(s.id));
+  return h('div', { className:'fade-in' },
+    h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 16 } },
+      h('div', { style: { flex: 1 } },
+        h('h2', { style: { margin: 0, fontSize: 18, fontWeight: 700 } }, 'Gekoppelde leveranciers'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, `${evS.length} leverancier${evS.length===1?'':'s'} gekoppeld aan dit event`)
+      ),
+      canEdit && h('button', { className: 'primary', onClick: () => sMd('addSup') }, h('i', { className:'ti ti-link', style: { fontSize: 14 } }), 'Koppelen')
+    ),
+    evS.length === 0 ? Empty('ti-user-off', 'Nog geen leveranciers gekoppeld') :
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 12 } }, evS.map(s => {
+      const cat = normCat(s.category);
+      return h('div', { key: s.id, className: 'card', style: { padding: 14 } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } },
+          h('div', { style: { width: 38, height: 38, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--accent2)' } }, ini(s.name)),
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { style: { fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.name),
+            s.company && h('div', { style: { fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.company)
+          ),
+          h('button', { className:'ghost', onClick: () => unlinkSu(s.id), style: { padding: '4px 6px' }, title:'Loskoppelen' }, h('i', { className: 'ti ti-x', style: { fontSize: 14 } }))
+        ),
+        cat && h('div', { className:'chip', style: { marginBottom: 8 } }, h('i', { className: `ti ${CAT_ICON[cat]||'ti-tag'}`, style: { fontSize: 11 } }), cat),
+        s.email && h('div', { style: { fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 } }, h('i', { className: 'ti ti-mail', style: { fontSize: 12 } }), s.email),
+        s.phone && h('div', { style: { fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 } }, h('i', { className: 'ti ti-phone', style: { fontSize: 12 } }), s.phone),
+        s.portalCode && h('button', { onClick: e2 => { e2.stopPropagation(); copyPortalLink(s); }, style: { marginTop: 10, width: '100%', justifyContent: 'center', fontSize: 11 } }, h('i', { className: 'ti ti-copy', style: { fontSize: 12 } }), 'Kopieer link')
+      );
+    }))
+  );
+}
+
+// ============ DOCS TAB ============
+function DocsTab({ e, su, sMd, delD, canEdit = true }) {
+  const docs = e.documents || [];
+  return h('div', { className:'fade-in' },
+    h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 16 } },
+      h('div', { style: { flex: 1 } },
+        h('h2', { style: { margin: 0, fontSize: 18, fontWeight: 700 } }, 'Documenten'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, `${docs.length} document${docs.length===1?'':'en'}`)
+      ),
+      canEdit && h('button', { className: 'primary', onClick: () => sMd('upDoc') }, h('i', { className:'ti ti-upload', style: { fontSize: 14 } }), 'Uploaden')
+    ),
+    docs.length === 0 ? Empty('ti-file-off', 'Geen documenten') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 800 } }, docs.map(d => {
+      const vis = docVis(d);
+      return h('div', { key: d.id, className: 'card', style: { padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 12 } },
+        h('div', { style: { width: 40, height: 40, borderRadius: 'var(--r)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: 'ti ti-file-text', style: { fontSize: 18, color: 'var(--accent)' } })),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14 } }, d.name),
+          h('div', { style: { fontSize: 11, color: 'var(--text3)', marginTop: 2 } }, fmt(d.uploadedAt)),
+          d.notes && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 6, fontStyle: 'italic' } }, `"${d.notes}"`),
+          h('div', { style: { marginTop: 8 } }, h('span', { className:'chip accent' }, h('i', { className:'ti ti-eye', style:{fontSize:11} }), visLabel(vis)))
+        ),
+        h('button', { className:'ghost danger', onClick: () => { if(confirm('Verwijderen?')) delD(d.id); }, style: { padding: '4px 6px' } }, h('i', { className: 'ti ti-trash', style: { fontSize: 14 } }))
+      );
+    }))
+  );
+}
+
+// ============ REQUESTS TAB ============
+function RequestsTab({ e, rq, selR, sSelR, sMd, addMsg, closeR, canEdit = true }) {
+  const evR = rq.filter(r => r.eventId === e.id);
+  if (selR) { const r = evR.find(x => x.id === selR); if (r) return h('div', null,
+    h('button', { onClick: () => sSelR(null), style: { marginBottom: 12 } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 14 } }), 'Terug'),
+    h(Thread, { r, org: true, reply: (t, a) => addMsg(r.id, 'organizer', t, a), close: () => closeR(r.id) })
+  ); }
+  return h('div', { className:'fade-in' },
+    h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 16 } },
+      h('div', { style: { flex: 1 } },
+        h('h2', { style: { margin: 0, fontSize: 18, fontWeight: 700 } }, 'Aanvragen'),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, `${evR.length} aanvraag${evR.length===1?'':'en'}`)
+      ),
+      canEdit && h('button', { className: 'primary', onClick: () => sMd('newReq') }, h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Nieuwe aanvraag')
+    ),
+    evR.length === 0 ? Empty('ti-message-off', 'Geen aanvragen', 'Vraag iets aan een leverancier') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9, maxWidth: 800 } }, evR.map(r => {
+      const st = ST[r.status]; const lm = r.messages[r.messages.length - 1];
+      return h('div', { key: r.id, className: 'card', onClick: () => sSelR(r.id), style: { padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, borderColor: r.status==='beantwoord' ? 'var(--info-border)' : undefined, background: r.status==='beantwoord' ? 'var(--info-bg)' : undefined } },
+        h('div', { style: { width: 38, height: 38, borderRadius: '50%', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: `ti ${r.status==='beantwoord'?'ti-message-check':'ti-message'}`, style: { fontSize: 17, color: r.status==='beantwoord' ? 'var(--info-text)' : 'var(--text2)' } })),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14 } }, r.title),
+          h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, `${r.supplierName} · ${fmt(r.createdAt)}`),
+          lm && h('div', { style: { fontSize: 12, color: 'var(--text3)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, `${lm.from==='supplier'?'↩ ':''}${lm.text}`)
+        ),
+        h('span', { className: `chip ${r.status==='open'?'warn':r.status==='beantwoord'?'accent':''}` }, st.l)
+      );
+    }))
+  );
+}
+
+// ============ THREAD ============
+function Thread({ r, org, reply, close }) {
+  const [t, st] = useState(''), [file, setFile] = useState(null), [busy, setBusy] = useState(false);
+  const er = useRef(), fr = useRef();
+  useEffect(() => { er.current?.scrollIntoView({ behavior: 'smooth' }); }, [r.messages.length]);
+  const send = async () => {
+    if (!t.trim() || busy) return;
+    setBusy(true);
+    try {
+      let att = null;
+      if (file) att = await FB.upload(`requests/${r.id}`, file, { portal: !org });
+      await reply(t.trim(), att);
+      st(''); setFile(null); if (fr.current) fr.current.value = '';
+    } catch (err) { alert('Upload mislukt: '+(err?.message||'onbekend')); }
+    finally { setBusy(false); }
+  };
+  const stt = ST[r.status];
+  return h('div', { style: { maxWidth: 700 } },
+    h('div', { className: 'card', style: { padding: '14px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 } },
+      h('div', { style: { flex: 1 } },
+        h('div', { style: { fontWeight: 700, fontSize: 16 } }, r.title),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2 } }, org ? r.supplierName : r.eventName)
+      ),
+      h('span', { className: `chip ${r.status==='open'?'warn':r.status==='beantwoord'?'accent':''}` }, stt.l),
+      org && r.status !== 'gesloten' && h('button', { onClick: close, style: { fontSize: 12 } }, h('i', { className:'ti ti-check', style:{fontSize:13} }), 'Afsluiten')
+    ),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, maxHeight: 400, overflowY: 'auto', padding: '4px 2px' } },
+      r.messages.map(m => {
+        const mn = (org && m.from === 'organizer') || (!org && m.from === 'supplier');
+        return h('div', { key: m.id, style: { display: 'flex', justifyContent: mn ? 'flex-end' : 'flex-start' } },
+          h('div', { style: { maxWidth: '75%', padding: '11px 14px', borderRadius: 'var(--rl)', background: mn ? 'var(--accent-bg)' : 'var(--bg2)', border: `1px solid ${mn ? 'var(--accent-border)' : 'var(--border)'}` } },
+            h('div', { style: { fontSize: 11, color: mn ? 'var(--accent2)' : 'var(--text3)', marginBottom: 4, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' } }, m.from === 'organizer' ? 'Organisatie' : 'Leverancier'),
+            h('div', { style: { fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, m.text),
+            m.attachment && Attach(m.attachment),
+            h('div', { style: { fontSize: 10, color: mn ? 'var(--accent2)' : 'var(--text3)', marginTop: 5, opacity: .8 } }, fmtT(m.createdAt))
+          )
+        );
+      }),
+      h('div', { ref: er })
+    ),
+    r.status !== 'gesloten' && h('div', { className: 'card', style: { padding: 12 } },
+      h('textarea', { value: t, onChange: e => st(e.target.value), placeholder: org ? 'Follow-up vraag...' : 'Typ uw antwoord...', rows: 3, style: { marginBottom: 8, border: 'none', padding: 0 } }),
+      h('div', { style: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' } },
+        h('input', { ref: fr, type: 'file', onChange: e => setFile(e.target.files?.[0] || null), style: { flex: 1, padding: '6px 8px', fontSize: 12 } }),
+        h('button', { className: 'primary', onClick: send, disabled: !t.trim() || busy }, h('i', { className: `ti ${busy?'ti-loader':'ti-send'}`, style: { fontSize: 14 } }), busy ? 'Bezig...' : (org ? 'Versturen' : 'Antwoorden'))
+      )
+    ),
+    r.status === 'gesloten' && h('div', { style: { padding: '12px 16px', background: 'var(--bg2)', borderRadius: 'var(--r)', fontSize: 13, color: 'var(--text2)', textAlign: 'center' } }, h('i', { className: 'ti ti-lock', style: { fontSize: 14, marginRight: 6, verticalAlign: -2 } }), 'Aanvraag afgesloten.')
+  );
+}
+
+function Attach(a) {
+  if (typeof a === 'string') return h('div', { key: 'att', style: { marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, background: 'var(--bg)', padding: '6px 9px', borderRadius: 'var(--r)' } }, h('i', { className: 'ti ti-paperclip', style: { fontSize: 13 } }), a);
+  return h('a', { key: 'att', href: a.url, target: '_blank', rel: 'noopener', style: { marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, background: 'var(--bg)', padding: '6px 9px', borderRadius: 'var(--r)', textDecoration: 'none', color: 'var(--accent2)', fontWeight: 600 } }, h('i', { className: 'ti ti-download', style: { fontSize: 13 } }), a.name);
+}
+
+// ============ PORTAL (supplier side) ============
+function Portal({ rq, su, ev, addMsg, pCode, sPCode, actP, sActP, enterP, nav, toggleTask, addTaskResponse }) {
+  const [sel, setSel] = useState(null);
+  const [evView, setEvView] = useState(null);
+  const norm = normCode(actP);
+  const sup = norm ? su.find(s => normCode(s.portalCode) === norm) : null;
+  const mine = norm ? rq.filter(r => normCode(r.portalCode) === norm) : [];
+  const supEv = sup ? ev.filter(e => e.suppliers?.includes(sup.id)) : [];
+  const supName = sup?.name || mine[0]?.supplierName || 'Leverancier';
+
+  // lastAccess is recorded server-side by the portalAction Cloud Function
+
+  if (!actP) return h('div', { style: { maxWidth: 420, margin: '4rem auto', textAlign: 'center', padding: '0 1rem' } },
+    h('div', { style: { width: 72, height: 72, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' } }, h('i', { className: 'ti ti-message-circle', style: { fontSize: 36, color: 'var(--accent)' } })),
+    h('h1', { style: { margin: '0 0 8px', fontSize: 22, fontWeight: 700 } }, 'Leverancier portaal'),
+    h('p', { style: { fontSize: 14, color: 'var(--text2)', marginBottom: '1.5rem', lineHeight: 1.6 } }, 'Je hebt normaal een persoonlijke link gekregen. Heb je in de plaats een korte code? Voer die hier in.'),
+    h('div', { style: { display: 'flex', gap: 8, marginBottom: '1rem' } },
+      h('input', { value: pCode, onChange: e => sPCode(e.target.value), placeholder: 'Code', style: { fontFamily: 'monospace', fontSize: 14, textAlign: 'center' }, onKeyDown: e => e.key === 'Enter' && enterP() }),
+      h('button', { className: 'primary', onClick: enterP }, h('i', { className: 'ti ti-arrow-right', style: { fontSize: 14 } }), 'Open')
+    ),
+    h('button', { className:'ghost', onClick: () => nav('dashboard'), style: { marginTop: 16, fontSize: 12 } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 12 } }), 'Terug')
+  );
+
+  if (sel) { const r = mine.find(x => x.id === sel); if (r) return h('div', { style: { padding: '1.5rem', maxWidth: 800, margin: '0 auto' } },
+    h('button', { onClick: () => setSel(null), style: { marginBottom: 14 } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 14 } }), 'Terug'),
+    h(Thread, { r, org: false, reply: (t, a) => addMsg(r.id, 'supplier', t, a) })
+  ); }
+
+  if (evView) { const e = supEv.find(x => x.id === evView); if (e) return h(PortalEvent, { e, sup, back: () => setEvView(null), toggleTask, addTaskResponse }); }
+
+  return h('div', { style: { padding: '1.5rem', maxWidth: 1000, margin: '0 auto' } },
+    h('div', { className: 'card', style: { padding: '18px 20px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: 14 } },
+      h('div', { style: { width: 52, height: 52, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: 'var(--accent2)' } }, ini(supName)),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { fontWeight: 700, fontSize: 18 } }, supName),
+        sup?.company && h('div', { style: { fontSize: 13, color: 'var(--text2)' } }, sup.company),
+        sup && h('div', { style: { fontSize: 12, color: 'var(--text3)', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 12 } },
+          sup.email && h('span', null, h('i', { className: 'ti ti-mail', style: { fontSize: 12, marginRight: 4 } }), sup.email),
+          sup.phone && h('span', null, h('i', { className: 'ti ti-phone', style: { fontSize: 12, marginRight: 4 } }), sup.phone),
+          sup.category && h('span', null, h('i', { className: 'ti ti-tag', style: { fontSize: 12, marginRight: 4 } }), normCat(sup.category))
+        )
+      ),
+      h('button', { onClick: () => { sActP(null); window.location.hash = ''; } }, h('i', { className: 'ti ti-logout', style: { fontSize: 13 } }), 'Sluiten')
+    ),
+
+    sup && supEv.length > 0 && h('div', { style: { marginBottom: '1.5rem' } },
+      h('h2', { style: { margin: '0 0 12px', fontSize: 15, fontWeight: 700 } }, `Mijn evenementen (${supEv.length})`),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 } }, supEv.map(e => {
+        const docs = (e.documents||[]).filter(d => visMatches(docVis(d), sup));
+        const open = (e.tasks||[]).filter(t => visMatches(t.visibility, sup) && t.visibility?.mode !== 'internal' && t.status !== 'done').length;
+        return h('div', { key: e.id, className: 'card', onClick: () => setEvView(e.id), style: { padding: 14, cursor: 'pointer' } },
+          h('div', { style: { fontWeight: 700, fontSize: 15, marginBottom: 6 } }, e.name),
+          h('div', { style: { fontSize: 12, color: 'var(--text2)', display: 'flex', flexWrap: 'wrap', gap: 10 } },
+            e.date && h('span', null, h('i', { className: 'ti ti-calendar', style: { fontSize: 12, marginRight: 4 } }), fmt(e.date)),
+            e.location && h('span', null, h('i', { className: 'ti ti-map-pin', style: { fontSize: 12, marginRight: 4 } }), e.location)
+          ),
+          h('div', { style: { display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' } },
+            open > 0 && h('span', { className: 'chip warn' }, h('i', { className: 'ti ti-checkbox', style: { fontSize: 11 } }), `${open} taak${open===1?'':'en'} open`),
+            docs.length > 0 && h('span', { className: 'chip' }, h('i', { className: 'ti ti-file', style: { fontSize: 11 } }), `${docs.length} doc${docs.length===1?'':'s'}`)
+          )
+        );
+      }))
+    ),
+
+    mine.length > 0 && h('div', null,
+      h('h2', { style: { margin: '0 0 12px', fontSize: 15, fontWeight: 700 } }, `Aanvragen (${mine.length})`),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9 } }, mine.map(r => {
+        const st = ST[r.status]; const lo = r.messages.filter(m => m.from === 'organizer').pop();
+        return h('div', { key: r.id, className: 'card', onClick: () => setSel(r.id), style: { padding: 14, cursor: 'pointer', background: r.status==='open' ? 'var(--warn-bg)' : 'var(--bg)', borderColor: r.status==='open' ? 'var(--warn-border)' : 'var(--border)' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+            h('i', { className: 'ti ti-message', style: { fontSize: 16, color: r.status==='open' ? 'var(--warn-text)' : 'var(--text2)' } }),
+            h('div', { style: { fontWeight: 600, fontSize: 14, flex: 1 } }, r.title),
+            h('span', { className: `chip ${r.status==='open'?'warn':''}` }, st.l)
+          ),
+          h('div', { style: { fontSize: 12, color: 'var(--text2)', marginBottom: 5 } }, `${r.eventName} · ${fmt(r.createdAt)}`),
+          lo && h('div', { style: { fontSize: 12, color: r.status==='open' ? 'var(--warn-text)' : 'var(--text2)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, `"${lo.text}"`)
+        );
+      }))
+    ),
+
+    supEv.length === 0 && mine.length === 0 && Empty('ti-inbox', 'Nog niets klaar', 'De organisator heeft nog geen info voor je klaargezet.')
+  );
+}
+
+function PortalTaskItem({ e, t, sup, toggleTask, addTaskResponse }) {
+  const [open, setOpen] = useState(false);
+  const [txt, setTxt] = useState(''), [file, setFile] = useState(null), [busy, setBusy] = useState(false);
+  const fr = useRef();
+  const overdue = t.deadline && t.status !== 'done' && new Date(t.deadline) < new Date();
+  const responses = t.responses || [];
+  const send = async () => {
+    if ((!txt.trim() && !file) || busy) return;
+    setBusy(true);
+    try {
+      let att = null;
+      if (file) att = await FB.upload(`tasks/${e.id}/${t.id}`, file, { portal: true });
+      await addTaskResponse(e.id, t.id, sup, txt.trim(), att);
+      setTxt(''); setFile(null); if (fr.current) fr.current.value = '';
+    } catch (err) { alert('Mislukt: '+(err?.message||'onbekend')); }
+    finally { setBusy(false); }
+  };
+  return h('div', { className: 'card', style: { padding: '12px 14px', opacity: t.status==='done' ? .75 : 1 } },
+    h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 12 } },
+      h('div', { onClick: () => toggleTask(e.id, t.id), style: { width: 22, height: 22, borderRadius: 6, border: `2px solid ${t.status==='done' ? 'var(--ok-border)' : 'var(--border2)'}`, background: t.status==='done' ? 'var(--ok-bg)' : 'transparent', flexShrink: 0, marginTop: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, t.status==='done' && h('i', { className: 'ti ti-check', style: { fontSize: 14, color: 'var(--ok-text)' } })),
+      h('div', { style: { flex: 1, minWidth: 0 } },
+        h('div', { style: { fontWeight: 600, fontSize: 14, textDecoration: t.status==='done' ? 'line-through' : 'none' } }, t.title),
+        t.description && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 4, whiteSpace: 'pre-wrap' } }, t.description),
+        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6, alignItems: 'center' } },
+          t.deadline && h('span', { className: overdue ? 'chip warn' : 'chip' }, h('i', { className:'ti ti-calendar', style:{fontSize:11} }), fmt(t.deadline)),
+          responses.length > 0 && h('span', { className: 'chip accent' }, h('i', { className:'ti ti-message', style:{fontSize:11} }), `${responses.length} reactie${responses.length===1?'':'s'}`)
+        )
+      ),
+      h('button', { className: 'ghost', onClick: () => setOpen(o => !o), style: { padding: '4px 8px', fontSize: 12 } }, h('i', { className: `ti ti-chevron-${open?'up':'down'}`, style:{fontSize:14} }), 'Reageren')
+    ),
+    open && h('div', { style: { marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' } },
+      responses.length > 0 && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 } }, responses.map(r =>
+        h('div', { key: r.id, style: { padding: '8px 10px', background: 'var(--bg2)', borderRadius: 'var(--r)' } },
+          h('div', { style: { fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 3 } }, `${r.supplierName} · ${fmtT(r.createdAt)}`),
+          r.text && h('div', { style: { fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' } }, r.text),
+          r.attachment && Attach(r.attachment)
+        )
+      )),
+      h('textarea', { value: txt, onChange: e => setTxt(e.target.value), placeholder: 'Schrijf een reactie (optioneel)...', rows: 2, style: { marginBottom: 8 } }),
+      h('div', { style: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' } },
+        h('input', { ref: fr, type: 'file', onChange: e => setFile(e.target.files?.[0] || null), style: { flex: 1, padding: '6px 8px', fontSize: 12 } }),
+        h('button', { className: 'primary', onClick: send, disabled: (!txt.trim() && !file) || busy }, h('i', { className: `ti ${busy?'ti-loader':'ti-send'}`, style:{fontSize:13} }), busy ? 'Bezig...' : 'Versturen')
+      )
+    )
+  );
+}
+
+function PortalEvent({ e, sup, back, toggleTask, addTaskResponse }) {
+  const myFixed = FIXED.map(f => {
+    const v = e.fixed?.[f.key];
+    if (!v) return null;
+    if (!visMatches(v.visibility, sup)) return null;
+    const variant = v.variants?.find(va => va.cat === normCat(sup.category));
+    return { ...f, text: variant?.text || v.text };
+  }).filter(Boolean);
+  const myBlocks = (e.infoBlocks||[]).filter(b => visMatches(b.visibility, sup));
+  const myDocs = (e.documents||[]).filter(d => visMatches(docVis(d), sup));
+  const myTasks = (e.tasks||[]).filter(t => visMatches(t.visibility, sup) && t.visibility?.mode !== 'internal');
+  const timeline = (e.timeline||[]).slice().sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+  return h('div', { style: { padding: '1.5rem', maxWidth: 900, margin: '0 auto' } },
+    h('button', { onClick: back, style: { marginBottom: 14 } }, h('i', { className: 'ti ti-arrow-left', style: { fontSize: 14 } }), 'Terug naar overzicht'),
+
+    h('div', { className: 'card', style: { padding: '20px 22px', marginBottom: '1.5rem' } },
+      h('h1', { style: { margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: '-.01em' } }, e.name),
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 8, fontSize: 13, color: 'var(--text2)' } },
+        e.date && h('span', null, h('i', { className: 'ti ti-calendar', style: { fontSize: 13, marginRight: 5 } }), fmt(e.date)),
+        e.location && h('span', null, h('i', { className: 'ti ti-map-pin', style: { fontSize: 13, marginRight: 5 } }), e.location)
+      ),
+      e.description && h('p', { style: { marginTop: 12, fontSize: 14, color: 'var(--text)', lineHeight: 1.6 } }, e.description)
+    ),
+
+    myFixed.length > 0 && h('div', { style: { marginBottom: '1.5rem' } },
+      h('h2', { style: { margin: '0 0 12px', fontSize: 16, fontWeight: 700 } }, 'Praktische info'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 } }, myFixed.map(f =>
+        h('div', { key: f.key, className: 'card', style: { padding: 14 } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 } },
+            h('div', { style: { width: 30, height: 30, borderRadius: 'var(--r)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: `ti ${f.icon}`, style: { fontSize: 15, color: 'var(--accent)' } })),
+            h('div', { style: { fontWeight: 600, fontSize: 13 } }, f.label)
+          ),
+          h('div', { style: { fontSize: 13, color: 'var(--text)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, f.text)
+        )
+      ))
+    ),
+
+    myBlocks.length > 0 && h('div', { style: { marginBottom: '1.5rem' } },
+      h('h2', { style: { margin: '0 0 12px', fontSize: 16, fontWeight: 700 } }, 'Extra info'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 } }, myBlocks.map(b =>
+        h('div', { key: b.id, className: 'card', style: { padding: 14 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14, marginBottom: 6 } }, b.title || 'Info'),
+          b.text && h('div', { style: { fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, b.text)
+        )
+      ))
+    ),
+
+    timeline.length > 0 && h('div', { style: { marginBottom: '1.5rem' } },
+      h('h2', { style: { margin: '0 0 12px', fontSize: 16, fontWeight: 700 } }, 'Run sheet'),
+      h('div', { style: { position: 'relative' } },
+        h('div', { style: { position: 'absolute', left: 64, top: 8, bottom: 8, width: 2, background: 'var(--border)' } }),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4 } }, timeline.map(it =>
+          h('div', { key: it.id, style: { display: 'flex', gap: 14, padding: '6px 0', alignItems: 'flex-start' } },
+            h('div', { style: { width: 52, fontSize: 13, fontWeight: 700, color: 'var(--accent2)', textAlign: 'right', paddingTop: 10, flexShrink: 0 } }, it.time || '--:--'),
+            h('div', { style: { width: 16, height: 16, borderRadius: '50%', background: 'var(--bg)', border: '3px solid var(--accent)', flexShrink: 0, marginTop: 11, zIndex: 1 } }),
+            h('div', { className: 'card', style: { flex: 1, padding: 11, marginLeft: 4 } },
+              h('div', { style: { fontWeight: 600, fontSize: 14 } }, it.text),
+              (it.duration || it.zone || it.responsible) && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 10 } },
+                it.duration && h('span', null, h('i', { className: 'ti ti-hourglass', style: { fontSize: 11, marginRight: 4 } }), fmtDur(it.duration)),
+                it.zone && h('span', null, h('i', { className: 'ti ti-map-pin', style: { fontSize: 11, marginRight: 4 } }), it.zone),
+                it.responsible && h('span', null, h('i', { className: 'ti ti-user', style: { fontSize: 11, marginRight: 4 } }), it.responsible)
+              )
+            )
+          )
+        ))
+      )
+    ),
+
+    myTasks.length > 0 && h('div', { style: { marginBottom: '1.5rem' } },
+      h('h2', { style: { margin: '0 0 12px', fontSize: 16, fontWeight: 700 } }, 'Taken voor jullie'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } }, myTasks.map(t =>
+        h(PortalTaskItem, { key: t.id, e, t, sup, toggleTask, addTaskResponse })
+      ))
+    ),
+
+    myDocs.length > 0 && h('div', { style: { marginBottom: '1.5rem' } },
+      h('h2', { style: { margin: '0 0 12px', fontSize: 16, fontWeight: 700 } }, 'Documenten'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } }, myDocs.map(d =>
+        h('div', { key: d.id, className: 'card', style: { padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12 } },
+          h('div', { style: { width: 36, height: 36, borderRadius: 'var(--r)', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' } }, h('i', { className: 'ti ti-file-text', style: { fontSize: 16, color: 'var(--accent)' } })),
+          h('div', { style: { flex: 1 } },
+            h('div', { style: { fontWeight: 600, fontSize: 14 } }, d.name),
+            d.notes && h('div', { style: { fontSize: 12, color: 'var(--text2)', marginTop: 2, fontStyle: 'italic' } }, `"${d.notes}"`)
+          )
+        )
+      ))
+    ),
+
+    myFixed.length === 0 && myBlocks.length === 0 && timeline.length === 0 && myTasks.length === 0 && myDocs.length === 0 && Empty('ti-info-circle', 'Nog geen info klaargezet voor jou')
+  );
+}
+
+// ============ SUPPLIERS PAGE ============
+function SupP({ su, ev, copyPortalLink, sMd, delSu, canEdit = true }) {
+  const [filter, setFilter] = useState('');
+  const [cat, setCat] = useState('');
+  const ec = i => ev.filter(e => e.suppliers?.includes(i)).length;
+
+  const filtered = su.filter(s => {
+    if (cat && normCat(s.category) !== cat) return false;
+    if (filter && !(s.name + ' ' + (s.company||'') + ' ' + (s.email||'')).toLowerCase().includes(filter.toLowerCase())) return false;
+    return true;
+  });
+
+  if (su.length === 0) return Empty('ti-user-off', 'Geen leveranciers', "Klik 'Nieuwe leverancier' bovenaan");
+
+  return h('div', { className:'fade-in' },
+    h('div', { style: { display: 'flex', gap: 10, marginBottom: 14, flexWrap:'wrap' } },
+      h('div', { style: { position: 'relative', flex: '1 1 220px', minWidth: 200 } },
+        h('i', { className: 'ti ti-search', style: { position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: 'var(--text3)' } }),
+        h('input', { value: filter, onChange: e => setFilter(e.target.value), placeholder: 'Zoeken op naam, bedrijf of e-mail', style: { paddingLeft: 32 } })
+      ),
+      h('select', { value: cat, onChange: e => setCat(e.target.value), style: { width: 'auto', minWidth: 180 } },
+        h('option', { value: '' }, 'Alle categorieën'),
+        CATS.map(c => h('option', { key: c, value: c }, c))
+      ),
+      h('button', { onClick: () => exportSuppliersPDF(filtered), title: 'Download gefilterde lijst als PDF' }, h('i', { className: 'ti ti-file-download', style: { fontSize: 13 } }), 'PDF')
+    ),
+    filtered.length === 0 ? Empty('ti-search-off', 'Geen resultaten') :
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 12 } }, filtered.map(s => {
+      const cat = normCat(s.category);
+      return h('div', { key: s.id, className: 'card', style: { padding: 14 } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 11, marginBottom: 10 } },
+          h('div', { style: { width: 42, height: 42, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: 'var(--accent2)' } }, ini(s.name)),
+          h('div', { style: { flex: 1, minWidth: 0 } },
+            h('div', { style: { fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.name),
+            s.company && h('div', { style: { fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.company)
+          ),
+          canEdit && h('button', { className:'ghost', onClick: () => sMd({ type:'editSup', sup: s }), style: { padding: '4px 6px' }, title:'Bewerken' }, h('i', { className: 'ti ti-edit', style: { fontSize: 14 } }))
+        ),
+        cat && h('div', { className:'chip', style: { marginBottom: 10 } }, h('i', { className: `ti ${CAT_ICON[cat]||'ti-tag'}`, style: { fontSize: 11 } }), cat),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--text2)' } },
+          s.email && h('div', { style: { display: 'flex', alignItems: 'center', gap: 7, overflow: 'hidden' } }, h('i', { className: 'ti ti-mail', style: { fontSize: 13, flexShrink: 0 } }), h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.email)),
+          s.phone && h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } }, h('i', { className: 'ti ti-phone', style: { fontSize: 13 } }), s.phone),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } }, h('i', { className: 'ti ti-calendar', style: { fontSize: 13 } }), `${ec(s.id)} event${ec(s.id)===1?'':'en'}`),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } }, h('i', { className: 'ti ti-login', style: { fontSize: 13 } }), s.lastAccess ? `Laatste login: ${fmtT(s.lastAccess)}` : 'Nog niet ingelogd')
+        ),
+        s.portalCode && h('button', { onClick: () => copyPortalLink(s), style: { marginTop: 10, width: '100%', justifyContent: 'center', fontSize: 11 } }, h('i', { className: 'ti ti-copy', style: { fontSize: 12 } }), 'Kopieer geheime link')
+      );
+    }))
+  );
+}
+
+// ============ MODAL WRAPPER ============
+function MW({ title, c, children, w = 520, footer }) {
+  return h('div', { onClick: e => { if (e.target === e.currentTarget) c(); }, style: { position: 'fixed', inset: 0, background: 'rgba(40,20,10,.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 500, padding: '2rem 1rem', overflowY: 'auto', backdropFilter: 'blur(4px)' } },
+    h('div', { className:'fade-in', style: { background: 'var(--bg)', borderRadius: 'var(--rxl)', border: '1px solid var(--border2)', width: '100%', maxWidth: w, marginTop: '1rem', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 4rem)' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 } },
+        h('h2', { style: { margin: 0, fontSize: 16, fontWeight: 700 } }, title),
+        h('button', { className:'ghost', onClick: c, style: { padding: '4px 7px' } }, h('i', { className: 'ti ti-x', style: { fontSize: 18 } }))
+      ),
+      h('div', { style: { padding: 20, overflowY: 'auto', flex: 1 } }, children),
+      footer && h('div', { style: { padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0, background: 'var(--bg2)', borderRadius: '0 0 var(--rxl) var(--rxl)' } }, footer)
+    )
+  );
+}
+
+// ============ SUPPLIER PICKER ============
+function SupplierPicker({ value, onChange, suppliers, scope }) {
+  const vis = value || VIS_ALL;
+  const [mode, setMode] = useState(vis.mode === 'cats' ? 'cats' : (vis.mode === 'sups' ? 'sups' : 'all'));
+  useEffect(() => { setMode(vis.mode === 'cats' ? 'cats' : (vis.mode === 'sups' ? 'sups' : 'all')); }, [value]);
+
+  const sups = (scope || suppliers).slice();
+  const presentCats = Array.from(new Set(sups.map(s => normCat(s.category)).filter(Boolean)));
+
+  const setM = m => {
+    setMode(m);
+    if (m === 'all') onChange(VIS_ALL);
+    else if (m === 'cats') onChange({ mode: 'cats', cats: vis.cats || [] });
+    else onChange({ mode: 'sups', sups: vis.sups || [] });
+  };
+  const toggleCat = c => {
+    const arr = vis.cats || [];
+    const next = arr.includes(c) ? arr.filter(x => x !== c) : [...arr, c];
+    onChange({ mode: 'cats', cats: next });
+  };
+  const toggleSup = id => {
+    const arr = vis.sups || [];
+    const next = arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id];
+    onChange({ mode: 'sups', sups: next });
+  };
+
+  return h('div', { style: { border: '1px solid var(--border2)', borderRadius: 'var(--r)', padding: 4, background: 'var(--bg2)' } },
+    h('div', { style: { display: 'flex', gap: 2, marginBottom: 8 } },
+      ['all','cats','sups'].map(m => h('button', { key: m, onClick: () => setM(m), style: { flex: 1, justifyContent: 'center', fontSize: 12, padding: '7px 10px', background: mode===m?'var(--bg)':'transparent', borderColor: mode===m?'var(--accent-border)':'transparent', color: mode===m?'var(--accent2)':'var(--text2)', fontWeight: mode===m?600:500, boxShadow: mode===m?'var(--shadow)':'none' } },
+        h('i', { className: `ti ${m==='all'?'ti-users-group':m==='cats'?'ti-tags':'ti-user'}`, style: { fontSize: 13 } }),
+        m==='all' ? 'Iedereen' : m==='cats' ? 'Per categorie' : 'Per leverancier'
+      ))
+    ),
+    h('div', { style: { padding: '6px 4px' } },
+      mode === 'all' && h('div', { style: { fontSize: 12, color: 'var(--text2)', textAlign: 'center', padding: '12px 8px' } },
+        h('i', { className: 'ti ti-users-group', style: { fontSize: 18, color: 'var(--accent)', display: 'block', marginBottom: 6 } }),
+        `Zichtbaar voor alle ${sups.length} gekoppelde leverancier${sups.length===1?'':'s'}`
+      ),
+      mode === 'cats' && (presentCats.length === 0 ? h('div', { style: { fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: 12 } }, 'Geen categorieën beschikbaar') :
+        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 } }, CATS.filter(c => presentCats.includes(c)).map(c => {
+          const ch = vis.cats?.includes(c);
+          const cnt = sups.filter(s => normCat(s.category) === c).length;
+          return h('div', { key: c, onClick: () => toggleCat(c), style: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 'var(--r)', cursor: 'pointer', background: ch ? 'var(--accent-bg)' : 'var(--bg)', border: `1px solid ${ch ? 'var(--accent-border)' : 'var(--border)'}` } },
+            h('div', { style: { width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${ch ? 'var(--accent)' : 'var(--border2)'}`, background: ch ? 'var(--accent)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, ch && h('i', { className: 'ti ti-check', style: { fontSize: 11, color: '#fff' } })),
+            h('i', { className: `ti ${CAT_ICON[c]||'ti-tag'}`, style: { fontSize: 14, color: ch ? 'var(--accent2)' : 'var(--text2)' } }),
+            h('span', { style: { flex: 1, fontSize: 12, fontWeight: 600, color: ch ? 'var(--accent2)' : 'var(--text)' } }, c),
+            h('span', { style: { fontSize: 11, color: 'var(--text3)' } }, cnt)
+          );
+        }))
+      ),
+      mode === 'sups' && (sups.length === 0 ? h('div', { style: { fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: 12 } }, 'Geen leveranciers gekoppeld') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' } }, sups.map(s => {
+          const ch = vis.sups?.includes(s.id);
+          return h('div', { key: s.id, onClick: () => toggleSup(s.id), style: { display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', borderRadius: 'var(--r)', cursor: 'pointer', background: ch ? 'var(--accent-bg)' : 'var(--bg)', border: `1px solid ${ch ? 'var(--accent-border)' : 'var(--border)'}` } },
+            h('div', { style: { width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${ch ? 'var(--accent)' : 'var(--border2)'}`, background: ch ? 'var(--accent)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } }, ch && h('i', { className: 'ti ti-check', style: { fontSize: 11, color: '#fff' } })),
+            h('div', { style: { width: 26, height: 26, borderRadius: '50%', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--text2)' } }, ini(s.name)),
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: { fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, s.name),
+              normCat(s.category) && h('div', { style: { fontSize: 11, color: 'var(--text3)' } }, normCat(s.category))
+            )
+          );
+        }))
+      )
+    )
+  );
+}
+
+// ============ MODALS ============
+function NEv({ c, s }) {
+  const [f, sf] = useState({ name: '', date: '', location: '', description: '' });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  return h(MW, { title: 'Nieuw evenement', c, footer: h(React.Fragment, null,
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => f.name && s(f), disabled: !f.name }, 'Aanmaken')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Naam *', h('input', { value: f.name, onChange: e => upd('name', e.target.value), autoFocus: true, placeholder:'Bv. Festival 2026' })),
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Datum', h('input', { type: 'date', value: f.date, onChange: e => upd('date', e.target.value) })),
+        FL('Locatie (kort)', h('input', { value: f.location, onChange: e => upd('location', e.target.value), placeholder:'Bv. Gent' }))
+      ),
+      FL('Omschrijving', h('textarea', { value: f.description, onChange: e => upd('description', e.target.value), rows: 3 }))
+    )
+  );
+}
+
+function NSu({ c, s }) {
+  const [f, sf] = useState({ name: '', company: '', email: '', phone: '', category: '' });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const ok = f.name && f.email;
+  return h(MW, { title: 'Nieuwe leverancier', c, footer: h(React.Fragment, null,
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => ok && s(f), disabled: !ok }, 'Toevoegen')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Naam *', h('input', { value: f.name, onChange: e => upd('name', e.target.value), autoFocus: true })),
+        FL('Bedrijf', h('input', { value: f.company, onChange: e => upd('company', e.target.value) }))
+      ),
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('E-mail *', h('input', { type: 'email', value: f.email, onChange: e => upd('email', e.target.value) })),
+        FL('Telefoon', h('input', { value: f.phone, onChange: e => upd('phone', e.target.value) }))
+      ),
+      FL('Categorie', h('select', { value: f.category, onChange: e => upd('category', e.target.value) }, h('option', { value: '' }, 'Kies...'), CATS.map(x => h('option', { key: x, value: x }, x)))),
+      h('div', { style: { padding: '10px 12px', background: 'var(--accent-bg)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--accent2)', display: 'flex', alignItems: 'center', gap: 8 } }, h('i', { className: 'ti ti-link', style: { fontSize: 14 } }), 'Er wordt een onraadbare portaal-link gegenereerd.')
+    )
+  );
+}
+
+function EditSu({ c, s, save, del }) {
+  const [f, sf] = useState({ name: s.name, company: s.company||'', email: s.email||'', phone: s.phone||'', category: normCat(s.category) || '' });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  return h(MW, { title: 'Leverancier bewerken', c, footer: h(React.Fragment, null,
+    h('button', { className: 'danger ghost', onClick: del, style: { marginRight:'auto' } }, h('i', { className:'ti ti-trash', style:{fontSize:13} }), 'Verwijderen'),
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => save(f), disabled: !f.name || !f.email }, 'Opslaan')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Naam *', h('input', { value: f.name, onChange: e => upd('name', e.target.value) })),
+        FL('Bedrijf', h('input', { value: f.company, onChange: e => upd('company', e.target.value) }))
+      ),
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('E-mail *', h('input', { type: 'email', value: f.email, onChange: e => upd('email', e.target.value) })),
+        FL('Telefoon', h('input', { value: f.phone, onChange: e => upd('phone', e.target.value) }))
+      ),
+      FL('Categorie', h('select', { value: f.category, onChange: e => upd('category', e.target.value) }, h('option', { value: '' }, 'Kies...'), CATS.map(x => h('option', { key: x, value: x }, x))))
+    )
+  );
+}
+
+function ASu({ c, su, es, a, sMd }) {
+  const av = su.filter(x => !es.includes(x.id));
+  return h(MW, { title: 'Leverancier koppelen', c },
+    av.length === 0 ?
+    h('div', null, Empty('ti-user-off', 'Geen leveranciers beschikbaar'), h('div', { style: { marginTop: 14, textAlign: 'center' } }, h('button', { className:'primary', onClick: () => sMd('newSupplier') }, 'Nieuwe aanmaken'))) :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 } }, av.map(s => {
+      const cat = normCat(s.category);
+      return h('div', { key: s.id, onClick: () => a(s.id), className: 'card', style: { padding: '11px 13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 11 } },
+        h('div', { style: { width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--accent2)' } }, ini(s.name)),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontWeight: 600, fontSize: 14 } }, s.name),
+          h('div', { style: { fontSize: 12, color: 'var(--text2)' } }, s.company || s.email)
+        ),
+        cat && h('span', { className: 'chip' }, h('i', { className: `ti ${CAT_ICON[cat]||'ti-tag'}`, style: { fontSize: 11 } }), cat),
+        h('i', { className: 'ti ti-plus', style: { fontSize: 16, color: 'var(--accent)' } })
+      );
+    }))
+  );
+}
+
+function UDoc({ c, e, su, s }) {
+  const [f, sf] = useState({ name: '', size: 0, type: '', notes: '', visibility: VIS_ALL });
+  const [fn, sfn] = useState('');
+  const fr = useRef();
+  const evS = su.filter(x => e.suppliers?.includes(x.id));
+  const hf = ev2 => { const fl = ev2.target.files[0]; if (fl) { sfn(fl.name); sf(p => ({ ...p, name: fl.name, size: fl.size, type: fl.type })); } };
+  return h(MW, { title: 'Document uploaden', c, footer: h(React.Fragment, null,
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => f.name && s(f), disabled: !f.name }, 'Uploaden')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', null,
+        h('label', { style: { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 6 } }, 'Bestand *'),
+        h('div', { onClick: () => fr.current?.click(), style: { padding: '1.5rem', border: '2px dashed var(--accent-border)', borderRadius: 'var(--rl)', cursor: 'pointer', textAlign: 'center', background: 'var(--accent-bg)' } },
+          h('i', { className: 'ti ti-cloud-upload', style: { fontSize: 28, color: 'var(--accent)', display: 'block', marginBottom: 8 } }),
+          fn ? h('div', { style: { fontSize: 13, fontWeight: 600 } }, fn) : h('div', { style: { fontSize: 12, color: 'var(--accent2)' } }, 'Klik om bestand te kiezen')
+        ),
+        h('input', { ref: fr, type: 'file', onChange: hf, style: { display: 'none' } })
+      ),
+      FL('Nota (optioneel)', h('input', { value: f.notes, onChange: e => sf(p => ({ ...p, notes: e.target.value })) })),
+      FL('Voor wie zichtbaar?', h(SupplierPicker, { value: f.visibility, onChange: v => sf(p => ({ ...p, visibility: v })), suppliers: evS, scope: evS }))
+    )
+  );
+}
+
+function NReq({ c, e, su, s, copyPortalLink }) {
+  const evS = su.filter(x => e.suppliers?.includes(x.id));
+  const [f, sf] = useState({ supplierId: '', title: '', message: '' });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const ok = f.supplierId && f.title && f.message;
+  const sel = su.find(x => x.id === f.supplierId);
+  return h(MW, { title: 'Nieuwe aanvraag', c, footer: h(React.Fragment, null,
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => ok && s({ eventId: e.id, eventName: e.name, supplierId: f.supplierId, supplierName: sel?.name||'', portalCode: sel?.portalCode||'', title: f.title, message: f.message }), disabled: !ok }, 'Versturen')
+  ) },
+    evS.length === 0 ? Empty('ti-user-off', 'Geen leveranciers', 'Koppel eerst leveranciers aan dit event') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Aan welke leverancier?', h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } }, evS.map(x =>
+        h('label', { key: x.id, style: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 'var(--r)', border: `1px solid ${f.supplierId===x.id?'var(--accent-border)':'var(--border)'}`, background: f.supplierId===x.id?'var(--accent-bg)':'var(--bg)' } },
+          h('input', { type: 'radio', name: 'sup', checked: f.supplierId === x.id, onChange: () => sf(p => ({ ...p, supplierId: x.id })), style: { width: 'auto' } }),
+          h('div', { style: { width: 28, height: 28, borderRadius: '50%', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text2)' } }, ini(x.name)),
+          h('div', { style: { flex: 1 } }, h('div', { style: { fontWeight: 600, fontSize: 13 } }, x.name), h('div', { style: { fontSize: 11, color: 'var(--text2)' } }, x.company || x.email))
+        )
+      ))),
+      FL('Onderwerp', h('input', { value: f.title, onChange: e => upd('title', e.target.value), placeholder: 'Bv. Keuring attest foodtruck' })),
+      FL('Bericht', h('textarea', { value: f.message, onChange: e => upd('message', e.target.value), rows: 4, placeholder: 'Bv. Gelieve uw meest recente keuringscertificaat te bezorgen voor 15 december...' })),
+      sel?.portalCode && h('div', { style: { padding: '12px 14px', background: 'var(--bg2)', borderRadius: 'var(--r)', fontSize: 12, color: 'var(--text2)' } },
+        h('div', { style: { marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 } }, h('i', { className: 'ti ti-info-circle', style: { fontSize: 14 } }), h('strong', null, 'Hoe ', sel.name, ' antwoordt:')),
+        h('button', { onClick: () => copyPortalLink(sel), style: { width: '100%', justifyContent: 'center', fontSize: 12 } }, h('i', { className: 'ti ti-copy', style: { fontSize: 13 } }), 'Kopieer portaal-link voor ', sel.name)
+      )
+    )
+  );
+}
+
+function MQ({ c, pe, su, ev, done }) {
+  const entries = Object.entries(pe).map(([sid, m]) => ({ sid, sup: su.find(x => x.id === sid), m })).filter(x => x.sup);
+  const eventItems = {};
+  entries.forEach(({ m }) => {
+    Object.entries(m).forEach(([eid, items]) => {
+      if (!eventItems[eid]) eventItems[eid] = new Set();
+      items.forEach(x => eventItems[eid].add(x.name));
+    });
+  });
+  const eventIds = Object.keys(eventItems);
+  const eventNames = eventIds.map(eid => ev.find(e => e.id === eid)?.name).filter(Boolean);
+  const bccList = [...new Set(entries.map(({ sup }) => sup.email).filter(Boolean))];
+
+  const body = `Beste leveranciers,\n\nEr zijn updates beschikbaar${eventNames.length ? ' voor: '+eventNames.join(', ') : ''}.\n\nGelieve jullie leveranciersportaal te raadplegen voor de details. De link werd eerder bezorgd.\n\nBedankt!`;
+
+  const ml = `mailto:?bcc=${encodeURIComponent(bccList.join(','))}&subject=${encodeURIComponent('Update: '+eventNames.join(', '))}&body=${encodeURIComponent(body)}`;
+
+  return h(MW, { title: 'Updates versturen', c, w: 600, footer: h(React.Fragment, null,
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: done }, h('i', { className: 'ti ti-check', style: { fontSize: 14 } }), 'Wachtrij wissen')
+  ) },
+    entries.length === 0 ? Empty('ti-checks', 'Niets in wachtrij') :
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+      h('div', { className: 'card', style: { padding: '12px 14px' } },
+        h('div', { style: { fontSize: 13, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } }, h('i', { className: 'ti ti-users', style: { fontSize: 14 } }), `${bccList.length} ontvanger${bccList.length===1?'':'s'} (BCC)`),
+        h('div', { style: { fontSize: 12, color: 'var(--text2)', wordBreak: 'break-all', lineHeight: 1.5 } }, bccList.join(', ') || '—')
+      ),
+      h('a', { href: ml, target: '_blank', style: { textDecoration: 'none' } },
+        h('button', { className: 'primary', style: { width: '100%', justifyContent: 'center' } }, h('i', { className: 'ti ti-mail', style: { fontSize: 13 } }), 'Open mail (1× BCC)')
+      )
+    )
+  );
+}
+
+// ============ INFO BLOCK EDITOR ============
+const BLOCK_ICONS = ['ti-note','ti-bulb','ti-key','ti-wifi','ti-bolt','ti-toolbox','ti-clipboard-list','ti-shield','ti-coffee','ti-music','ti-camera','ti-flag'];
+function BlockEdit({ c, e, su, b, save, del }) {
+  const [f, sf] = useState({
+    id: b?.id || uid(),
+    title: b?.title || '',
+    text: b?.text || '',
+    icon: b?.icon || 'ti-note',
+    visibility: b?.visibility || VIS_ALL
+  });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const evS = su.filter(x => e.suppliers?.includes(x.id));
+  return h(MW, { title: b ? 'Info-blok bewerken' : 'Nieuw info-blok', c, w: 560, footer: h(React.Fragment, null,
+    del && h('button', { className: 'danger ghost', onClick: del, style: { marginRight:'auto' } }, h('i', { className:'ti ti-trash', style:{fontSize:13} }), 'Verwijderen'),
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => save(f), disabled: !f.title }, 'Opslaan')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Titel *', h('input', { value: f.title, onChange: e => upd('title', e.target.value), autoFocus: true, placeholder: 'Bv. Wifi-toegang, Backstage-toegang, Allergieën...' })),
+      FL('Icoon', h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } }, BLOCK_ICONS.map(ic =>
+        h('div', { key: ic, onClick: () => upd('icon', ic), style: { width: 34, height: 34, borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: f.icon===ic?'var(--accent-bg)':'var(--bg2)', border: `1px solid ${f.icon===ic?'var(--accent-border)':'var(--border)'}` } }, h('i', { className: `ti ${ic}`, style: { fontSize: 16, color: f.icon===ic?'var(--accent)':'var(--text2)' } }))
+      ))),
+      FL('Inhoud', h('textarea', { value: f.text, onChange: e => upd('text', e.target.value), rows: 5, placeholder: 'Tekst die leveranciers te zien krijgen...' })),
+      FL('Voor wie zichtbaar?', h(SupplierPicker, { value: f.visibility, onChange: v => upd('visibility', v), suppliers: evS, scope: evS }))
+    )
+  );
+}
+
+// ============ FIXED FIELD EDITOR ============
+function FixedEdit({ c, e, su, field, value, save }) {
+  const [f, sf] = useState({
+    text: value?.text || '',
+    variants: value?.variants || [],
+    visibility: value?.visibility || VIS_ALL
+  });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const evS = su.filter(x => e.suppliers?.includes(x.id));
+  const presentCats = Array.from(new Set(evS.map(s => normCat(s.category)).filter(Boolean)));
+  const addVariant = () => upd('variants', [...f.variants, { cat: presentCats[0] || CATS[0], text: '' }]);
+  const updVariant = (i, k, v) => upd('variants', f.variants.map((x, idx) => idx === i ? { ...x, [k]: v } : x));
+  const delVariant = i => upd('variants', f.variants.filter((_, idx) => idx !== i));
+
+  return h(MW, { title: field.label, c, w: 580, footer: h(React.Fragment, null,
+    value && h('button', { className: 'danger ghost', onClick: () => save(null), style: { marginRight:'auto' } }, h('i', { className:'ti ti-trash', style:{fontSize:13} }), 'Leegmaken'),
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => save(f) }, 'Opslaan')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', { style: { padding: '10px 14px', background: 'var(--accent-bg)', borderRadius: 'var(--r)', display: 'flex', alignItems: 'center', gap: 10 } },
+        h('i', { className: `ti ${field.icon}`, style: { fontSize: 18, color: 'var(--accent)' } }),
+        h('div', { style: { fontSize: 12, color: 'var(--accent2)' } }, 'Standaard waarde voor iedereen, optioneel per categorie aanpasbaar')
+      ),
+      FL('Standaard waarde', h('textarea', { value: f.text, onChange: e => upd('text', e.target.value), rows: 3, placeholder: field.placeholder })),
+      h('div', null,
+        h('div', { style: { display: 'flex', alignItems: 'center', marginBottom: 8 } },
+          h('label', { style: { fontSize: 12, fontWeight: 600, color: 'var(--text2)', flex: 1 } }, 'Afwijkende waarde per categorie'),
+          h('button', { onClick: addVariant, style: { fontSize: 11, padding: '5px 9px' } }, h('i', { className:'ti ti-plus', style:{fontSize:12} }), 'Variant')
+        ),
+        f.variants.length === 0 ? h('div', { style: { fontSize: 12, color: 'var(--text3)', padding: '10px 0' } }, 'Geen varianten — iedereen ziet de standaard waarde.') :
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } }, f.variants.map((v, i) =>
+          h('div', { key: i, style: { padding: 10, background: 'var(--bg2)', borderRadius: 'var(--r)', display: 'flex', gap: 8, alignItems: 'flex-start' } },
+            h('select', { value: v.cat, onChange: e => updVariant(i, 'cat', e.target.value), style: { width: 170 } }, CATS.map(c => h('option', { key: c, value: c }, c))),
+            h('input', { value: v.text, onChange: e => updVariant(i, 'text', e.target.value), placeholder:'Afwijkende waarde voor deze categorie', style: { flex: 1 } }),
+            h('button', { className:'ghost danger', onClick: () => delVariant(i), style: { padding: '6px 8px' } }, h('i', { className: 'ti ti-x', style: { fontSize: 14 } }))
+          )
+        ))
+      ),
+      FL('Voor wie zichtbaar?', h(SupplierPicker, { value: f.visibility, onChange: v => upd('visibility', v), suppliers: evS, scope: evS }))
+    )
+  );
+}
+
+// ============ TIMELINE ITEM EDITOR ============
+function TlEdit({ c, e, item, save, del }) {
+  const [f, sf] = useState({
+    id: item?.id || uid(),
+    time: item?.time || '',
+    duration: item?.duration || '',
+    text: item?.text || '',
+    zone: item?.zone || '',
+    responsible: item?.responsible || ''
+  });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  return h(MW, { title: item ? 'Tijdslijn-item bewerken' : 'Nieuw tijdslijn-item', c, w: 520, footer: h(React.Fragment, null,
+    del && h('button', { className: 'danger ghost', onClick: del, style: { marginRight:'auto' } }, h('i', { className:'ti ti-trash', style:{fontSize:13} }), 'Verwijderen'),
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => save({ ...f, duration: f.duration ? Number(f.duration) : null }), disabled: !f.text || !f.time }, 'Opslaan')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '140px 1fr', gap: 12 } },
+        FL('Tijd *', h('input', { type: 'time', value: f.time, onChange: e => upd('time', e.target.value), autoFocus: true })),
+        FL('Duur (minuten)', h('input', { type: 'number', value: f.duration, onChange: e => upd('duration', e.target.value), placeholder: 'Bv. 60', min: 0 }))
+      ),
+      FL('Wat gebeurt er? *', h('input', { value: f.text, onChange: e => upd('text', e.target.value), placeholder: 'Bv. Catering opbouw, deuren open, podium soundcheck' })),
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Zone / locatie', h('input', { value: f.zone, onChange: e => upd('zone', e.target.value), placeholder: 'Bv. Gate B, backstage, podium 1' })),
+        FL('Verantwoordelijke', h('input', { value: f.responsible, onChange: e => upd('responsible', e.target.value), placeholder: 'Bv. Tom' }))
+      )
+    )
+  );
+}
+
+// ============ TASK EDITOR ============
+function TaskEdit({ c, e, su, t, save, del }) {
+  const [f, sf] = useState({
+    id: t?.id || uid(),
+    title: t?.title || '',
+    description: t?.description || '',
+    deadline: t?.deadline || '',
+    status: t?.status || 'open',
+    visibility: t?.visibility || { mode: 'internal' }
+  });
+  const upd = (k, v) => sf(p => ({ ...p, [k]: v }));
+  const evS = su.filter(x => e.suppliers?.includes(x.id));
+  const isInternal = f.visibility?.mode === 'internal';
+  return h(MW, { title: t ? 'Taak bewerken' : 'Nieuwe taak', c, w: 560, footer: h(React.Fragment, null,
+    del && h('button', { className: 'danger ghost', onClick: del, style: { marginRight:'auto' } }, h('i', { className:'ti ti-trash', style:{fontSize:13} }), 'Verwijderen'),
+    h('button', { onClick: c }, 'Annuleren'),
+    h('button', { className: 'primary', onClick: () => save(f), disabled: !f.title }, 'Opslaan')
+  ) },
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 14 } },
+      FL('Titel *', h('input', { value: f.title, onChange: e => upd('title', e.target.value), autoFocus: true, placeholder: 'Bv. Keuring opsturen' })),
+      FL('Beschrijving', h('textarea', { value: f.description, onChange: e => upd('description', e.target.value), rows: 3, placeholder: 'Extra details, instructies...' })),
+      h('div', { className:'responsive-grid-2', style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+        FL('Deadline', h('input', { type: 'date', value: f.deadline, onChange: e => upd('deadline', e.target.value) })),
+        FL('Status', h('select', { value: f.status, onChange: e => upd('status', e.target.value) }, h('option', { value:'open' }, 'Open'), h('option', { value:'done' }, 'Klaar')))
+      ),
+      FL('Type taak', h('div', { style: { display: 'flex', gap: 6 } },
+        h('button', { onClick: () => upd('visibility', { mode:'internal' }), style: { flex: 1, justifyContent:'center', background: isInternal?'var(--accent-bg)':'var(--bg)', borderColor: isInternal?'var(--accent-border)':'var(--border)', color: isInternal?'var(--accent2)':'var(--text)', fontWeight: isInternal?600:500 } },
+          h('i', { className:'ti ti-lock', style:{fontSize:14} }), 'Intern (alleen ik)'
+        ),
+        h('button', { onClick: () => upd('visibility', VIS_ALL), style: { flex: 1, justifyContent:'center', background: !isInternal?'var(--accent-bg)':'var(--bg)', borderColor: !isInternal?'var(--accent-border)':'var(--border)', color: !isInternal?'var(--accent2)':'var(--text)', fontWeight: !isInternal?600:500 } },
+          h('i', { className:'ti ti-users', style:{fontSize:14} }), 'Voor leverancier(s)'
+        )
+      )),
+      !isInternal && FL('Voor wie?', h(SupplierPicker, { value: f.visibility, onChange: v => upd('visibility', v), suppliers: evS, scope: evS })),
+      t?.responses?.length > 0 && h('div', { style: { borderTop: '1px solid var(--border)', paddingTop: 14 } },
+        h('div', { style: { fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 } }, h('i', { className: 'ti ti-message', style: { fontSize: 13 } }), `Reacties van leveranciers (${t.responses.length})`),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto' } }, t.responses.map(r =>
+          h('div', { key: r.id, style: { padding: '10px 12px', background: 'var(--bg2)', borderRadius: 'var(--r)', border: '1px solid var(--border)' } },
+            h('div', { style: { fontSize: 11, color: 'var(--text3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 } }, `${r.supplierName} · ${fmtT(r.createdAt)}`),
+            r.text && h('div', { style: { fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap' } }, r.text),
+            r.attachment && Attach(r.attachment)
+          )
+        ))
+      )
+    )
+  );
+}
+
+// ============ MOUNT ============
+let __efMounted = false;
+window.__mountApp = () => {
+  if (__efMounted) return;
+  __efMounted = true;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Root));
+};
+if (window.__firebase) window.__mountApp();
+setTimeout(() => window.__mountApp(), 6000);
+</script>
+</body>
+</html>

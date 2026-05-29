@@ -2,11 +2,25 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<script src="auth.js"></script>
+<script>
+// Gate: redirect to /app login if no Firebase Auth session on this domain.
+// Firebase Auth Web SDK stores the user in localStorage under a key shaped
+// like "firebase:authUser:<apiKey>:[DEFAULT]". Casual gate — actual RTDB
+// access is also subject to the project's rules.
+(function(){
+  try {
+    var apiKey = "AIzaSyDnR_P-N-hto2Ft6lMs9dx6ZKWGCh5p19Q";
+    var key = "firebase:authUser:" + apiKey + ":[DEFAULT]";
+    if (!localStorage.getItem(key)) {
+      window.location.replace('/app');
+    }
+  } catch (e) { window.location.replace('/app'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Señor Snacks — QR codes</title>
-<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<title>EventSheet — QR codes</title>
+<link rel="icon" type="image/svg+xml" href="/eventsheet-logo.svg">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -195,7 +209,7 @@ select{cursor:pointer;}
 
 <div class="topbar">
   <div class="logo-wrap">
-    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <img src="/eventsheet-logo.svg" alt="EventSheet" class="logo-img">
     <div class="topbar-divider"></div>
     <div class="topbar-section">QR codes</div>
   </div>
@@ -349,7 +363,7 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 
 function siteOrigin(){
   const o = location.origin;
-  return (o && o.indexOf('http')===0) ? o : 'https://operationssenorsnacks.web.app';
+  return (o && o.indexOf('http')===0) ? o : 'https://eventsheet-app.web.app';
 }
 function viewerUrl(id){ return siteOrigin() + '/qr.html?id=' + encodeURIComponent(id); }
 

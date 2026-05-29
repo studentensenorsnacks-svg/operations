@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Privacybeleid — EventSheet</title>
+<link rel="icon" type="image/svg+xml" href="eventsheet-logo.svg"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:#fdf8f0;color:#3a2415;line-height:1.6;font-size:15px}
+.wrap{max-width:760px;margin:0 auto;padding:3rem 1.5rem 5rem}
+header{margin-bottom:2.5rem;padding-bottom:1rem;border-bottom:1px solid rgba(120,60,20,.12)}
+h1{font-size:30px;font-weight:800;letterSpacing:-.01em;margin-bottom:.4rem}
+.lead{color:#7a5a40;font-size:14px}
+h2{font-size:18px;font-weight:700;margin:2rem 0 .6rem;color:#3a2415}
+h3{font-size:14px;font-weight:700;margin:1.2rem 0 .4rem;text-transform:uppercase;letter-spacing:.05em;color:#7a5a40}
+p,li{margin-bottom:.6rem}
+ul{padding-left:1.2rem;margin-bottom:1rem}
+a{color:#e8662b;text-decoration:none}
+a:hover{text-decoration:underline}
+.todo{background:#fdf0d4;border:1px solid #e9b870;border-radius:8px;padding:.7rem 1rem;font-size:13px;color:#7a4d12;margin:1rem 0}
+.todo strong{display:block;margin-bottom:.2rem}
+.back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#7a5a40;margin-bottom:2rem}
+@media(prefers-color-scheme:dark){
+  body{background:#1c130b;color:#fdf0e0}
+  .lead,h3,.back{color:#c5a079}
+  header{border-color:rgba(255,210,170,.1)}
+  .todo{background:#3a2a14;border-color:#7a4d12;color:#e9b870}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a href="/" class="back">← Terug</a>
+<header>
+  <h1>Privacybeleid</h1>
+  <div class="lead">EventSheet · Laatst bijgewerkt: 25 mei 2026</div>
+</header>
+
+<div class="todo">
+  <strong>⚠️ Template — laat dit nakijken door een jurist voor productie-gebruik.</strong>
+  De bedrijfsnaam, KBO/BTW-nummer en exacte contactgegevens hieronder moeten vervangen worden door jouw eigen.
+</div>
+
+<h2>1. Wie zijn we?</h2>
+<p><strong>[BEDRIJFSNAAM]</strong>, gevestigd te [ADRES], België, KBO [NUMMER], hierna "EventSheet" of "wij", is de verwerkingsverantwoordelijke voor de persoonsgegevens die via deze applicatie worden verwerkt.</p>
+<p>Contact: <a href="mailto:[E-MAIL]">[E-MAIL]</a></p>
+
+<h2>2. Welke gegevens verwerken we?</h2>
+<h3>Van jou als gebruiker</h3>
+<ul>
+  <li><strong>Account:</strong> e-mailadres, naam, gehashed wachtwoord (via Firebase Authentication)</li>
+  <li><strong>Werkruimte:</strong> naam van je organisatie, rol</li>
+  <li><strong>Login-info:</strong> tijdstip laatste login, IP-adres (logs)</li>
+</ul>
+<h3>Van leveranciers/derden die je in EventSheet invoert</h3>
+<ul>
+  <li>Naam, bedrijfsnaam, e-mail, telefoonnummer, categorie</li>
+  <li>Documenten die je of zij uploaden (bijlagen bij taken en aanvragen)</li>
+  <li>Berichten in de communicatie-thread</li>
+  <li>Tijdstip laatste portaal-toegang</li>
+</ul>
+<p>Voor data van derden ben <strong>jij</strong> als organisator de verwerkingsverantwoordelijke. EventSheet treedt op als verwerker en biedt een DPA bij signup (zie sectie 8).</p>
+
+<h2>3. Waarom verwerken we deze gegevens? (Rechtsgrond)</h2>
+<ul>
+  <li><strong>Uitvoering van de overeenkomst</strong> (art. 6.1.b GDPR) — om de SaaS-functionaliteit te bieden</li>
+  <li><strong>Gerechtvaardigd belang</strong> (art. 6.1.f) — beveiliging (rate limiting, IP-logs)</li>
+  <li><strong>Wettelijke verplichting</strong> (art. 6.1.c) — facturering en boekhouding</li>
+</ul>
+
+<h2>4. Met wie delen we?</h2>
+<p>We verkopen géén gegevens. Sub-verwerkers (verwerken in onze opdracht):</p>
+<ul>
+  <li><strong>Google Firebase / Google Cloud Platform</strong> — hosting, databases, authenticatie, file storage. Data wordt opgeslagen in europe-west1 (België/Nederland).</li>
+  <li>[Optioneel: Stripe voor facturatie, SendGrid voor e-mail, ...] <em>[invullen wanneer toegevoegd]</em></li>
+</ul>
+
+<h2>5. Hoelang bewaren we?</h2>
+<ul>
+  <li>Account-data: tot je het account verwijdert</li>
+  <li>Werkruimte-data: tot de werkruimte wordt verwijderd</li>
+  <li>Logs: 90 dagen</li>
+  <li>Facturatie: 7 jaar (wettelijke verplichting)</li>
+</ul>
+
+<h2>6. Jouw rechten</h2>
+<p>Onder de GDPR heb je:</p>
+<ul>
+  <li><strong>Recht van inzage</strong> — exporteer al je data als JSON via Mijn account → Data exporteren</li>
+  <li><strong>Recht op rectificatie</strong> — pas je data aan in de app</li>
+  <li><strong>Recht op vergetelheid</strong> — verwijder je account via Mijn account → Account verwijderen. Cascade verwijdert ook alle werkruimtes waar jij eigenaar van bent.</li>
+  <li><strong>Recht op dataportabiliteit</strong> — JSON-export bovenstaand</li>
+  <li><strong>Recht van bezwaar</strong> en <strong>recht op beperking</strong> — contacteer ons</li>
+  <li><strong>Klacht indienen</strong> bij de Gegevensbeschermingsautoriteit (gegevensbeschermingsautoriteit.be)</li>
+</ul>
+
+<h2>7. Cookies</h2>
+<p>EventSheet gebruikt enkel <strong>strikt noodzakelijke</strong> cookies/storage:</p>
+<ul>
+  <li>Firebase Authentication-token (om je ingelogd te houden)</li>
+  <li>localStorage voor je workspace-keuze en UI-voorkeuren (thema, etc.)</li>
+</ul>
+<p>Geen tracking, geen marketing-cookies. Geen toestemming vereist onder de ePrivacy-richtlijn.</p>
+
+<h2>8. DPA (Verwerkersovereenkomst)</h2>
+<p>Als jij persoonsgegevens van derden (jouw leveranciers, klanten) in EventSheet stopt, ben jij verwerkingsverantwoordelijke en EventSheet verwerker. Op aanvraag ondertekenen we een DPA. Contact: <a href="mailto:[E-MAIL]">[E-MAIL]</a></p>
+
+<h2>9. Beveiliging</h2>
+<ul>
+  <li>Encryptie at-rest (Google Cloud) en in-transit (TLS)</li>
+  <li>Wachtwoorden worden gehashed door Firebase Authentication (nooit in plain-text bewaard)</li>
+  <li>Rolgebaseerde toegang per werkruimte</li>
+  <li>API-key gerestricteerd op domein, Firestore-rules vereisen authenticatie</li>
+</ul>
+
+<h2>10. Wijzigingen</h2>
+<p>Wij kunnen dit beleid aanpassen. Belangrijke wijzigingen melden we via e-mail. De datum bovenaan toont de laatste versie.</p>
+
+<p style="margin-top:3rem;font-size:13px;color:#7a5a40">Bij vragen: <a href="mailto:[E-MAIL]">[E-MAIL]</a></p>
+
+</div>
+</body>
+</html>

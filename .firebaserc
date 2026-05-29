@@ -9,6 +9,9 @@
         "ops": [
           "operationssenorsnacks"
         ],
+        "ops-login": [
+          "operationssenorsnacks-login"
+        ],
         "greendeal": [
           "senorsnacks-greendeal"
         ],
