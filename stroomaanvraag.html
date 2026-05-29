@@ -197,6 +197,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .form-input:focus{outline:none;border-color:var(--red);}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
 
+/* ARCHIEF rijen */
+.archive-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;background:var(--surface);}
+.archive-info{flex:1;min-width:0;}
+.archive-name{font-weight:700;font-size:13.5px;line-height:1.2;}
+.archive-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.archive-actions{display:flex;gap:6px;flex-shrink:0;}
+
 /* CUSTOM-ITEM in palette */
 .pal-item-custom{position:relative;}
 .pal-item-custom .pal-del{position:absolute;top:4px;right:6px;font-size:10px;color:var(--text3);cursor:pointer;background:#fff;border:1px solid var(--border2);border-radius:4px;padding:0 5px;line-height:14px;}
@@ -240,6 +247,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <select id="proj-sel" onchange="onProjectSelect()"></select>
     <button class="btn btn-sm" onclick="newProject()">+ Nieuwe</button>
     <button class="btn btn-sm" onclick="renameProject()">✎ Hernoem</button>
+    <button class="btn btn-sm" onclick="archiveCurrentProject()">📦 Archiveer</button>
+    <button class="btn btn-sm" onclick="openArchiveModal()" title="Archief openen">🗄 Archief <span id="archive-count" style="background:var(--surface2);padding:1px 7px;border-radius:10px;font-size:11px;margin-left:3px;">0</span></button>
     <button class="btn btn-sm btn-ghost" style="color:var(--red);" onclick="deleteProject()">🗑 Verwijder</button>
     <div style="flex:1;"></div>
     <label>Event</label>
@@ -346,6 +355,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="summary-card" id="summary-card"></div>
   </div>
 
+</div>
+
+<!-- ─── MODAL: Archief ─── -->
+<div class="modal-bg" id="modal-archive">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-title">🗄 Archief</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">Gearchiveerde aanvragen. Klik <b>Terughalen</b> om er één opnieuw actief te maken.</div>
+    <div id="archive-list" style="max-height:50vh;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeArchiveModal()">Sluiten</button>
+    </div>
+  </div>
 </div>
 
 <!-- ─── MODAL: Eigen structuur ─── -->
@@ -480,7 +501,16 @@ function loadAll(){
       state.projects[id] = blankProject('Nieuwe aanvraag');
       state.currentId = id;
     }
-    if(!state.projects[state.currentId]) state.currentId = Object.keys(state.projects)[0];
+    // currentId moet bestaan EN niet-gearchiveerd zijn
+    if(!state.projects[state.currentId] || state.projects[state.currentId].archived){
+      state.currentId = firstActiveId();
+      if(!state.currentId){
+        // alleen gearchiveerd → maak nieuwe actieve aanvraag
+        const id = 'p_'+Date.now();
+        state.projects[id] = blankProject('Nieuwe aanvraag');
+        state.currentId = id;
+      }
+    }
   });
 }
 
@@ -496,7 +526,9 @@ function currentProj(){ return state.projects[state.currentId]; }
 function renderProjectBar(){
   const sel = document.getElementById('proj-sel');
   sel.innerHTML = '';
+  // alleen niet-gearchiveerde tonen in dropdown
   for(const [id,p] of Object.entries(state.projects)){
+    if(p.archived) continue;
     const opt = document.createElement('option');
     opt.value = id; opt.textContent = p.name || '(naamloos)';
     if(id === state.currentId) opt.selected = true;
@@ -508,6 +540,82 @@ function renderProjectBar(){
   document.getElementById('meta-plaats').value = p.plaats || '';
   document.getElementById('field-w').value = p.fieldW || 40;
   document.getElementById('field-h').value = p.fieldH || 25;
+  // archive-count
+  const archCount = Object.values(state.projects).filter(p=>p.archived).length;
+  const cEl = document.getElementById('archive-count');
+  if(cEl) cEl.textContent = archCount;
+}
+
+function firstActiveId(){
+  return Object.entries(state.projects).find(([_,p])=>!p.archived)?.[0] || null;
+}
+
+function archiveCurrentProject(){
+  const p = currentProj(); if(!p) return;
+  if(!confirm(`Aanvraag "${p.name}" archiveren?\n\nJe kan ze later terughalen uit het archief.`)) return;
+  p.archived = true;
+  p.archivedAt = Date.now();
+  // wissel naar volgende actieve aanvraag of maak nieuwe
+  let next = firstActiveId();
+  if(!next){
+    next = 'p_'+Date.now();
+    state.projects[next] = blankProject('Nieuwe aanvraag');
+  }
+  state.currentId = next;
+  selectedItemId = null;
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+}
+
+function openArchiveModal(){
+  const archived = Object.entries(state.projects)
+    .filter(([_,p])=>p.archived)
+    .sort((a,b)=>(b[1].archivedAt||0)-(a[1].archivedAt||0));   // recentst gearchiveerd bovenaan
+  const list = document.getElementById('archive-list');
+  if(!archived.length){
+    list.innerHTML = '<div style="color:var(--text2);font-size:13px;text-align:center;padding:30px 10px;">Archief is leeg.</div>';
+  } else {
+    list.innerHTML = archived.map(([id,p])=>{
+      const sub = [p.event, p.datum, p.plaats].filter(x=>x).map(escapeHTML).join(' · ');
+      const arch = p.archivedAt ? new Date(p.archivedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+      return `
+        <div class="archive-row">
+          <div class="archive-info">
+            <div class="archive-name">${escapeHTML(p.name||'(naamloos)')}</div>
+            <div class="archive-meta">${sub || '<span style="color:var(--text3);">geen details</span>'}${arch ? ' <span style="color:var(--text3);">· gearchiveerd '+arch+'</span>' : ''}</div>
+          </div>
+          <div class="archive-actions">
+            <button class="btn btn-sm" onclick="restoreProject('${id}')">↩ Terughalen</button>
+            <button class="btn btn-sm btn-ghost" style="color:var(--red);" onclick="deleteArchivedProject('${id}')" title="Definitief verwijderen">🗑</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  document.getElementById('modal-archive').classList.add('show');
+}
+
+function closeArchiveModal(){
+  document.getElementById('modal-archive').classList.remove('show');
+}
+
+function restoreProject(id){
+  const p = state.projects[id]; if(!p) return;
+  p.archived = false;
+  delete p.archivedAt;
+  state.currentId = id;
+  selectedItemId = null;
+  closeArchiveModal();
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+}
+
+function deleteArchivedProject(id){
+  const p = state.projects[id]; if(!p) return;
+  if(!confirm(`"${p.name}" definitief verwijderen?\n\nDit kan NIET ongedaan gemaakt worden.`)) return;
+  delete state.projects[id];
+  scheduleSave();
+  openArchiveModal();
+  renderProjectBar();
 }
 
 function onProjectSelect(){
@@ -539,15 +647,15 @@ function renameProject(){
   scheduleSave();
 }
 function deleteProject(){
-  if(!confirm('Aanvraag verwijderen?')) return;
+  const p = currentProj();
+  if(!confirm(`"${p?.name||'aanvraag'}" definitief verwijderen?\n\nGebruik liever 📦 Archiveer als je ze later nog wil terugvinden.`)) return;
   delete state.projects[state.currentId];
-  if(!Object.keys(state.projects).length){
-    const id = 'p_'+Date.now();
-    state.projects[id] = blankProject('Nieuwe aanvraag');
-    state.currentId = id;
-  } else {
-    state.currentId = Object.keys(state.projects)[0];
+  let next = firstActiveId();
+  if(!next){
+    next = 'p_'+Date.now();
+    state.projects[next] = blankProject('Nieuwe aanvraag');
   }
+  state.currentId = next;
   renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
   scheduleSave();
 }
@@ -1499,14 +1607,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   });
   cs.addEventListener('click', ()=>cs.focus());
 
-  // Modal — klik backdrop = sluiten, Esc ook
+  // Modals — klik backdrop = sluiten, Esc ook
   document.getElementById('modal-custom').addEventListener('click', e=>{
     if(e.target.id === 'modal-custom') closeCustomModal();
   });
+  document.getElementById('modal-archive').addEventListener('click', e=>{
+    if(e.target.id === 'modal-archive') closeArchiveModal();
+  });
   document.addEventListener('keydown', e=>{
-    if(e.key === 'Escape' && document.getElementById('modal-custom').classList.contains('show')){
-      closeCustomModal();
-    }
+    if(e.key !== 'Escape') return;
+    if(document.getElementById('modal-custom').classList.contains('show')) closeCustomModal();
+    if(document.getElementById('modal-archive').classList.contains('show')) closeArchiveModal();
   });
 });
 </script>
