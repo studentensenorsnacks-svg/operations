@@ -302,6 +302,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
             <span id="zoom-lbl">100%</span>
             <button class="pg-zoom-btn" onclick="zoom(1)">+</button>
           </div>
+          <button class="btn btn-sm" onclick="expandField('w', 5)" title="Veld 5m breder maken">↔ +5m</button>
+          <button class="btn btn-sm" onclick="expandField('h', 5)" title="Veld 5m hoger maken">↕ +5m</button>
+          <button class="btn btn-sm" onclick="fitFieldToItems()" title="Maak veld precies groot genoeg voor alle items">⤢ Pas op</button>
           <button class="btn btn-sm" onclick="rotateSelected()" title="Roteer (R)">↻ Roteer</button>
           <button class="btn btn-sm" onclick="deleteSelected()" title="Verwijder (Del)" style="color:var(--red);">🗑 Verwijder</button>
           <button class="btn btn-sm btn-ghost" onclick="clearAllItems()" style="color:var(--red);">Wis alles</button>
@@ -456,6 +459,19 @@ function loadAll(){
     for(const p of Object.values(state.projects)){
       if(!p.items) p.items = {};
       if(!p.kastenConfig) p.kastenConfig = {};
+      // veld moet minstens groot genoeg zijn voor alle items
+      let maxX = p.fieldW || 40, maxY = p.fieldH || 25;
+      for(const it of Object.values(p.items)){
+        const cat = (CATALOG.tenten.concat(CATALOG.containers, CATALOG.foodtrucks, CATALOG.stroomkasten)).find(x=>x.id===it.catId) || (v.customCatalog||{})[it.catId];
+        if(!cat) continue;
+        const rotated = (it.rot||0) % 180 !== 0;
+        const w = rotated ? cat.h : cat.w;
+        const h = rotated ? cat.w : cat.h;
+        maxX = Math.max(maxX, it.x + w + 2);
+        maxY = Math.max(maxY, it.y + h + 2);
+      }
+      p.fieldW = Math.ceil(maxX);
+      p.fieldH = Math.ceil(maxY);
     }
     state.currentId = v.currentId || null;
     // bootstrap if empty
@@ -548,6 +564,55 @@ function setFieldSize(){
   p.fieldH = Math.max(5, parseInt(document.getElementById('field-h').value)||25);
   renderCanvas();
   scheduleSave();
+}
+
+function expandField(axis, delta){
+  const p = currentProj();
+  if(axis === 'w') p.fieldW = Math.max(5, (p.fieldW || 0) + delta);
+  if(axis === 'h') p.fieldH = Math.max(5, (p.fieldH || 0) + delta);
+  document.getElementById('field-w').value = p.fieldW;
+  document.getElementById('field-h').value = p.fieldH;
+  renderCanvas();
+  scheduleSave();
+}
+
+function fitFieldToItems(){
+  const p = currentProj();
+  const items = Object.values(p.items || {});
+  if(!items.length){ alert('Nog geen items geplaatst.'); return; }
+  let maxX = 0, maxY = 0;
+  for(const it of items){
+    const cat = catalogById(it.catId); if(!cat) continue;
+    const rotated = (it.rot||0) % 180 !== 0;
+    const w = rotated ? cat.h : cat.w;
+    const h = rotated ? cat.w : cat.h;
+    maxX = Math.max(maxX, it.x + w);
+    maxY = Math.max(maxY, it.y + h);
+  }
+  p.fieldW = Math.max(5, Math.ceil(maxX + 2));   // +2m marge
+  p.fieldH = Math.max(5, Math.ceil(maxY + 2));
+  document.getElementById('field-w').value = p.fieldW;
+  document.getElementById('field-h').value = p.fieldH;
+  renderCanvas();
+  scheduleSave();
+}
+
+// Groei het veld als (x+w, y+h) over de rand gaat. Roept lichte resize aan.
+function growFieldIfNeeded(x, y, w, h){
+  const p = currentProj();
+  const marginM = 2;  // 2m extra ademruimte
+  let grew = false;
+  if(x + w > p.fieldW){ p.fieldW = Math.ceil(x + w + marginM); grew = true; }
+  if(y + h > p.fieldH){ p.fieldH = Math.ceil(y + h + marginM); grew = true; }
+  if(grew){
+    document.getElementById('field-w').value = p.fieldW;
+    document.getElementById('field-h').value = p.fieldH;
+    const canvas = document.getElementById('canvas');
+    const pxScale = scale * zoomLvl;
+    canvas.style.width  = (p.fieldW * pxScale) + 'px';
+    canvas.style.height = (p.fieldH * pxScale) + 'px';
+  }
+  return grew;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -717,11 +782,10 @@ function attachItemDrag(el, id){
     const pxScale = scale * zoomLvl;
     let nx = origX + (e.clientX - startX)/pxScale;
     let ny = origY + (e.clientY - startY)/pxScale;
-    // snap 0.5m
-    nx = Math.round(nx*2)/2;
-    ny = Math.round(ny*2)/2;
-    nx = Math.max(0, Math.min(nx, p.fieldW - wM));
-    ny = Math.max(0, Math.min(ny, p.fieldH - hM));
+    // snap 0.5m, alleen ondergrens — bovengrens laat veld auto-groeien
+    nx = Math.max(0, Math.round(nx*2)/2);
+    ny = Math.max(0, Math.round(ny*2)/2);
+    growFieldIfNeeded(nx, ny, wM, hM);
     item.x = nx; item.y = ny;
     el.style.left = (nx*pxScale)+'px';
     el.style.top  = (ny*pxScale)+'px';
@@ -802,7 +866,12 @@ function setItemNaam(val){
 
 function setItemPos(axis, val){
   const item = currentProj().items[selectedItemId]; if(!item) return;
+  const cat = catalogById(item.catId); if(!cat) return;
   item[axis] = Math.max(0, parseFloat(val)||0);
+  const rotated = (item.rot||0) % 180 !== 0;
+  const wM = rotated ? cat.h : cat.w;
+  const hM = rotated ? cat.w : cat.h;
+  growFieldIfNeeded(item.x, item.y, wM, hM);
   renderCanvas(); scheduleSave();
 }
 function setItemRot(val){
@@ -874,8 +943,7 @@ function setupCanvasDrop(){
     x = Math.max(0, Math.round(x*2)/2);
     y = Math.max(0, Math.round(y*2)/2);
     const p = currentProj();
-    x = Math.min(x, p.fieldW - cat.w);
-    y = Math.min(y, p.fieldH - cat.h);
+    growFieldIfNeeded(x, y, cat.w, cat.h);
     const id = 'i_'+Date.now()+'_'+Math.floor(Math.random()*999);
     const newItem = { catId, x, y, rot:0 };
     if(cat.kind==='stroomkast'){
