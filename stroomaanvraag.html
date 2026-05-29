@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Stroomaanvraag</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --orange:#c2410c;--orange-bg:#fdeee2;
+  --blue:#1d4ed8;--blue-bg:#e6ecfb;
+  --yellow:#a16207;--yellow-bg:#fef3c7;
+  --purple:#6d28d9;--purple-bg:#ede9fe;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* TOPBAR */
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;letter-spacing:.02em;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+.save-state{font-size:12px;color:var(--text3);font-family:var(--mono);}
+.save-state.dirty{color:var(--orange);}
+.save-state.saved{color:var(--green);}
+
+/* LAYOUT */
+.main{max-width:1400px;margin:0 auto;padding:18px 22px 40px;}
+.page-hdr{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--font-cond);font-size:26px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:4px;}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:16px;}
+.tab-btn{padding:8px 18px;border-radius:7px;border:none;background:transparent;font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;color:var(--text2);}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{background:var(--red);color:#fff;}
+.tab-content{display:none;}.tab-content.active{display:block;}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--text);transition:background .12s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--surface2);}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red);}
+.btn-red:hover{background:var(--red-dark);border-color:var(--red-dark);}
+.btn-dark{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+.btn-dark:hover{background:#333;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--text2);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+
+/* PROJECT BAR */
+.proj-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.proj-bar label{font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.proj-bar input,.proj-bar select{padding:7px 10px;border:1px solid var(--border2);border-radius:7px;font-family:var(--font);font-size:13px;background:#fff;}
+.proj-bar input{min-width:180px;}
+.proj-bar select{min-width:200px;}
+
+/* ─── PLATTEGROND ─── */
+.pg-wrap{display:grid;grid-template-columns:260px 1fr;gap:14px;align-items:flex-start;}
+.pg-side{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:14px;position:sticky;top:74px;max-height:calc(100vh - 90px);overflow-y:auto;}
+.pg-sec-h{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.palette{display:flex;flex-direction:column;gap:7px;}
+.pal-item{border:1px solid var(--border2);border-radius:8px;padding:9px 11px;cursor:grab;background:var(--surface);display:flex;align-items:center;gap:9px;transition:background .12s,border-color .12s;user-select:none;}
+.pal-item:hover{background:var(--surface2);border-color:var(--text3);}
+.pal-item:active{cursor:grabbing;}
+.pal-swatch{width:28px;height:22px;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.pal-info{flex:1;min-width:0;}
+.pal-name{font-size:12.5px;font-weight:700;line-height:1.2;}
+.pal-dim{font-size:11px;color:var(--text2);font-family:var(--mono);}
+
+.pg-canvas-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;}
+.pg-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.pg-toolbar .grow{flex:1;}
+.pg-zoom-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);font-family:var(--mono);}
+.pg-zoom-btn{width:26px;height:26px;border:1px solid var(--border2);background:#fff;border-radius:6px;cursor:pointer;font-weight:700;color:var(--text);}
+.pg-zoom-btn:hover{background:var(--surface2);}
+.pg-canvas-scroll{position:relative;overflow:auto;max-height:calc(100vh - 230px);background:#fafafb;border:1px solid var(--border);border-radius:8px;}
+.pg-canvas{position:relative;background-image:
+  linear-gradient(rgba(0,0,0,0.04) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,0,0,0.04) 1px,transparent 1px),
+  linear-gradient(rgba(0,0,0,0.08) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,0,0,0.08) 1px,transparent 1px);
+  background-color:#fff;
+  transform-origin:top left;
+}
+.pg-canvas.drag-over{outline:2px dashed var(--red);outline-offset:-4px;}
+.pg-canvas-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:14px;pointer-events:none;}
+
+/* Items on canvas */
+.cv-item{position:absolute;cursor:move;user-select:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;text-align:center;line-height:1.1;border:1.5px solid;border-radius:3px;transition:box-shadow .1s,border-color .1s;overflow:hidden;}
+.cv-item.selected{box-shadow:0 0 0 2px var(--red),0 4px 12px rgba(232,0,29,0.25);z-index:10;}
+.cv-item-label{padding:2px 4px;text-shadow:0 0 2px rgba(255,255,255,0.6);pointer-events:none;}
+.cv-tent{background:rgba(34,197,94,0.18);border-color:#16a34a;color:#15803d;}
+.cv-container{background:rgba(29,78,216,0.16);border-color:#1d4ed8;color:#1e3a8a;}
+.cv-foodtruck{background:rgba(249,115,22,0.18);border-color:#c2410c;color:#9a3412;}
+.cv-stroomkast-32{background:rgba(234,179,8,0.22);border-color:#a16207;color:#713f12;}
+.cv-stroomkast-63{background:rgba(249,115,22,0.28);border-color:#c2410c;color:#7c2d12;}
+.cv-stroomkast-125{background:rgba(232,0,29,0.22);border-color:var(--red);color:#7f1d1d;}
+
+/* Inspector */
+.pg-inspector{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);}
+.pg-inspector b{color:var(--text);font-size:13px;}
+.pg-inspector-row{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;}
+.pg-inspector-row input{padding:4px 8px;border:1px solid var(--border2);border-radius:5px;font-family:var(--mono);font-size:12px;width:70px;}
+
+/* ─── STROOMKASTEN-TAB ─── */
+.totals-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.totals-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.totals-label{font-size:11px;color:var(--text2);text-transform:uppercase;font-weight:700;letter-spacing:.05em;}
+.totals-num{font-family:var(--font-cond);font-size:32px;font-weight:800;line-height:1.05;margin-top:2px;}
+.totals-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+
+.sk-list{display:flex;flex-direction:column;gap:10px;}
+.sk-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--yellow);border-radius:10px;padding:14px 16px;}
+.sk-card.sk-63{border-left-color:var(--orange);}
+.sk-card.sk-125{border-left-color:var(--red);}
+.sk-hdr{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.sk-num{background:var(--text);color:#fff;font-family:var(--font-cond);font-weight:800;font-size:18px;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.sk-type-badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.sk-type-32{background:var(--yellow-bg);color:var(--yellow);}
+.sk-type-63{background:var(--orange-bg);color:var(--orange);}
+.sk-type-125{background:rgba(232,0,29,0.12);color:var(--red);}
+.sk-name-input{flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--border2);border-radius:6px;font-family:var(--font);font-size:13px;font-weight:600;}
+.sk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+.sk-cell{background:var(--surface2);border-radius:8px;padding:10px;}
+.sk-cell-lbl{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;gap:6px;}
+.sk-cell-tag{font-size:9.5px;background:#fff;padding:1px 6px;border-radius:6px;color:var(--text2);font-family:var(--mono);}
+.sk-qty{width:100%;padding:6px 10px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:16px;font-weight:700;text-align:center;background:#fff;}
+.sk-empty{background:var(--surface);border:1px dashed var(--border2);border-radius:10px;padding:24px;text-align:center;color:var(--text2);font-size:13.5px;}
+
+/* ─── SAMENVATTING ─── */
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;}
+.summary-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border);}
+.summary-meta-label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+.summary-meta-val{font-family:var(--font-cond);font-size:18px;font-weight:700;margin-top:2px;}
+.summary-h{font-family:var(--font-cond);font-size:18px;font-weight:800;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.02em;}
+.summary-table{width:100%;border-collapse:collapse;font-size:13px;}
+.summary-table th,.summary-table td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;}
+.summary-table th{font-size:11px;text-transform:uppercase;color:var(--text2);font-weight:700;letter-spacing:.04em;}
+.summary-table td.num{text-align:right;font-family:var(--mono);font-weight:700;}
+.summary-table tfoot td{font-weight:800;background:var(--surface2);}
+
+/* PRINT */
+@media print {
+  .topbar,.tabs,.proj-bar,.pg-side,.pg-toolbar,.no-print{display:none !important;}
+  body{background:#fff;}
+  .main{max-width:none;padding:0;}
+  .summary-card{border:none;padding:0;}
+  .pg-canvas-scroll{max-height:none;overflow:visible;border:none;}
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .pg-wrap{grid-template-columns:1fr;}
+  .pg-side{position:static;max-height:none;}
+  .totals-bar{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">Stroomaanvraag</div>
+  </a>
+  <div class="topbar-right">
+    <span class="save-state" id="save-state">—</span>
+    <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- PROJECT-BAR -->
+  <div class="proj-bar">
+    <label>Aanvraag</label>
+    <select id="proj-sel" onchange="onProjectSelect()"></select>
+    <button class="btn btn-sm" onclick="newProject()">+ Nieuwe</button>
+    <button class="btn btn-sm" onclick="renameProject()">✎ Hernoem</button>
+    <button class="btn btn-sm btn-ghost" style="color:var(--red);" onclick="deleteProject()">🗑 Verwijder</button>
+    <div style="flex:1;"></div>
+    <label>Event</label>
+    <input id="meta-event" placeholder="bv. Gladiolen 2026" oninput="setMeta('event',this.value)">
+    <label>Datum</label>
+    <input id="meta-datum" type="date" oninput="setMeta('datum',this.value)">
+    <label>Plaats</label>
+    <input id="meta-plaats" placeholder="bv. Vosselaar" oninput="setMeta('plaats',this.value)">
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="plattegrond" onclick="setTab('plattegrond')">📐 Plattegrond</button>
+    <button class="tab-btn" data-tab="stroomkasten" onclick="setTab('stroomkasten')">⚡ Stroomkasten</button>
+    <button class="tab-btn" data-tab="samenvatting" onclick="setTab('samenvatting')">📋 Samenvatting</button>
+  </div>
+
+  <!-- ─── TAB PLATTEGROND ─── -->
+  <div class="tab-content active" id="tab-plattegrond">
+    <div class="pg-wrap">
+      <aside class="pg-side">
+        <div>
+          <div class="pg-sec-h">Tenten</div>
+          <div class="palette" id="pal-tenten"></div>
+        </div>
+        <div>
+          <div class="pg-sec-h">Containers</div>
+          <div class="palette" id="pal-containers"></div>
+        </div>
+        <div>
+          <div class="pg-sec-h">Foodtrucks</div>
+          <div class="palette" id="pal-foodtrucks"></div>
+        </div>
+        <div>
+          <div class="pg-sec-h">Stroomkasten</div>
+          <div class="palette" id="pal-stroomkasten"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);line-height:1.4;border-top:1px solid var(--border);padding-top:10px;">
+          Sleep items naar het canvas. Klik om te selecteren, sleep om te verplaatsen. <b>R</b> = roteer 90°, <b>Del</b> = verwijder.
+        </div>
+      </aside>
+
+      <div class="pg-canvas-card">
+        <div class="pg-toolbar">
+          <span style="font-size:12px;color:var(--text2);">Veld:</span>
+          <input id="field-w" type="number" min="5" max="200" step="1" value="40" style="width:60px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:12px;" oninput="setFieldSize()">
+          <span style="font-size:12px;color:var(--text2);">×</span>
+          <input id="field-h" type="number" min="5" max="200" step="1" value="25" style="width:60px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:12px;" oninput="setFieldSize()">
+          <span style="font-size:12px;color:var(--text2);">m</span>
+          <div class="grow"></div>
+          <div class="pg-zoom-wrap">
+            <button class="pg-zoom-btn" onclick="zoom(-1)">−</button>
+            <span id="zoom-lbl">100%</span>
+            <button class="pg-zoom-btn" onclick="zoom(1)">+</button>
+          </div>
+          <button class="btn btn-sm" onclick="rotateSelected()" title="Roteer (R)">↻ Roteer</button>
+          <button class="btn btn-sm" onclick="deleteSelected()" title="Verwijder (Del)" style="color:var(--red);">🗑 Verwijder</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearAllItems()" style="color:var(--red);">Wis alles</button>
+        </div>
+        <div class="pg-canvas-scroll" id="canvas-scroll">
+          <div class="pg-canvas" id="canvas" tabindex="0"></div>
+        </div>
+        <div class="pg-inspector" id="inspector">Geen item geselecteerd.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TAB STROOMKASTEN ─── -->
+  <div class="tab-content" id="tab-stroomkasten">
+    <div class="totals-bar" id="totals-bar"></div>
+    <div class="sk-list" id="sk-list"></div>
+    <div class="sk-empty" id="sk-empty" style="display:none;">
+      Nog geen stroomkasten geplaatst — voeg ze toe op de <b>Plattegrond</b>-tab.
+    </div>
+  </div>
+
+  <!-- ─── TAB SAMENVATTING ─── -->
+  <div class="tab-content" id="tab-samenvatting">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;" class="no-print">
+      <button class="btn btn-dark" onclick="window.print()">🖨 Print</button>
+    </div>
+    <div class="summary-card" id="summary-card"></div>
+  </div>
+
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────
+// CATALOGUS — items palet
+// ──────────────────────────────────────────────────────────
+const CATALOG = {
+  tenten: [
+    { id:'tent5',     name:'Tent 5×5',      kind:'tent',       w:5,    h:5,    icon:'⛺' },
+  ],
+  containers: [
+    { id:'cont20',    name:'Container 20ft', kind:'container', w:6.06, h:2.44, icon:'📦' },
+    { id:'cont10',    name:'Container 10ft', kind:'container', w:2.99, h:2.44, icon:'📦' },
+  ],
+  foodtrucks: [
+    { id:'truck8',    name:'Foodtruck 8m',  kind:'foodtruck',  w:8,    h:2.5,  icon:'🚚' },
+    { id:'truck5',    name:'Foodtruck 5m',  kind:'foodtruck',  w:5,    h:2.5,  icon:'🚚' },
+  ],
+  stroomkasten: [
+    { id:'sk32',  name:'Stroomkast 32A',  kind:'stroomkast', amp:32,  w:1, h:1, icon:'⚡' },
+    { id:'sk63',  name:'Stroomkast 63A',  kind:'stroomkast', amp:63,  w:1.2, h:1.2, icon:'⚡' },
+    { id:'sk125', name:'Stroomkast 125A', kind:'stroomkast', amp:125, w:1.4, h:1.4, icon:'⚡' },
+  ],
+};
+
+// ──────────────────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────────────────
+let state = {
+  projects: {},     // { projId: { name, event, datum, plaats, fieldW, fieldH, items:{}, kastenConfig:{} } }
+  currentId: null,
+};
+let selectedItemId = null;
+let scale = 24;                // px per meter (zoom 100%)
+let zoomLvl = 1;               // multiplier
+let saveTimer = null;
+let firstLoad = true;
+
+const ROOT = 'ft_stroomaanvraag_v1';
+
+// ──────────────────────────────────────────────────────────
+// FIREBASE LOAD/SAVE
+// ──────────────────────────────────────────────────────────
+function setSaveState(s){
+  const el = document.getElementById('save-state');
+  if(s==='dirty'){ el.textContent='wijziging…'; el.className='save-state dirty'; }
+  else if(s==='saving'){ el.textContent='opslaan…'; el.className='save-state'; }
+  else if(s==='saved'){ el.textContent='opgeslagen'; el.className='save-state saved'; }
+}
+
+function scheduleSave(){
+  setSaveState('dirty');
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveAll, 600);
+}
+
+function saveAll(){
+  setSaveState('saving');
+  fbdb.ref(ROOT).set({
+    projects: state.projects,
+    currentId: state.currentId,
+  }).then(()=>setSaveState('saved'))
+    .catch(e=>{ console.error(e); setSaveState('dirty'); });
+}
+
+function loadAll(){
+  return fbdb.ref(ROOT).once('value').then(snap=>{
+    const v = snap.val() || {};
+    state.projects = v.projects || {};
+    state.currentId = v.currentId || null;
+    // bootstrap if empty
+    if(!Object.keys(state.projects).length){
+      const id = 'p_'+Date.now();
+      state.projects[id] = blankProject('Nieuwe aanvraag');
+      state.currentId = id;
+    }
+    if(!state.projects[state.currentId]) state.currentId = Object.keys(state.projects)[0];
+  });
+}
+
+function blankProject(name){
+  return { name, event:'', datum:'', plaats:'', fieldW:40, fieldH:25, items:{}, kastenConfig:{} };
+}
+
+function currentProj(){ return state.projects[state.currentId]; }
+
+// ──────────────────────────────────────────────────────────
+// PROJECT-BAR
+// ──────────────────────────────────────────────────────────
+function renderProjectBar(){
+  const sel = document.getElementById('proj-sel');
+  sel.innerHTML = '';
+  for(const [id,p] of Object.entries(state.projects)){
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = p.name || '(naamloos)';
+    if(id === state.currentId) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  const p = currentProj();
+  document.getElementById('meta-event').value = p.event || '';
+  document.getElementById('meta-datum').value = p.datum || '';
+  document.getElementById('meta-plaats').value = p.plaats || '';
+  document.getElementById('field-w').value = p.fieldW || 40;
+  document.getElementById('field-h').value = p.fieldH || 25;
+}
+
+function onProjectSelect(){
+  state.currentId = document.getElementById('proj-sel').value;
+  selectedItemId = null;
+  renderProjectBar();
+  renderCanvas();
+  renderStroomkasten();
+  renderSamenvatting();
+  scheduleSave();
+}
+
+function newProject(){
+  const name = prompt('Naam nieuwe aanvraag?');
+  if(!name) return;
+  const id = 'p_'+Date.now();
+  state.projects[id] = blankProject(name.trim());
+  state.currentId = id;
+  selectedItemId = null;
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+}
+function renameProject(){
+  const p = currentProj(); if(!p) return;
+  const name = prompt('Nieuwe naam?', p.name);
+  if(!name) return;
+  p.name = name.trim();
+  renderProjectBar();
+  scheduleSave();
+}
+function deleteProject(){
+  if(!confirm('Aanvraag verwijderen?')) return;
+  delete state.projects[state.currentId];
+  if(!Object.keys(state.projects).length){
+    const id = 'p_'+Date.now();
+    state.projects[id] = blankProject('Nieuwe aanvraag');
+    state.currentId = id;
+  } else {
+    state.currentId = Object.keys(state.projects)[0];
+  }
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+}
+
+function setMeta(key,val){
+  currentProj()[key] = val;
+  renderSamenvatting();
+  scheduleSave();
+}
+
+function setFieldSize(){
+  const p = currentProj();
+  p.fieldW = Math.max(5, parseInt(document.getElementById('field-w').value)||40);
+  p.fieldH = Math.max(5, parseInt(document.getElementById('field-h').value)||25);
+  renderCanvas();
+  scheduleSave();
+}
+
+// ──────────────────────────────────────────────────────────
+// TABS
+// ──────────────────────────────────────────────────────────
+function setTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active', c.id==='tab-'+name));
+  if(name==='stroomkasten') renderStroomkasten();
+  if(name==='samenvatting') renderSamenvatting();
+}
+
+// ──────────────────────────────────────────────────────────
+// PALET
+// ──────────────────────────────────────────────────────────
+function renderPalette(){
+  const groups = [
+    ['pal-tenten', CATALOG.tenten],
+    ['pal-containers', CATALOG.containers],
+    ['pal-foodtrucks', CATALOG.foodtrucks],
+    ['pal-stroomkasten', CATALOG.stroomkasten],
+  ];
+  for(const [elId, items] of groups){
+    const el = document.getElementById(elId);
+    el.innerHTML = '';
+    for(const it of items){
+      const div = document.createElement('div');
+      div.className = 'pal-item';
+      div.draggable = true;
+      div.dataset.catId = it.id;
+      const swatchClass = it.kind==='stroomkast' ? `cv-stroomkast-${it.amp}` : `cv-${it.kind}`;
+      div.innerHTML = `
+        <div class="pal-swatch ${swatchClass}">${it.icon}</div>
+        <div class="pal-info">
+          <div class="pal-name">${it.name}</div>
+          <div class="pal-dim">${it.w}m × ${it.h}m</div>
+        </div>
+      `;
+      div.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData('text/cat-id', it.id);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      el.appendChild(div);
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────
+// CANVAS
+// ──────────────────────────────────────────────────────────
+function catalogById(id){
+  for(const cat of Object.values(CATALOG)){
+    const it = cat.find(x=>x.id===id);
+    if(it) return it;
+  }
+  return null;
+}
+
+function renderCanvas(){
+  const p = currentProj(); if(!p) return;
+  const canvas = document.getElementById('canvas');
+  const pxScale = scale * zoomLvl;
+  canvas.style.width  = (p.fieldW * pxScale) + 'px';
+  canvas.style.height = (p.fieldH * pxScale) + 'px';
+  // grids: 1m fijn (lichter) + 5m grover
+  canvas.style.backgroundSize = `${pxScale}px ${pxScale}px, ${pxScale}px ${pxScale}px, ${pxScale*5}px ${pxScale*5}px, ${pxScale*5}px ${pxScale*5}px`;
+  document.getElementById('zoom-lbl').textContent = Math.round(zoomLvl*100)+'%';
+
+  canvas.innerHTML = '';
+  const items = p.items || {};
+  if(!Object.keys(items).length){
+    const empty = document.createElement('div');
+    empty.className = 'pg-canvas-empty';
+    empty.textContent = 'Sleep items uit het palet hierheen.';
+    canvas.appendChild(empty);
+  }
+  for(const [id, item] of Object.entries(items)){
+    canvas.appendChild(buildItemEl(id, item, pxScale));
+  }
+  updateInspector();
+}
+
+function buildItemEl(id, item, pxScale){
+  const cat = catalogById(item.catId);
+  if(!cat) return document.createElement('div');
+  const rotated = (item.rot||0) % 180 !== 0;
+  const wM = rotated ? cat.h : cat.w;
+  const hM = rotated ? cat.w : cat.h;
+  const el = document.createElement('div');
+  el.className = 'cv-item';
+  el.dataset.id = id;
+  let typeCls = `cv-${cat.kind}`;
+  if(cat.kind==='stroomkast') typeCls = `cv-stroomkast-${cat.amp}`;
+  el.classList.add(typeCls);
+  if(id === selectedItemId) el.classList.add('selected');
+  el.style.left = (item.x * pxScale) + 'px';
+  el.style.top  = (item.y * pxScale) + 'px';
+  el.style.width  = (wM * pxScale) + 'px';
+  el.style.height = (hM * pxScale) + 'px';
+
+  let label = cat.name;
+  if(cat.kind === 'stroomkast'){
+    label = `#${item.nummer || '?'}<br><span style="font-size:10px;font-weight:600;">${cat.amp}A</span>`;
+  } else {
+    label = `<span style="font-size:14px;">${cat.icon}</span><br>${cat.name}`;
+  }
+  el.innerHTML = `<div class="cv-item-label">${label}</div>`;
+  attachItemDrag(el, id);
+  return el;
+}
+
+function attachItemDrag(el, id){
+  let startX, startY, origX, origY;
+  let dragging = false;
+  el.addEventListener('pointerdown', e=>{
+    if(e.button !== 0) return;
+    e.stopPropagation();
+    selectItem(id);
+    const item = currentProj().items[id];
+    startX = e.clientX; startY = e.clientY;
+    origX = item.x; origY = item.y;
+    dragging = true;
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const p = currentProj();
+    const item = p.items[id];
+    const cat = catalogById(item.catId);
+    const rotated = (item.rot||0) % 180 !== 0;
+    const wM = rotated ? cat.h : cat.w;
+    const hM = rotated ? cat.w : cat.h;
+    const pxScale = scale * zoomLvl;
+    let nx = origX + (e.clientX - startX)/pxScale;
+    let ny = origY + (e.clientY - startY)/pxScale;
+    // snap 0.5m
+    nx = Math.round(nx*2)/2;
+    ny = Math.round(ny*2)/2;
+    nx = Math.max(0, Math.min(nx, p.fieldW - wM));
+    ny = Math.max(0, Math.min(ny, p.fieldH - hM));
+    item.x = nx; item.y = ny;
+    el.style.left = (nx*pxScale)+'px';
+    el.style.top  = (ny*pxScale)+'px';
+    updateInspector();
+  });
+  el.addEventListener('pointerup', e=>{
+    if(!dragging) return;
+    dragging = false;
+    try { el.releasePointerCapture(e.pointerId); } catch(_){}
+    scheduleSave();
+  });
+}
+
+function selectItem(id){
+  selectedItemId = id;
+  document.querySelectorAll('.cv-item').forEach(el=>{
+    el.classList.toggle('selected', el.dataset.id === id);
+  });
+  updateInspector();
+}
+
+function updateInspector(){
+  const insp = document.getElementById('inspector');
+  if(!selectedItemId || !currentProj().items[selectedItemId]){
+    insp.innerHTML = 'Geen item geselecteerd.';
+    return;
+  }
+  const item = currentProj().items[selectedItemId];
+  const cat = catalogById(item.catId);
+  if(!cat){ insp.innerHTML = 'Onbekend item.'; return; }
+  const extra = cat.kind==='stroomkast' ? ` · <b>Nr. ${item.nummer}</b> · ${cat.amp}A` : '';
+  insp.innerHTML = `
+    <b>${cat.name}</b>${extra} · ${cat.w}m × ${cat.h}m
+    <div class="pg-inspector-row">
+      X: <input type="number" step="0.5" value="${item.x}" onchange="setItemPos('x', this.value)">
+      Y: <input type="number" step="0.5" value="${item.y}" onchange="setItemPos('y', this.value)">
+      Rotatie: <input type="number" step="90" value="${item.rot||0}" onchange="setItemRot(this.value)">°
+    </div>
+  `;
+}
+
+function setItemPos(axis, val){
+  const item = currentProj().items[selectedItemId]; if(!item) return;
+  item[axis] = Math.max(0, parseFloat(val)||0);
+  renderCanvas(); scheduleSave();
+}
+function setItemRot(val){
+  const item = currentProj().items[selectedItemId]; if(!item) return;
+  item.rot = ((parseInt(val)||0) % 360 + 360) % 360;
+  renderCanvas(); scheduleSave();
+}
+
+function rotateSelected(){
+  if(!selectedItemId) return;
+  const item = currentProj().items[selectedItemId]; if(!item) return;
+  item.rot = ((item.rot||0) + 90) % 360;
+  renderCanvas(); scheduleSave();
+}
+
+function deleteSelected(){
+  if(!selectedItemId) return;
+  const p = currentProj();
+  const item = p.items[selectedItemId];
+  if(!item) return;
+  const cat = catalogById(item.catId);
+  delete p.items[selectedItemId];
+  if(cat && cat.kind === 'stroomkast'){
+    delete p.kastenConfig[selectedItemId];
+    renumberKasten();
+  }
+  selectedItemId = null;
+  renderCanvas(); renderStroomkasten(); scheduleSave();
+}
+
+function clearAllItems(){
+  if(!confirm('Alle items wissen?')) return;
+  const p = currentProj();
+  p.items = {}; p.kastenConfig = {};
+  selectedItemId = null;
+  renderCanvas(); renderStroomkasten(); scheduleSave();
+}
+
+// ZOOM
+function zoom(dir){
+  const steps = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+  let i = steps.findIndex(s=>Math.abs(s-zoomLvl)<0.01);
+  if(i<0) i = 2;
+  i = Math.max(0, Math.min(steps.length-1, i+dir));
+  zoomLvl = steps[i];
+  renderCanvas();
+}
+
+// DROP NEW ITEM
+function setupCanvasDrop(){
+  const canvas = document.getElementById('canvas');
+  canvas.addEventListener('dragover', e=>{
+    if(!e.dataTransfer.types.includes('text/cat-id')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    canvas.classList.add('drag-over');
+  });
+  canvas.addEventListener('dragleave', ()=>canvas.classList.remove('drag-over'));
+  canvas.addEventListener('drop', e=>{
+    e.preventDefault();
+    canvas.classList.remove('drag-over');
+    const catId = e.dataTransfer.getData('text/cat-id');
+    if(!catId) return;
+    const cat = catalogById(catId); if(!cat) return;
+    const rect = canvas.getBoundingClientRect();
+    const pxScale = scale * zoomLvl;
+    let x = (e.clientX - rect.left)/pxScale - cat.w/2;
+    let y = (e.clientY - rect.top)/pxScale - cat.h/2;
+    x = Math.max(0, Math.round(x*2)/2);
+    y = Math.max(0, Math.round(y*2)/2);
+    const p = currentProj();
+    x = Math.min(x, p.fieldW - cat.w);
+    y = Math.min(y, p.fieldH - cat.h);
+    const id = 'i_'+Date.now()+'_'+Math.floor(Math.random()*999);
+    const newItem = { catId, x, y, rot:0 };
+    if(cat.kind==='stroomkast'){
+      newItem.nummer = nextKastNummer();
+      p.kastenConfig[id] = { schuco:0, a32:0, a63:0, a125:0, naam:'' };
+    }
+    p.items[id] = newItem;
+    selectItem(id);
+    renderCanvas(); renderStroomkasten(); scheduleSave();
+  });
+  // klik leeg vlak = deselect
+  canvas.addEventListener('pointerdown', e=>{
+    if(e.target === canvas){ selectedItemId = null; updateInspector();
+      document.querySelectorAll('.cv-item.selected').forEach(el=>el.classList.remove('selected'));
+    }
+  });
+  canvas.addEventListener('keydown', e=>{
+    if(e.key === 'Delete' || e.key === 'Backspace'){ deleteSelected(); }
+    if(e.key === 'r' || e.key === 'R'){ rotateSelected(); }
+  });
+}
+
+function nextKastNummer(){
+  const p = currentProj();
+  const used = new Set();
+  for(const [id,item] of Object.entries(p.items)){
+    const cat = catalogById(item.catId);
+    if(cat && cat.kind==='stroomkast') used.add(item.nummer);
+  }
+  let n = 1;
+  while(used.has(n)) n++;
+  return n;
+}
+
+function renumberKasten(){
+  const p = currentProj();
+  // herken volgorde op huidig nummer → en hernummer naar 1..N
+  const entries = Object.entries(p.items).filter(([_,it])=>{
+    const c = catalogById(it.catId); return c && c.kind==='stroomkast';
+  }).sort((a,b)=>(a[1].nummer||999)-(b[1].nummer||999));
+  entries.forEach(([id,it],i)=>{ it.nummer = i+1; });
+}
+
+// ──────────────────────────────────────────────────────────
+// STROOMKASTEN-CONFIG TAB
+// ──────────────────────────────────────────────────────────
+function getKastenSorted(){
+  const p = currentProj();
+  const arr = [];
+  for(const [id, item] of Object.entries(p.items || {})){
+    const cat = catalogById(item.catId);
+    if(cat && cat.kind === 'stroomkast'){
+      arr.push({ id, item, cat });
+    }
+  }
+  arr.sort((a,b)=>(a.item.nummer||999)-(b.item.nummer||999));
+  return arr;
+}
+
+function renderStroomkasten(){
+  const list = document.getElementById('sk-list');
+  const empty = document.getElementById('sk-empty');
+  const kasten = getKastenSorted();
+  list.innerHTML = '';
+  empty.style.display = kasten.length ? 'none' : 'block';
+
+  // totalen
+  let totSchuco=0, tot32=0, tot63=0, tot125=0;
+  const p = currentProj();
+  for(const k of kasten){
+    const cfg = p.kastenConfig[k.id] || (p.kastenConfig[k.id] = { schuco:0, a32:0, a63:0, a125:0, naam:'' });
+    totSchuco += +cfg.schuco||0;
+    tot32 += +cfg.a32||0;
+    tot63 += +cfg.a63||0;
+    tot125 += +cfg.a125||0;
+  }
+  document.getElementById('totals-bar').innerHTML = `
+    <div class="totals-card"><div class="totals-label">Totaal schuco's</div><div class="totals-num">${totSchuco}</div><div class="totals-sub">220V / 16A</div></div>
+    <div class="totals-card"><div class="totals-label">Totaal 32A</div><div class="totals-num">${tot32}</div><div class="totals-sub">CEE 32A</div></div>
+    <div class="totals-card"><div class="totals-label">Totaal 63A</div><div class="totals-num">${tot63}</div><div class="totals-sub">CEE 63A</div></div>
+    <div class="totals-card"><div class="totals-label">Totaal 125A</div><div class="totals-num">${tot125}</div><div class="totals-sub">CEE 125A</div></div>
+  `;
+
+  for(const k of kasten){
+    const cfg = p.kastenConfig[k.id];
+    const card = document.createElement('div');
+    card.className = 'sk-card sk-'+k.cat.amp;
+    card.innerHTML = `
+      <div class="sk-hdr">
+        <div class="sk-num">${k.item.nummer || '?'}</div>
+        <div class="sk-type-badge sk-type-${k.cat.amp}">${k.cat.amp}A kast</div>
+        <input class="sk-name-input" placeholder="bv. Hoofdpodium, Bar links…" value="${cfg.naam || ''}" oninput="setKastNaam('${k.id}', this.value)">
+      </div>
+      <div class="sk-grid">
+        <div class="sk-cell">
+          <div class="sk-cell-lbl">Schuco's <span class="sk-cell-tag">220V / 16A</span></div>
+          <input type="number" min="0" step="1" class="sk-qty" value="${cfg.schuco||0}" oninput="setKastVal('${k.id}','schuco',this.value)">
+        </div>
+        <div class="sk-cell">
+          <div class="sk-cell-lbl">CEE 32A <span class="sk-cell-tag">5-pin</span></div>
+          <input type="number" min="0" step="1" class="sk-qty" value="${cfg.a32||0}" oninput="setKastVal('${k.id}','a32',this.value)">
+        </div>
+        <div class="sk-cell">
+          <div class="sk-cell-lbl">CEE 63A <span class="sk-cell-tag">5-pin</span></div>
+          <input type="number" min="0" step="1" class="sk-qty" value="${cfg.a63||0}" oninput="setKastVal('${k.id}','a63',this.value)">
+        </div>
+        <div class="sk-cell">
+          <div class="sk-cell-lbl">CEE 125A <span class="sk-cell-tag">5-pin</span></div>
+          <input type="number" min="0" step="1" class="sk-qty" value="${cfg.a125||0}" oninput="setKastVal('${k.id}','a125',this.value)">
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  }
+}
+
+function setKastNaam(id, val){
+  currentProj().kastenConfig[id].naam = val;
+  scheduleSave();
+}
+function setKastVal(id, key, val){
+  const cfg = currentProj().kastenConfig[id];
+  cfg[key] = Math.max(0, parseInt(val)||0);
+  // alleen totalen verversen, niet hele lijst
+  renderStroomkastenTotals();
+  scheduleSave();
+}
+function renderStroomkastenTotals(){
+  const p = currentProj();
+  let totSchuco=0, tot32=0, tot63=0, tot125=0;
+  for(const k of getKastenSorted()){
+    const cfg = p.kastenConfig[k.id] || {};
+    totSchuco += +cfg.schuco||0;
+    tot32 += +cfg.a32||0;
+    tot63 += +cfg.a63||0;
+    tot125 += +cfg.a125||0;
+  }
+  document.getElementById('totals-bar').innerHTML = `
+    <div class="totals-card"><div class="totals-label">Totaal schuco's</div><div class="totals-num">${totSchuco}</div><div class="totals-sub">220V / 16A</div></div>
+    <div class="totals-card"><div class="totals-label">Totaal 32A</div><div class="totals-num">${tot32}</div><div class="totals-sub">CEE 32A</div></div>
+    <div class="totals-card"><div class="totals-label">Totaal 63A</div><div class="totals-num">${tot63}</div><div class="totals-sub">CEE 63A</div></div>
+    <div class="totals-card"><div class="totals-label">Totaal 125A</div><div class="totals-num">${tot125}</div><div class="totals-sub">CEE 125A</div></div>
+  `;
+}
+
+// ──────────────────────────────────────────────────────────
+// SAMENVATTING TAB
+// ──────────────────────────────────────────────────────────
+function renderSamenvatting(){
+  const p = currentProj(); if(!p) return;
+  const kasten = getKastenSorted();
+  let totSchuco=0, tot32=0, tot63=0, tot125=0;
+  const rows = kasten.map(k=>{
+    const cfg = p.kastenConfig[k.id] || {};
+    totSchuco += +cfg.schuco||0;
+    tot32 += +cfg.a32||0;
+    tot63 += +cfg.a63||0;
+    tot125 += +cfg.a125||0;
+    return `<tr>
+      <td><b>#${k.item.nummer}</b></td>
+      <td>${k.cat.amp}A</td>
+      <td>${cfg.naam || '<span style="color:var(--text3);">—</span>'}</td>
+      <td class="num">${cfg.schuco||0}</td>
+      <td class="num">${cfg.a32||0}</td>
+      <td class="num">${cfg.a63||0}</td>
+      <td class="num">${cfg.a125||0}</td>
+    </tr>`;
+  }).join('');
+
+  // counts per type op plattegrond
+  const counts = {};
+  for(const it of Object.values(p.items||{})){
+    const c = catalogById(it.catId); if(!c) continue;
+    counts[c.name] = (counts[c.name]||0) + 1;
+  }
+  const plRows = Object.entries(counts).map(([n,c])=>`<tr><td>${n}</td><td class="num">${c}</td></tr>`).join('');
+
+  document.getElementById('summary-card').innerHTML = `
+    <div class="summary-meta">
+      <div><div class="summary-meta-label">Aanvraag</div><div class="summary-meta-val">${p.name||'—'}</div></div>
+      <div><div class="summary-meta-label">Event</div><div class="summary-meta-val">${p.event||'—'}</div></div>
+      <div><div class="summary-meta-label">Datum</div><div class="summary-meta-val">${p.datum||'—'}</div></div>
+      <div><div class="summary-meta-label">Plaats</div><div class="summary-meta-val">${p.plaats||'—'}</div></div>
+      <div><div class="summary-meta-label">Veld</div><div class="summary-meta-val">${p.fieldW}m × ${p.fieldH}m</div></div>
+    </div>
+
+    <div class="summary-h">Plattegrond</div>
+    ${plRows ? `<table class="summary-table"><thead><tr><th>Item</th><th style="text-align:right;">Aantal</th></tr></thead><tbody>${plRows}</tbody></table>` : '<div style="color:var(--text2);font-size:13px;">Nog niets geplaatst.</div>'}
+
+    <div class="summary-h">Stroomkasten</div>
+    ${rows ? `<table class="summary-table">
+      <thead><tr><th>Nr.</th><th>Type</th><th>Naam</th><th style="text-align:right;">Schuco</th><th style="text-align:right;">32A</th><th style="text-align:right;">63A</th><th style="text-align:right;">125A</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="3">TOTAAL</td><td class="num">${totSchuco}</td><td class="num">${tot32}</td><td class="num">${tot63}</td><td class="num">${tot125}</td></tr></tfoot>
+    </table>` : '<div style="color:var(--text2);font-size:13px;">Nog geen stroomkasten geplaatst.</div>'}
+  `;
+}
+
+// ──────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async ()=>{
+  renderPalette();
+  setupCanvasDrop();
+  await loadAll();
+  renderProjectBar();
+  renderCanvas();
+  renderStroomkasten();
+  renderSamenvatting();
+  setSaveState('saved');
+  firstLoad = false;
+
+  // keyboard op canvas-wrap (focus zodat Del/R werken)
+  const cs = document.getElementById('canvas-scroll');
+  cs.tabIndex = 0;
+  cs.addEventListener('keydown', e=>{
+    if(e.key === 'Delete' || e.key === 'Backspace'){ deleteSelected(); }
+    if(e.key === 'r' || e.key === 'R'){ rotateSelected(); }
+  });
+  cs.addEventListener('click', ()=>cs.focus());
+});
+</script>
+
+</body>
+</html>

@@ -1043,6 +1043,7 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="ocb.html" target="_blank">✅ OCB</a>
   <a href="ops.html" target="_blank">👥 Personeelsfiche</a>
   <a href="horeca-planning.html" target="_blank">🍔 Horeca Planning</a>
+  <a href="stroomaanvraag.html" target="_blank">⚡ Stroomaanvraag</a>
   <a href="laadlijst-beheer.html" target="_blank">📦 Laadlijsten</a>
   <a href="laadlijst-koppeling.html" target="_blank">🔗 Koppelingen</a>
   <a href="qr-codes.html" target="_blank">🔳 QR codes</a>
@@ -1242,6 +1243,7 @@ fbdb.ref('ft_ops_v2').on('value', snap => {
   checkins.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   localStorage.setItem('ft_ops_v2_cache', JSON.stringify(checkins));
   renderDashboard();
+  if (typeof recomputeStukNotes === 'function') recomputeStukNotes();
 });
 
 // Real-time listener voor poets-prioriteit per truck
@@ -1277,20 +1279,56 @@ fbdb.ref('ft_eindstock_v1').on('value', snap => {
   renderDashboard();
 });
 
-// ── STUKKEN: notities die zijn doorgegeven als "kapot / te maken" ──
-let stukNotes = []; // [{ id, name, event, text, date, time, ts, broken }]
+// ── STUKKEN: notities (broken=true) + check-ins (hasDefect=true) ──
+let stukNotes = [];       // samengevoegde lijst voor rendering
+let stukNotesRaw = [];    // notities met broken=true (ruwe items)
 
 fbdb.ref('ft_notities_v1').on('value', snap => {
   const raw = snap.val() || {};
-  stukNotes = Object.entries(raw)
+  stukNotesRaw = Object.entries(raw)
     .map(([k, v]) => ({ ...(v || {}), id: (v && v.id) || k }))
-    .filter(n => n.broken === true)
-    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    .filter(n => n.broken === true);
+  recomputeStukNotes();
+});
+
+function recomputeStukNotes() {
+  // Bron 1: notities die als "kapot / te maken" gemarkeerd zijn
+  const fromNotes = stukNotesRaw.map(n => ({
+    id: String(n.id),
+    source: 'note',
+    name: n.name || 'Onbekend',
+    event: n.event || '',
+    text: n.text || '',
+    date: n.date || '',
+    time: n.time || '',
+    ts: n.ts || 0
+  }));
+  // Bron 2: laatste check-in per truck — als hasDefect=true, behandel als open stuk
+  const latestPerTruck = {};
+  (checkins || []).forEach(c => {
+    if (!c || !c.truck) return;
+    if (!latestPerTruck[c.truck] || (c.timestamp || 0) > (latestPerTruck[c.truck].timestamp || 0)) {
+      latestPerTruck[c.truck] = c;
+    }
+  });
+  const fromCheckins = Object.values(latestPerTruck)
+    .filter(c => c.hasDefect === true && (c.defectWat || c.defectText))
+    .map(c => ({
+      id: String(c.id),
+      source: 'checkin',
+      name: c.employee || 'Onbekend',
+      event: c.truck || '',
+      text: [c.defectWat, c.defectText].filter(Boolean).join(' — '),
+      date: c.date || '',
+      time: c.time || '',
+      ts: c.timestamp || 0
+    }));
+  stukNotes = [...fromNotes, ...fromCheckins].sort((a, b) => (b.ts || 0) - (a.ts || 0));
   renderStukkenUI();
   if (!document.getElementById('stuk-modal-overlay').classList.contains('hidden')) {
     renderStukkenModal();
   }
-});
+}
 
 function renderStukkenUI() {
   // Topbar-knop + counter
@@ -1318,9 +1356,11 @@ function renderStukkenUI() {
   }
   list.innerHTML = stukNotes.map(n => {
     const id = escapeHtml(n.id);
+    const src = escapeHtml(n.source || 'note');
     const who = escapeHtml(n.name || 'Onbekend');
     const when = escapeHtml(fmtStukWhen(n));
-    const ev = n.event ? '<div><span class="ssi-ev">' + escapeHtml(n.event) + '</span></div>' : '';
+    const evLabel = n.source === 'checkin' ? ('🚛 ' + (n.event || '')) : (n.event || '');
+    const ev = evLabel ? '<div><span class="ssi-ev">' + escapeHtml(evLabel) + '</span></div>' : '';
     const text = escapeHtml(n.text || '');
     return '<div class="sidebar-stuk-item" data-id="' + id + '">' +
       '<div class="ssi-who-row"><span class="ssi-who">' + who + '</span><span class="ssi-time">' + when + '</span></div>' +
@@ -1328,7 +1368,7 @@ function renderStukkenUI() {
       '<div class="ssi-text">' + text + '</div>' +
       '<div class="ssi-foot">' +
         '<button class="ssi-more" type="button" data-action="toggle-expand">Meer</button>' +
-        '<button class="ssi-done" type="button" data-stuk-id="' + id + '">✓ Opgelost</button>' +
+        '<button class="ssi-done" type="button" data-stuk-id="' + id + '" data-stuk-source="' + src + '">✓ Opgelost</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1360,7 +1400,9 @@ function renderStukkenModal() {
     return;
   }
   body.innerHTML = '<div class="stuk-list">' + stukNotes.map(n => {
-    const ev = n.event ? '<span class="stuk-item-ev">' + escapeHtml(n.event) + '</span>' : '';
+    const evLabel = n.source === 'checkin' ? ('🚛 ' + (n.event || '')) : (n.event || '');
+    const ev = evLabel ? '<span class="stuk-item-ev">' + escapeHtml(evLabel) + '</span>' : '';
+    const src = escapeHtml(n.source || 'note');
     return '<div class="stuk-item">' +
       '<div class="stuk-item-hdr">' +
         '<div><span class="stuk-item-who">' + escapeHtml(n.name || 'Onbekend') + '</span>' + ev + '</div>' +
@@ -1368,7 +1410,7 @@ function renderStukkenModal() {
       '</div>' +
       '<div class="stuk-item-text">' + escapeHtml(n.text || '') + '</div>' +
       '<div class="stuk-item-act">' +
-        '<button class="stuk-btn-done" type="button" data-stuk-id="' + escapeHtml(n.id) + '">✓ Opgelost</button>' +
+        '<button class="stuk-btn-done" type="button" data-stuk-id="' + escapeHtml(n.id) + '" data-stuk-source="' + src + '">✓ Opgelost</button>' +
       '</div>' +
     '</div>';
   }).join('') + '</div>';
@@ -1427,17 +1469,34 @@ document.addEventListener('keydown', ev => {
   }
 });
 
-// Markeer een stuk als opgelost: verwijdert enkel de broken-flag, notitie blijft bewaard
+// Markeer een stuk als opgelost.
+//   - source 'note'    → broken-flag uit op notitie; notitie zelf blijft bewaard
+//   - source 'checkin' → hasDefect uit op check-in + log + resolvedAt; check-in zelf blijft
 document.addEventListener('click', ev => {
   const btn = ev.target.closest && ev.target.closest('button[data-stuk-id]');
   if (!btn) return;
   const id = btn.getAttribute('data-stuk-id');
   if (!id) return;
+  const source = btn.getAttribute('data-stuk-source') || 'note';
   btn.disabled = true;
   btn.textContent = '… bezig';
-  fbdb.ref('ft_notities_v1/' + id + '/broken').set(null)
-    .then(() => showToast('✓ Stuk opgelost'))
-    .catch(() => { btn.disabled = false; btn.textContent = '✓ Opgelost'; showToast('Kon niet opslaan', true); });
+  let p;
+  if (source === 'checkin') {
+    p = fbdb.ref('ft_ops_v2/' + id).once('value').then(snap => {
+      const old = snap.val();
+      if (!old) return;
+      const now = new Date();
+      old.hasDefect = false;
+      old.defectResolvedAt = now.getTime();
+      old.log = old.log || [];
+      old.log.push('✓ Defect opgelost via dashboard op ' + now.toLocaleDateString('nl-NL') + ' ' + now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'}));
+      return fbdb.ref('ft_ops_v2/' + id).set(old);
+    });
+  } else {
+    p = fbdb.ref('ft_notities_v1/' + id + '/broken').set(null);
+  }
+  p.then(() => showToast('✓ Stuk opgelost'))
+   .catch(() => { btn.disabled = false; btn.textContent = '✓ Opgelost'; showToast('Kon niet opslaan', true); });
 });
 
 // EENMALIGE MIGRATIE: oude ft_ops_v1 data verplaatsen naar ft_ops_v2
