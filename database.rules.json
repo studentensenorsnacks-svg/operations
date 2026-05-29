@@ -29,6 +29,30 @@
     "ft_poets_history":   { ".read": "auth != null", ".write": "auth != null" },
     "foldtable_requests": { ".read": "auth != null", ".write": "auth != null" },
     "ocb_keuringen":      { ".read": "auth != null", ".write": "auth != null" },
-    "vet_tonnen":         { ".read": "auth != null", ".write": "auth != null" }
+    "vet_tonnen":         { ".read": "auth != null", ".write": "auth != null" },
+
+    "_userActivity": {
+      ".read": "auth != null && auth.token.role == 'admin'",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid && !auth.token.firebase.sign_in_provider.matches(/^anonymous$/i)",
+        ".read":  "auth != null && (auth.uid == $uid || auth.token.role == 'admin')",
+        "lastSeen":       { ".validate": "newData.isNumber()" },
+        "lastLogin":      { ".validate": "newData.isNumber()" },
+        "loginCount":     { ".validate": "newData.isNumber()" },
+        "email":          { ".validate": "newData.isString() && newData.val().length < 200" },
+        "displayName":    { ".validate": "newData.isString() && newData.val().length < 200" },
+        "provider":       { ".validate": "newData.isString() && newData.val().length < 40" },
+        "userAgent":      { ".validate": "newData.isString() && newData.val().length < 400" },
+        "loginHistory": {
+          "$ts": {
+            ".validate": "newData.hasChildren()",
+            "provider":  { ".validate": "newData.isString() && newData.val().length < 40" },
+            "userAgent": { ".validate": "newData.isString() && newData.val().length < 400" },
+            "$other":    { ".validate": false }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    }
   }
 }

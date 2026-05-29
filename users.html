@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
 <script>
 const firebaseConfig = {
@@ -27,10 +28,10 @@ firebase.initializeApp(firebaseConfig);
 body{
   font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",sans-serif;
   background:#fdf8f0;color:#3a2415;
-  min-height:100vh;padding:24px 18px 60px;
+  min-height:100vh;padding:22px 18px 60px;
 }
 .topbar{
-  max-width:880px;margin:0 auto 22px;display:flex;align-items:center;
+  max-width:1080px;margin:0 auto 22px;display:flex;align-items:center;
   gap:14px;padding-bottom:14px;border-bottom:1px solid rgba(120,60,20,.12);
 }
 .topbar img{width:38px;height:auto}
@@ -43,71 +44,82 @@ body{
 }
 .topbar button.logout:hover{background:#fef0e2;border-color:#e8662b;color:#3a2415}
 
-.wrap{max-width:880px;margin:0 auto}
-.card{
-  background:#fff;border:1px solid rgba(120,60,20,.12);
-  border-radius:12px;padding:18px 20px;margin-bottom:18px;
-  box-shadow:0 1px 3px rgba(120,60,20,.04);
+.wrap{max-width:1080px;margin:0 auto}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.stat{
+  background:#fff;border:1px solid rgba(120,60,20,.12);border-radius:12px;
+  padding:14px 16px;border-top:3px solid #e8662b;
 }
-h2{font-size:15px;font-weight:700;margin-bottom:14px;color:#3a2415}
-label{display:block;font-size:11px;font-weight:600;color:#7a5a40;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.3px}
-input,select{
-  width:100%;padding:9px 11px;font-size:13px;
-  border:1px solid rgba(120,60,20,.22);border-radius:8px;
-  background:#fff;color:#3a2415;font-family:inherit;outline:none;
+.stat .lbl{font-size:11px;font-weight:700;color:#7a5a40;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.stat .num{font-size:26px;font-weight:800;line-height:1}
+.stat .sub{font-size:11.5px;color:#b89878;margin-top:5px}
+.stat.r{border-top-color:#a04510}
+.stat.r .num{color:#a04510}
+.stat.g{border-top-color:#3f5a18}
+.stat.g .num{color:#3f5a18}
+.stat.b{border-top-color:#1e4a5c}
+.stat.b .num{color:#1e4a5c}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.search{
+  flex:1;min-width:200px;
+  display:flex;align-items:center;gap:9px;
+  background:#fff;border:1px solid rgba(120,60,20,.22);border-radius:10px;
+  padding:9px 13px;transition:border-color .15s,box-shadow .15s;
 }
-input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
+.search:focus-within{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
+.search input{flex:1;border:none;outline:none;background:transparent;font-size:14px;font-family:inherit;color:#3a2415}
+.search-icon{color:#b89878;font-size:14px}
 button{
   padding:9px 14px;font-size:13px;font-weight:600;
   border:1px solid rgba(120,60,20,.22);border-radius:8px;
   background:#fff;color:#3a2415;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:background .12s,border-color .12s;
 }
 button:hover:not(:disabled){background:#fef0e2;border-color:#e8662b}
 button.primary{background:#e8662b;color:#fff;border-color:#e8662b}
 button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
 button.danger{color:#7a2818;border-color:#f0a896}
 button.danger:hover:not(:disabled){background:#fde2dd;border-color:#7a2818}
+button.ghost{background:transparent;border-color:transparent;color:#7a5a40}
+button.ghost:hover:not(:disabled){background:#fef0e2;color:#3a2415}
 button:disabled{opacity:.5;cursor:not-allowed}
 
-.formgrid{display:grid;grid-template-columns:1.5fr 1.5fr 1fr 1fr auto;gap:10px;align-items:end}
-@media(max-width:680px){.formgrid{grid-template-columns:1fr 1fr}.formgrid > button{grid-column:span 2}}
-@media(max-width:760px){
-  body{padding:18px 12px 50px;}
-  .topbar{gap:10px;padding-bottom:12px;margin-bottom:18px;flex-wrap:wrap;}
-  .topbar img{width:32px;}
-  .topbar h1{font-size:18px;}
-  .topbar .who{flex:1 1 100%;font-size:11px;order:3;}
-  .topbar button.logout{padding:7px 11px;font-size:11.5px;}
-  .card{padding:14px 14px;border-radius:10px;}
-  h2{font-size:14px;}
-  input,select{padding:11px 12px;font-size:14.5px;}
-  /* Tabel naar kaartjes per user */
-  table,thead,tbody,tr,td{display:block;width:100%;}
-  thead{display:none;}
-  tr{background:#fff;border:1px solid rgba(120,60,20,.10);border-radius:10px;padding:11px 12px;margin-bottom:9px;}
-  td{padding:6px 0;border:none;}
-  td.role-cell select{min-width:0;width:100%;padding:11px;font-size:14px;}
-  td:has(button[data-act="delete"]){display:flex;justify-content:flex-end;padding-top:8px;}
-  td:has(button[data-act="delete"]) button{padding:9px 14px;font-size:13px;}
+/* USERS LIST */
+.list{
+  background:#fff;border:1px solid rgba(120,60,20,.12);
+  border-radius:12px;overflow:hidden;
 }
-@media(max-width:480px){
-  .formgrid{grid-template-columns:1fr;gap:8px;}
-  .formgrid > button{grid-column:span 1;width:100%;padding:13px;}
-  button{padding:12px 14px;font-size:14px;}
+.list-head{
+  display:grid;grid-template-columns:1.7fr 1fr 0.9fr 0.9fr 50px;gap:14px;
+  padding:11px 16px;font-size:11px;font-weight:700;color:#7a5a40;
+  text-transform:uppercase;letter-spacing:.04em;
+  background:#fef0e2;border-bottom:1px solid rgba(120,60,20,.10);
 }
+.row{
+  display:grid;grid-template-columns:1.7fr 1fr 0.9fr 0.9fr 50px;gap:14px;
+  padding:13px 16px;border-bottom:1px solid rgba(120,60,20,.06);
+  align-items:center;cursor:pointer;transition:background .1s;
+}
+.row:hover{background:#fef0e2}
+.row:last-child{border-bottom:none}
+.cell{min-width:0}
+.user-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-meta{font-size:11px;color:#b89878;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-self{color:#e8662b;font-size:10.5px;font-weight:600;margin-left:6px}
+.last-seen{font-size:12.5px;color:#7a5a40;display:flex;align-items:center;gap:7px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#b89878}
+.dot.online{background:#3f5a18;box-shadow:0 0 0 3px rgba(63,90,24,.18)}
+.dot.recent{background:#a04510}
+.dot.away{background:#b89878}
+.last-login{font-size:12.5px;color:#7a5a40}
+.last-login .small{font-size:11px;color:#b89878;display:block;margin-top:1px}
+.chev{color:#b89878;font-size:18px;text-align:right}
 
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{
-  text-align:left;font-size:11px;font-weight:600;color:#7a5a40;
-  text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;
-  border-bottom:1px solid rgba(120,60,20,.12);
-}
-td{padding:11px 10px;border-bottom:1px solid rgba(120,60,20,.06);vertical-align:middle}
-tr:last-child td{border-bottom:none}
-.email{font-weight:600}
-.uid{font-size:11px;color:#b89878;font-family:monospace}
-.providers{font-size:11px;color:#7a5a40}
-.role-cell select{padding:6px 9px;font-size:12px;min-width:120px}
 .badge{
   display:inline-block;padding:2px 9px;font-size:11px;font-weight:600;
   border-radius:100px;background:#f7ecd8;color:#7a5a40;
@@ -118,16 +130,101 @@ tr:last-child td{border-bottom:none}
 .badge.viewer{background:#e0ebef;color:#1e4a5c}
 .badge.none{background:#f0e7da;color:#856042}
 
+.empty{padding:30px;text-align:center;color:#b89878;font-size:13px}
+
+/* MODAL */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(60,30,15,.4);z-index:100;
+  display:none;align-items:flex-start;justify-content:center;
+  padding:30px 16px;overflow-y:auto;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:#fff;border-radius:14px;width:100%;max-width:540px;
+  box-shadow:0 14px 36px rgba(120,60,20,.18);margin:auto;
+}
+.modal-hd{
+  padding:18px 22px 0;display:flex;justify-content:space-between;align-items:flex-start;
+}
+.modal-hd h2{font-size:18px;font-weight:700;line-height:1.3}
+.modal-hd .x{
+  background:#fef0e2;border:none;width:30px;height:30px;border-radius:8px;
+  cursor:pointer;font-size:16px;color:#7a5a40;flex-shrink:0;
+}
+.modal-bd{padding:16px 22px 22px}
+.modal-section{margin-bottom:18px}
+.modal-section:last-child{margin-bottom:0}
+.modal-section .lbl{
+  font-size:11px;font-weight:700;color:#7a5a40;
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;
+}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:11px;font-weight:700;color:#7a5a40;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 5px}
+input,select{
+  width:100%;padding:10px 12px;font-size:13.5px;
+  border:1px solid rgba(120,60,20,.22);border-radius:8px;
+  background:#fff;color:#3a2415;font-family:inherit;outline:none;
+}
+input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+
+.detail-list{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#7a5a40}
+.detail-list b{color:#3a2415;font-weight:600}
+.detail-list code{font-family:monospace;font-size:12px;background:#fef0e2;padding:2px 6px;border-radius:5px;color:#3a2415}
+
+.history{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-right:4px}
+.history-item{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:9px 11px;background:#fef0e2;border-radius:8px;font-size:12.5px;
+}
+.history-when{font-weight:600;color:#3a2415;flex-shrink:0}
+.history-meta{color:#7a5a40;font-size:11.5px;margin-top:2px}
+.history-prov{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:#fff;color:#7a5a40;flex-shrink:0;border:1px solid rgba(120,60,20,.12);align-self:flex-start}
+.history-empty{padding:14px;color:#b89878;text-align:center;font-size:12.5px}
+
+/* TOAST */
 .toast{
   position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
   background:#3a2415;color:#fdf8f0;padding:11px 18px;border-radius:10px;
   font-size:13px;font-weight:500;box-shadow:0 4px 14px rgba(0,0,0,.2);
-  z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;
+  z-index:200;opacity:0;transition:opacity .2s;pointer-events:none;
 }
 .toast.show{opacity:1}
 .toast.error{background:#7a2818}
 
-.empty{padding:30px;text-align:center;color:#b89878;font-size:13px}
+@media(max-width:760px){
+  body{padding:16px 12px 50px}
+  .topbar{margin-bottom:16px;flex-wrap:wrap}
+  .topbar h1{font-size:17px}
+  .topbar .who{flex:1 1 100%;font-size:11px;order:3}
+  .stats{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .stat{padding:11px 13px}
+  .stat .num{font-size:22px}
+  .toolbar{gap:8px}
+  /* Lijst → kaartjes */
+  .list-head{display:none}
+  .row{
+    grid-template-columns:1fr auto;grid-template-areas:"name role" "ls last";
+    gap:6px 10px;padding:12px 13px;border:1px solid rgba(120,60,20,.10);
+    border-radius:10px;margin:7px;background:#fff;
+  }
+  .row:hover{background:#fff}
+  .cell:nth-child(1){grid-area:name}
+  .cell:nth-child(2){grid-area:role;justify-self:end}
+  .cell:nth-child(3){grid-area:ls}
+  .cell:nth-child(4){grid-area:last;justify-self:end;text-align:right}
+  .cell:nth-child(5){display:none}
+  .list{background:#fef0e2;border:none;padding:1px 0}
+}
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr 1fr}
+  .formgrid{grid-template-columns:1fr}
+  .modal{border-radius:12px}
+  .modal-hd{padding:15px 16px 0}
+  .modal-bd{padding:12px 16px 18px}
+  .modal-actions{flex-direction:column-reverse}
+  .modal-actions button{width:100%;justify-content:center}
+}
 </style>
 </head>
 <body>
@@ -140,40 +237,107 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <div class="wrap">
-  <div class="card" data-role="write" id="add-card">
-    <h2>Nieuwe gebruiker</h2>
-    <div class="formgrid">
-      <div>
-        <label>E-mailadres</label>
-        <input id="new-email" type="email" placeholder="naam@senorsnacks.be" autocomplete="off">
+  <div class="stats">
+    <div class="stat"><div class="lbl">Totaal</div><div class="num" id="st-total">…</div><div class="sub" id="st-total-sub">— gebruikers</div></div>
+    <div class="stat r"><div class="lbl">Admins</div><div class="num" id="st-admins">…</div><div class="sub" id="st-admins-sub">—</div></div>
+    <div class="stat g"><div class="lbl">Nu online</div><div class="num" id="st-online">…</div><div class="sub">laatste 2 min</div></div>
+    <div class="stat b"><div class="lbl">Actief vandaag</div><div class="num" id="st-today">…</div><div class="sub" id="st-week-sub">— deze week</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <span class="search-icon">🔍</span>
+      <input id="search" type="text" placeholder="Zoek op naam, e-mail of rol…" autocomplete="off">
+    </div>
+    <button class="primary" data-role="write" onclick="openAddModal()">+ Nieuwe gebruiker</button>
+    <button class="ghost" onclick="refresh()" title="Vernieuwen">↻</button>
+  </div>
+
+  <div class="list">
+    <div class="list-head">
+      <div>Gebruiker</div>
+      <div>Rol</div>
+      <div>Laatst gezien</div>
+      <div>Laatste login</div>
+      <div></div>
+    </div>
+    <div id="rows">
+      <div class="empty">Bezig met laden…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD USER MODAL ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h2>Nieuwe gebruiker toevoegen</h2>
+      <button class="x" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <label>E-mailadres</label>
+      <input id="add-email" type="email" autocomplete="off" placeholder="naam@senorsnacks.be">
+      <div class="formgrid">
+        <div>
+          <label>Wachtwoord <span style="font-weight:400;text-transform:none;color:#b89878">(optioneel)</span></label>
+          <input id="add-pwd" type="text" autocomplete="off" placeholder="laat leeg voor Google-only">
+        </div>
+        <div>
+          <label>Naam (optioneel)</label>
+          <input id="add-name" type="text" autocomplete="off">
+        </div>
       </div>
-      <div>
-        <label>Wachtwoord <span style="font-weight:400;text-transform:none;color:#b89878">(optioneel)</span></label>
-        <input id="new-pwd" type="text" placeholder="laat leeg voor Google-only" autocomplete="off">
-      </div>
-      <div>
-        <label>Naam</label>
-        <input id="new-name" type="text" placeholder="optioneel" autocomplete="off">
-      </div>
-      <div>
-        <label>Rol</label>
-        <select id="new-role">
-          <option value="medewerker">medewerker</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-          <option value="viewer">alleen-lezen</option>
-        </select>
-      </div>
-      <div>
-        <button class="primary" id="btn-create">Aanmaken</button>
+      <label>Rol</label>
+      <select id="add-role">
+        <option value="medewerker">medewerker</option>
+        <option value="manager">manager</option>
+        <option value="admin">admin</option>
+        <option value="viewer">alleen-lezen</option>
+      </select>
+      <div class="modal-actions">
+        <button onclick="closeAddModal()">Annuleren</button>
+        <button class="primary" id="add-submit" onclick="submitAdd()">Aanmaken</button>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="card">
-    <h2>Alle gebruikers (<span id="count">…</span>)</h2>
-    <div id="users-wrap">
-      <div class="empty">Bezig met laden…</div>
+<!-- ── USER DETAIL MODAL ──────────────────────────────────────── -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <h2 id="d-name">—</h2>
+      <button class="x" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <div class="modal-section">
+        <div class="detail-list" id="d-meta"></div>
+      </div>
+
+      <div class="modal-section" data-role="write">
+        <div class="lbl">Rol wijzigen</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="d-role" style="flex:1;min-width:140px">
+            <option value="admin">admin</option>
+            <option value="manager">manager</option>
+            <option value="medewerker">medewerker</option>
+            <option value="viewer">alleen-lezen</option>
+          </select>
+          <button class="primary" id="d-save-role" onclick="saveRole()">Opslaan</button>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="lbl">Login-historiek <span style="font-weight:400;text-transform:none;color:#b89878" id="d-login-count"></span></div>
+        <div class="history" id="d-history">
+          <div class="history-empty">Geen login-historiek beschikbaar.</div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="danger" id="d-delete" data-role="write" onclick="deleteCurrent()">Verwijderen</button>
+        <button onclick="closeDetailModal()">Sluiten</button>
+      </div>
     </div>
   </div>
 </div>
@@ -182,19 +346,17 @@ tr:last-child td{border-bottom:none}
 
 <script>
 (function () {
-  var ROLES = [
-    { value: 'admin',      label: 'admin' },
-    { value: 'manager',    label: 'manager' },
-    { value: 'medewerker', label: 'medewerker' },
-    { value: 'viewer',     label: 'alleen-lezen' },
-  ];
-
   var fns       = firebase.app().functions('europe-west1');
   var fnCreate  = fns.httpsCallable('createUser');
   var fnSetRole = fns.httpsCallable('setUserRole');
   var fnList    = fns.httpsCallable('listUsers');
   var fnDelete  = fns.httpsCallable('deleteUser');
 
+  var allUsers = [];      // van listUsers
+  var activity = {};      // _userActivity per uid
+  var currentDetailUid = null;
+
+  // ── UI helpers ──────────────────────────────────────────────
   var toastEl = document.getElementById('toast');
   var toastTimer = null;
   function toast(msg, isErr) {
@@ -204,141 +366,283 @@ tr:last-child td{border-bottom:none}
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 3200);
   }
-
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]);
     });
   }
-
   function badge(role) {
     if (!role) return '<span class="badge none">geen rol</span>';
     var label = role === 'viewer' ? 'alleen-lezen' : role;
     return '<span class="badge ' + esc(role) + '">' + esc(label) + '</span>';
   }
 
-  function providerIcons(list) {
-    if (!list || !list.length) return '';
-    return list.map(function (p) {
-      if (p === 'google.com') return 'Google';
-      if (p === 'password') return 'E-mail';
-      return p;
-    }).join(', ');
+  // ── Datum formatters ────────────────────────────────────────
+  function fmtRelative(ts) {
+    if (!ts) return '—';
+    var diff = Date.now() - ts;
+    if (diff < 60 * 1000)         return 'net';
+    if (diff < 60 * 60 * 1000)    return Math.floor(diff / 60000) + ' min geleden';
+    if (diff < 24 * 60 * 60 * 1000) return Math.floor(diff / 3600000) + ' u geleden';
+    if (diff < 7 * 24 * 60 * 60 * 1000) return Math.floor(diff / 86400000) + ' d geleden';
+    return fmtDate(ts);
   }
-
   function fmtDate(ts) {
     if (!ts) return '—';
-    var d = new Date(ts);
-    return d.toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(ts).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  function fmtDateTime(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleString('nl-BE', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
+  function providerLabel(p) {
+    if (p === 'google.com') return 'Google';
+    if (p === 'password')   return 'E-mail';
+    if (!p)                  return '—';
+    return p;
+  }
+  function uaShort(ua) {
+    if (!ua) return '';
+    if (/iPhone|iPad/.test(ua))  return 'iOS';
+    if (/Android/.test(ua))      return 'Android';
+    if (/Windows/.test(ua))      return 'Windows';
+    if (/Macintosh/.test(ua))    return 'macOS';
+    if (/Linux/.test(ua))        return 'Linux';
+    return 'Web';
   }
 
-  function renderUsers(users, currentUid) {
-    var wrap = document.getElementById('users-wrap');
-    document.getElementById('count').textContent = users.length;
+  // ── Activity status helpers ─────────────────────────────────
+  function presence(lastSeen) {
+    if (!lastSeen) return { cls: 'away', label: '—' };
+    var diff = Date.now() - lastSeen;
+    if (diff < 2 * 60 * 1000)    return { cls: 'online', label: 'online' };
+    if (diff < 60 * 60 * 1000)   return { cls: 'recent', label: 'recent' };
+    return { cls: 'away', label: 'inactief' };
+  }
+  function isToday(ts) {
+    if (!ts) return false;
+    var d = new Date(ts), now = new Date();
+    return d.getFullYear() === now.getFullYear()
+        && d.getMonth() === now.getMonth()
+        && d.getDate() === now.getDate();
+  }
+  function isThisWeek(ts) {
+    if (!ts) return false;
+    var d = new Date();
+    var day = d.getDay() || 7;
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - day + 1);  // maandag
+    return ts >= d.getTime();
+  }
+
+  // ── Stats ───────────────────────────────────────────────────
+  function updateStats() {
+    var total = allUsers.length;
+    var byRole = { admin: 0, manager: 0, medewerker: 0, viewer: 0, none: 0 };
+    allUsers.forEach(function (u) {
+      var r = u.role || 'none';
+      byRole[r] = (byRole[r] || 0) + 1;
+    });
+    var online = 0, today = 0, week = 0;
+    allUsers.forEach(function (u) {
+      var ls = activity[u.uid] && activity[u.uid].lastSeen;
+      if (ls && (Date.now() - ls) < 2 * 60 * 1000) online++;
+      if (isToday(ls)) today++;
+      if (isThisWeek(ls)) week++;
+    });
+    document.getElementById('st-total').textContent = total;
+    document.getElementById('st-total-sub').textContent =
+      (byRole.medewerker + ' medewerker' + (byRole.medewerker !== 1 ? 's' : '')) +
+      ' · ' + (byRole.manager + ' manager' + (byRole.manager !== 1 ? 's' : ''));
+    document.getElementById('st-admins').textContent = byRole.admin;
+    document.getElementById('st-admins-sub').textContent =
+      byRole.viewer + ' viewers · ' + byRole.none + ' zonder rol';
+    document.getElementById('st-online').textContent = online;
+    document.getElementById('st-today').textContent = today;
+    document.getElementById('st-week-sub').textContent = week + ' deze week';
+  }
+
+  // ── Render lijst ────────────────────────────────────────────
+  function matchesSearch(u, q) {
+    if (!q) return true;
+    q = q.toLowerCase();
+    return (u.email || '').toLowerCase().indexOf(q) !== -1
+        || (u.displayName || '').toLowerCase().indexOf(q) !== -1
+        || (u.role || '').toLowerCase().indexOf(q) !== -1;
+  }
+  function render() {
+    var q = (document.getElementById('search').value || '').trim();
+    var rowsEl = document.getElementById('rows');
+    var me = firebase.auth().currentUser;
+    var meUid = me ? me.uid : null;
+    var users = allUsers.filter(function (u) { return matchesSearch(u, q); });
+    // Sorteer: admins eerst, dan op recentste activiteit
+    users.sort(function (a, b) {
+      var ra = a.role === 'admin' ? 0 : 1;
+      var rb = b.role === 'admin' ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      var la = (activity[a.uid] && activity[a.uid].lastSeen) || a.lastSignInAt || 0;
+      var lb = (activity[b.uid] && activity[b.uid].lastSeen) || b.lastSignInAt || 0;
+      return lb - la;
+    });
     if (!users.length) {
-      wrap.innerHTML = '<div class="empty">Geen gebruikers.</div>';
+      rowsEl.innerHTML = '<div class="empty">' +
+        (q ? 'Geen resultaten voor "' + esc(q) + '".' : 'Geen gebruikers.') + '</div>';
       return;
     }
-    var rows = users.map(function (u) {
-      var roleOpts = ROLES.map(function (r) {
-        return '<option value="' + r.value + '"' + (u.role === r.value ? ' selected' : '') + '>' + r.label + '</option>';
-      }).join('');
-      var self = u.uid === currentUid;
-      var deleteBtn = self
-        ? '<button disabled title="Je kan jezelf niet verwijderen">Verwijder</button>'
-        : '<button class="danger" data-act="delete" data-uid="' + esc(u.uid) + '" data-email="' + esc(u.email) + '">Verwijder</button>';
+    rowsEl.innerHTML = users.map(function (u) {
+      var act = activity[u.uid] || {};
+      var ls = act.lastSeen;
+      var ll = act.lastLogin || u.lastSignInAt;
+      var pres = presence(ls);
+      var self = u.uid === meUid;
+      var providers = u.providers && u.providers.length
+        ? u.providers.map(providerLabel).join(', ')
+        : '—';
       return ''
-        + '<tr data-uid="' + esc(u.uid) + '">'
-        +   '<td>'
-        +     '<div class="email">' + esc(u.email || '(geen e-mail)') + (self ? ' <span style="color:#b89878;font-size:11px">(jij)</span>' : '') + '</div>'
-        +     (u.displayName ? '<div class="providers">' + esc(u.displayName) + '</div>' : '')
-        +     '<div class="uid">' + esc(u.uid) + '</div>'
-        +   '</td>'
-        +   '<td>' + badge(u.role) + '</td>'
-        +   '<td class="role-cell">'
-        +     '<select data-act="role" data-uid="' + esc(u.uid) + '">'
-        +       '<option value="">— geen rol —</option>'
-        +       roleOpts
-        +     '</select>'
-        +   '</td>'
-        +   '<td class="providers">' + esc(providerIcons(u.providers)) + '</td>'
-        +   '<td class="providers">' + esc(fmtDate(u.lastSignInAt)) + '</td>'
-        +   '<td>' + deleteBtn + '</td>'
-        + '</tr>';
+        + '<div class="row" data-uid="' + esc(u.uid) + '">'
+        +   '<div class="cell">'
+        +     '<div class="user-name">' + esc(u.email || '(geen e-mail)')
+        +       (self ? '<span class="user-self">jij</span>' : '')
+        +     '</div>'
+        +     '<div class="user-meta">'
+        +       (u.displayName ? esc(u.displayName) + ' · ' : '')
+        +       esc(providers)
+        +     '</div>'
+        +   '</div>'
+        +   '<div class="cell">' + badge(u.role) + '</div>'
+        +   '<div class="cell"><div class="last-seen">'
+        +     '<span class="dot ' + pres.cls + '"></span>'
+        +     esc(ls ? fmtRelative(ls) : '—')
+        +   '</div></div>'
+        +   '<div class="cell last-login">'
+        +     (ll ? esc(fmtDate(ll)) : '—')
+        +     (act.loginCount ? '<span class="small">' + act.loginCount + ' login' + (act.loginCount > 1 ? 's' : '') + '</span>' : '')
+        +   '</div>'
+        +   '<div class="cell chev">›</div>'
+        + '</div>';
     }).join('');
-    wrap.innerHTML =
-      '<table>'
-      + '<thead><tr>'
-      +   '<th>Gebruiker</th><th>Rol</th><th>Wijzig rol</th><th>Login via</th><th>Laatste login</th><th></th>'
-      + '</tr></thead>'
-      + '<tbody>' + rows + '</tbody>'
-      + '</table>';
-  }
-
-  function loadUsers() {
-    document.getElementById('users-wrap').innerHTML = '<div class="empty">Bezig met laden…</div>';
-    return fnList({}).then(function (res) {
-      var users = (res && res.data && res.data.users) || [];
-      renderUsers(users, firebase.auth().currentUser.uid);
-    }).catch(function (e) {
-      document.getElementById('users-wrap').innerHTML =
-        '<div class="empty">Laden mislukt: ' + esc((e && e.message) || String(e)) + '</div>';
+    Array.prototype.forEach.call(rowsEl.querySelectorAll('.row'), function (el) {
+      el.onclick = function () { openDetail(el.getAttribute('data-uid')); };
     });
   }
 
-  function onChangeRole(ev) {
-    var sel = ev.target;
-    if (!sel.matches('select[data-act="role"]')) return;
-    var uid = sel.getAttribute('data-uid');
-    var role = sel.value;
-    if (!role) {
-      toast('Lege rol nog niet ondersteund — kies een rol uit de lijst.', true);
-      return;
+  // ── Detail modal ────────────────────────────────────────────
+  function openDetail(uid) {
+    currentDetailUid = uid;
+    var u = allUsers.find(function (x) { return x.uid === uid; });
+    if (!u) return;
+    var act = activity[uid] || {};
+    document.getElementById('d-name').textContent = u.email || u.uid;
+    var providers = u.providers && u.providers.length
+      ? u.providers.map(providerLabel).join(', ') : '—';
+    var html = ''
+      + '<div><b>Rol:</b> ' + badge(u.role) + '</div>'
+      + (u.displayName ? '<div><b>Naam:</b> ' + esc(u.displayName) + '</div>' : '')
+      + '<div><b>UID:</b> <code>' + esc(u.uid) + '</code></div>'
+      + '<div><b>Login via:</b> ' + esc(providers) + '</div>'
+      + '<div><b>Aangemaakt:</b> ' + esc(fmtDateTime(u.createdAt)) + '</div>'
+      + '<div><b>Laatste login:</b> ' + esc(act.lastLogin ? fmtDateTime(act.lastLogin) : (u.lastSignInAt ? fmtDateTime(u.lastSignInAt) : '—')) + '</div>'
+      + '<div><b>Laatst gezien:</b> ' + esc(act.lastSeen ? fmtDateTime(act.lastSeen) : '—') + '</div>'
+      + (act.loginCount ? '<div><b>Totaal logins:</b> ' + act.loginCount + '</div>' : '')
+      + (act.userAgent ? '<div><b>Laatste toestel:</b> ' + esc(uaShort(act.userAgent)) + '</div>' : '');
+    document.getElementById('d-meta').innerHTML = html;
+
+    document.getElementById('d-role').value = u.role || 'medewerker';
+    var me = firebase.auth().currentUser;
+    document.getElementById('d-delete').disabled = me && me.uid === uid;
+
+    // Login historiek
+    var hist = act.loginHistory || {};
+    var keys = Object.keys(hist).sort().reverse();
+    document.getElementById('d-login-count').textContent =
+      keys.length ? '(' + keys.length + ' meest recente getoond)' : '';
+    var histEl = document.getElementById('d-history');
+    if (!keys.length) {
+      histEl.innerHTML = '<div class="history-empty">Nog geen login-historiek.</div>';
+    } else {
+      histEl.innerHTML = keys.map(function (k) {
+        var ts = Number(k) || 0;
+        var entry = hist[k] || {};
+        return ''
+          + '<div class="history-item">'
+          +   '<div>'
+          +     '<div class="history-when">' + esc(fmtDateTime(ts)) + '</div>'
+          +     '<div class="history-meta">' + esc(uaShort(entry.userAgent)) + '</div>'
+          +   '</div>'
+          +   '<div class="history-prov">' + esc(providerLabel(entry.provider)) + '</div>'
+          + '</div>';
+      }).join('');
     }
-    sel.disabled = true;
-    fnSetRole({ uid: uid, role: role }).then(function () {
+    document.getElementById('detail-modal').classList.add('show');
+  }
+  function closeDetailModal() {
+    document.getElementById('detail-modal').classList.remove('show');
+    currentDetailUid = null;
+  }
+  window.closeDetailModal = closeDetailModal;
+
+  window.saveRole = function () {
+    if (!currentDetailUid) return;
+    var role = document.getElementById('d-role').value;
+    var btn = document.getElementById('d-save-role');
+    btn.disabled = true; btn.textContent = 'Bezig…';
+    fnSetRole({ uid: currentDetailUid, role: role }).then(function () {
       toast('Rol gewijzigd.');
-      loadUsers();
+      closeDetailModal();
+      refresh();
     }).catch(function (e) {
       toast((e && e.message) || 'Wijzigen mislukt.', true);
-      sel.disabled = false;
+    }).then(function () {
+      btn.disabled = false; btn.textContent = 'Opslaan';
     });
-  }
+  };
 
-  function onClick(ev) {
-    var btn = ev.target.closest('button[data-act]');
-    if (!btn) return;
-    var act = btn.getAttribute('data-act');
-    var uid = btn.getAttribute('data-uid');
-    if (act === 'delete') {
-      var email = btn.getAttribute('data-email') || uid;
-      if (!confirm('Verwijder gebruiker ' + email + '? Dit kan niet ongedaan worden.')) return;
-      btn.disabled = true;
-      fnDelete({ uid: uid }).then(function () {
-        toast('Gebruiker verwijderd.');
-        loadUsers();
-      }).catch(function (e) {
-        toast((e && e.message) || 'Verwijderen mislukt.', true);
-        btn.disabled = false;
-      });
-    }
-  }
+  window.deleteCurrent = function () {
+    if (!currentDetailUid) return;
+    var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
+    var label = (u && u.email) || currentDetailUid;
+    if (!confirm('Verwijder gebruiker ' + label + '?\n\nDit kan niet ongedaan worden gemaakt.')) return;
+    var btn = document.getElementById('d-delete');
+    btn.disabled = true; btn.textContent = 'Bezig…';
+    fnDelete({ uid: currentDetailUid }).then(function () {
+      toast('Gebruiker verwijderd.');
+      closeDetailModal();
+      refresh();
+    }).catch(function (e) {
+      toast((e && e.message) || 'Verwijderen mislukt.', true);
+      btn.disabled = false; btn.textContent = 'Verwijderen';
+    });
+  };
 
-  document.getElementById('btn-create').onclick = function () {
-    var btn = this;
-    var email = (document.getElementById('new-email').value || '').trim();
-    var pwd   = (document.getElementById('new-pwd').value || '').trim();
-    var name  = (document.getElementById('new-name').value || '').trim();
-    var role  = document.getElementById('new-role').value;
+  // ── Add modal ───────────────────────────────────────────────
+  window.openAddModal = function () {
+    document.getElementById('add-email').value = '';
+    document.getElementById('add-pwd').value = '';
+    document.getElementById('add-name').value = '';
+    document.getElementById('add-role').value = 'medewerker';
+    document.getElementById('add-modal').classList.add('show');
+    setTimeout(function () { document.getElementById('add-email').focus(); }, 80);
+  };
+  window.closeAddModal = function () {
+    document.getElementById('add-modal').classList.remove('show');
+  };
+  window.submitAdd = function () {
+    var email = (document.getElementById('add-email').value || '').trim();
+    var pwd   = (document.getElementById('add-pwd').value || '').trim();
+    var name  = (document.getElementById('add-name').value || '').trim();
+    var role  = document.getElementById('add-role').value;
     if (!email) { toast('E-mail vereist.', true); return; }
+    var btn = document.getElementById('add-submit');
     btn.disabled = true; btn.textContent = 'Bezig…';
     fnCreate({ email: email, password: pwd, displayName: name, role: role })
       .then(function () {
-        document.getElementById('new-email').value = '';
-        document.getElementById('new-pwd').value = '';
-        document.getElementById('new-name').value = '';
         toast('Gebruiker aangemaakt.');
-        loadUsers();
+        closeAddModal();
+        refresh();
       })
       .catch(function (e) {
         toast((e && e.message) || 'Aanmaken mislukt.', true);
@@ -348,10 +652,39 @@ tr:last-child td{border-bottom:none}
       });
   };
 
-  document.addEventListener('change', onChangeRole);
-  document.addEventListener('click', onClick);
+  // ── Data load ───────────────────────────────────────────────
+  function loadActivity() {
+    return firebase.database().ref('_userActivity').once('value')
+      .then(function (snap) { activity = snap.val() || {}; })
+      .catch(function () { activity = {}; });
+  }
+  function loadUsers() {
+    return fnList({}).then(function (res) {
+      allUsers = (res && res.data && res.data.users) || [];
+    }).catch(function (e) {
+      allUsers = [];
+      toast((e && e.message) || 'Laden mislukt.', true);
+    });
+  }
+  function refresh() {
+    document.getElementById('rows').innerHTML = '<div class="empty">Bezig met laden…</div>';
+    return Promise.all([loadUsers(), loadActivity()]).then(function () {
+      updateStats();
+      render();
+    });
+  }
+  window.refresh = refresh;
 
-  // Wacht op auth.js (die de gate doet) — pas dan zijn we admin én klaar.
+  // ── Init ────────────────────────────────────────────────────
+  document.getElementById('search').addEventListener('input', render);
+
+  // Sluit modals bij klik buiten
+  Array.prototype.forEach.call(document.querySelectorAll('.modal-overlay'), function (ov) {
+    ov.addEventListener('click', function (e) {
+      if (e.target === ov) ov.classList.remove('show');
+    });
+  });
+
   window.addEventListener('auth-ready', function (e) {
     var a = e.detail;
     if (!a.isAdmin) {
@@ -365,7 +698,11 @@ tr:last-child td{border-bottom:none}
     }
     document.getElementById('who').textContent = a.email + ' · admin';
     document.getElementById('btn-logout').onclick = a.logout;
-    loadUsers();
+    refresh();
+    // Refresh activity-snapshot elke 60s zodat "nu online" leeft.
+    setInterval(function () {
+      loadActivity().then(function () { updateStats(); render(); });
+    }, 60 * 1000);
   });
 })();
 </script>

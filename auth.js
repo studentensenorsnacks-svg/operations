@@ -183,6 +183,22 @@
       }
       var hideEl = document.getElementById('__auth_hide');
       if (hideEl) hideEl.remove();
+      // Activity-heartbeat: rapporteer aanwezigheid voor admin-dashboard.
+      // Stilletjes falen als RTDB niet beschikbaar is op deze pagina.
+      try {
+        if (typeof firebase.database === 'function') {
+          var actRef = firebase.database().ref('_userActivity/' + user.uid);
+          actRef.update({
+            lastSeen: firebase.database.ServerValue.TIMESTAMP,
+            email: user.email || '',
+            displayName: user.displayName || '',
+          }).catch(function () { /* niet kritiek */ });
+          setInterval(function () {
+            actRef.update({ lastSeen: firebase.database.ServerValue.TIMESTAMP })
+              .catch(function () {});
+          }, 90 * 1000);
+        }
+      } catch (e) { /* noop */ }
       try {
         window.dispatchEvent(new CustomEvent('auth-ready', { detail: window.__auth }));
       } catch (e) { /* oudere browsers */ }

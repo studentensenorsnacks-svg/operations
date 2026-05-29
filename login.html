@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
 <script>
 const firebaseConfig = {
@@ -233,7 +234,42 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
       : 'Inloggen';
   }
 
+  function logLoginEvent(user) {
+    try {
+      var actRef = firebase.database().ref('_userActivity/' + user.uid);
+      var now = Date.now();
+      var providerId = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'password';
+      var ua = (navigator.userAgent || '').slice(0, 380);
+      actRef.update({
+        lastLogin: now,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP,
+        email: user.email || '',
+        displayName: user.displayName || '',
+        provider: providerId,
+        userAgent: ua,
+      }).catch(function () {});
+      actRef.child('loginHistory/' + now).set({
+        provider: providerId,
+        userAgent: ua,
+      }).catch(function () {});
+      actRef.child('loginCount').transaction(function (c) {
+        return (c || 0) + 1;
+      });
+      // Trim oude history-entries (bewaar 30 meest recente).
+      actRef.child('loginHistory').orderByKey().limitToLast(60).once('value')
+        .then(function (snap) {
+          var v = snap.val() || {};
+          var keys = Object.keys(v).sort();
+          var drop = keys.slice(0, Math.max(0, keys.length - 30));
+          drop.forEach(function (k) {
+            actRef.child('loginHistory/' + k).remove().catch(function () {});
+          });
+        }).catch(function () {});
+    } catch (e) { /* niet kritiek */ }
+  }
+
   function afterSignIn(user) {
+    logLoginEvent(user);
     // Forceer token-refresh om de meest recente custom claims op te halen.
     user.getIdTokenResult(true).then(function (tokenResult) {
       var role = tokenResult && tokenResult.claims && tokenResult.claims.role;

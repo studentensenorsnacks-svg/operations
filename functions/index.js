@@ -450,6 +450,62 @@ exports.listUsers = onCall({ region: REGION }, async (request) => {
   return { users };
 });
 
+// One-shot HTTP endpoint om de initiële admin met password aan te maken,
+// alleen bruikbaar zolang er nog GEEN admin bestaat. Daarna geeft hij 409.
+// Hardgecodeerd op BOOTSTRAP_ADMIN_EMAIL — past geen andere users aan.
+exports.bootstrapEmailAdmin = onRequest(
+  { region: REGION, cors: false },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'POST only' });
+      return;
+    }
+    const password = (req.body && req.body.password) || '';
+    if (typeof password !== 'string' || password.length < 8) {
+      res.status(400).json({ error: 'Geldig password vereist (min 8 chars).' });
+      return;
+    }
+    try {
+      const list = await admin.auth().listUsers(1000);
+      const existingAdmin = list.users.find(
+        (u) => u.customClaims && u.customClaims.role === 'admin',
+      );
+      if (existingAdmin) {
+        res.status(409).json({
+          error: 'Er bestaat al een admin.',
+          existing: existingAdmin.email || existingAdmin.uid,
+        });
+        return;
+      }
+      let user;
+      try {
+        user = await admin.auth().getUserByEmail(BOOTSTRAP_ADMIN_EMAIL);
+        await admin.auth().updateUser(user.uid, {
+          password,
+          emailVerified: true,
+        });
+      } catch (e) {
+        if (e.code !== 'auth/user-not-found') throw e;
+        user = await admin.auth().createUser({
+          email: BOOTSTRAP_ADMIN_EMAIL,
+          password,
+          displayName: 'Jelle Verboven',
+          emailVerified: true,
+        });
+      }
+      await admin.auth().setCustomUserClaims(user.uid, {
+        ...(user.customClaims || {}),
+        role: 'admin',
+      });
+      logger.info('bootstrapEmailAdmin: ' + BOOTSTRAP_ADMIN_EMAIL + ' is nu admin.');
+      res.json({ ok: true, uid: user.uid, email: user.email });
+    } catch (e) {
+      logger.error('bootstrapEmailAdmin error', e);
+      res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    }
+  },
+);
+
 exports.deleteUser = onCall({ region: REGION }, async (request) => {
   const adminUid = requireAdmin(request);
   const uid = String((request.data && request.data.uid) || '');
