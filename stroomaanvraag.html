@@ -181,6 +181,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .pg-canvas-scroll{max-height:none;overflow:visible;border:none;}
 }
 
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:200;padding:16px;}
+.modal-bg.show{display:flex;}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:520px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.modal-title{font-family:var(--font-cond);font-size:22px;font-weight:800;margin-bottom:14px;}
+.form-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.form-group{flex:1;min-width:0;display:flex;flex-direction:column;}
+.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;}
+.form-input{padding:7px 10px;border:1px solid var(--border2);border-radius:6px;font-family:var(--font);font-size:13px;}
+.form-input:focus{outline:none;border-color:var(--red);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+
+/* CUSTOM-ITEM in palette */
+.pal-item-custom{position:relative;}
+.pal-item-custom .pal-del{position:absolute;top:4px;right:6px;font-size:10px;color:var(--text3);cursor:pointer;background:#fff;border:1px solid var(--border2);border-radius:4px;padding:0 5px;line-height:14px;}
+.pal-item-custom .pal-del:hover{color:var(--red);border-color:var(--red);}
+.cv-custom{background:rgba(126,34,206,0.18);border-color:#7e22ce;color:#581c87;}
+
+/* SK-card highlight (na selectie van kast op canvas) */
+.sk-card.flash{animation:skFlash 1.4s ease-out;}
+@keyframes skFlash {
+  0%,40%{box-shadow:0 0 0 3px var(--red),0 6px 18px rgba(232,0,29,0.3);}
+  100%{box-shadow:none;}
+}
+
 /* Responsive */
 @media (max-width: 900px){
   .pg-wrap{grid-template-columns:1fr;}
@@ -223,13 +248,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" data-tab="plattegrond" onclick="setTab('plattegrond')">📐 Plattegrond</button>
-    <button class="tab-btn" data-tab="stroomkasten" onclick="setTab('stroomkasten')">⚡ Stroomkasten</button>
+    <button class="tab-btn active" data-tab="plan" onclick="setTab('plan')">📐 Plan & Aansluitingen</button>
     <button class="tab-btn" data-tab="samenvatting" onclick="setTab('samenvatting')">📋 Samenvatting</button>
   </div>
 
-  <!-- ─── TAB PLATTEGROND ─── -->
-  <div class="tab-content active" id="tab-plattegrond">
+  <!-- ─── TAB PLAN ─── -->
+  <div class="tab-content active" id="tab-plan">
     <div class="pg-wrap">
       <aside class="pg-side">
         <div>
@@ -247,6 +271,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div>
           <div class="pg-sec-h">Stroomkasten</div>
           <div class="palette" id="pal-stroomkasten"></div>
+        </div>
+        <div>
+          <div class="pg-sec-h" style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Eigen structuren</span>
+            <button class="btn btn-sm btn-red" style="padding:3px 8px;font-size:11px;" onclick="openCustomModal()">+ Nieuw</button>
+          </div>
+          <div class="palette" id="pal-custom"></div>
+          <div id="pal-custom-empty" style="font-size:11px;color:var(--text3);padding:4px 2px;display:none;">Nog niets — klik <b>+ Nieuw</b>.</div>
         </div>
         <div style="font-size:11px;color:var(--text3);line-height:1.4;border-top:1px solid var(--border);padding-top:10px;">
           Sleep items naar het canvas. Klik om te selecteren, sleep om te verplaatsen. <b>R</b> = roteer 90°, <b>Del</b> = verwijder.
@@ -269,6 +301,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <button class="btn btn-sm" onclick="rotateSelected()" title="Roteer (R)">↻ Roteer</button>
           <button class="btn btn-sm" onclick="deleteSelected()" title="Verwijder (Del)" style="color:var(--red);">🗑 Verwijder</button>
           <button class="btn btn-sm btn-ghost" onclick="clearAllItems()" style="color:var(--red);">Wis alles</button>
+          <button class="btn btn-sm btn-red" id="pdf-btn" onclick="exportPDF()">📄 PDF</button>
         </div>
         <div class="pg-canvas-scroll" id="canvas-scroll">
           <div class="pg-canvas" id="canvas" tabindex="0"></div>
@@ -276,14 +309,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="pg-inspector" id="inspector">Geen item geselecteerd.</div>
       </div>
     </div>
-  </div>
 
-  <!-- ─── TAB STROOMKASTEN ─── -->
-  <div class="tab-content" id="tab-stroomkasten">
-    <div class="totals-bar" id="totals-bar"></div>
-    <div class="sk-list" id="sk-list"></div>
-    <div class="sk-empty" id="sk-empty" style="display:none;">
-      Nog geen stroomkasten geplaatst — voeg ze toe op de <b>Plattegrond</b>-tab.
+    <!-- STROOMKAST-CONFIG onder canvas -->
+    <div style="margin-top:18px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-family:var(--font-cond);font-size:20px;font-weight:800;line-height:1;">Aansluitingen per stroomkast</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px;">Klik een stroomkast op het canvas om naar zijn fiche te springen.</div>
+        </div>
+      </div>
+      <div class="totals-bar" id="totals-bar"></div>
+      <div class="sk-list" id="sk-list"></div>
+      <div class="sk-empty" id="sk-empty" style="display:none;">
+        Nog geen stroomkasten geplaatst — sleep er één uit het palet links.
+      </div>
     </div>
   </div>
 
@@ -291,11 +330,47 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="tab-content" id="tab-samenvatting">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;" class="no-print">
       <button class="btn" onclick="window.print()">🖨 Print</button>
-      <button class="btn btn-red" id="pdf-btn" onclick="exportPDF()">📄 Download PDF</button>
+      <button class="btn btn-red" id="pdf-btn-2" onclick="exportPDF()">📄 Download PDF</button>
     </div>
     <div class="summary-card" id="summary-card"></div>
   </div>
 
+</div>
+
+<!-- ─── MODAL: Eigen structuur ─── -->
+<div class="modal-bg" id="modal-custom">
+  <div class="modal">
+    <div class="modal-title" id="cm-title">Nieuwe eigen structuur</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2;">
+        <label class="form-label">Naam</label>
+        <input id="cm-name" class="form-input" placeholder="bv. Bar, Kraampje, Podium">
+      </div>
+      <div class="form-group" style="flex:0 0 90px;">
+        <label class="form-label">Icoon</label>
+        <input id="cm-icon" class="form-input" maxlength="2" placeholder="📐" style="text-align:center;font-size:16px;">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Breedte (m)</label>
+        <input id="cm-w" type="number" min="0.5" step="0.5" class="form-input" placeholder="4" style="text-align:right;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Diepte (m)</label>
+        <input id="cm-h" type="number" min="0.5" step="0.5" class="form-input" placeholder="2" style="text-align:right;">
+      </div>
+      <div class="form-group" style="flex:0 0 100px;">
+        <label class="form-label">Kleur</label>
+        <input id="cm-color" type="color" value="#7e22ce" class="form-input" style="height:36px;padding:2px;">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cm-delete" onclick="deleteCustomItem()" style="margin-right:auto;color:var(--red);display:none;">Verwijder</button>
+      <button class="btn" onclick="closeCustomModal()">Annuleer</button>
+      <button class="btn btn-red" onclick="saveCustomItem()">Opslaan</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -325,12 +400,14 @@ const CATALOG = {
 // STATE
 // ──────────────────────────────────────────────────────────
 let state = {
-  projects: {},     // { projId: { name, event, datum, plaats, fieldW, fieldH, items:{}, kastenConfig:{} } }
+  customCatalog: {},  // { id: { id, name, kind:'custom', w, h, color, icon } }  — globaal, hergebruikbaar
+  projects: {},       // { projId: { name, event, datum, plaats, fieldW, fieldH, items:{}, kastenConfig:{} } }
   currentId: null,
 };
 let selectedItemId = null;
-let scale = 24;                // px per meter (zoom 100%)
-let zoomLvl = 1;               // multiplier
+let editingCustomId = null;     // null = nieuw, anders = bewerken
+let scale = 24;                 // px per meter (zoom 100%)
+let zoomLvl = 1;                // multiplier
 let saveTimer = null;
 let firstLoad = true;
 
@@ -355,6 +432,7 @@ function scheduleSave(){
 function saveAll(){
   setSaveState('saving');
   fbdb.ref(ROOT).set({
+    customCatalog: state.customCatalog,
     projects: state.projects,
     currentId: state.currentId,
   }).then(()=>setSaveState('saved'))
@@ -364,7 +442,13 @@ function saveAll(){
 function loadAll(){
   return fbdb.ref(ROOT).once('value').then(snap=>{
     const v = snap.val() || {};
+    state.customCatalog = v.customCatalog || {};
     state.projects = v.projects || {};
+    // normaliseer projecten: items/kastenConfig moeten objects zijn (Firebase strip lege objects)
+    for(const p of Object.values(state.projects)){
+      if(!p.items) p.items = {};
+      if(!p.kastenConfig) p.kastenConfig = {};
+    }
     state.currentId = v.currentId || null;
     // bootstrap if empty
     if(!Object.keys(state.projects).length){
@@ -464,7 +548,6 @@ function setFieldSize(){
 function setTab(name){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.toggle('active', c.id==='tab-'+name));
-  if(name==='stroomkasten') renderStroomkasten();
   if(name==='samenvatting') renderSamenvatting();
 }
 
@@ -482,25 +565,49 @@ function renderPalette(){
     const el = document.getElementById(elId);
     el.innerHTML = '';
     for(const it of items){
-      const div = document.createElement('div');
-      div.className = 'pal-item';
-      div.draggable = true;
-      div.dataset.catId = it.id;
-      const swatchClass = it.kind==='stroomkast' ? `cv-stroomkast-${it.amp}` : `cv-${it.kind}`;
-      div.innerHTML = `
-        <div class="pal-swatch ${swatchClass}">${it.icon}</div>
-        <div class="pal-info">
-          <div class="pal-name">${it.name}</div>
-          <div class="pal-dim">${it.w}m × ${it.h}m</div>
-        </div>
-      `;
-      div.addEventListener('dragstart', e=>{
-        e.dataTransfer.setData('text/cat-id', it.id);
-        e.dataTransfer.effectAllowed = 'copy';
-      });
-      el.appendChild(div);
+      el.appendChild(buildPalItem(it, false));
     }
   }
+  // Custom items
+  const elC = document.getElementById('pal-custom');
+  const emptyEl = document.getElementById('pal-custom-empty');
+  elC.innerHTML = '';
+  const customs = Object.values(state.customCatalog || {});
+  emptyEl.style.display = customs.length ? 'none' : 'block';
+  for(const it of customs){
+    elC.appendChild(buildPalItem(it, true));
+  }
+}
+
+function buildPalItem(it, isCustom){
+  const div = document.createElement('div');
+  div.className = 'pal-item' + (isCustom ? ' pal-item-custom' : '');
+  div.draggable = true;
+  div.dataset.catId = it.id;
+  let swatchHTML;
+  if(isCustom){
+    swatchHTML = `<div class="pal-swatch" style="background:${it.color}33;border:1.5px solid ${it.color};color:${it.color};">${it.icon||'📐'}</div>`;
+  } else {
+    const swatchClass = it.kind==='stroomkast' ? `cv-stroomkast-${it.amp}` : `cv-${it.kind}`;
+    swatchHTML = `<div class="pal-swatch ${swatchClass}">${it.icon}</div>`;
+  }
+  div.innerHTML = `
+    ${swatchHTML}
+    <div class="pal-info">
+      <div class="pal-name">${escapeHTML(it.name)}</div>
+      <div class="pal-dim">${it.w}m × ${it.h}m</div>
+    </div>
+    ${isCustom ? `<span class="pal-del" title="Bewerk / verwijder" onclick="event.stopPropagation();openCustomModal('${it.id}')">✎</span>` : ''}
+  `;
+  div.addEventListener('dragstart', e=>{
+    e.dataTransfer.setData('text/cat-id', it.id);
+    e.dataTransfer.effectAllowed = 'copy';
+  });
+  return div;
+}
+
+function escapeHTML(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // ──────────────────────────────────────────────────────────
@@ -511,6 +618,8 @@ function catalogById(id){
     const it = cat.find(x=>x.id===id);
     if(it) return it;
   }
+  const c = (state.customCatalog||{})[id];
+  if(c) return { ...c, kind:'custom' };
   return null;
 }
 
@@ -550,6 +659,12 @@ function buildItemEl(id, item, pxScale){
   let typeCls = `cv-${cat.kind}`;
   if(cat.kind==='stroomkast') typeCls = `cv-stroomkast-${cat.amp}`;
   el.classList.add(typeCls);
+  if(cat.kind === 'custom' && cat.color){
+    // custom kleur via inline styles (overschrijft .cv-custom)
+    el.style.background = cat.color + '2e';   // ~18% alpha
+    el.style.borderColor = cat.color;
+    el.style.color = cat.color;
+  }
   if(id === selectedItemId) el.classList.add('selected');
   el.style.left = (item.x * pxScale) + 'px';
   el.style.top  = (item.y * pxScale) + 'px';
@@ -560,7 +675,8 @@ function buildItemEl(id, item, pxScale){
   if(cat.kind === 'stroomkast'){
     label = `#${item.nummer || '?'}<br><span style="font-size:10px;font-weight:600;">${cat.amp}A</span>`;
   } else {
-    label = `<span style="font-size:14px;">${cat.icon}</span><br>${cat.name}`;
+    const ico = cat.icon || (cat.kind==='custom' ? '📐' : '');
+    label = `<span style="font-size:14px;">${ico}</span><br>${escapeHTML(cat.name)}`;
   }
   el.innerHTML = `<div class="cv-item-label">${label}</div>`;
   attachItemDrag(el, id);
@@ -615,6 +731,21 @@ function selectItem(id){
     el.classList.toggle('selected', el.dataset.id === id);
   });
   updateInspector();
+  // scroll naar kast-card als het een stroomkast is
+  const item = currentProj().items[id];
+  if(item){
+    const cat = catalogById(item.catId);
+    if(cat && cat.kind === 'stroomkast'){
+      const card = document.querySelector(`.sk-card[data-id="${id}"]`);
+      if(card){
+        card.scrollIntoView({ behavior:'smooth', block:'center' });
+        card.classList.remove('flash');
+        // force reflow zodat animatie opnieuw start
+        void card.offsetWidth;
+        card.classList.add('flash');
+      }
+    }
+  }
 }
 
 function updateInspector(){
@@ -800,6 +931,7 @@ function renderStroomkasten(){
     const cfg = p.kastenConfig[k.id];
     const card = document.createElement('div');
     card.className = 'sk-card sk-'+k.cat.amp;
+    card.dataset.id = k.id;
     card.innerHTML = `
       <div class="sk-hdr">
         <div class="sk-num">${k.item.nummer || '?'}</div>
@@ -912,12 +1044,85 @@ function renderSamenvatting(){
 }
 
 // ──────────────────────────────────────────────────────────
+// CUSTOM-STRUCTUUR MODAL
+// ──────────────────────────────────────────────────────────
+function openCustomModal(id){
+  editingCustomId = id || null;
+  const isEdit = !!id;
+  document.getElementById('cm-title').textContent = isEdit ? 'Eigen structuur bewerken' : 'Nieuwe eigen structuur';
+  document.getElementById('cm-delete').style.display = isEdit ? 'inline-flex' : 'none';
+  if(isEdit){
+    const c = state.customCatalog[id];
+    document.getElementById('cm-name').value  = c.name || '';
+    document.getElementById('cm-icon').value  = c.icon || '';
+    document.getElementById('cm-w').value     = c.w;
+    document.getElementById('cm-h').value     = c.h;
+    document.getElementById('cm-color').value = c.color || '#7e22ce';
+  } else {
+    document.getElementById('cm-name').value  = '';
+    document.getElementById('cm-icon').value  = '';
+    document.getElementById('cm-w').value     = '';
+    document.getElementById('cm-h').value     = '';
+    document.getElementById('cm-color').value = '#7e22ce';
+  }
+  document.getElementById('modal-custom').classList.add('show');
+  setTimeout(()=>document.getElementById('cm-name').focus(), 50);
+}
+
+function closeCustomModal(){
+  document.getElementById('modal-custom').classList.remove('show');
+  editingCustomId = null;
+}
+
+function saveCustomItem(){
+  const name = document.getElementById('cm-name').value.trim();
+  const icon = document.getElementById('cm-icon').value.trim() || '📐';
+  const w = parseFloat(document.getElementById('cm-w').value);
+  const h = parseFloat(document.getElementById('cm-h').value);
+  const color = document.getElementById('cm-color').value || '#7e22ce';
+  if(!name){ alert('Geef een naam in.'); return; }
+  if(!w || w <= 0 || !h || h <= 0){ alert('Geef een geldige breedte en diepte in (in meter).'); return; }
+  const id = editingCustomId || ('c_'+Date.now()+'_'+Math.floor(Math.random()*999));
+  state.customCatalog[id] = { id, name, icon, w, h, color };
+  closeCustomModal();
+  renderPalette();
+  renderCanvas();  // bestaande items met deze catId krijgen nieuwe kleur/grootte
+  scheduleSave();
+}
+
+function deleteCustomItem(){
+  if(!editingCustomId) return;
+  const p = currentProj();
+  // tel hoeveel items op het canvas dit catId gebruiken
+  let used = 0;
+  for(const it of Object.values(p.items||{})){
+    if(it.catId === editingCustomId) used++;
+  }
+  let msg = 'Eigen structuur verwijderen?';
+  if(used > 0) msg += `\n\n⚠ Er ${used===1?'staat':'staan'} ${used} item${used===1?'':'s'} van dit type op het canvas — die verdwijnen ook.`;
+  if(!confirm(msg)) return;
+  // verwijder bijhorende items op canvas
+  for(const [iid, it] of Object.entries(p.items||{})){
+    if(it.catId === editingCustomId) delete p.items[iid];
+  }
+  delete state.customCatalog[editingCustomId];
+  closeCustomModal();
+  renderPalette();
+  renderCanvas();
+  renderStroomkasten();
+  scheduleSave();
+}
+
+// ──────────────────────────────────────────────────────────
 // PDF EXPORT
 // ──────────────────────────────────────────────────────────
 async function exportPDF(){
-  const btn = document.getElementById('pdf-btn');
-  const oldTxt = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '⏳ Bezig…';
+  const btns = [document.getElementById('pdf-btn'), document.getElementById('pdf-btn-2')].filter(Boolean);
+  const oldTxts = btns.map(b=>b.innerHTML);
+  btns.forEach(b=>{ b.disabled=true; b.innerHTML='⏳ Bezig…'; });
+  // canvas moet zichtbaar zijn voor html2canvas → tijdelijk plan-tab tonen
+  const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'plan';
+  if(activeTab !== 'plan') setTab('plan');
   try{
     const p = currentProj();
     const kasten = getKastenSorted();
@@ -1063,7 +1268,8 @@ async function exportPDF(){
     console.error(err);
     alert('PDF genereren mislukt: '+err.message);
   } finally {
-    btn.disabled = false; btn.innerHTML = oldTxt;
+    btns.forEach((b,i)=>{ b.disabled=false; b.innerHTML=oldTxts[i]; });
+    if(activeTab !== 'plan') setTab(activeTab);
   }
 }
 
@@ -1071,9 +1277,9 @@ async function exportPDF(){
 // INIT
 // ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async ()=>{
-  renderPalette();
   setupCanvasDrop();
   await loadAll();
+  renderPalette();         // na load zodat custom items er staan
   renderProjectBar();
   renderCanvas();
   renderStroomkasten();
@@ -1089,6 +1295,16 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if(e.key === 'r' || e.key === 'R'){ rotateSelected(); }
   });
   cs.addEventListener('click', ()=>cs.focus());
+
+  // Modal — klik backdrop = sluiten, Esc ook
+  document.getElementById('modal-custom').addEventListener('click', e=>{
+    if(e.target.id === 'modal-custom') closeCustomModal();
+  });
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && document.getElementById('modal-custom').classList.contains('show')){
+      closeCustomModal();
+    }
+  });
 });
 </script>
 
