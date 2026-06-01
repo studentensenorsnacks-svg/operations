@@ -70,6 +70,63 @@ textarea {
   grid-template-columns: 240px 1fr;
 }
 
+/* Topbar: alleen zichtbaar op telefoon/tablet */
+.topbar {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #18181b;
+  color: #fafafa;
+  padding: 10px 14px env(safe-area-inset-bottom, 0);
+  padding-top: max(10px, env(safe-area-inset-top, 0));
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #27272a;
+}
+.topbar-menu-btn {
+  background: transparent;
+  border: 1px solid #3f3f46;
+  border-radius: var(--radius-sm);
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: inherit;
+}
+.topbar-menu-btn:hover {
+  background: #27272a;
+}
+.topbar-menu-icon {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 18px;
+  height: 13px;
+}
+.topbar-menu-icon span {
+  display: block;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+.topbar-brand {
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+}
+.topbar-brand .brand-bar {
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background: var(--brand);
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
 .sidebar {
   background: #18181b;
   color: #fafafa;
@@ -122,9 +179,19 @@ textarea {
   line-height: 1.5;
 }
 
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+}
+
 main {
   padding: 28px 32px 80px;
   max-width: 1400px;
+  width: 100%;
+  min-width: 0;
 }
 
 .page-header {
@@ -133,6 +200,7 @@ main {
   justify-content: space-between;
   margin-bottom: 24px;
   gap: 16px;
+  flex-wrap: wrap;
 }
 .page-header h2 {
   margin: 0;
@@ -145,6 +213,56 @@ main {
   font-size: 0.92rem;
 }
 
+/* Tablet & telefoon: zijbalk wordt drawer, topbar verschijnt */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .topbar {
+    display: flex;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    max-width: 80vw;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    padding-top: max(20px, env(safe-area-inset-top, 0));
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    display: block;
+  }
+  main {
+    padding: 18px 16px 48px;
+  }
+  .page-header h2 {
+    font-size: 1.35rem;
+  }
+  .page-header p {
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 480px) {
+  main {
+    padding: 14px 12px 40px;
+  }
+  .page-header {
+    margin-bottom: 16px;
+  }
+  .page-header h2 {
+    font-size: 1.2rem;
+  }
+}
+
 /* ── Cards en panels ─────────────────────────────────── */
 
 .card {
@@ -154,6 +272,12 @@ main {
   padding: 20px;
   box-shadow: var(--shadow);
   margin-bottom: 20px;
+}
+@media (max-width: 640px) {
+  .card {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
 }
 .card h3 {
   margin: 0 0 14px;
@@ -179,7 +303,17 @@ main {
 .grid-4 {
   grid-template-columns: repeat(4, 1fr);
 }
+@media (max-width: 1100px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 @media (max-width: 900px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
   .grid-2,
   .grid-3,
   .grid-4 {
@@ -244,6 +378,20 @@ textarea {
   color: var(--text);
   transition: border-color 0.1s;
 }
+@media (max-width: 640px) {
+  input[type='text'],
+  input[type='number'],
+  input[type='datetime-local'],
+  input[type='date'],
+  input[type='search'],
+  input[type='password'],
+  select,
+  textarea {
+    /* 16px voorkomt dat iOS Safari inzoomt bij focus */
+    font-size: 16px;
+    padding: 11px 12px;
+  }
+}
 input:focus,
 select:focus,
 textarea:focus {
@@ -285,6 +433,14 @@ input[type='checkbox'] {
   color: #fff;
   cursor: pointer;
   transition: background 0.1s;
+  min-height: 36px;
+  touch-action: manipulation;
+}
+@media (max-width: 640px) {
+  .btn {
+    padding: 10px 14px;
+    min-height: 42px;
+  }
 }
 .btn:hover:not(:disabled) {
   background: var(--brand-dark);
@@ -339,6 +495,15 @@ table td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+}
+@media (max-width: 640px) {
+  table {
+    font-size: 0.82rem;
+  }
+  table th,
+  table td {
+    padding: 8px 10px;
+  }
 }
 table th {
   background: #fafafa;
@@ -424,7 +589,7 @@ table tr:hover td {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 200;
   padding: 20px;
 }
 .modal {
@@ -433,6 +598,8 @@ table tr:hover td {
   padding: 22px 24px;
   max-width: 480px;
   width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 .modal h3 {
@@ -447,6 +614,24 @@ table tr:hover td {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
+}
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    padding: 18px 16px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 92vh;
+  }
+  .modal-actions {
+    justify-content: stretch;
+  }
+  .modal-actions .btn {
+    flex: 1;
+  }
 }
 
 /* ── Tekst-helpers ──────────────────────────────────── */
@@ -514,6 +699,110 @@ pre.json {
   margin: 0;
   max-height: 360px;
   overflow-y: auto;
+}
+
+/* ── Kanban (event-koppeling) ───────────────────────── */
+
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 260px;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  align-items: start;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+.kanban-col {
+  scroll-snap-align: start;
+}
+@media (max-width: 640px) {
+  .kanban {
+    grid-auto-columns: 82vw;
+    gap: 10px;
+  }
+}
+.kanban-col {
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  max-height: 70vh;
+  transition: background 0.1s, border-color 0.1s;
+}
+.kanban-col.is-over {
+  background: var(--brand-tint);
+  border-color: var(--brand);
+}
+.kanban-col-unassigned {
+  background: #f4f4f5;
+  border-style: dashed;
+}
+.kanban-col-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.kanban-col-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.kanban-col-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.kanban-col-body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.kanban-col-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  padding: 18px 6px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+.kanban-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  cursor: grab;
+  user-select: none;
+}
+.kanban-card:active {
+  cursor: grabbing;
+}
+.kanban-card.is-dragging {
+  opacity: 0.4;
+}
+.kanban-card-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+}
+.kanban-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.kanban-card-comment {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
 }
 
 .pill-toolbar {

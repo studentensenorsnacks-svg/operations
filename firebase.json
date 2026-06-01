@@ -167,7 +167,7 @@
         "minInstances": 0,
         "maxInstances": 3,
         "concurrency": 80,
-        "secrets": ["EVENTPAY_API_KEY", "AUTH_USERNAME", "AUTH_PASSWORD"]
+        "secrets": ["EVENTPAY_API_KEY", "EVENTPAY_ADMIN_EMAIL", "EVENTPAY_ADMIN_PASSWORD", "AUTH_USERNAME", "AUTH_PASSWORD"]
       }
     },
     {

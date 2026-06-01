@@ -190,7 +190,7 @@ function DeviceActions({
       if (terminalId !== '') body.terminal_id = parseInt(terminalId, 10);
       if (comment !== '') body.comment = comment;
       await api.post(
-        `/device/${encodeURIComponent(device.device_name)}/${encodeURIComponent(app || 'default')}`,
+        `/devices/${encodeURIComponent(device.device_name)}/${encodeURIComponent(app || 'default')}`,
         body,
       );
       onSuccess(`Instellingen van ${device.device_name} bijgewerkt.`);
