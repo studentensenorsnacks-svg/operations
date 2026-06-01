@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Bestellingen</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --orange:#c2410c;--orange-bg:#fdeee2;
+  --blue:#1f76e8;--blue-bg:#e8f0fd;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+
+.main{max-width:1100px;margin:0 auto;padding:18px 18px 60px;}
+.page-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.page-title{font-family:var(--font-cond);font-size:28px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:5px;}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:110px;}
+.stat .n{font-family:var(--font-cond);font-size:26px;font-weight:800;line-height:1;}
+.stat .l{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
+.stat.nieuw .n{color:var(--blue);}
+.stat.verwerkt .n{color:var(--green);}
+
+.filterbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.fbtn{padding:7px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);}
+.fbtn.active{background:var(--text);color:#fff;border-color:var(--text);}
+
+.list{display:flex;flex-direction:column;gap:12px;}
+.order{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.order.verwerkt{opacity:.72;}
+.order-head{display:flex;align-items:center;gap:14px;padding:13px 16px;cursor:pointer;}
+.order-head:hover{background:var(--surface2);}
+.badge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+.badge.nieuw{background:var(--blue-bg);color:var(--blue);}
+.badge.verwerkt{background:var(--green-bg);color:var(--green);}
+.oh-main{flex:1;min-width:0;}
+.oh-title{font-weight:700;font-size:15px;}
+.oh-sub{font-size:12px;color:var(--text2);font-family:var(--mono);margin-top:2px;}
+.oh-count{font-family:var(--font-cond);font-weight:800;font-size:15px;color:var(--text2);white-space:nowrap;}
+.oh-chev{color:var(--text3);font-size:13px;transition:transform .15s;}
+.order.open .oh-chev{transform:rotate(90deg);}
+
+.order-body{display:none;padding:0 16px 16px;border-top:1px solid var(--border);}
+.order.open .order-body{display:block;}
+.detail-meta{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--text2);padding:12px 0;}
+.detail-meta b{color:var(--text);font-weight:700;}
+table.items{width:100%;border-collapse:collapse;font-size:13.5px;}
+table.items th{text-align:left;background:var(--blue);color:#fff;padding:7px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+table.items th.c{text-align:center;width:70px;}
+table.items td{padding:6px 10px;border-bottom:1px solid var(--border);}
+table.items td.c{text-align:center;font-family:var(--mono);font-weight:600;}
+table.items tr.sect td{background:var(--blue-bg);color:var(--blue);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;}
+.extra-box{margin-top:10px;font-size:13px;}
+.extra-box .lbl{font-weight:700;font-size:11px;text-transform:uppercase;color:var(--text2);letter-spacing:.04em;}
+.order-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--surface2);}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{background:#1660c4;}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green);}
+.btn-danger{color:var(--red);border-color:rgba(232,0,29,.3);}
+.btn-danger:hover{background:rgba(232,0,29,.08);}
+
+.empty{text-align:center;padding:60px 20px;color:var(--text3);}
+.empty .ico{font-size:42px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Bestellingen</span>
+  </a>
+  <div class="topbar-right">
+    <a class="back-link" href="bestel-catalogus.html">📒 Catalogus</a>
+    <a class="back-link" href="bestelling.html" target="_blank">+ Nieuwe invullen</a>
+    <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-hdr">
+    <div>
+      <div class="page-title">Bestellingen</div>
+      <div class="page-sub">Binnengekomen via het invulformulier.</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="st-total">0</div><div class="l">Totaal</div></div>
+    <div class="stat nieuw"><div class="n" id="st-nieuw">0</div><div class="l">Nieuw</div></div>
+    <div class="stat verwerkt"><div class="n" id="st-verwerkt">0</div><div class="l">Verwerkt</div></div>
+  </div>
+
+  <div class="filterbar">
+    <button class="fbtn active" data-f="all" onclick="setFilter('all',this)">Alle</button>
+    <button class="fbtn" data-f="nieuw" onclick="setFilter('nieuw',this)">Nieuw</button>
+    <button class="fbtn" data-f="verwerkt" onclick="setFilter('verwerkt',this)">Verwerkt</button>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+const DB_PATH = 'ft_bestellingen_v1';
+let ORDERS = [];      // [{key, ...record}]
+let FILTER = 'all';
+
+function setFilter(f,btn){
+  FILTER = f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+(async function init(){
+  if(window.fbAuthReady) await window.fbAuthReady;
+  fbdb.ref(DB_PATH).on('value', snap=>{
+    const v = snap.val() || {};
+    ORDERS = Object.entries(v).map(([key,r])=>Object.assign({key}, r));
+    ORDERS.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    renderStats(); renderList();
+  }, err=>{
+    console.error('Lezen mislukt:', err);
+    document.getElementById('list').innerHTML =
+      '<div class="empty"><div class="ico">⚠️</div>Kon bestellingen niet laden ('+esc(err.code||err.message)+').<br>Herlaad de pagina of meld dit.</div>';
+  });
+})();
+
+function renderStats(){
+  const nieuw = ORDERS.filter(o=>o.status!=='verwerkt').length;
+  document.getElementById('st-total').textContent = ORDERS.length;
+  document.getElementById('st-nieuw').textContent = nieuw;
+  document.getElementById('st-verwerkt').textContent = ORDERS.length - nieuw;
+}
+
+function renderList(){
+  const list = document.getElementById('list');
+  const rows = ORDERS.filter(o=>{
+    if(FILTER==='nieuw') return o.status!=='verwerkt';
+    if(FILTER==='verwerkt') return o.status==='verwerkt';
+    return true;
+  });
+  if(!rows.length){
+    list.innerHTML = '<div class="empty"><div class="ico">📭</div>Nog geen bestellingen.</div>';
+    return;
+  }
+  list.innerHTML = rows.map(o=>{
+    const verwerkt = o.status==='verwerkt';
+    const lines = o.lines||[];
+    const units = lines.reduce((s,l)=>s+(l.qty||0),0);
+    const itemsRows = lines.map(l=>
+      '<tr><td>'+esc(itemLabel(l.name,l.art))+'</td><td class="c">'+l.qty+'</td><td class="c"></td></tr>').join('');
+    const extra = [];
+    if(o.extraBest) extra.push('<div class="extra-box"><div class="lbl">Extra bestellingen</div>'+esc(o.extraBest)+'</div>');
+    if(o.extraOpm) extra.push('<div class="extra-box"><div class="lbl">Extra opmerkingen</div>'+esc(o.extraOpm)+'</div>');
+    const statusBtn = verwerkt
+      ? '<button class="btn" onclick="setStatus(\''+o.key+'\',\'nieuw\')">↩ Terug naar nieuw</button>'
+      : '<button class="btn btn-green" onclick="setStatus(\''+o.key+'\',\'verwerkt\')">✓ Markeer verwerkt</button>';
+    return ''
+    + '<div class="order'+(verwerkt?' verwerkt':'')+'" id="o_'+o.key+'">'
+    +   '<div class="order-head" onclick="toggle(\''+o.key+'\')">'
+    +     '<span class="badge '+(verwerkt?'verwerkt':'nieuw')+'">'+(verwerkt?'Verwerkt':'Nieuw')+'</span>'
+    +     '<div class="oh-main"><div class="oh-title">'+esc(o.kraam||'?')+' · '+esc(o.voornaam||'?')+'</div>'
+    +       '<div class="oh-sub">'+esc(o.type||'Bestelling')+(o.locatie?' · '+esc(o.locatie):'')+' · '+fmtDate(o.datum)+' · '+fmtTime(o.ts)+'</div></div>'
+    +     '<div class="oh-count">'+lines.length+' prod · '+units+' st</div>'
+    +     '<span class="oh-chev">▶</span>'
+    +   '</div>'
+    +   '<div class="order-body">'
+    +     '<div class="detail-meta"><span>Naam: <b>'+esc(o.voornaam||'—')+'</b></span><span>Kraam: <b>'+esc(o.kraam||'—')+'</b></span>'
+    +       '<span>Type: <b>'+esc(o.type||'—')+'</b></span><span>Locatie: <b>'+esc(o.locatie||'—')+'</b></span>'
+    +       '<span>Datum: <b>'+fmtDate(o.datum)+'</b></span><span>ID: <b>'+esc(o.id||'—')+'</b></span></div>'
+    +     '<table class="items"><thead><tr><th>Product / vraag</th><th class="c">Aantal</th><th class="c">OK</th></tr></thead>'
+    +       '<tbody><tr class="sect"><td colspan="3">Producten</td></tr>'
+    +       '<tr><td>KRAAM</td><td class="c">'+esc((o.kraam||'').toUpperCase())+'</td><td class="c"></td></tr>'
+    +       itemsRows + '</tbody></table>'
+    +     extra.join('')
+    +     '<div class="order-actions">'
+    +       '<button class="btn btn-blue" onclick="dlPDF(\''+o.key+'\')">📄 PDF</button>'
+    +       statusBtn
+    +       '<button class="btn btn-danger" onclick="del(\''+o.key+'\')">🗑 Verwijder</button>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+  }).join('');
+}
+
+function toggle(key){ const el=document.getElementById('o_'+key); if(el) el.classList.toggle('open'); }
+function setStatus(key,status){ fbdb.ref(DB_PATH+'/'+key+'/status').set(status); }
+function del(key){
+  const o = ORDERS.find(x=>x.key===key);
+  if(!confirm('Bestelling van '+(o?(o.kraam+' · '+o.voornaam):'?')+' verwijderen?')) return;
+  fbdb.ref(DB_PATH+'/'+key).remove();
+}
+function dlPDF(key){ const o = ORDERS.find(x=>x.key===key); if(o) buildPDF(o); }
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function itemLabel(name,art){ return art ? (name+' '+art) : (name+' NIET VAN ZON'); }
+function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=String(iso).split('-'); return parseInt(d,10)+'/'+parseInt(m,10)+'/'+y; }
+function fmtTime(ts){ if(!ts) return ''; const d=new Date(ts),p=n=>String(n).padStart(2,'0'); return p(d.getDate())+'/'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+
+// PDF — identiek aan het invulformulier
+function buildPDF(rec){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 12;
+  const blue = [40,130,230], sect = [232,240,253], sectTxt = [31,118,232];
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(24); doc.setTextColor(59,139,240);
+  doc.text('BESTELBON', pageW/2, 18, { align:'center' });
+  doc.setFontSize(13); doc.setTextColor(90,90,100);
+  doc.text(rec.type === 'Bestelling' ? 'Order' : (rec.type||'Order'), pageW/2, 26, { align:'center' });
+
+  doc.setFontSize(9); doc.setTextColor(70,70,75);
+  doc.text('Datum: '+fmtDate(rec.datum), margin, 35);
+  doc.text('ID: '+(rec.id||''), pageW-margin, 35, { align:'right' });
+  let subY = 35;
+  const sub = [];
+  if(rec.voornaam) sub.push('Naam: '+rec.voornaam);
+  if(rec.locatie)  sub.push('Locatie: '+rec.locatie);
+  if(sub.length){ doc.text(sub.join('     '), margin, 40); subY = 40; }
+
+  const body = [];
+  body.push([{ content:'PRODUCTEN', colSpan:3, styles:{ fillColor:sect, textColor:sectTxt, fontStyle:'bold', fontSize:10 } }]);
+  body.push([ 'KRAAM', { content:(rec.kraam||'').toUpperCase(), styles:{ halign:'left' } }, '' ]);
+  (rec.lines||[]).forEach(l=>{ body.push([ itemLabel(l.name,l.art), { content:String(l.qty), styles:{ halign:'center' } }, '' ]); });
+  if(rec.extraBest) body.push([ 'extra bestellingen', { content:rec.extraBest, styles:{ halign:'left' } }, '' ]);
+  if(rec.extraOpm)  body.push([ 'extra opmerkingen',  { content:rec.extraOpm,  styles:{ halign:'left' } }, '' ]);
+
+  doc.autoTable({
+    startY: subY + 5,
+    margin: { left:margin, right:margin },
+    head: [[
+      { content:'PRODUCT / VRAAG', styles:{ halign:'left' } },
+      { content:'AANTAL', styles:{ halign:'center' } },
+      { content:'OKE', styles:{ halign:'center' } },
+    ]],
+    body, theme:'grid',
+    headStyles: { fillColor:blue, textColor:255, fontStyle:'bold', fontSize:10, lineColor:[210,222,240], lineWidth:0.2 },
+    bodyStyles: { fontSize:10, textColor:[35,35,40], lineColor:[224,228,233], lineWidth:0.2 },
+    styles: { cellPadding:2.4, valign:'middle' },
+    columnStyles: { 0:{ cellWidth:'auto' }, 1:{ cellWidth:26, halign:'center' }, 2:{ cellWidth:20, halign:'center' } },
+  });
+  const naamDeel = (rec.kraam||'bestelling').replace(/[^a-z0-9]+/gi,'_');
+  doc.save('Bestelbon_'+naamDeel+'_'+(rec.id||'')+'.pdf');
+}
+</script>
+</body>
+</html>

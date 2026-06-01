@@ -50,6 +50,14 @@
           }
         },
         {
+          "source": "/poets-extern",
+          "destination": "/poets-extern.html"
+        },
+        {
+          "source": "/poetsen",
+          "destination": "/poets-extern.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -111,6 +119,14 @@
             "functionId": "vetTonnenApi",
             "region": "europe-west1"
           }
+        },
+        {
+          "source": "/poets-extern",
+          "destination": "/poets-extern.html"
+        },
+        {
+          "source": "/poetsen",
+          "destination": "/poets-extern.html"
         },
         {
           "source": "**",

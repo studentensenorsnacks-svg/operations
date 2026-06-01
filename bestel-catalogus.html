@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Productcatalogus</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --blue:#1f76e8;--blue-bg:#e8f0fd;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+
+.main{max-width:920px;margin:0 auto;padding:18px 18px 60px;}
+.page-hdr{margin-bottom:16px;}
+.page-title{font-family:var(--font-cond);font-size:28px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:5px;}
+.save-state{font-size:12px;color:var(--text3);font-family:var(--mono);margin-left:8px;}
+.save-state.saved{color:var(--green);}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.card-h{font-family:var(--font-cond);font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:12px;}
+
+.addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select{padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+
+.cat-h{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-cond);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);padding:16px 4px 8px;border-bottom:2px solid var(--blue-bg);margin-bottom:6px;}
+.cat-h .cnt{font-size:12px;color:var(--text3);font-family:var(--mono);font-weight:500;}
+.crow{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.crow .name{flex:2;min-width:160px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;}
+.crow .art{width:120px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:13px;}
+.crow .art:disabled{background:var(--surface2);color:var(--text3);}
+.crow .cat{width:170px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;background:#fff;}
+.crow input:focus,.crow select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.nvz-wrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;}
+.del{width:34px;height:36px;border:1px solid var(--border2);background:#fff;border-radius:8px;color:var(--red);font-size:17px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.del:hover{background:rgba(232,0,29,.08);}
+
+.btn{padding:10px 16px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:7px;}
+.btn:hover{background:var(--surface2);}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{background:#1660c4;}
+.hide{display:none!important;}
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Productcatalogus</span>
+  </a>
+  <div class="topbar-right">
+    <span class="save-state" id="save-state"></span>
+    <a class="back-link" href="bestellingen-dashboard.html">📊 Bestellingen</a>
+    <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-hdr">
+    <div class="page-title">Productcatalogus</div>
+    <div class="page-sub">Pas namen, artikelnummers en categorieën aan. Wijzigingen worden meteen bewaard en gelden voor het bestelformulier.</div>
+  </div>
+
+  <!-- TOEVOEGEN -->
+  <div class="card">
+    <div class="card-h">Product toevoegen</div>
+    <div class="addrow">
+      <div class="field" style="flex:2;min-width:160px;"><label for="a-name">Naam</label><input type="text" id="a-name" placeholder="bv. Loempia"></div>
+      <div class="field" style="width:130px;"><label for="a-art">Artikelnr</label><input type="text" id="a-art" inputmode="numeric" placeholder="optioneel"></div>
+      <div class="field" style="width:180px;"><label for="a-cat">Categorie</label>
+        <select id="a-cat" onchange="onAddCatChange()"></select>
+      </div>
+      <input type="text" id="a-cat-new" class="field hide" style="width:160px;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;align-self:flex-end;" placeholder="Nieuwe categorie">
+      <button class="btn btn-blue" type="button" onclick="addProduct()">+ Toevoegen</button>
+    </div>
+  </div>
+
+  <!-- LIJST -->
+  <div class="card">
+    <div class="card-h">Producten</div>
+    <div id="catalog-list"><div class="empty">Laden…</div></div>
+  </div>
+</div>
+
+<script>
+const CAT_PATH = 'ft_bestel_catalogus_v1';
+const CATEGORY_ORDER = ['Snacks','Kruidenierswaren / Vers','Sauzen','Dranken','Brood','Verpakking','Eigen producten'];
+function catOrderIndex(cat){ const i = CATEGORY_ORDER.indexOf(cat); return i===-1 ? 998 : i; }
+
+// Standaardlijst (seed) — alleen gebruikt als de catalogus nog leeg is
+const SEED = [
+  { cat:'Snacks', items:[
+    ['Frikandel','629'],['Sito stick',null],['kipcorn','62187'],['belcanto/sunbrero','81907'],
+    ['krokidel (giantdel)','883'],['boulet','655'],['cervela','915'],['Braadworst','919'],
+    ['Bami laan','762'],['kaaskroket',null],['Bockworst','1054'],['chicken fingers (fries)',null],
+    ['Goulashkroket',null],['Vleeskroket',null],['Kipnuggets','6597'],['sate vers 5st',null],['hamburger','803'],
+  ]},
+  { cat:'Kruidenierswaren / Vers', items:[
+    ['ajuin zak 25kg','47876'],['Cheddar kaas','49007'],['Zuurkool 12 blikken 1DU','1702'],
+    ['boter bak','40615'],['stoofvlees doos 10KG',null],['Verse frieten',null],
+  ]},
+  { cat:'Sauzen', items:[
+    ['sate saus wijko','10389'],['curryketchup Z','15453'],['Tomaten ketchup Z','15452'],['mayo chef','10682'],
+    ['mayo hollandse','57147'],['andalouse 3l','24743'],['tartaar 3l','77621'],['hela curry 10l','58483'],
+    ['mosterd 3l','24753'],['Happy saus (smoel) 3l','39233'],['pickles','34084'],['gele curry 1L','65094'],
+    ['Samoerai 1L','57066'],['Hela curry','1662'],['Happy (smoel) saus 1L','57068'],
+  ]},
+  { cat:'Dranken', items:[
+    ['bier jup','3062'],['casis','5404'],['dr pepper','11725'],['sprite','2678'],['bruis water','16697'],
+    ['plat water','16689'],['fanta','2641'],['ice tea','2648'],['ice tea green','13693'],['caprisun','23057'],
+    ['cola','25848'],['Cola zero','47224'],
+  ]},
+  { cat:'Brood', items:[
+    ['maxiboll',null],['broodjes lang','74892'],['bicky broodje','40745'],
+  ]},
+  { cat:'Verpakking', items:[
+    ['tipzakken klein',null],['tipzakken groot',null],['bord rond 18cm','59455'],['vorken groot (100st)','82299'],
+    ['vorkjes klein','72687'],['servetten (500st)','65325'],['a7 boulet bruin','74871'],['frietbakje 90','2323'],
+    ['frietbakje 85',null],['a14 stoofvlees',null],['schaal wit cw','3333'],['a16L schaal curryworst bruin','74649'],
+  ]},
+];
+function seedMap(){
+  const map={}; let idx=0;
+  SEED.forEach(c=>c.items.forEach(it=>{ map['b'+idx]={ name:it[0], art:it[1]||null, cat:c.cat, order:idx, ts:0 }; idx++; }));
+  return map;
+}
+
+let PRODS = [];          // {key,name,art,cat,order}
+let renderedSig = '';
+
+(async function init(){
+  if(window.fbAuthReady) await window.fbAuthReady;
+  const ref = fbdb.ref(CAT_PATH);
+  try{
+    const snap = await ref.once('value');
+    const v = snap.val() || {};
+    if(!Object.keys(v).some(k=>k.charAt(0)==='b')) await ref.update(seedMap());
+  }catch(e){ console.error('seed mislukt', e); }
+  ref.on('value', snap=>{
+    const v = snap.val() || {};
+    PRODS = Object.entries(v).map(([key,p])=>({
+      key, name:p.name||'', art:(p.art==null?null:p.art), cat:p.cat||'Eigen producten', order:(p.order!=null?p.order:(p.ts||0))
+    }));
+    fillAddCats();
+    // Alleen volledig hertekenen als de set producten (toevoegen/verwijderen/categorie) wijzigt,
+    // zodat je niet de focus verliest tijdens het typen.
+    const sig = PRODS.map(p=>p.key+':'+p.cat).sort().join('|');
+    if(sig !== renderedSig){ renderedSig = sig; render(); }
+  }, err=>{
+    document.getElementById('catalog-list').innerHTML = '<div class="empty">⚠️ Kon catalogus niet laden ('+(err.code||err.message)+').</div>';
+  });
+})();
+
+function allCats(){
+  const set = new Set(CATEGORY_ORDER);
+  PRODS.forEach(p=>set.add(p.cat));
+  return Array.from(set).sort((a,b)=>{ const c=catOrderIndex(a)-catOrderIndex(b); return c || (a<b?-1:1); });
+}
+function fillAddCats(){
+  const sel = document.getElementById('a-cat');
+  const cur = sel.value;
+  const cats = allCats();
+  sel.innerHTML = cats.map(c=>'<option>'+esc(c)+'</option>').join('') + '<option value="__new">+ Nieuwe categorie…</option>';
+  if(cur && (cats.includes(cur) || cur==='__new')) sel.value = cur;
+}
+function onAddCatChange(){
+  const sel = document.getElementById('a-cat');
+  document.getElementById('a-cat-new').classList.toggle('hide', sel.value!=='__new');
+}
+
+function render(){
+  const wrap = document.getElementById('catalog-list');
+  if(!PRODS.length){ wrap.innerHTML = '<div class="empty">Nog geen producten.</div>'; return; }
+  const sorted = PRODS.slice().sort((a,b)=>{
+    const ci = catOrderIndex(a.cat)-catOrderIndex(b.cat); if(ci) return ci;
+    if(a.cat!==b.cat) return a.cat<b.cat?-1:1;
+    return (a.order||0)-(b.order||0);
+  });
+  const cats = allCats();
+  let html='', lastCat=null;
+  sorted.forEach(p=>{
+    if(p.cat!==lastCat){
+      const n = sorted.filter(x=>x.cat===p.cat).length;
+      html += '<div class="cat-h"><span>'+esc(p.cat)+'</span><span class="cnt">'+n+'</span></div>';
+      lastCat = p.cat;
+    }
+    const nvz = (p.art==null);
+    const catOpts = cats.map(c=>'<option'+(c===p.cat?' selected':'')+'>'+esc(c)+'</option>').join('');
+    html += '<div class="crow" data-key="'+p.key+'">'
+      + '<input class="name" type="text" value="'+esc(p.name)+'" onchange="saveField(\''+p.key+'\',\'name\',this.value)">'
+      + '<input class="art" type="text" inputmode="numeric" value="'+esc(p.art==null?'':p.art)+'"'+(nvz?' disabled placeholder="—"':'')+' onchange="saveField(\''+p.key+'\',\'art\',this.value)">'
+      + '<label class="nvz-wrap"><input type="checkbox"'+(nvz?' checked':'')+' onchange="toggleNvz(\''+p.key+'\',this.checked)"> n.v. Zon</label>'
+      + '<select class="cat" onchange="saveField(\''+p.key+'\',\'cat\',this.value)">'+catOpts+'</select>'
+      + '<button class="del" type="button" title="Verwijderen" onclick="delProduct(\''+p.key+'\')">×</button>'
+      + '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function flashSaved(){
+  const el = document.getElementById('save-state');
+  el.textContent = '✓ bewaard'; el.classList.add('saved');
+  clearTimeout(el._t); el._t = setTimeout(()=>{ el.textContent=''; el.classList.remove('saved'); }, 1500);
+}
+function saveField(key, field, value){
+  let val = value;
+  if(field==='art'){ val = (value||'').trim() || null; }
+  if(field==='name'){ val = (value||'').trim(); if(!val){ alert('Naam mag niet leeg zijn.'); render(); return; } }
+  fbdb.ref(CAT_PATH+'/'+key+'/'+field).set(val).then(flashSaved).catch(e=>{ console.error(e); alert('Opslaan mislukt.'); });
+}
+function toggleNvz(key, checked){
+  // aangevinkt = geen artikelnr (NIET VAN ZON) → art = null
+  const v = checked ? null : '';
+  fbdb.ref(CAT_PATH+'/'+key+'/art').set(v).then(()=>{ renderedSig=''; flashSaved();
+    // forceer hertekenen zodat het art-veld in/uitschakelt
+    const ev = PRODS.find(p=>p.key===key); if(ev){ ev.art=v; } render();
+  }).catch(e=>{ console.error(e); alert('Opslaan mislukt.'); });
+}
+function addProduct(){
+  const name = (document.getElementById('a-name').value||'').trim();
+  const art = (document.getElementById('a-art').value||'').trim() || null;
+  let cat = document.getElementById('a-cat').value;
+  if(cat==='__new') cat = (document.getElementById('a-cat-new').value||'').trim();
+  if(!name){ alert('Vul een naam in.'); return; }
+  if(!cat){ alert('Kies of vul een categorie in.'); return; }
+  fbdb.ref(CAT_PATH).push().set({ name, art, cat, order: Date.now(), ts: Date.now() }).then(()=>{
+    document.getElementById('a-name').value=''; document.getElementById('a-art').value='';
+    document.getElementById('a-cat-new').value=''; document.getElementById('a-cat-new').classList.add('hide');
+    document.getElementById('a-cat').value = cat;
+    flashSaved();
+  }).catch(e=>{ console.error(e); alert('Toevoegen mislukt.'); });
+}
+function delProduct(key){
+  const p = PRODS.find(x=>x.key===key);
+  if(!confirm('"'+(p?p.name:'')+'" verwijderen uit de catalogus?')) return;
+  fbdb.ref(CAT_PATH+'/'+key).remove().then(flashSaved).catch(e=>{ console.error(e); alert('Verwijderen mislukt.'); });
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+</script>
+</body>
+</html>
