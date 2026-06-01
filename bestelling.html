@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow">
-<title>Señor Snacks — Bestelling</title>
+<title>Señor Snacks — Postel bestelling</title>
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
@@ -129,12 +129,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <div class="topbar">
   <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
   <span class="topbar-divider"></span>
-  <span class="topbar-section">Bestelling</span>
+  <span class="topbar-section">Postel bestelling</span>
 </div>
 
 <div class="main">
   <div class="page-hdr">
-    <div class="page-title">Bestelling doorgeven</div>
+    <div class="page-title">Postel bestelling doorgeven</div>
     <div class="page-sub">Vul je gegevens en de aantallen in en verstuur. Je krijgt meteen een PDF-bestelbon.</div>
   </div>
 
@@ -538,7 +538,7 @@ async function addCustom(){
   if(!name){ alert('Vul een productnaam in.'); document.getElementById('c-name').focus(); return; }
   try{
     if(window.fbAuthReady) await window.fbAuthReady;
-    await fbdb.ref(CAT_PATH).push().set({ name, art: art || null, cat:'Eigen producten', order: Date.now(), ts: Date.now() });
+    await fbdb.ref(CAT_PATH).push().set({ name, art: art || null, cat:'Eigen producten', order: Date.now(), ts: Date.now(), inPostel:true, inStandaard:false });
   }catch(e){ console.error(e); alert('Toevoegen mislukt. Probeer opnieuw.'); return; }
   document.getElementById('c-name').value = '';
   document.getElementById('c-art').value = '';
@@ -551,7 +551,7 @@ async function removeCustom(key){
 // Eenmalige seed van de standaardlijst als die nog niet bestaat
 function seedMap(){
   const map = {}; let idx = 0;
-  CATALOG.forEach(c=>c.items.forEach(it=>{ map['b'+idx] = { name:it[0], art:it[1]||null, cat:c.cat, order:idx, ts:0 }; idx++; }));
+  CATALOG.forEach(c=>c.items.forEach(it=>{ map['b'+idx] = { name:it[0], art:it[1]||null, cat:c.cat, order:idx, ts:0, inPostel:true, inStandaard:false }; idx++; }));
   return map;
 }
 async function initCatalog(){
@@ -564,9 +564,12 @@ async function initCatalog(){
   }catch(e){ console.error('seed mislukt', e); }
   ref.on('value', snap=>{
     const v = snap.val() || {};
-    catalog = Object.entries(v).map(([key,p])=>({
-      key, name:p.name, art:p.art||null, cat:p.cat||'Eigen producten', order:(p.order!=null?p.order:(p.ts||0))
-    }));
+    catalog = Object.entries(v)
+      // Toon enkel producten uit de Postel-catalogus (producten zonder vlaggen = legacy Postel).
+      .filter(([key,p])=> p && (p.inPostel===true || (p.inPostel==null && p.inStandaard==null)))
+      .map(([key,p])=>({
+        key, name:p.name, art:p.art||null, cat:p.cat||'Eigen producten', order:(p.order!=null?p.order:(p.ts||0))
+      }));
     buildItems(); render(); reapplySearch();
   });
 }

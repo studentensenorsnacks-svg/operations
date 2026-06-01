@@ -62,6 +62,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .field input,.field select{padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
 .field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
 
+.tabs{display:flex;gap:6px;margin-bottom:16px;background:var(--surface2);padding:5px;border-radius:11px;width:fit-content;}
+.tab{padding:9px 22px;border-radius:8px;border:none;background:transparent;font-family:var(--font-cond);font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--surface);color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.tab .cnt{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text3);}
+.tab.active .cnt{color:var(--blue);}
+
 .cat-h{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-cond);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);padding:16px 4px 8px;border-bottom:2px solid var(--blue-bg);margin-bottom:6px;}
 .cat-h .cnt{font-size:12px;color:var(--text3);font-family:var(--mono);font-weight:500;}
 .crow{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
@@ -71,6 +78,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .crow .cat{width:170px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;background:#fff;}
 .crow input:focus,.crow select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
 .nvz-wrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;}
+.also-wrap{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);white-space:nowrap;font-weight:600;padding:5px 9px;border:1px solid var(--border2);border-radius:8px;cursor:pointer;}
+.also-wrap:hover{background:var(--surface2);}
+.also-wrap.on{color:var(--blue);border-color:var(--blue);background:var(--blue-bg);}
 .del{width:34px;height:36px;border:1px solid var(--border2);background:#fff;border-radius:8px;color:var(--red);font-size:17px;font-weight:700;cursor:pointer;flex-shrink:0;}
 .del:hover{background:rgba(232,0,29,.08);}
 
@@ -92,20 +102,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </a>
   <div class="topbar-right">
     <span class="save-state" id="save-state"></span>
-    <a class="back-link" href="bestellingen-dashboard.html">📊 Bestellingen</a>
-    <a class="back-link" href="dashboard.html">← Dashboard</a>
+    <a class="back-link" href="bestellingen-dashboard.html">📊 Postel bestellingen</a>
+    <a class="back-link" href="lijsten.html">← Lijsten</a>
   </div>
 </div>
 
 <div class="main">
   <div class="page-hdr">
     <div class="page-title">Productcatalogus</div>
-    <div class="page-sub">Pas namen, artikelnummers en categorieën aan. Wijzigingen worden meteen bewaard en gelden voor het bestelformulier.</div>
+    <div class="page-sub">Twee aparte catalogi. Vink <b>"ook in …"</b> aan om een product in beide te tonen. Wijzigingen worden meteen bewaard.</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" id="tab-postel" type="button" onclick="setScope('postel')">Postel <span class="cnt" id="cnt-postel">0</span></button>
+    <button class="tab" id="tab-standaard" type="button" onclick="setScope('standaard')">Standaard <span class="cnt" id="cnt-standaard">0</span></button>
   </div>
 
   <!-- TOEVOEGEN -->
   <div class="card">
-    <div class="card-h">Product toevoegen</div>
+    <div class="card-h">Product toevoegen aan <span id="add-scope-lbl" style="color:var(--blue)">Postel</span></div>
     <div class="addrow">
       <div class="field" style="flex:2;min-width:160px;"><label for="a-name">Naam</label><input type="text" id="a-name" placeholder="bv. Loempia"></div>
       <div class="field" style="width:130px;"><label for="a-art">Artikelnr</label><input type="text" id="a-art" inputmode="numeric" placeholder="optioneel"></div>
@@ -163,11 +179,16 @@ const SEED = [
 ];
 function seedMap(){
   const map={}; let idx=0;
-  SEED.forEach(c=>c.items.forEach(it=>{ map['b'+idx]={ name:it[0], art:it[1]||null, cat:c.cat, order:idx, ts:0 }; idx++; }));
+  SEED.forEach(c=>c.items.forEach(it=>{ map['b'+idx]={ name:it[0], art:it[1]||null, cat:c.cat, order:idx, ts:0, inPostel:true, inStandaard:false }; idx++; }));
   return map;
 }
 
-let PRODS = [];          // {key,name,art,cat,order}
+// Een product zonder vlaggen is "legacy" (uit de oude, gedeelde catalogus) → hoort bij Postel.
+function prodInPostel(p){ return p.inPostel===true || (p.inPostel==null && p.inStandaard==null); }
+function prodInStandaard(p){ return p.inStandaard===true; }
+
+let PRODS = [];          // {key,name,art,cat,order,inPostel,inStandaard}
+let SCOPE = 'postel';    // actieve tab
 let renderedSig = '';
 
 (async function init(){
@@ -176,22 +197,44 @@ let renderedSig = '';
   try{
     const snap = await ref.once('value');
     const v = snap.val() || {};
-    if(!Object.keys(v).some(k=>k.charAt(0)==='b')) await ref.update(seedMap());
-  }catch(e){ console.error('seed mislukt', e); }
+    if(!Object.keys(v).some(k=>k.charAt(0)==='b')){
+      await ref.update(seedMap());
+    }else{
+      // Migratie: bestaande producten zonder scope-vlaggen → Postel
+      const mig = {};
+      Object.entries(v).forEach(([key,p])=>{ if(p && p.inPostel==null && p.inStandaard==null) mig[key+'/inPostel']=true; });
+      if(Object.keys(mig).length) await ref.update(mig);
+    }
+  }catch(e){ console.error('seed/migratie mislukt', e); }
   ref.on('value', snap=>{
     const v = snap.val() || {};
     PRODS = Object.entries(v).map(([key,p])=>({
-      key, name:p.name||'', art:(p.art==null?null:p.art), cat:p.cat||'Eigen producten', order:(p.order!=null?p.order:(p.ts||0))
+      key, name:p.name||'', art:(p.art==null?null:p.art), cat:p.cat||'Eigen producten', order:(p.order!=null?p.order:(p.ts||0)),
+      inPostel:prodInPostel(p), inStandaard:prodInStandaard(p)
     }));
     fillAddCats();
-    // Alleen volledig hertekenen als de set producten (toevoegen/verwijderen/categorie) wijzigt,
-    // zodat je niet de focus verliest tijdens het typen.
-    const sig = PRODS.map(p=>p.key+':'+p.cat).sort().join('|');
+    // Alleen volledig hertekenen als de set/scope/categorie wijzigt, zodat je niet de focus verliest tijdens het typen.
+    const sig = PRODS.map(p=>p.key+':'+p.cat+':'+(p.inPostel?1:0)+(p.inStandaard?1:0)).sort().join('|');
     if(sig !== renderedSig){ renderedSig = sig; render(); }
+    updateTabCounts();
   }, err=>{
     document.getElementById('catalog-list').innerHTML = '<div class="empty">⚠️ Kon catalogus niet laden ('+(err.code||err.message)+').</div>';
   });
 })();
+
+function setScope(s){
+  if(SCOPE===s) return;
+  SCOPE = s;
+  document.getElementById('tab-postel').classList.toggle('active', s==='postel');
+  document.getElementById('tab-standaard').classList.toggle('active', s==='standaard');
+  document.getElementById('add-scope-lbl').textContent = s==='postel' ? 'Postel' : 'Standaard';
+  renderedSig = ''; render();
+}
+function scopedProds(){ return PRODS.filter(p=> SCOPE==='postel' ? p.inPostel : p.inStandaard); }
+function updateTabCounts(){
+  document.getElementById('cnt-postel').textContent = PRODS.filter(p=>p.inPostel).length;
+  document.getElementById('cnt-standaard').textContent = PRODS.filter(p=>p.inStandaard).length;
+}
 
 function allCats(){
   const set = new Set(CATEGORY_ORDER);
@@ -212,13 +255,21 @@ function onAddCatChange(){
 
 function render(){
   const wrap = document.getElementById('catalog-list');
-  if(!PRODS.length){ wrap.innerHTML = '<div class="empty">Nog geen producten.</div>'; return; }
-  const sorted = PRODS.slice().sort((a,b)=>{
+  const list = scopedProds();
+  if(!list.length){
+    wrap.innerHTML = SCOPE==='postel'
+      ? '<div class="empty">Nog geen producten in de Postel-catalogus.</div>'
+      : '<div class="empty">Nog geen producten in de Standaard-catalogus.<br>Voeg er toe, of vink bij een Postel-product <b>"ook in Standaard"</b> aan.</div>';
+    return;
+  }
+  const sorted = list.slice().sort((a,b)=>{
     const ci = catOrderIndex(a.cat)-catOrderIndex(b.cat); if(ci) return ci;
     if(a.cat!==b.cat) return a.cat<b.cat?-1:1;
     return (a.order||0)-(b.order||0);
   });
   const cats = allCats();
+  const otherField = SCOPE==='postel' ? 'inStandaard' : 'inPostel';
+  const otherLabel = SCOPE==='postel' ? 'ook in Standaard' : 'ook in Postel';
   let html='', lastCat=null;
   sorted.forEach(p=>{
     if(p.cat!==lastCat){
@@ -227,16 +278,21 @@ function render(){
       lastCat = p.cat;
     }
     const nvz = (p.art==null);
+    const alsoOn = p[otherField]===true;
     const catOpts = cats.map(c=>'<option'+(c===p.cat?' selected':'')+'>'+esc(c)+'</option>').join('');
     html += '<div class="crow" data-key="'+p.key+'">'
       + '<input class="name" type="text" value="'+esc(p.name)+'" onchange="saveField(\''+p.key+'\',\'name\',this.value)">'
       + '<input class="art" type="text" inputmode="numeric" value="'+esc(p.art==null?'':p.art)+'"'+(nvz?' disabled placeholder="—"':'')+' onchange="saveField(\''+p.key+'\',\'art\',this.value)">'
       + '<label class="nvz-wrap"><input type="checkbox"'+(nvz?' checked':'')+' onchange="toggleNvz(\''+p.key+'\',this.checked)"> n.v. Zon</label>'
       + '<select class="cat" onchange="saveField(\''+p.key+'\',\'cat\',this.value)">'+catOpts+'</select>'
+      + '<label class="also-wrap'+(alsoOn?' on':'')+'"><input type="checkbox"'+(alsoOn?' checked':'')+' onchange="toggleAlso(\''+p.key+'\',\''+otherField+'\',this.checked)"> '+otherLabel+'</label>'
       + '<button class="del" type="button" title="Verwijderen" onclick="delProduct(\''+p.key+'\')">×</button>'
       + '</div>';
   });
   wrap.innerHTML = html;
+}
+function toggleAlso(key, field, checked){
+  fbdb.ref(CAT_PATH+'/'+key+'/'+field).set(!!checked).then(flashSaved).catch(e=>{ console.error(e); alert('Opslaan mislukt.'); });
 }
 
 function flashSaved(){
@@ -265,7 +321,8 @@ function addProduct(){
   if(cat==='__new') cat = (document.getElementById('a-cat-new').value||'').trim();
   if(!name){ alert('Vul een naam in.'); return; }
   if(!cat){ alert('Kies of vul een categorie in.'); return; }
-  fbdb.ref(CAT_PATH).push().set({ name, art, cat, order: Date.now(), ts: Date.now() }).then(()=>{
+  const flags = { inPostel: SCOPE==='postel', inStandaard: SCOPE==='standaard' };
+  fbdb.ref(CAT_PATH).push().set({ name, art, cat, order: Date.now(), ts: Date.now(), ...flags }).then(()=>{
     document.getElementById('a-name').value=''; document.getElementById('a-art').value='';
     document.getElementById('a-cat-new').value=''; document.getElementById('a-cat-new').classList.add('hide');
     document.getElementById('a-cat').value = cat;
