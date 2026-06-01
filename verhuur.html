@@ -631,10 +631,20 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
     </div>
     <div class="form-section">🚛 Wagen & periode</div>
     <div class="fg2">
-      <div class="field"><label>Wagen *</label><select id="r-truck" onchange="checkAvailability()"></select></div>
+      <div class="field"><label>Wagen-bron</label><select id="r-source" onchange="toggleSubrental()">
+        <option value="own">Eigen vloot</option><option value="sub">Subrental — extern ingehuurd</option>
+      </select></div>
       <div class="field"><label>Tarief categorie</label><select id="r-tariff" onchange="recalcPrice()">
         <option value="day">Dagtarief</option><option value="weekend">Weekendtarief</option><option value="week">Weektarief</option><option value="custom">Custom</option>
       </select></div>
+    </div>
+    <div class="fg2" id="r-own-row">
+      <div class="field" style="grid-column:1/-1"><label>Wagen *</label><select id="r-truck" onchange="checkAvailability();recalcPrice()"></select></div>
+    </div>
+    <div class="fg3" id="r-sub-row" style="display:none">
+      <div class="field"><label>Leverancier *</label><input id="r-sub-supplier" placeholder="Bv. Boels, TVH..."></div>
+      <div class="field"><label>Wagen-type / kenteken</label><input id="r-sub-plate" placeholder="Hamburgerwagen + nummerplaat"></div>
+      <div class="field"><label>Inkoopprijs (€) *</label><input type="number" id="r-sub-cost" step="0.01" oninput="recalcPrice()" placeholder="Wat wij betalen"></div>
     </div>
     <div class="fg2">
       <div class="field"><label>Vertrek *</label><input type="datetime-local" id="r-start" onchange="onPeriodChange()"></div>
@@ -852,6 +862,37 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
   </div>
 </div>
 
+<!-- Signature modal -->
+<div class="overlay" id="modal-sign">
+  <div class="modal modal-md">
+    <div class="modal-h"><div><h2>Digitale handtekening</h2><div class="sub" id="sign-sub"></div></div><button class="modal-close" onclick="closeModal('modal-sign')">✕</button></div>
+    <input type="hidden" id="sign-res-id">
+    <div class="alert al-info">✍️ Laat de huurder hier tekenen. Dit bewijst akkoord met de huurvoorwaarden en wordt opgenomen in het PDF-contract.</div>
+    <div class="fg2">
+      <div class="field"><label>Naam ondertekenaar *</label><input id="sign-name" placeholder="Volledige naam"></div>
+      <div class="field"><label>Hoedanigheid</label><input id="sign-role" placeholder="Zaakvoerder, contactpersoon..."></div>
+    </div>
+    <div class="field">
+      <label>Handtekening</label>
+      <div style="border:2px dashed var(--border2);border-radius:9px;background:var(--s1);position:relative">
+        <canvas id="sign-pad" width="600" height="180" style="display:block;width:100%;height:180px;cursor:crosshair;touch-action:none;border-radius:7px"></canvas>
+        <button type="button" onclick="clearSig()" style="position:absolute;top:6px;right:6px;background:var(--s2);color:var(--sub);font-size:11px;padding:4px 10px;border-radius:5px">✕ Wissen</button>
+      </div>
+      <div class="help">Teken met muis op desktop of vinger op tablet/gsm</div>
+    </div>
+    <div class="field">
+      <label>Akkoord</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);font-weight:500;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="sign-terms" style="width:auto"> Ik aanvaard de algemene huurvoorwaarden en bevestig de juistheid van mijn gegevens.
+      </label>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sign')">Annuleren</button>
+      <button class="btn btn-gold" onclick="saveSignature()">✓ Bevestig handtekening</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox -->
 <div id="lightbox" onclick="closeLightbox()">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
@@ -985,7 +1026,18 @@ function migrateFromV3(){
   console.log('✓ Gemigreerd van v3:',{trucks:trucks.length,customers:customers.length,reservations:reservations.length,damages:damages.length});
 }
 
-function persist(){
+/* =====================================================
+   PERSISTENCE — localStorage cache + Firebase (multi-device)
+===================================================== */
+const FB_VH = 'ft_verhuur_v1';        // single source of truth for verhuur
+const FB_SUMMARY = 'ft_verhuur_summary'; // surface KPIs for dashboard.html
+let fbSyncing = false;                 // avoid loop: when we receive a remote update, don't push back
+let fbApplying = false;                // we're applying a remote snapshot now
+let lastLocalChange = 0;
+
+function persist(opts){
+  opts = opts || {};
+  // 1) Local cache
   localStorage.setItem('vh4_trucks',      JSON.stringify(trucks));
   localStorage.setItem('vh4_customers',   JSON.stringify(customers));
   localStorage.setItem('vh4_reservations',JSON.stringify(reservations));
@@ -993,6 +1045,101 @@ function persist(){
   localStorage.setItem('vh4_maintenance', JSON.stringify(maintenance));
   localStorage.setItem('vh4_invoices',    JSON.stringify(invoices));
   localStorage.setItem('vh4_counters',    JSON.stringify(counters));
+  lastLocalChange = Date.now();
+
+  // 2) Firebase (skip if we're applying a remote update)
+  if (fbApplying || opts.localOnly) return;
+  pushToFirebase();
+  publishSummary();
+}
+
+function pushToFirebase(){
+  if (!fbdb) return;
+  const payload = {
+    trucks, customers, reservations, damages, maintenance, invoices, counters,
+    _updatedAt: new Date().toISOString(),
+    _updatedBy: (window.__authUser?.email) || 'unknown',
+  };
+  fbdb.ref(FB_VH).set(payload).catch(e => console.warn('Firebase sync mislukt:', e));
+}
+
+function publishSummary(){
+  if (!fbdb) return;
+  const today = new Date(); const todayStr = todayISO();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const monthEnd   = new Date(today.getFullYear(), today.getMonth()+1, 0);
+
+  const active = reservations.filter(r => r.status==='active');
+  const monthRev = reservations
+    .filter(r => ['returned','invoiced'].includes(r.status) && r.end && new Date(r.end)>=monthStart && new Date(r.end)<=monthEnd)
+    .reduce((s,r)=>s+calcPrice(r).subtotal, 0);
+  const pickupToday = reservations.filter(r => r.status==='reserved' && toDateOnly(r.start)===todayStr).length;
+  const returnToday = reservations.filter(r => r.status==='active'   && toDateOnly(r.end)===todayStr).length;
+  const overdue     = reservations.filter(r => r.status==='active'   && r.end && new Date(r.end)<today).length;
+  const openDamages = damages.filter(d=>d.status!=='fixed').length;
+  const openInv     = invoices.filter(i=>['sent','overdue'].includes(i.status)).reduce((s,i)=>s+(i.total||0), 0);
+  const maintAlerts = trucks.filter(t => ['ctcDate','insDate','srvDate'].some(k => isOverdue(t[k]) || inSoonRange(t[k],30))).length;
+
+  // Subrental margin MTD
+  const subRes = reservations.filter(r => r.subrental && ['returned','invoiced'].includes(r.status) && r.end && new Date(r.end)>=monthStart && new Date(r.end)<=monthEnd);
+  const subMarginMTD = subRes.reduce((s,r)=>s+calcPrice(r).margin, 0);
+
+  fbdb.ref(FB_SUMMARY).set({
+    fleet: trucks.filter(t=>!t.archived).length,
+    activeRentals: active.length,
+    pickupToday, returnToday, overdueReturns: overdue,
+    monthRevenue: Math.round(monthRev),
+    openDamages, maintAlerts,
+    outstandingInvoices: Math.round(openInv),
+    subrentalMarginMTD: Math.round(subMarginMTD),
+    subrentalCount: subRes.length,
+    updatedAt: new Date().toISOString(),
+  }).catch(()=>{});
+}
+
+function applyRemoteSnapshot(snap){
+  if (!snap) return;
+  // Skip if remote update is older than our last local change (avoid race losing local edits)
+  const remoteAt = snap._updatedAt ? new Date(snap._updatedAt).getTime() : 0;
+  if (remoteAt && lastLocalChange && remoteAt < lastLocalChange - 1000) return;
+
+  fbApplying = true;
+  try {
+    if (Array.isArray(snap.trucks))       trucks       = snap.trucks;
+    if (Array.isArray(snap.customers))    customers    = snap.customers;
+    if (Array.isArray(snap.reservations)) reservations = snap.reservations;
+    if (Array.isArray(snap.damages))      damages      = snap.damages;
+    if (Array.isArray(snap.maintenance))  maintenance  = snap.maintenance;
+    if (Array.isArray(snap.invoices))     invoices     = snap.invoices;
+    if (snap.counters && typeof snap.counters === 'object') counters = snap.counters;
+    persist({localOnly:true}); // cache locally
+    refreshUI();
+  } finally {
+    fbApplying = false;
+  }
+}
+
+function attachFirebaseListener(){
+  if (!fbdb) return;
+  // First load: if Firebase has data, prefer it (unless local is newer)
+  fbdb.ref(FB_VH).once('value').then(snap => {
+    const data = snap.val();
+    if (data) {
+      const remoteAt = data._updatedAt ? new Date(data._updatedAt).getTime() : 0;
+      const localAt  = +(localStorage.getItem('vh4_updated_at')||0);
+      // If local has more recent edits, push local up; else pull remote
+      if (localAt && localAt > remoteAt + 5000) {
+        pushToFirebase();
+      } else {
+        applyRemoteSnapshot(data);
+      }
+    } else {
+      // No remote data yet → seed Firebase from local
+      pushToFirebase();
+    }
+    // Subscribe to live updates
+    fbdb.ref(FB_VH).on('value', s => applyRemoteSnapshot(s.val()));
+  }).catch(e => console.warn('Firebase listener init mislukt:', e));
 }
 
 /* =====================================================
@@ -1054,7 +1201,11 @@ function calcPrice(r){
   const subtotal = baseRent + kmCost - discountAmt;
   const vat = subtotal * CFG.vatRate;
   const total = subtotal + vat;
-  return {days,km,kmCost,baseRent,discountAmt,discountPct,subtotal,vat,total,deposit:+r.deposit||0};
+  // Subrental margin
+  const subCost = r.subrental ? (+r.subCost||0) : 0;
+  const margin  = subtotal - subCost;
+  const marginPct = subtotal>0 ? Math.round((margin/subtotal)*100) : 0;
+  return {days,km,kmCost,baseRent,discountAmt,discountPct,subtotal,vat,total,deposit:+r.deposit||0,subCost,margin,marginPct};
 }
 
 /* =====================================================
@@ -1262,14 +1413,21 @@ function renderDashboard(){
   // Open damages (kost)
   const openDamCost = damages.filter(d=>d.status!=='fixed').reduce((s,d)=>s+(+d.cost||0),0);
 
-  document.getElementById('dash-kpis').innerHTML = [
+  // Subrental marge MTD
+  const subRes = reservations.filter(r => r.subrental && ['returned','invoiced'].includes(r.status) && r.end && new Date(r.end)>=monthStart && new Date(r.end)<=monthEnd);
+  const subMargin = subRes.reduce((s,r)=>s+calcPrice(r).margin, 0);
+
+  const kpis = [
     {l:'Vloot beschikbaar',v:fleetSize-active.length,sub:`/ ${fleetSize} wagens`,k:'k-teal',i:'🚛'},
     {l:'Lopende verhuringen',v:active.length,sub:overdueReturn.length?`⚠ ${overdueReturn.length} overdue`:'op planning',k:'k-green',i:'✓'},
     {l:'Toekomstige reservaties',v:reservedFuture.length,sub:'bevestigd',k:'k-purple',i:'📅'},
     {l:'Omzet MTD',v:fmtEur0(monthRevenue),sub:'excl. BTW',k:'k-gold',i:'💶'},
     {l:'Utilization',v:utilization+'%',sub:`${bookedDays} dagen geboekt`,k:utilization>70?'k-green':(utilization>40?'k-amber':'k-red'),i:'📊'},
     {l:'Openstaand',v:fmtEur0(outstanding),sub:invoices.filter(i=>i.status==='sent').length+' facturen',k:'k-amber',i:'💳'},
-  ].map(s=>`<div class="kpi ${s.k}">
+  ];
+  if (subRes.length) kpis.push({l:'Subrental marge MTD',v:fmtEur0(subMargin),sub:`${subRes.length} ext. verhuringen`,k:subMargin>=0?'k-green':'k-red',i:'↗'});
+
+  document.getElementById('dash-kpis').innerHTML = kpis.map(s=>`<div class="kpi ${s.k}">
     <div class="kpi-l">${s.l}</div>
     <div class="kpi-v">${s.v} <span style="font-size:18px">${s.i}</span></div>
     <div class="kpi-s">${s.sub}</div>
@@ -1508,7 +1666,7 @@ function renderReservations(){
     const p=calcPrice(r);
     return `<tr class="row-link" onclick="openResDetail('${r.id}')">
       <td><div class="td-main">${esc(r.name||'Verhuur')}</div><div class="td-sub">${esc(c.name||'—')}</div></td>
-      <td>${t.id?`<span style="color:${t.color};margin-right:4px">●</span>${esc(t.name)}`:(r.planningTrucks?.join(', ')||'—')}</td>
+      <td>${r.subrental?`<span class="badge b-purple no-dot" style="font-size:9.5px;padding:1px 6px;vertical-align:middle">SUB</span> ${esc(r.subSupplier||'extern')}`:(t.id?`<span style="color:${t.color};margin-right:4px">●</span>${esc(t.name)}`:(r.planningTrucks?.join(', ')||'—'))}</td>
       <td style="font-size:11.5px;color:var(--sub)">${fmtDF(r.start)}<br>→ ${fmtDF(r.end)}</td>
       <td style="font-size:11.5px;color:var(--sub)">${esc(r.location||'—')}</td>
       <td style="font-family:var(--font-h);font-weight:700">${fmtEur0(p.total)}</td>
@@ -1967,17 +2125,33 @@ function openResModal(id){
     document.getElementById('r-km-dep').value=r.kmDep||'';
     document.getElementById('r-km-ret').value=r.kmRet||'';
     document.getElementById('r-notes').value=r.notes||'';
+    document.getElementById('r-source').value = r.subrental ? 'sub' : 'own';
+    document.getElementById('r-sub-supplier').value = r.subSupplier || '';
+    document.getElementById('r-sub-plate').value    = r.subPlate    || '';
+    document.getElementById('r-sub-cost').value     = r.subCost     || '';
   } else {
-    ['r-name','r-location','r-rent','r-km-dep','r-km-ret','r-notes'].forEach(i=>document.getElementById(i).value='');
+    ['r-name','r-location','r-rent','r-km-dep','r-km-ret','r-notes','r-sub-supplier','r-sub-plate','r-sub-cost'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('r-status').value='quote';
     document.getElementById('r-tariff').value='day';
     document.getElementById('r-kmrate').value=0.40;
     document.getElementById('r-deposit').value=500;
     document.getElementById('r-discount').value=0;
     document.getElementById('r-start').value='';document.getElementById('r-end').value='';
+    document.getElementById('r-source').value='own';
   }
+  toggleSubrental();
   recalcPrice(); checkAvailability();
   openModal('modal-res');
+}
+
+function toggleSubrental(){
+  const isSub = document.getElementById('r-source').value === 'sub';
+  document.getElementById('r-own-row').style.display = isSub ? 'none' : 'grid';
+  document.getElementById('r-sub-row').style.display = isSub ? 'grid' : 'none';
+  // Required field swap
+  if (isSub) document.getElementById('r-truck').value = '';
+  checkAvailability();
+  recalcPrice();
 }
 function onCustomerChange(){
   const c=customer(document.getElementById('r-customer').value);
@@ -1986,11 +2160,13 @@ function onCustomerChange(){
 }
 function onPeriodChange(){checkAvailability();recalcPrice();}
 function checkAvailability(){
+  const isSub = document.getElementById('r-source').value === 'sub';
+  const el=document.getElementById('r-avail');
+  if (isSub){ el.innerHTML = `<div class="avail-line avail-maint">↗ Subrental — vloot-conflictcheck overgeslagen (extern ingehuurd)</div>`; return; }
   const truckId=document.getElementById('r-truck').value;
   const start=document.getElementById('r-start').value;
   const end=document.getElementById('r-end').value;
   const excludeId=document.getElementById('r-id').value;
-  const el=document.getElementById('r-avail');
   if (!truckId||!start||!end){el.innerHTML='';return;}
   const c=getConflicts(truckId,start,end,excludeId);
   const m=maintenanceConflicts(truckId,start,end);
@@ -2026,33 +2202,54 @@ function recalcPrice(){
     if(r.tariff==='week')document.getElementById('r-rent').placeholder=`Suggestie: €${(t.rateWeek*Math.ceil(daysBetween(r.start,r.end)/7)).toFixed(0)}`;
   }
   const p = calcPrice(r);
+  // Compute price (include subrental flag for margin calc in calcPrice)
+  r.subrental = document.getElementById('r-source').value==='sub';
+  r.subCost   = +document.getElementById('r-sub-cost').value||0;
+  const p2 = calcPrice(r);
   document.getElementById('r-price-box').innerHTML = `
-    <div class="price-row"><span class="desc">${p.days} dag(en) huur</span><span>${fmtEur(p.baseRent)}</span></div>
-    ${p.km?`<div class="price-row"><span class="desc">${p.km} km × €${(r.rateKm).toFixed(2)}</span><span>${fmtEur(p.kmCost)}</span></div>`:''}
-    ${p.discountAmt?`<div class="price-row" style="color:var(--red)"><span class="desc">Korting ${p.discountPct}%</span><span>−${fmtEur(p.discountAmt)}</span></div>`:''}
-    <div class="price-row"><span class="desc">Subtotaal excl. BTW</span><span>${fmtEur(p.subtotal)}</span></div>
-    <div class="price-row"><span class="desc">BTW ${(CFG.vatRate*100)}%</span><span>${fmtEur(p.vat)}</span></div>
-    <div class="price-row total"><span>Totaal incl. BTW</span><span>${fmtEur(p.total)}</span></div>
-    ${p.deposit?`<div class="price-row" style="margin-top:6px;color:var(--sub)"><span class="desc">+ Waarborg (terug bij retour)</span><span>${fmtEur(p.deposit)}</span></div>`:''}
+    <div class="price-row"><span class="desc">${p2.days} dag(en) huur</span><span>${fmtEur(p2.baseRent)}</span></div>
+    ${p2.km?`<div class="price-row"><span class="desc">${p2.km} km × €${(r.rateKm).toFixed(2)}</span><span>${fmtEur(p2.kmCost)}</span></div>`:''}
+    ${p2.discountAmt?`<div class="price-row" style="color:var(--red)"><span class="desc">Korting ${p2.discountPct}%</span><span>−${fmtEur(p2.discountAmt)}</span></div>`:''}
+    <div class="price-row"><span class="desc">Subtotaal excl. BTW</span><span>${fmtEur(p2.subtotal)}</span></div>
+    <div class="price-row"><span class="desc">BTW ${(CFG.vatRate*100)}%</span><span>${fmtEur(p2.vat)}</span></div>
+    <div class="price-row total"><span>Totaal incl. BTW</span><span>${fmtEur(p2.total)}</span></div>
+    ${p2.deposit?`<div class="price-row" style="margin-top:6px;color:var(--sub)"><span class="desc">+ Waarborg (terug bij retour)</span><span>${fmtEur(p2.deposit)}</span></div>`:''}
+    ${r.subrental && p2.subCost?`<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)">
+      <div class="price-row" style="color:var(--sub)"><span class="desc">Inkoop bij ${esc(document.getElementById('r-sub-supplier').value||'extern')}</span><span>−${fmtEur(p2.subCost)}</span></div>
+      <div class="price-row" style="font-weight:700;color:${p2.margin>=0?'var(--green)':'var(--red)'}"><span>Marge</span><span>${fmtEur(p2.margin)} (${p2.marginPct}%)</span></div>
+    </div>`:''}
   `;
 }
 function saveRes(forceStatus){
   const customerId = document.getElementById('r-customer').value;
-  const truckId    = document.getElementById('r-truck').value;
+  const isSub = document.getElementById('r-source').value === 'sub';
+  const truckId    = isSub ? '' : document.getElementById('r-truck').value;
+  const subSupplier= document.getElementById('r-sub-supplier').value.trim();
+  const subPlate   = document.getElementById('r-sub-plate').value.trim();
+  const subCost    = +document.getElementById('r-sub-cost').value||0;
   const start      = document.getElementById('r-start').value;
   const end        = document.getElementById('r-end').value;
-  if (!customerId||!truckId){alert('Klant en wagen zijn verplicht.');return;}
+  if (!customerId){alert('Klant is verplicht.');return;}
+  if (isSub){
+    if (!subSupplier){alert('Leverancier is verplicht voor subrental.');return;}
+    if (!subCost){alert('Inkoopprijs is verplicht voor subrental.');return;}
+  } else {
+    if (!truckId){alert('Wagen is verplicht.');return;}
+  }
   if (!start||!end){alert('Vertrek en terug-datum zijn verplicht.');return;}
   if (new Date(end) <= new Date(start)){alert('Terug-datum moet na vertrek liggen.');return;}
   const id = document.getElementById('r-id').value;
   const status = forceStatus || document.getElementById('r-status').value;
-  // Conflict warning (niet hard blokkeren bij offerte)
-  const conflicts = getConflicts(truckId, start, end, id);
-  if (conflicts.length && status!=='quote') {
-    if (!confirm(`⚠ Conflict met ${conflicts.length} reservatie(s):\n${conflicts.map(x=>'• '+(x.name||'?')).join('\n')}\n\nToch opslaan?`)) return;
+  // Conflict warning (niet hard blokkeren bij offerte, en niet bij subrental)
+  if (!isSub){
+    const conflicts = getConflicts(truckId, start, end, id);
+    if (conflicts.length && status!=='quote') {
+      if (!confirm(`⚠ Conflict met ${conflicts.length} reservatie(s):\n${conflicts.map(x=>'• '+(x.name||'?')).join('\n')}\n\nToch opslaan?`)) return;
+    }
   }
   const data = {
     customerId, truckId, status,
+    subrental: isSub, subSupplier, subPlate, subCost,
     name:    document.getElementById('r-name').value,
     location:document.getElementById('r-location').value,
     start, end,
@@ -2065,12 +2262,17 @@ function saveRes(forceStatus){
     kmRet:   +document.getElementById('r-km-ret').value||null,
     notes:   document.getElementById('r-notes').value,
   };
+  let savedId = id;
   if (id){
     reservations = reservations.map(r => r.id===id ? {...r,...data} : r);
   } else {
-    reservations.push({id:'r'+uid(),...data,photos:[],createdAt:new Date().toISOString()});
+    savedId = 'r'+uid();
+    reservations.push({id:savedId,...data,photos:[],createdAt:new Date().toISOString()});
   }
-  persist(); closeModal('modal-res');
+  persist();
+  // Sync to planning (only if reserved/active/returned)
+  pushReservationToPlanning(res(savedId));
+  closeModal('modal-res');
   refreshUI();
 }
 
@@ -2218,6 +2420,7 @@ function renderResDetail(){
   if (r.status==='reserved') actions += `<button class="btn btn-green" onclick="advanceStatus('${r.id}','active')">🚛 Markeer als opgehaald</button>`;
   if (r.status==='active')   actions += `<button class="btn btn-blue" onclick="openReturnModal('${r.id}')">📥 Terugname</button>`;
   if (r.status==='returned') actions += `<button class="btn btn-gold" onclick="createInvoice('${r.id}')">💶 Factuur maken</button>`;
+  if (['reserved','active'].includes(r.status)) actions += `<button class="btn ${r.signature?'btn-green-s':'btn-purple btn-blue-s'} btn-sm" onclick="openSignModal('${r.id}')">${r.signature?'✓ Getekend':'✍ Tekenen'}</button>`;
   actions += `<button class="btn btn-ghost btn-sm" onclick="openResModal('${r.id}')">✏ Bewerken</button>`;
   if (c.email) actions += `<button class="btn btn-ghost btn-sm" onclick="emailRes('${r.id}')">✉ Email</button>`;
   actions += `<button class="btn btn-ghost btn-sm" onclick="printRes('${r.id}')">🖨 Print</button>`;
@@ -2233,9 +2436,9 @@ function renderResDetail(){
 
     <div class="fiche-hero">
       <div>
-        <div class="fiche-title"><span style="color:${t.color||'var(--gold)'}">●</span> ${esc(c.name||'—')}</div>
+        <div class="fiche-title"><span style="color:${t.color||'var(--gold)'}">●</span> ${esc(c.name||'—')}${r.subrental?' <span class="badge b-purple" style="vertical-align:middle;font-size:10px">SUBRENTAL</span>':''}</div>
         <div class="fiche-meta">
-          <span>🚛 ${esc(t.name||'?')}</span>
+          <span>🚛 ${r.subrental?`<strong>${esc(r.subSupplier||'extern')}</strong> ${r.subPlate?'· '+esc(r.subPlate):''}`:esc(t.name||'?')}</span>
           <span>📅 ${fmtDF(r.start)} → ${fmtDF(r.end)} (${p.days} dag${p.days>1?'en':''})</span>
           <span>📍 ${esc(r.location||'—')}</span>
         </div>
@@ -2271,6 +2474,12 @@ function renderResDetail(){
           <div class="price-row"><span class="desc">BTW ${CFG.vatRate*100}%</span><span>${fmtEur(p.vat)}</span></div>
           <div class="price-row total"><span>Totaal incl. BTW</span><span>${fmtEur(p.total)}</span></div>
           ${p.deposit?`<div class="price-row" style="color:var(--sub);margin-top:6px"><span class="desc">+ Waarborg (refundable)</span><span>${fmtEur(p.deposit)}</span></div>`:''}
+          ${r.subrental?`
+            <div style="margin-top:8px;padding-top:8px;border-top:2px solid var(--border3)">
+              <div class="price-row" style="color:var(--sub)"><span class="desc">Inkoop bij ${esc(r.subSupplier||'extern')}</span><span>−${fmtEur(p.subCost)}</span></div>
+              <div class="price-row" style="font-weight:800;color:${p.margin>=0?'var(--green)':'var(--red)'}"><span>Marge</span><span>${fmtEur(p.margin)} (${p.marginPct}%)</span></div>
+            </div>
+          `:''}
         </div>
       </div>
     </div>
@@ -2287,6 +2496,15 @@ function renderResDetail(){
     </div>
     ${resDam.length ? resDam.map(d=>renderDamageRow(d,false)).join('') : '<div class="empty">Geen schade gemeld</div>'}
 
+    ${r.signature?`<div class="sec">✍ Handtekening huurder</div>
+      <div class="info-box" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <img src="${r.signature.dataURL}" alt="handtekening" style="max-height:90px;background:#fff;border-radius:5px;border:1px solid var(--border)">
+        <div>
+          <div style="font-weight:700">${esc(r.signature.name)}</div>
+          ${r.signature.role?`<div style="font-size:11.5px;color:var(--sub)">${esc(r.signature.role)}</div>`:''}
+          <div style="font-size:11px;color:var(--sub);margin-top:3px">Getekend op ${fmtDT(r.signature.signedAt)}</div>
+        </div>
+      </div>`:''}
     ${r.notes?`<div class="sec">📝 Interne notities</div><div class="info-box" style="font-size:12.5px;color:var(--sub);line-height:1.5">${esc(r.notes).replace(/\n/g,'<br>')}</div>`:''}
     ${r.returnNotes?`<div class="sec">📥 Terugname-notities</div><div class="info-box" style="font-size:12.5px;color:var(--sub);line-height:1.5">${esc(r.returnNotes).replace(/\n/g,'<br>')}</div>`:''}
   `;
@@ -2309,7 +2527,10 @@ function advanceStatus(rid, newStatus){
   if (newStatus==='active') updates.pickedUpAt = new Date().toISOString();
   if (newStatus==='returned') updates.returnedAt = new Date().toISOString();
   reservations = reservations.map(x => x.id===rid ? {...x,...updates} : x);
-  persist(); refreshUI();
+  persist();
+  if (newStatus==='cancelled') removeReservationFromPlanning(rid);
+  else pushReservationToPlanning(res(rid));
+  refreshUI();
 }
 
 function emailRes(rid){
@@ -2395,7 +2616,14 @@ th{background:#f0f0f0;font-size:10px;text-transform:uppercase}
   ${p.deposit?`<tr><td colspan="3" class="right">+ Waarborg (terug bij retour)</td><td class="right">${fmtEur(p.deposit)}</td></tr>`:''}
 </table>
 ${r.notes?`<h2>Bijzondere bepalingen</h2><p style="font-size:11px;line-height:1.6">${esc(r.notes).replace(/\n/g,'<br>')}</p>`:''}
-${!isQuote?`<div class="sign"><div>Datum + handtekening huurder</div><div>Datum + handtekening verhuurder</div></div>`:''}
+${!isQuote?(r.signature?`
+<div class="sign">
+  <div style="border-top:none">
+    <img src="${r.signature.dataURL}" style="max-height:60px;display:block;margin-bottom:5px">
+    <div style="border-top:1px solid #444;padding-top:4px"><strong>${esc(r.signature.name)}</strong>${r.signature.role?' · '+esc(r.signature.role):''}<br><small>Getekend ${fmtDT(r.signature.signedAt)}</small></div>
+  </div>
+  <div>Datum + handtekening verhuurder</div>
+</div>`:`<div class="sign"><div>Datum + handtekening huurder</div><div>Datum + handtekening verhuurder</div></div>`):''}
 <div class="foot">Señor Snacks BV · Verhuur Operations · ${docType} ${docNr} · gegenereerd ${fmtDT(new Date())}</div>
 </body></html>`);
   w.document.close();
@@ -2654,7 +2882,9 @@ function confirmReturn(){
   if (km && r.truckId){
     trucks = trucks.map(t => t.id===r.truckId && km > (t.km||0) ? {...t, km} : t);
   }
-  persist(); closeModal('modal-return'); refreshUI();
+  persist();
+  pushReservationToPlanning(res(rid));
+  closeModal('modal-return'); refreshUI();
   if (cond==='damage'){
     openDamageModal(null, rid, r.truckId);
     document.getElementById('d-phase').value='return';
@@ -2766,9 +2996,161 @@ function parseICS(ev){
 function importICS(p){openResModal();document.getElementById('r-name').value=p.name||'';document.getElementById('r-location').value=p.location||'';document.getElementById('r-start').value=p.start?p.start+'T09:00':'';document.getElementById('r-end').value=p.end?p.end+'T18:00':'';document.getElementById('r-notes').value=p.notes||'';}
 
 /* =====================================================
+   DIGITAL SIGNATURE (canvas pad)
+   Opslag: r.signature = {dataURL, name, role, signedAt, ip?}
+===================================================== */
+let sigCtx = null, sigDrawing = false, sigLastPt = null, sigEmpty = true;
+function openSignModal(rid){
+  const r = res(rid); if(!r.id) return;
+  const c = customer(r.customerId);
+  document.getElementById('sign-res-id').value = rid;
+  document.getElementById('sign-sub').textContent = `${r.name||'Verhuur'} — ${c.name||'?'}`;
+  document.getElementById('sign-name').value = r.signature?.name || c.contact || c.name || '';
+  document.getElementById('sign-role').value = r.signature?.role || '';
+  document.getElementById('sign-terms').checked = false;
+  openModal('modal-sign');
+  setTimeout(initSigPad, 50);
+}
+function initSigPad(){
+  const cv = document.getElementById('sign-pad');
+  if (!cv) return;
+  // Scale for crisp lines on hi-dpi
+  const ratio = window.devicePixelRatio || 1;
+  const w = cv.offsetWidth, h = cv.offsetHeight;
+  cv.width = w*ratio; cv.height = h*ratio;
+  sigCtx = cv.getContext('2d');
+  sigCtx.scale(ratio, ratio);
+  sigCtx.lineWidth = 2; sigCtx.lineCap='round'; sigCtx.lineJoin='round'; sigCtx.strokeStyle='#1a1a1a';
+  sigEmpty = true;
+  // Restore existing signature (preview)
+  const rid = document.getElementById('sign-res-id').value;
+  const r = res(rid);
+  if (r.signature?.dataURL){
+    const img = new Image();
+    img.onload = () => { sigCtx.drawImage(img,0,0,w,h); sigEmpty=false; };
+    img.src = r.signature.dataURL;
+  }
+  // Wire events (mouse + touch)
+  const getPt = e => {
+    const t = e.touches ? e.touches[0] : e;
+    const rect = cv.getBoundingClientRect();
+    return {x: t.clientX-rect.left, y: t.clientY-rect.top};
+  };
+  const startDraw = e => {
+    e.preventDefault();
+    sigDrawing = true; sigLastPt = getPt(e); sigEmpty = false;
+  };
+  const moveDraw = e => {
+    if (!sigDrawing) return; e.preventDefault();
+    const p = getPt(e);
+    sigCtx.beginPath(); sigCtx.moveTo(sigLastPt.x,sigLastPt.y); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
+    sigLastPt = p;
+  };
+  const endDraw = () => { sigDrawing = false; sigLastPt = null; };
+  cv.onmousedown = startDraw; cv.onmousemove = moveDraw;
+  cv.onmouseup = endDraw; cv.onmouseleave = endDraw;
+  cv.ontouchstart = startDraw; cv.ontouchmove = moveDraw; cv.ontouchend = endDraw;
+}
+function clearSig(){
+  const cv = document.getElementById('sign-pad');
+  if (sigCtx) sigCtx.clearRect(0,0,cv.width,cv.height);
+  sigEmpty = true;
+}
+function saveSignature(){
+  if (sigEmpty){alert('Plaats een handtekening.');return;}
+  if (!document.getElementById('sign-terms').checked){alert('Bevestig akkoord met de huurvoorwaarden.');return;}
+  const name = document.getElementById('sign-name').value.trim();
+  if (!name){alert('Vul de naam van de ondertekenaar in.');return;}
+  const rid = document.getElementById('sign-res-id').value;
+  const cv  = document.getElementById('sign-pad');
+  const dataURL = cv.toDataURL('image/png');
+  reservations = reservations.map(r => r.id===rid ? {...r, signature:{
+    dataURL, name,
+    role: document.getElementById('sign-role').value,
+    signedAt: new Date().toISOString(),
+  }} : r);
+  persist(); closeModal('modal-sign'); refreshUI();
+}
+
+/* =====================================================
+   PUSH VH RESERVATIONS → ft_planning_v1
+   Zo verschijnen bevestigde reservaties automatisch in de hoofdagenda.
+   ID-conventie: "vh_<reservationId>" zodat planning-sync ze niet als
+   nieuwe import oppikt.
+===================================================== */
+function pushReservationToPlanning(r){
+  if (!fbdb || !r || !r.id) return;
+  if (r.planningId) return; // came FROM planning — already there
+  if (r.subrental)  return; // subrental = wagen niet in eigen vloot
+  if (!['reserved','active','returned'].includes(r.status)) return;
+  if (!r.start || !r.end) return;
+  const t = truck(r.truckId);
+  const c = customer(r.customerId);
+  const planningId = 'vh_'+r.id;
+  const evt = {
+    id: planningId,
+    name: 'VH ' + (c.name||r.name||'Verhuur'),
+    location: r.location || '',
+    startDate: r.start.slice(0,10),
+    endDate:   r.end.slice(0,10),
+    trucks: t.name ? [t.name] : [],
+    color: t.color || '#9d74f7',
+    notes: `Verhuur · ${STATUS_LABEL[r.status]||r.status}` + (r.notes?'\n'+r.notes:''),
+    _verhuurRef: r.id,
+  };
+  // Read current planning, upsert this event
+  fbdb.ref('ft_planning_v1').once('value').then(snap => {
+    let live = snap.val();
+    let arr = Array.isArray(live) ? live : (live ? Object.values(live) : []);
+    arr = arr.filter(e => e && e.id && e.id !== planningId);
+    arr.push(evt);
+    fbdb.ref('ft_planning_v1').set(arr).catch(e=>console.warn('Push naar planning mislukt:',e));
+  }).catch(()=>{});
+}
+function removeReservationFromPlanning(rid){
+  if (!fbdb) return;
+  const planningId = 'vh_'+rid;
+  fbdb.ref('ft_planning_v1').once('value').then(snap => {
+    let arr = snap.val();
+    arr = Array.isArray(arr) ? arr : (arr ? Object.values(arr) : []);
+    const before = arr.length;
+    arr = arr.filter(e => e && e.id !== planningId);
+    if (arr.length !== before) fbdb.ref('ft_planning_v1').set(arr).catch(()=>{});
+  }).catch(()=>{});
+}
+
+/* =====================================================
+   READ CTC/keuringen UIT ocb_keuringen (Firebase)
+   Mapt op wagennaam → toont laatste keuring + vervaldatum in onderhoud
+===================================================== */
+let ocbKeuringen = {};   // truck-name (lc) → {lastDate, nextDate, status}
+function loadOcbKeuringen(){
+  if (!fbdb) return;
+  fbdb.ref('ocb_keuringen').on('value', snap => {
+    const data = snap.val() || {};
+    const map = {};
+    // OCB stores per truckId. Verhuur trucks use different ids → match on plate/name.
+    Object.values(data).forEach(rec => {
+      if (!rec) return;
+      // Best-effort: rec might have truck name in description
+      const key = (rec.truckName||rec.name||'').toLowerCase().trim();
+      if (key) map[key] = {
+        lastDate: rec.date || rec.lastDate || null,
+        nextDate: rec.nextDate || rec.validUntil || null,
+        status: rec.status || 'unknown',
+      };
+    });
+    ocbKeuringen = map;
+    if (document.querySelector('#page-maintenance.active')) renderMaintenance();
+  }, err => console.warn('OCB-keuringen sync mislukt:', err));
+}
+
+/* =====================================================
    INIT
 ===================================================== */
 migrateFromV3();
+attachFirebaseListener();
+loadOcbKeuringen();
 renderDashboard();
 refreshBadges();
 console.log('✓ Verhuur-module v4 geladen',{trucks:trucks.length,customers:customers.length,reservations:reservations.length});
