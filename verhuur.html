@@ -833,10 +833,60 @@ tbody td{padding:11px 14px;font-size:12.5px;vertical-align:middle}
       <label>Conditie OK?</label>
       <select id="ret-condition"><option value="ok">✓ Zonder problemen</option><option value="damage">⚠ Met schade → schadefiche aanmaken</option><option value="late">⏱ Te laat teruggebracht</option></select>
     </div>
-    <div class="field"><label>Notities terugname</label><textarea id="ret-notes" placeholder="Opmerkingen, brandstof, accessoires..."></textarea></div>
+    <div class="field"><label>Brandstof bij terugkomst</label><select id="ret-fuel">
+      <option value="">—</option><option value="vol">Vol</option><option value="3/4">¾</option><option value="1/2">½</option><option value="1/4">¼</option><option value="leeg">Leeg / reserve</option>
+    </select></div>
+    <div class="field"><label>Notities terugname</label><textarea id="ret-notes" placeholder="Opmerkingen, accessoires, brandstof..."></textarea></div>
+    <div class="field"><label>Conditiefoto's bij terugkomst</label>
+      <div class="photo-grid" id="ret-preview"></div>
+      <input type="file" id="ret-input" accept="image/*" multiple hidden onchange="handleReturnPhotos(event)">
+      <button class="btn btn-ghost btn-sm" type="button" style="margin-top:6px" onclick="document.getElementById('ret-input').click()">📷 Foto's maken/selecteren</button>
+    </div>
+    <div class="field"><label>Handtekening terugname (optioneel)</label>
+      <div style="border:2px dashed var(--border2);border-radius:9px;background:var(--s1);position:relative">
+        <canvas id="ret-pad" style="display:block;width:100%;height:150px;cursor:crosshair;touch-action:none;border-radius:7px"></canvas>
+        <button type="button" onclick="if(retPad)retPad.clear()" style="position:absolute;top:6px;right:6px;background:var(--s2);color:var(--sub);font-size:11px;padding:4px 10px;border-radius:5px">✕ Wissen</button>
+      </div>
+      <input id="ret-sign-name" placeholder="Naam ondertekenaar" style="margin-top:8px">
+    </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-return')">Annuleren</button>
       <button class="btn btn-gold" onclick="confirmReturn()">✓ Terugname bevestigen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Aflevering / handover (km + brandstof + conditiefoto's + handtekening) -->
+<div class="overlay" id="modal-handover">
+  <div class="modal modal-md">
+    <div class="modal-h"><div><h2>🚛 Aflevering</h2><div class="sub" id="ho-sub"></div></div><button class="modal-close" onclick="closeModal('modal-handover')">✕</button></div>
+    <input type="hidden" id="ho-res-id">
+    <div id="ho-info" class="alert al-ok"></div>
+    <div class="fg2">
+      <div class="field"><label>KM bij vertrek</label><input type="number" id="ho-km" placeholder="Huidige km-stand"></div>
+      <div class="field"><label>Brandstof bij vertrek</label><select id="ho-fuel">
+        <option value="">—</option><option value="vol">Vol</option><option value="3/4">¾</option><option value="1/2">½</option><option value="1/4">¼</option><option value="leeg">Leeg / reserve</option>
+      </select></div>
+    </div>
+    <div class="field"><label>Conditiefoto's bij vertrek</label>
+      <div class="photo-grid" id="ho-preview"></div>
+      <input type="file" id="ho-input" accept="image/*" multiple hidden onchange="handleHandoverPhotos(event)">
+      <button class="btn btn-ghost btn-sm" type="button" style="margin-top:6px" onclick="document.getElementById('ho-input').click()">📷 Foto's maken/selecteren</button>
+    </div>
+    <div class="field"><label>Notities (accessoires, bestaande krassen, ...)</label><textarea id="ho-notes" placeholder="Wat gaat mee, bestaande schade vooraf, ..."></textarea></div>
+    <div class="field"><label>Naam ondertekenaar (huurder) *</label><input id="ho-name" placeholder="Volledige naam"></div>
+    <div class="field"><label>Handtekening — ontvangen in goede staat *</label>
+      <div style="border:2px dashed var(--border2);border-radius:9px;background:var(--s1);position:relative">
+        <canvas id="ho-pad" style="display:block;width:100%;height:160px;cursor:crosshair;touch-action:none;border-radius:7px"></canvas>
+        <button type="button" onclick="if(hoPad)hoPad.clear()" style="position:absolute;top:6px;right:6px;background:var(--s2);color:var(--sub);font-size:11px;padding:4px 10px;border-radius:5px">✕ Wissen</button>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text);margin-top:8px">
+        <input type="checkbox" id="ho-terms" style="width:auto;margin-top:2px"> Huurder bevestigt ontvangst in goede staat en akkoord met de huurvoorwaarden.
+      </label>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-handover')">Annuleren</button>
+      <button class="btn btn-green" onclick="confirmHandover()">✓ Afleveren &amp; activeren</button>
     </div>
   </div>
 </div>
@@ -1053,14 +1103,17 @@ function persist(opts){
   publishSummary();
 }
 
-function pushToFirebase(){
+function pushToFirebase(retries=2){
   if (!fbdb) return;
   const payload = {
     trucks, customers, reservations, damages, maintenance, invoices, counters,
     _updatedAt: new Date().toISOString(),
     _updatedBy: (window.__authUser?.email) || 'unknown',
   };
-  fbdb.ref(FB_VH).set(payload).catch(e => console.warn('Firebase sync mislukt:', e));
+  fbdb.ref(FB_VH).set(payload).catch(e => {
+    console.warn('Firebase sync mislukt:', e, retries>0?'— opnieuw proberen…':'— opgegeven, data staat lokaal opgeslagen');
+    if (retries>0) setTimeout(()=>pushToFirebase(retries-1), 2000);
+  });
 }
 
 function publishSummary(){
@@ -1446,7 +1499,7 @@ function renderDashboard(){
             <div class="row-desc">${esc(t.name||'?')} · ${esc(r.location||'—')}</div>
             <div class="row-info">⏰ ${fmtDT(r.start)} → ${fmtDT(r.end)}</div>
           </div>
-          <button class="btn btn-green-s btn-xs" onclick="event.stopPropagation();markActive('${r.id}')">✓ Opgehaald</button>
+          <button class="btn btn-green-s btn-xs" onclick="event.stopPropagation();markActive('${r.id}')">🚛 Afleveren</button>
         </div>`;
       }).join('')
     : '<div class="empty">Geen ophalingen vandaag</div>';
@@ -1520,10 +1573,8 @@ function renderDashboard(){
 }
 
 function markActive(rid){
-  const r=res(rid);if(!r.id)return;
-  if(!confirm(`Wagen "${truck(r.truckId).name}" opgehaald door ${customer(r.customerId).name}?\n\nVul eventueel km-stand en foto's in via de fiche.`))return;
-  reservations=reservations.map(x=>x.id===rid?{...x,status:'active',pickedUpAt:new Date().toISOString()}:x);
-  persist();refreshUI();
+  // Ophalen vanaf dashboard → volledige aflevering-flow (km + foto's + handtekening)
+  openHandover(rid);
 }
 
 /* =====================================================
@@ -2229,6 +2280,10 @@ function saveRes(forceStatus){
   const subCost    = +document.getElementById('r-sub-cost').value||0;
   const start      = document.getElementById('r-start').value;
   const end        = document.getElementById('r-end').value;
+  const kmDepRaw   = document.getElementById('r-km-dep').value.trim();
+  const kmRetRaw   = document.getElementById('r-km-ret').value.trim();
+  const kmDep      = kmDepRaw==='' ? null : +kmDepRaw;
+  const kmRet      = kmRetRaw==='' ? null : +kmRetRaw;
   if (!customerId){alert('Klant is verplicht.');return;}
   if (isSub){
     if (!subSupplier){alert('Leverancier is verplicht voor subrental.');return;}
@@ -2238,6 +2293,9 @@ function saveRes(forceStatus){
   }
   if (!start||!end){alert('Vertrek en terug-datum zijn verplicht.');return;}
   if (new Date(end) <= new Date(start)){alert('Terug-datum moet na vertrek liggen.');return;}
+  if (kmDep!=null && kmRet!=null && kmRet<kmDep){
+    if(!confirm('⚠ Km terug ('+kmRet+') ligt lager dan km vertrek ('+kmDep+'). Geen km-kost berekend. Toch opslaan?')) return;
+  }
   const id = document.getElementById('r-id').value;
   const status = forceStatus || document.getElementById('r-status').value;
   // Conflict warning (niet hard blokkeren bij offerte, en niet bij subrental)
@@ -2258,8 +2316,7 @@ function saveRes(forceStatus){
     rateKm:  +document.getElementById('r-kmrate').value||0.40,
     deposit: +document.getElementById('r-deposit').value||0,
     discount:+document.getElementById('r-discount').value||0,
-    kmDep:   +document.getElementById('r-km-dep').value||null,
-    kmRet:   +document.getElementById('r-km-ret').value||null,
+    kmDep, kmRet,
     notes:   document.getElementById('r-notes').value,
   };
   let savedId = id;
@@ -2417,7 +2474,7 @@ function renderResDetail(){
   // Action buttons depending on status
   let actions = '';
   if (r.status==='quote')    actions += `<button class="btn btn-blue" onclick="advanceStatus('${r.id}','reserved')">✓ Bevestigen</button>`;
-  if (r.status==='reserved') actions += `<button class="btn btn-green" onclick="advanceStatus('${r.id}','active')">🚛 Markeer als opgehaald</button>`;
+  if (r.status==='reserved') actions += `<button class="btn btn-green" onclick="openHandover('${r.id}')">🚛 Aflevering</button>`;
   if (r.status==='active')   actions += `<button class="btn btn-blue" onclick="openReturnModal('${r.id}')">📥 Terugname</button>`;
   if (r.status==='returned') actions += `<button class="btn btn-gold" onclick="createInvoice('${r.id}')">💶 Factuur maken</button>`;
   if (['reserved','active'].includes(r.status)) actions += `<button class="btn ${r.signature?'btn-green-s':'btn-purple btn-blue-s'} btn-sm" onclick="openSignModal('${r.id}')">${r.signature?'✓ Getekend':'✍ Tekenen'}</button>`;
@@ -2460,8 +2517,8 @@ function renderResDetail(){
           <div class="info-box"><div class="info-l">Wagen</div><div class="info-v">${esc(t.name||'—')}</div><div class="info-v2">${esc(t.plate||'')}${t.year?' · '+t.year:''}</div></div>
           <div class="info-box"><div class="info-l">Vertrek</div><div class="info-v">${fmtDT(r.start)}</div>${r.pickedUpAt?`<div class="info-v2">Werkelijk: ${fmtDT(r.pickedUpAt)}</div>`:''}</div>
           <div class="info-box"><div class="info-l">Terug verwacht</div><div class="info-v">${fmtDT(r.end)}</div>${r.returnedAt?`<div class="info-v2">Werkelijk: ${fmtDT(r.returnedAt)}</div>`:''}</div>
-          <div class="info-box"><div class="info-l">KM bij vertrek</div><div class="info-v">${r.kmDep?r.kmDep.toLocaleString('nl'):'—'}</div></div>
-          <div class="info-box"><div class="info-l">KM bij terug</div><div class="info-v">${r.kmRet?r.kmRet.toLocaleString('nl'):'—'}</div>${p.km?`<div class="info-v2">${p.km} km gereden</div>`:''}</div>
+          <div class="info-box"><div class="info-l">KM bij vertrek</div><div class="info-v">${r.kmDep?r.kmDep.toLocaleString('nl'):'—'}</div>${r.fuelDep?`<div class="info-v2">⛽ ${esc(r.fuelDep)}</div>`:''}</div>
+          <div class="info-box"><div class="info-l">KM bij terug</div><div class="info-v">${r.kmRet?r.kmRet.toLocaleString('nl'):'—'}</div>${p.km?`<div class="info-v2">${p.km} km gereden</div>`:''}${r.fuelRet?`<div class="info-v2">⛽ ${esc(r.fuelRet)}</div>`:''}</div>
         </div>
       </div>
       <div>
@@ -2496,14 +2553,25 @@ function renderResDetail(){
     </div>
     ${resDam.length ? resDam.map(d=>renderDamageRow(d,false)).join('') : '<div class="empty">Geen schade gemeld</div>'}
 
-    ${r.signature?`<div class="sec">✍ Handtekening huurder</div>
-      <div class="info-box" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-        <img src="${r.signature.dataURL}" alt="handtekening" style="max-height:90px;background:#fff;border-radius:5px;border:1px solid var(--border)">
+    ${(r.signature||r.returnSignature)?`<div class="sec">✍ Handtekeningen</div>
+      <div class="info-grid">
+      ${r.signature?`<div class="info-box" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <img src="${r.signature.dataURL}" alt="handtekening aflevering" style="max-height:80px;background:#fff;border-radius:5px;border:1px solid var(--border)">
         <div>
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--green);font-weight:700">🚛 Aflevering</div>
           <div style="font-weight:700">${esc(r.signature.name)}</div>
           ${r.signature.role?`<div style="font-size:11.5px;color:var(--sub)">${esc(r.signature.role)}</div>`:''}
-          <div style="font-size:11px;color:var(--sub);margin-top:3px">Getekend op ${fmtDT(r.signature.signedAt)}</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:3px">${fmtDT(r.signature.signedAt)}</div>
         </div>
+      </div>`:''}
+      ${r.returnSignature?`<div class="info-box" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <img src="${r.returnSignature.dataURL}" alt="handtekening terugname" style="max-height:80px;background:#fff;border-radius:5px;border:1px solid var(--border)">
+        <div>
+          <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--teal);font-weight:700">📥 Terugname</div>
+          <div style="font-weight:700">${esc(r.returnSignature.name)}</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:3px">${fmtDT(r.returnSignature.signedAt)}</div>
+        </div>
+      </div>`:''}
       </div>`:''}
     ${r.notes?`<div class="sec">📝 Interne notities</div><div class="info-box" style="font-size:12.5px;color:var(--sub);line-height:1.5">${esc(r.notes).replace(/\n/g,'<br>')}</div>`:''}
     ${r.returnNotes?`<div class="sec">📥 Terugname-notities</div><div class="info-box" style="font-size:12.5px;color:var(--sub);line-height:1.5">${esc(r.returnNotes).replace(/\n/g,'<br>')}</div>`:''}
@@ -2855,7 +2923,74 @@ function markDamageFixed(id){
 function openAddPhotos(rid){document.getElementById('ph-res-id').value=rid;pendingPhotos=[];document.getElementById('ph-preview').innerHTML='';openModal('modal-photos');}
 async function handlePhotos(ev){const files=[...ev.target.files];for(const f of files){pendingPhotos.push(await readPhotoWithMeta(f));}document.getElementById('ph-preview').innerHTML=pendingPhotos.map(p=>`<div class="photo-cell"><img src="${p.src}"><div class="photo-ts">${fmtPhotoTs(p)}</div></div>`).join('');ev.target.value='';}
 function savePhotos(){const rid=document.getElementById('ph-res-id').value;const cat=document.getElementById('ph-cat').value;const ph=pendingPhotos.map(p=>({...p,category:cat}));reservations=reservations.map(r=>r.id===rid?{...r,photos:[...(r.photos||[]),...ph]}:r);persist();closeModal('modal-photos');refreshUI();}
-function openReturnModal(rid){const r=res(rid);if(!r.id)return;document.getElementById('ret-res-id').value=rid;const t=truck(r.truckId);const c=customer(r.customerId);document.getElementById('ret-info').innerHTML=`<strong>${esc(c.name)}</strong> · ${esc(t.name)}<br><small>${esc(r.location||'')} · Start KM: ${r.kmDep||'—'}</small>`;document.getElementById('ret-km').value='';document.getElementById('ret-when').value=new Date().toISOString().slice(0,16);document.getElementById('ret-notes').value='';openModal('modal-return');}
+
+/* =====================================================
+   AFLEVERING (handover) — km + brandstof + conditiefoto's + handtekening
+===================================================== */
+let hoPad=null, hoPhotos=[], retPad=null, retPhotos=[];
+function openHandover(rid){
+  const r=res(rid); if(!r.id) return;
+  if (r.subrental){ // subrental = geen eigen wagen om af te leveren → enkel activeren
+    if (confirm('Subrental activeren? (geen eigen wagen om af te leveren)')) advanceStatus(rid,'active');
+    return;
+  }
+  const t=truck(r.truckId), c=customer(r.customerId);
+  document.getElementById('ho-res-id').value=rid;
+  document.getElementById('ho-sub').textContent=`${r.name||'Verhuur'} — ${c.name||'?'}`;
+  document.getElementById('ho-info').innerHTML=`<strong>${esc(c.name||'?')}</strong> · ${esc(t.name||'?')}${t.plate?' · '+esc(t.plate):''}<br><small>📍 ${esc(r.location||'—')} · 📅 ${fmtDF(r.start)} → ${fmtDF(r.end)}</small>`;
+  document.getElementById('ho-km').value   = r.kmDep || t.km || '';
+  document.getElementById('ho-fuel').value = r.fuelDep || '';
+  document.getElementById('ho-notes').value= '';
+  document.getElementById('ho-name').value = r.signature?.name || c.contact || c.name || '';
+  document.getElementById('ho-terms').checked=false;
+  hoPhotos=[]; document.getElementById('ho-preview').innerHTML='';
+  openModal('modal-handover');
+  setTimeout(()=>{
+    hoPad = makeSigPad(document.getElementById('ho-pad'));
+    if (r.signature?.dataURL && hoPad) hoPad.drawImage(r.signature.dataURL);
+  }, 50);
+}
+async function handleHandoverPhotos(ev){
+  const files=[...ev.target.files];
+  for (const f of files){ hoPhotos.push(await readPhotoWithMeta(f)); }
+  document.getElementById('ho-preview').innerHTML=hoPhotos.map(p=>`<div class="photo-cell"><img src="${p.src}"><div class="photo-ts">${fmtPhotoTs(p)}</div></div>`).join('');
+  ev.target.value='';
+}
+function confirmHandover(){
+  const rid=document.getElementById('ho-res-id').value;
+  const r=res(rid); if(!r.id) return;
+  const name=document.getElementById('ho-name').value.trim();
+  if (!hoPad || hoPad.isEmpty()){alert('Laat de huurder tekenen bij aflevering.');return;}
+  if (!name){alert('Naam ondertekenaar is verplicht.');return;}
+  if (!document.getElementById('ho-terms').checked){alert('Bevestig ontvangst in goede staat + akkoord met de voorwaarden.');return;}
+  const kmRaw=document.getElementById('ho-km').value.trim();
+  const km = kmRaw==='' ? (r.kmDep??null) : +kmRaw;
+  const fuel=document.getElementById('ho-fuel').value;
+  const note=document.getElementById('ho-notes').value.trim();
+  const newPhotos=hoPhotos.map(p=>({...p,category:'pickup'}));
+  const sig={ dataURL:hoPad.toDataURL(), name, role:'huurder', signedAt:new Date().toISOString() };
+  reservations=reservations.map(x=>x.id===rid?{
+    ...x,
+    status:'active',
+    pickedUpAt:new Date().toISOString(),
+    kmDep: km,
+    fuelDep: fuel,
+    signature: sig,
+    photos: [...(x.photos||[]), ...newPhotos],
+    notes: note ? ((x.notes?x.notes+'\n':'')+'[Aflevering] '+note) : x.notes,
+  }:x);
+  if (km && r.truckId){ trucks=trucks.map(t => t.id===r.truckId && km>(t.km||0) ? {...t,km} : t); }
+  persist();
+  pushReservationToPlanning(res(rid));
+  closeModal('modal-handover'); refreshUI();
+}
+async function handleReturnPhotos(ev){
+  const files=[...ev.target.files];
+  for (const f of files){ retPhotos.push(await readPhotoWithMeta(f)); }
+  document.getElementById('ret-preview').innerHTML=retPhotos.map(p=>`<div class="photo-cell"><img src="${p.src}"><div class="photo-ts">${fmtPhotoTs(p)}</div></div>`).join('');
+  ev.target.value='';
+}
+function openReturnModal(rid){const r=res(rid);if(!r.id)return;document.getElementById('ret-res-id').value=rid;const t=truck(r.truckId);const c=customer(r.customerId);document.getElementById('ret-info').innerHTML=`<strong>${esc(c.name||'?')}</strong> · ${esc(t.name||'?')}<br><small>${esc(r.location||'')} · Start KM: ${r.kmDep||'—'}${r.fuelDep?' · Brandstof af: '+esc(r.fuelDep):''}</small>`;document.getElementById('ret-km').value='';document.getElementById('ret-when').value=new Date().toISOString().slice(0,16);document.getElementById('ret-notes').value='';document.getElementById('ret-fuel').value='';document.getElementById('ret-sign-name').value=c.contact||c.name||'';retPhotos=[];document.getElementById('ret-preview').innerHTML='';openModal('modal-return');setTimeout(()=>{retPad=makeSigPad(document.getElementById('ret-pad'));},50);}
 function recalcReturn(){
   const rid = document.getElementById('ret-res-id').value;
   const r = res(rid); if (!r.id) return;
@@ -2873,11 +3008,25 @@ function recalcReturn(){
 }
 function confirmReturn(){
   const rid = document.getElementById('ret-res-id').value;
-  const km = +document.getElementById('ret-km').value||null;
+  const kmRaw = document.getElementById('ret-km').value.trim();
+  const km = kmRaw==='' ? null : +kmRaw;
   const when = document.getElementById('ret-when').value;
   const cond = document.getElementById('ret-condition').value;
+  const fuel = document.getElementById('ret-fuel').value;
   const r = res(rid);
-  reservations = reservations.map(x=>x.id===rid?{...x,kmRet:km,returnedAt:when||new Date().toISOString(),returnNotes:document.getElementById('ret-notes').value,status:'returned'}:x);
+  if (km!=null && r.kmDep!=null && km<r.kmDep){
+    if(!confirm('⚠ Km terug ('+km+') ligt lager dan km vertrek ('+r.kmDep+'). Toch bevestigen?')) return;
+  }
+  const retPhotosOut = retPhotos.map(p=>({...p,category:'return'}));
+  const retSignName = document.getElementById('ret-sign-name').value.trim();
+  const retSig = (retPad && !retPad.isEmpty()) ? {dataURL:retPad.toDataURL(), name:retSignName||'huurder', role:'huurder', signedAt:new Date().toISOString()} : null;
+  reservations = reservations.map(x=>x.id===rid?{...x,
+    kmRet:km, fuelRet:fuel,
+    returnedAt:when||new Date().toISOString(),
+    returnNotes:document.getElementById('ret-notes').value,
+    photos:[...(x.photos||[]), ...retPhotosOut],
+    ...(retSig?{returnSignature:retSig}:{}),
+    status:'returned'}:x);
   // Sync de wagen's km-stand
   if (km && r.truckId){
     trucks = trucks.map(t => t.id===r.truckId && km > (t.km||0) ? {...t, km} : t);
@@ -2999,7 +3148,32 @@ function importICS(p){openResModal();document.getElementById('r-name').value=p.n
    DIGITAL SIGNATURE (canvas pad)
    Opslag: r.signature = {dataURL, name, role, signedAt, ip?}
 ===================================================== */
-let sigCtx = null, sigDrawing = false, sigLastPt = null, sigEmpty = true;
+// Herbruikbaar handtekening-pad: koppelt teken-events aan om het even welk canvas
+// en geeft een controller terug. Gebruikt door aflevering, terugname én los tekenen.
+function makeSigPad(canvas){
+  if (!canvas) return null;
+  const ratio = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  canvas.width = w*ratio; canvas.height = h*ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+  ctx.lineWidth = 2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#1a1a1a';
+  let drawing=false, last=null, empty=true;
+  const getPt = e => { const t=e.touches?e.touches[0]:e; const r=canvas.getBoundingClientRect(); return {x:t.clientX-r.left, y:t.clientY-r.top}; };
+  const start = e => { e.preventDefault(); drawing=true; last=getPt(e); empty=false; };
+  const move  = e => { if(!drawing) return; e.preventDefault(); const p=getPt(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; };
+  const end   = () => { drawing=false; last=null; };
+  canvas.onmousedown=start; canvas.onmousemove=move; canvas.onmouseup=end; canvas.onmouseleave=end;
+  canvas.ontouchstart=start; canvas.ontouchmove=move; canvas.ontouchend=end;
+  return {
+    drawImage(src){ const img=new Image(); img.onload=()=>{ ctx.drawImage(img,0,0,w,h); empty=false; }; img.src=src; },
+    clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); empty=true; },
+    isEmpty(){ return empty; },
+    toDataURL(){ return canvas.toDataURL('image/png'); },
+  };
+}
+
+let sigPad = null;
 function openSignModal(rid){
   const r = res(rid); if(!r.id) return;
   const c = customer(r.customerId);
@@ -3009,61 +3183,19 @@ function openSignModal(rid){
   document.getElementById('sign-role').value = r.signature?.role || '';
   document.getElementById('sign-terms').checked = false;
   openModal('modal-sign');
-  setTimeout(initSigPad, 50);
+  setTimeout(()=>{
+    sigPad = makeSigPad(document.getElementById('sign-pad'));
+    if (r.signature?.dataURL && sigPad) sigPad.drawImage(r.signature.dataURL);
+  }, 50);
 }
-function initSigPad(){
-  const cv = document.getElementById('sign-pad');
-  if (!cv) return;
-  // Scale for crisp lines on hi-dpi
-  const ratio = window.devicePixelRatio || 1;
-  const w = cv.offsetWidth, h = cv.offsetHeight;
-  cv.width = w*ratio; cv.height = h*ratio;
-  sigCtx = cv.getContext('2d');
-  sigCtx.scale(ratio, ratio);
-  sigCtx.lineWidth = 2; sigCtx.lineCap='round'; sigCtx.lineJoin='round'; sigCtx.strokeStyle='#1a1a1a';
-  sigEmpty = true;
-  // Restore existing signature (preview)
-  const rid = document.getElementById('sign-res-id').value;
-  const r = res(rid);
-  if (r.signature?.dataURL){
-    const img = new Image();
-    img.onload = () => { sigCtx.drawImage(img,0,0,w,h); sigEmpty=false; };
-    img.src = r.signature.dataURL;
-  }
-  // Wire events (mouse + touch)
-  const getPt = e => {
-    const t = e.touches ? e.touches[0] : e;
-    const rect = cv.getBoundingClientRect();
-    return {x: t.clientX-rect.left, y: t.clientY-rect.top};
-  };
-  const startDraw = e => {
-    e.preventDefault();
-    sigDrawing = true; sigLastPt = getPt(e); sigEmpty = false;
-  };
-  const moveDraw = e => {
-    if (!sigDrawing) return; e.preventDefault();
-    const p = getPt(e);
-    sigCtx.beginPath(); sigCtx.moveTo(sigLastPt.x,sigLastPt.y); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
-    sigLastPt = p;
-  };
-  const endDraw = () => { sigDrawing = false; sigLastPt = null; };
-  cv.onmousedown = startDraw; cv.onmousemove = moveDraw;
-  cv.onmouseup = endDraw; cv.onmouseleave = endDraw;
-  cv.ontouchstart = startDraw; cv.ontouchmove = moveDraw; cv.ontouchend = endDraw;
-}
-function clearSig(){
-  const cv = document.getElementById('sign-pad');
-  if (sigCtx) sigCtx.clearRect(0,0,cv.width,cv.height);
-  sigEmpty = true;
-}
+function clearSig(){ if (sigPad) sigPad.clear(); }
 function saveSignature(){
-  if (sigEmpty){alert('Plaats een handtekening.');return;}
+  if (!sigPad || sigPad.isEmpty()){alert('Plaats een handtekening.');return;}
   if (!document.getElementById('sign-terms').checked){alert('Bevestig akkoord met de huurvoorwaarden.');return;}
   const name = document.getElementById('sign-name').value.trim();
   if (!name){alert('Vul de naam van de ondertekenaar in.');return;}
   const rid = document.getElementById('sign-res-id').value;
-  const cv  = document.getElementById('sign-pad');
-  const dataURL = cv.toDataURL('image/png');
+  const dataURL = sigPad.toDataURL();
   reservations = reservations.map(r => r.id===rid ? {...r, signature:{
     dataURL, name,
     role: document.getElementById('sign-role').value,
