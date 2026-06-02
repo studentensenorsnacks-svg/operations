@@ -27,6 +27,7 @@
     "ft_stroomaanvraag_v1": { ".read": "auth != null", ".write": "auth != null" },
     "ft_bestellingen_v1":     { ".read": "auth != null", ".write": "auth != null" },
     "ft_bestel_catalogus_v1": { ".read": "auth != null", ".write": "auth != null" },
+    "ft_archief_v1":          { ".read": "auth != null", ".write": "auth != null" },
     "ft_trucks_v1":       { ".read": "auth != null", ".write": "auth != null" },
     "ft_poets_history":   { ".read": "auth != null", ".write": "auth != null" },
     "foldtable_requests": { ".read": "auth != null", ".write": "auth != null" },

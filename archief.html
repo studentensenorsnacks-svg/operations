@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Archief</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --blue:#1f76e8;--blue-bg:#e8f0fd;
+  --amber:#b45309;--amber-bg:#fef3e2;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+
+.main{max-width:920px;margin:0 auto;padding:18px 18px 60px;}
+.page-hdr{margin-bottom:16px;}
+.page-title{font-family:var(--font-cond);font-size:28px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:5px;}
+.save-state{font-size:12px;color:var(--text3);font-family:var(--mono);margin-left:8px;}
+.save-state.saved{color:var(--green);}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.card-h{font-family:var(--font-cond);font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:12px;}
+
+/* Upload */
+.drop{border:2px dashed var(--border2);border-radius:12px;padding:28px 18px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+.drop:hover{border-color:var(--blue);background:var(--blue-bg);}
+.drop.drag{border-color:var(--blue);background:var(--blue-bg);}
+.drop .big{font-size:30px;}
+.drop .t{font-family:var(--font-cond);font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-top:6px;}
+.drop .s{font-size:12.5px;color:var(--text2);margin-top:3px;}
+.up-opts{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select{padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+
+.queue{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.qitem{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);}
+.qitem .qn{flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.qitem .qs{font-size:11px;color:var(--text3);font-family:var(--mono);white-space:nowrap;}
+.qbar{width:120px;height:7px;border-radius:5px;background:var(--surface3);overflow:hidden;flex-shrink:0;}
+.qbar .fill{height:100%;width:0;background:var(--blue);transition:width .15s;}
+.qitem.done .qbar .fill{background:var(--green);}
+.qitem.err{border-color:var(--red);background:rgba(232,0,29,.06);}
+.qitem.err .qs{color:var(--red);}
+
+/* Filterbar */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.toolbar input,.toolbar select{padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
+.toolbar .search{flex:1;min-width:180px;}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+
+/* Lijst */
+.cat-h{display:flex;align-items:center;justify-content:space-between;font-family:var(--font-cond);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);padding:16px 4px 8px;border-bottom:2px solid var(--blue-bg);margin-bottom:6px;}
+.cat-h .cnt{font-size:12px;color:var(--text3);font-family:var(--mono);font-weight:500;}
+.arow{display:flex;align-items:center;gap:11px;padding:10px 4px;border-bottom:1px solid var(--border);}
+.arow .ico{font-size:20px;flex-shrink:0;}
+.arow .body{flex:1;min-width:0;}
+.arow .nm{font-size:14px;font-weight:600;text-decoration:none;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;}
+.arow .nm:hover{color:var(--blue);text-decoration:underline;}
+.arow .meta{font-size:11.5px;color:var(--text3);font-family:var(--mono);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.badge{font-family:var(--font);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:20px;}
+.badge.upload{color:var(--blue);background:var(--blue-bg);}
+.badge.ops{color:var(--amber);background:var(--amber-bg);}
+.arow .acts{display:flex;gap:6px;flex-shrink:0;}
+.iconbtn{width:34px;height:34px;border:1px solid var(--border2);background:#fff;border-radius:8px;cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text2);}
+.iconbtn:hover{background:var(--surface2);color:var(--text);}
+.iconbtn.del{color:var(--red);}
+.iconbtn.del:hover{background:rgba(232,0,29,.08);}
+
+.btn{padding:10px 16px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:7px;}
+.btn:hover{background:var(--surface2);}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{background:#1660c4;}
+.hide{display:none!important;}
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Archief</span>
+  </a>
+  <div class="topbar-right">
+    <span class="save-state" id="save-state"></span>
+    <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-hdr">
+    <div class="page-title">Archief</div>
+    <div class="page-sub">Upload PDF's in bulk en bewaar ze centraal. Lijsten die je later via Operations maakt, komen hier ook terecht.</div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="card">
+    <div class="card-h">PDF's uploaden</div>
+    <div class="up-opts">
+      <div class="field" style="min-width:200px;">
+        <label for="u-cat">Map / categorie</label>
+        <input type="text" id="u-cat" list="cat-list" placeholder="bv. Facturen, Keuringen, 2026" value="Algemeen">
+        <datalist id="cat-list"></datalist>
+      </div>
+    </div>
+    <div class="drop" id="drop" onclick="document.getElementById('file-input').click()">
+      <div class="big">📥</div>
+      <div class="t">Sleep PDF's hierheen</div>
+      <div class="s">of klik om te kiezen — meerdere tegelijk kan (max 50 MB per bestand)</div>
+    </div>
+    <input type="file" id="file-input" accept="application/pdf,.pdf" multiple class="hide" onchange="onPick(this)">
+    <div class="queue" id="queue"></div>
+  </div>
+
+  <!-- LIJST -->
+  <div class="card">
+    <div class="card-h">Bestanden <span id="total-cnt" style="color:var(--text3);font-family:var(--mono);">0</span></div>
+    <div class="toolbar">
+      <input class="search" type="text" id="q-search" placeholder="🔍 Zoek op naam…" oninput="render()">
+      <select id="q-cat" onchange="render()"><option value="">Alle mappen</option></select>
+      <select id="q-src" onchange="render()">
+        <option value="">Alle bronnen</option>
+        <option value="upload">Geüpload</option>
+        <option value="operations">Via Operations</option>
+      </select>
+    </div>
+    <div id="archief-list"><div class="empty">Laden…</div></div>
+  </div>
+</div>
+
+<script>
+const ARCH_PATH = 'ft_archief_v1';
+let ITEMS = [];
+
+(async function init(){
+  if(window.fbAuthReady) await window.fbAuthReady;
+  const ref = fbdb.ref(ARCH_PATH);
+  ref.on('value', snap=>{
+    const v = snap.val() || {};
+    ITEMS = Object.entries(v).map(([key,it])=>({
+      key,
+      name: it.name || 'bestand',
+      path: it.path || '',
+      url: it.url || '',
+      size: (typeof it.size==='number'? it.size : null),
+      contentType: it.contentType || '',
+      category: (it.category||'').trim() || 'Algemeen',
+      source: it.source === 'operations' ? 'operations' : 'upload',
+      ts: it.ts || 0
+    }));
+    fillCatFilters();
+    render();
+    updateTotal();
+  }, err=>{
+    document.getElementById('archief-list').innerHTML = '<div class="empty">⚠️ Kon archief niet laden ('+(err.code||err.message)+').</div>';
+  });
+})();
+
+/* ---------- Upload ---------- */
+const drop = document.getElementById('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('drag'); }));
+drop.addEventListener('drop', e=>{ if(e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files); });
+
+function onPick(input){ handleFiles(input.files); input.value=''; }
+
+function handleFiles(fileList){
+  const files = Array.from(fileList||[]);
+  const cat = (document.getElementById('u-cat').value||'').trim() || 'Algemeen';
+  let started = 0;
+  files.forEach(f=>{
+    const isPdf = f.type==='application/pdf' || /\.pdf$/i.test(f.name);
+    if(!isPdf){ addQueueItem(f.name, 'Geen PDF — overgeslagen', true); return; }
+    if(f.size > 50*1024*1024){ addQueueItem(f.name, 'Te groot (max 50 MB)', true); return; }
+    uploadOne(f, cat); started++;
+  });
+  if(!started && files.length){ /* alle overgeslagen */ }
+}
+
+function addQueueItem(name, statusText, isErr){
+  const q = document.getElementById('queue');
+  const el = document.createElement('div');
+  el.className = 'qitem' + (isErr?' err':'');
+  el.innerHTML = '<span class="qn"></span>'
+    + (isErr ? '' : '<div class="qbar"><div class="fill"></div></div>')
+    + '<span class="qs"></span>';
+  el.querySelector('.qn').textContent = name;
+  el.querySelector('.qs').textContent = statusText || '';
+  q.appendChild(el);
+  if(isErr) setTimeout(()=>{ el.remove(); }, 6000);
+  return el;
+}
+
+function uploadOne(file, cat){
+  const el = addQueueItem(file.name, fmtSize(file.size), false);
+  const fill = el.querySelector('.fill');
+  const qs = el.querySelector('.qs');
+  const uid = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);
+  const safe = (file.name || 'bestand.pdf').replace(/[^\w.\- ]+/g,'_');
+  const path = 'archief/' + uid + '/' + safe;
+  let task;
+  try{
+    task = firebase.storage().ref(path).put(file, {contentType:'application/pdf'});
+  }catch(err){
+    el.classList.add('err'); qs.textContent = 'Start mislukt'; setTimeout(()=>el.remove(),6000); return;
+  }
+  task.on('state_changed',
+    s => { fill.style.width = Math.round(s.bytesTransferred / s.totalBytes * 100) + '%'; },
+    err => { el.classList.add('err'); qs.textContent = 'Mislukt: '+(err&&err.code||'fout'); setTimeout(()=>el.remove(),6000); },
+    () => {
+      task.snapshot.ref.getDownloadURL().then(url=>{
+        fbdb.ref(ARCH_PATH).push().set({
+          name: file.name, path, url, size: file.size,
+          contentType: 'application/pdf', category: cat,
+          source: 'upload', ts: Date.now()
+        }).then(()=>{
+          el.classList.add('done'); fill.style.width='100%'; qs.textContent='✓ klaar';
+          flashSaved(); setTimeout(()=>el.remove(), 2500);
+        }).catch(e=>{ el.classList.add('err'); qs.textContent='Opslaan mislukt'; setTimeout(()=>el.remove(),6000); });
+      }).catch(()=>{ el.classList.add('err'); qs.textContent='Linkfout'; setTimeout(()=>el.remove(),6000); });
+    });
+}
+
+/* ---------- Lijst ---------- */
+function allCats(){
+  return Array.from(new Set(ITEMS.map(i=>i.category))).sort((a,b)=>a.localeCompare(b,'nl'));
+}
+function fillCatFilters(){
+  const cats = allCats();
+  const sel = document.getElementById('q-cat');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Alle mappen</option>' + cats.map(c=>'<option>'+esc(c)+'</option>').join('');
+  if(cur && cats.includes(cur)) sel.value = cur;
+  document.getElementById('cat-list').innerHTML = cats.map(c=>'<option value="'+esc(c)+'">').join('');
+}
+function updateTotal(){ document.getElementById('total-cnt').textContent = ITEMS.length; }
+
+function render(){
+  const wrap = document.getElementById('archief-list');
+  const term = (document.getElementById('q-search').value||'').trim().toLowerCase();
+  const fcat = document.getElementById('q-cat').value;
+  const fsrc = document.getElementById('q-src').value;
+  let list = ITEMS.filter(i=>{
+    if(term && i.name.toLowerCase().indexOf(term)===-1) return false;
+    if(fcat && i.category!==fcat) return false;
+    if(fsrc && i.source!==fsrc) return false;
+    return true;
+  });
+  if(!list.length){
+    wrap.innerHTML = ITEMS.length
+      ? '<div class="empty">Geen bestanden gevonden met deze filters.</div>'
+      : '<div class="empty">Nog niets in het archief.<br>Sleep hierboven PDF\'s naar het uploadvak.</div>';
+    return;
+  }
+  list.sort((a,b)=>{
+    const c = a.category.localeCompare(b.category,'nl'); if(c) return c;
+    return (b.ts||0)-(a.ts||0);
+  });
+  let html='', lastCat=null;
+  list.forEach(i=>{
+    if(i.category!==lastCat){
+      const n = list.filter(x=>x.category===i.category).length;
+      html += '<div class="cat-h"><span>'+esc(i.category)+'</span><span class="cnt">'+n+'</span></div>';
+      lastCat = i.category;
+    }
+    const badge = i.source==='operations'
+      ? '<span class="badge ops">⚙️ Operations</span>'
+      : '<span class="badge upload">📤 Geüpload</span>';
+    const meta = [i.size!=null?fmtSize(i.size):null, fmtDate(i.ts)].filter(Boolean).join(' · ');
+    const open = i.url ? '<a class="iconbtn" href="'+esc(i.url)+'" target="_blank" rel="noopener" title="Openen">↗</a>'
+                       + '<a class="iconbtn" href="'+esc(i.url)+'" download="'+esc(i.name)+'" title="Downloaden">⬇</a>' : '';
+    html += '<div class="arow">'
+      + '<span class="ico">📄</span>'
+      + '<div class="body">'
+        + (i.url?'<a class="nm" href="'+esc(i.url)+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>':'<span class="nm">'+esc(i.name)+'</span>')
+        + '<div class="meta">'+badge+'<span>'+esc(meta)+'</span></div>'
+      + '</div>'
+      + '<div class="acts">'+open+'<button class="iconbtn del" type="button" title="Verwijderen" onclick="delItem(\''+i.key+'\')">×</button></div>'
+      + '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function delItem(key){
+  const i = ITEMS.find(x=>x.key===key);
+  if(!i) return;
+  if(!confirm('"'+i.name+'" definitief verwijderen uit het archief?')) return;
+  const done = ()=>{ fbdb.ref(ARCH_PATH+'/'+key).remove().then(flashSaved).catch(e=>{ console.error(e); alert('Verwijderen mislukt.'); }); };
+  if(i.path){
+    firebase.storage().ref(i.path).delete().then(done).catch(()=>done()); // bestand kan al weg zijn → toch metadata opruimen
+  }else{ done(); }
+}
+
+/* ---------- Helpers ---------- */
+function fmtSize(b){
+  if(b==null) return '';
+  if(b < 1024) return b+' B';
+  if(b < 1024*1024) return (b/1024).toFixed(0)+' KB';
+  return (b/1024/1024).toFixed(1)+' MB';
+}
+function fmtDate(ts){
+  if(!ts) return '';
+  try{ return new Date(ts).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ''; }
+}
+function flashSaved(){
+  const el = document.getElementById('save-state');
+  el.textContent = '✓ bewaard'; el.classList.add('saved');
+  clearTimeout(el._t); el._t = setTimeout(()=>{ el.textContent=''; el.classList.remove('saved'); }, 1500);
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+</script>
+</body>
+</html>

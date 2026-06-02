@@ -15,6 +15,15 @@ service firebase.storage {
                            && request.resource.contentType == 'application/pdf'));
     }
 
+    // Operations — archief. Bulk-geüploade PDF's en later via Operations
+    // gegenereerde lijsten. Intern: lezen én schrijven vereist auth.
+    match /archief/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && (request.resource == null
+                       || request.resource.size < 50 * 1024 * 1024);
+    }
+
     // EventSheet — taakbijlagen. Auth-required: organisators via Firebase Auth,
     // leveranciers via custom-token in een aparte portal Firebase-app.
     match /tasks/{allPaths=**} {
