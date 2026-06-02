@@ -1040,7 +1040,6 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="planning.html" target="_blank">📅 Planning</a>
   <a href="notities.html" target="_blank">📝 Notities</a>
   <a href="https://senorkeuringqr.web.app/index.html" target="_blank">📋 Keuringen</a>
-  <a href="ocb.html" target="_blank">✅ OCB</a>
   <a href="ops.html" target="_blank">👥 Personeelsfiche</a>
   <a href="horeca-planning.html" target="_blank">🍔 Horeca Planning</a>
   <a href="lijsten.html" target="_blank">📋 Lijsten</a>
@@ -1050,6 +1049,7 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="qr-codes.html" target="_blank">🔳 QR codes</a>
   <a href="event-sheet.html" target="_blank">📋 Event Sheet</a>
   <div class="menu-sep"></div>
+  <a href="audit.html" target="_blank">🗂️ Audit log <span style="font-size:0.62rem;opacity:0.6;">(admin)</span></a>
   <button type="button" id="backup-btn" onclick="downloadBackup(); closeMainMenu();">📥 Backup</button>
 </div>
 
@@ -1471,14 +1471,25 @@ document.addEventListener('keydown', ev => {
 });
 
 // Markeer een stuk als opgelost.
-//   - source 'note'    → broken-flag uit op notitie; notitie zelf blijft bewaard
-//   - source 'checkin' → hasDefect uit op check-in + log + resolvedAt; check-in zelf blijft
+//   - source 'note'    → broken-flag uit op notitie; wie/wanneer wordt geregistreerd; notitie blijft bewaard
+//   - source 'checkin' → hasDefect uit op check-in + log + resolvedAt/By; check-in zelf blijft
+// In beide gevallen is een naam VERPLICHT (accountability) en worden datum + uur vastgelegd.
 document.addEventListener('click', ev => {
   const btn = ev.target.closest && ev.target.closest('button[data-stuk-id]');
   if (!btn) return;
   const id = btn.getAttribute('data-stuk-id');
   if (!id) return;
   const source = btn.getAttribute('data-stuk-source') || 'note';
+
+  // Naam verplicht invullen vóór we iets wegschrijven
+  const resolvedBy = (prompt('Wie heeft dit stuk opgelost? (naam verplicht)') || '').trim();
+  if (!resolvedBy) { showToast('Naam is verplicht', true); return; }
+
+  const now = new Date();
+  const resolvedAt = now.getTime();
+  const resolvedDate = now.toLocaleDateString('nl-NL');
+  const resolvedTime = now.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+
   btn.disabled = true;
   btn.textContent = '… bezig';
   let p;
@@ -1486,17 +1497,23 @@ document.addEventListener('click', ev => {
     p = fbdb.ref('ft_ops_v2/' + id).once('value').then(snap => {
       const old = snap.val();
       if (!old) return;
-      const now = new Date();
       old.hasDefect = false;
-      old.defectResolvedAt = now.getTime();
+      old.defectResolvedAt = resolvedAt;
+      old.defectResolvedBy = resolvedBy;
       old.log = old.log || [];
-      old.log.push('✓ Defect opgelost via dashboard op ' + now.toLocaleDateString('nl-NL') + ' ' + now.toLocaleTimeString('nl-NL', {hour:'2-digit',minute:'2-digit'}));
+      old.log.push('✓ Defect opgelost door ' + resolvedBy + ' op ' + resolvedDate + ' ' + resolvedTime);
       return fbdb.ref('ft_ops_v2/' + id).set(old);
     });
   } else {
-    p = fbdb.ref('ft_notities_v1/' + id + '/broken').set(null);
+    p = fbdb.ref('ft_notities_v1/' + id).update({
+      broken: null,
+      resolvedBy: resolvedBy,
+      resolvedAt: resolvedAt,
+      resolvedDate: resolvedDate,
+      resolvedTime: resolvedTime
+    });
   }
-  p.then(() => showToast('✓ Stuk opgelost'))
+  p.then(() => showToast('✓ Stuk opgelost door ' + resolvedBy))
    .catch(() => { btn.disabled = false; btn.textContent = '✓ Opgelost'; showToast('Kon niet opslaan', true); });
 });
 
