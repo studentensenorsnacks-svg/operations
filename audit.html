@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<!-- Extra code-gate specifiek voor de audit-log (bovenop de algemene toegangscode). -->
+<script>
+(function () {
+  var KEY = 'senorsnacks_audit_v1';
+  var CODE = '1973';
+  try { if (localStorage.getItem(KEY) === CODE) return; } catch (e) {}
+
+  var hide = document.createElement('style');
+  hide.id = '__audit_hide';
+  hide.textContent = 'body>*:not(#__audit_overlay){visibility:hidden!important}';
+  (document.head || document.documentElement).appendChild(hide);
+
+  function build() {
+    if (document.getElementById('__audit_overlay')) return;
+    if (!document.body) { return setTimeout(build, 10); }
+    var ov = document.createElement('div');
+    ov.id = '__audit_overlay';
+    ov.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:2147483647',
+      'background:#fdf8f0', 'display:flex', 'align-items:center',
+      'justify-content:center', 'padding:1rem',
+      'font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",sans-serif',
+      'color:#3a2415'
+    ].join(';');
+    ov.innerHTML =
+      '<div style="text-align:center;max-width:340px;width:100%">' +
+        '<img src="/senorsnacks-logo.png" alt="Senor Snacks" style="width:110px;height:auto;margin:0 auto 1.25rem;display:block"/>' +
+        '<h1 style="margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-.01em">Audit Log</h1>' +
+        '<p style="margin:0 0 1.5rem;color:#7a5a40;font-size:14px;line-height:1.5">Deze pagina is extra beveiligd. Voer de audit-code in.</p>' +
+        '<input id="__audit_input" type="password" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="• • • •" ' +
+          'style="width:100%;padding:14px;font-size:20px;text-align:center;border:1px solid rgba(120,60,20,.22);border-radius:10px;background:#fff;color:#3a2415;outline:none;letter-spacing:.4em;font-family:monospace;box-sizing:border-box;transition:border-color .15s,background .15s,box-shadow .15s"/>' +
+        '<button id="__audit_btn" style="margin-top:12px;width:100%;padding:13px;font-size:14px;font-weight:600;background:#e8662b;color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:inherit;box-shadow:0 1px 3px rgba(232,102,43,.3);transition:background .12s">Open</button>' +
+        '<div id="__audit_err" style="margin-top:10px;font-size:12px;color:#7a2818;min-height:16px;font-weight:500"></div>' +
+        '<div style="margin-top:1.5rem;font-size:11px;color:#b89878">Je toestel onthoudt de toegang.</div>' +
+      '</div>';
+    document.body.appendChild(ov);
+
+    var inp = document.getElementById('__audit_input');
+    var btn = document.getElementById('__audit_btn');
+    var err = document.getElementById('__audit_err');
+    setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
+
+    function unlock() {
+      try { localStorage.setItem(KEY, CODE); } catch (e) {}
+      ov.remove();
+      var s = document.getElementById('__audit_hide'); if (s) s.remove();
+    }
+    function reject() {
+      err.textContent = 'Onjuiste code';
+      inp.value = '';
+      inp.style.borderColor = '#f0a896';
+      inp.style.background = '#fde2dd';
+      inp.style.boxShadow = '0 0 0 3px rgba(240,168,150,.3)';
+      setTimeout(function () {
+        inp.style.borderColor = 'rgba(120,60,20,.22)';
+        inp.style.background = '#fff';
+        inp.style.boxShadow = 'none';
+        err.textContent = '';
+        try { inp.focus(); } catch (e) {}
+      }, 1200);
+    }
+    function check() {
+      var v = (inp.value || '').trim();
+      if (v === CODE) unlock(); else reject();
+    }
+    btn.onclick = check;
+    btn.onmouseover = function () { btn.style.background = '#d05420'; };
+    btn.onmouseout = function () { btn.style.background = '#e8662b'; };
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') check(); });
+    inp.addEventListener('focus', function () {
+      inp.style.borderColor = '#e8662b';
+      inp.style.boxShadow = '0 0 0 3px #fef0e2';
+    });
+    inp.addEventListener('blur', function () {
+      if (inp.style.background !== 'rgb(253, 226, 221)') {
+        inp.style.borderColor = 'rgba(120,60,20,.22)';
+        inp.style.boxShadow = 'none';
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', build);
+  } else {
+    build();
+  }
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Audit Log</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root {
+  --red: #e8001d;
+  --bg: #f4f4f5;
+  --surface: #ffffff;
+  --surface2: #eeeef0;
+  --surface3: #e4e4e7;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1a1a;
+  --text2: #5f5f66;
+  --text3: #9a9aa2;
+  --green: #22c55e;
+  --orange: #f97316;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --font: 'Barlow', sans-serif;
+  --font-cond: 'Barlow Condensed', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* TOPBAR */
+.topbar {
+  height: 58px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; position: sticky; top: 0; z-index: 100;
+}
+.logo-wrap { display: flex; align-items: center; gap: 14px; }
+.logo-img { height: 30px; width: auto; display: block; }
+.topbar-divider { width: 1px; height: 22px; background: var(--border2); margin: 0 12px; }
+.topbar-section { font-size: 0.92rem; font-weight: 600; color: var(--text2); }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.nav-link {
+  padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border2);
+  color: var(--text2); font-size: 0.78rem; font-weight: 600; text-decoration: none;
+  transition: all 0.15s;
+}
+.nav-link:hover { border-color: var(--red); color: var(--text); background: rgba(232,0,29,0.06); }
+.whoami { font-size: 0.72rem; color: var(--text3); font-family: var(--mono); }
+
+.wrap { max-width: 1280px; margin: 0 auto; padding: 26px 24px 60px; }
+
+.page-header { margin-bottom: 22px; }
+.page-title { font-family: var(--font-cond); font-size: 2rem; font-weight: 900; line-height: 1; }
+.page-subtitle { font-size: 0.82rem; color: var(--text3); margin-top: 5px; font-family: var(--mono); }
+
+/* STATS */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.stat-num { font-family: var(--font-cond); font-size: 2.1rem; font-weight: 900; line-height: 1; }
+.stat-lbl { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text3); margin-top: 6px; }
+
+/* CONTROLS */
+.controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.search-bar {
+  display: flex; align-items: center; gap: 10px; background: var(--surface);
+  border: 1px solid var(--border2); border-radius: 10px; padding: 10px 14px;
+}
+.search-bar:focus-within { border-color: var(--red); }
+.search-bar input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: var(--font); font-size: 0.95rem; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.period-sel {
+  padding: 7px 12px; border-radius: 6px; border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text); font-family: var(--font); font-size: 0.8rem; cursor: pointer; outline: none;
+}
+.cat-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.cat-pill {
+  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text2); font-family: var(--font);
+  font-size: 0.76rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.cat-pill .cdot { width: 8px; height: 8px; border-radius: 50%; }
+.cat-pill.active { color: #fff; border-color: transparent; }
+.btn {
+  padding: 7px 14px; border-radius: 7px; border: 1px solid var(--border2);
+  background: var(--surface); color: var(--text2); font-family: var(--font);
+  font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+}
+.btn:hover { border-color: var(--red); color: var(--text); }
+.btn-ghost { color: var(--text3); }
+.spacer { flex: 1; }
+
+/* TABLE */
+.audit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.audit-head, .audit-row {
+  display: grid;
+  grid-template-columns: 150px 168px 150px 1fr 200px;
+  gap: 14px; padding: 11px 18px; align-items: start;
+}
+.audit-head {
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3);
+  position: sticky; top: 58px; z-index: 5;
+}
+.audit-row { border-bottom: 1px solid var(--border); font-size: 0.84rem; }
+.audit-row:hover { background: rgba(0,0,0,0.018); }
+.audit-row:last-child { border-bottom: none; }
+.ar-time { font-family: var(--mono); font-size: 0.78rem; color: var(--text2); white-space: nowrap; }
+.ar-time .d { color: var(--text); font-weight: 600; }
+.ar-cat { }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+}
+.chip .cdot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ar-person { font-weight: 700; color: var(--text); word-break: break-word; }
+.ar-action { color: var(--text); }
+.ar-action .target { display: block; font-size: 0.74rem; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+.ar-detail { font-size: 0.78rem; color: var(--text2); word-break: break-word; line-height: 1.4; }
+.empty { text-align: center; padding: 60px 20px; color: var(--text3); }
+.empty-icon { font-size: 2.4rem; opacity: 0.4; margin-bottom: 10px; }
+
+.load-note { font-size: 0.74rem; color: var(--text3); font-family: var(--mono); margin: 10px 2px 0; }
+.v1-badge {
+  display: inline-block; margin-left: 10px; padding: 2px 9px; border-radius: 20px;
+  background: rgba(249,115,22,0.12); color: #c2410c; font-size: 0.66rem; font-weight: 700;
+  vertical-align: middle;
+}
+
+/* ACCESS OVERLAY */
+.gate {
+  position: fixed; inset: 0; z-index: 500; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; padding: 1rem; text-align: center;
+}
+.gate.hidden { display: none; }
+.gate-box { max-width: 360px; }
+.gate-box img { width: 96px; margin: 0 auto 1rem; display: block; }
+.gate-box h1 { font-family: var(--font-cond); font-size: 1.5rem; font-weight: 900; margin-bottom: 8px; }
+.gate-box p { color: var(--text2); font-size: 0.9rem; line-height: 1.5; }
+.gate-box .sub { color: var(--text3); font-size: 0.8rem; margin-top: 10px; font-family: var(--mono); }
+
+@media (max-width: 880px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .audit-head { display: none; }
+  .audit-row {
+    grid-template-columns: 1fr; gap: 4px; padding: 12px 16px;
+    border-bottom: 4px solid var(--surface2);
+  }
+  .ar-time { order: 1; }
+  .ar-cat { order: 2; margin: 2px 0; }
+  .ar-person { order: 3; }
+  .ar-action { order: 4; }
+  .ar-detail { order: 5; }
+}
+</style>
+</head>
+<body>
+
+<!-- ACCESS GATE -->
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks">
+    <h1 id="gate-title">Toegang controleren…</h1>
+    <p id="gate-msg">Even geduld.</p>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="logo-wrap">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-divider"></div>
+    <div class="topbar-section">Audit Log</div>
+  </div>
+  <div class="topbar-right">
+    <span class="whoami" id="whoami"></span>
+    <a href="dashboard.html" class="nav-link">← Dashboard</a>
+  </div>
+</div>
+
+<div class="wrap" id="wrap" style="display:none;">
+  <div class="page-header">
+    <div class="page-title">Audit Log <span class="v1-badge" id="v1-badge" style="display:none;">V1 · rollen vanaf V2</span></div>
+    <div class="page-subtitle" id="subtitle">Laden…</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Gebeurtenissen (filter)</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-today">0</div><div class="stat-lbl">Vandaag</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-people">0</div><div class="stat-lbl">Unieke personen</div></div>
+    <div class="stat-card"><div class="stat-num" id="st-last">—</div><div class="stat-lbl">Laatste actie</div></div>
+  </div>
+
+  <div class="controls">
+    <div class="search-bar">
+      <span>🔍</span>
+      <input type="text" id="search" placeholder="Zoek op persoon, truck/object of detail…" oninput="render()">
+    </div>
+    <div class="row">
+      <select class="period-sel" id="period" onchange="render()">
+        <option value="today">Vandaag</option>
+        <option value="week">Deze week</option>
+        <option value="month">Deze maand</option>
+        <option value="all" selected>Alles</option>
+      </select>
+      <div class="cat-filters" id="cat-filters"></div>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost" onclick="toggleAllCats()">Alle aan/uit</button>
+      <button class="btn" onclick="exportCsv()">⬇ Export CSV</button>
+    </div>
+  </div>
+
+  <div class="audit-card">
+    <div class="audit-head">
+      <div>Tijdstip</div><div>Categorie</div><div>Persoon</div><div>Actie</div><div>Detail</div>
+    </div>
+    <div id="audit-body">
+      <div class="empty"><div class="empty-icon">🗂️</div><div>Laden…</div></div>
+    </div>
+  </div>
+  <div class="load-note" id="load-note"></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// CATEGORIEËN
+// ─────────────────────────────────────────────────────────────
+const CATS = {
+  checkin:          { label: 'Check-in',        color: '#3b82f6' },
+  edit:             { label: 'Bewerking/log',   color: '#6366f1' },
+  poets:            { label: 'Gepoetst',        color: '#0ea5e9' },
+  prio:             { label: 'Poets-prio',      color: '#f97316' },
+  'defect-open':    { label: 'Defect gemeld',   color: '#dc2626' },
+  'defect-resolved':{ label: 'Defect opgelost', color: '#16a34a' },
+  notitie:          { label: 'Notitie',         color: '#a855f7' },
+  'stuk-resolved':  { label: 'Stuk opgelost',   color: '#15803d' },
+  eindstock:        { label: 'Eindstock',       color: '#0d9488' },
+  'verhuur-sign':   { label: 'Verhuur aflevering', color: '#b45309' },
+  'verhuur-return': { label: 'Verhuur terugname',  color: '#92400e' },
+  login:            { label: 'Login-activiteit',color: '#64748b' },
+};
+const CAT_KEYS = Object.keys(CATS);
+let activeCats = new Set(CAT_KEYS);
+
+// Ruwe bron-data
+let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{} };
+let events = [];      // genormaliseerde audit-events
+const loaded = {};    // welke bronnen al binnen zijn
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function tsFrom(v){
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  const n = Date.parse(v);
+  return isNaN(n) ? 0 : n;
+}
+function fmtDateTime(ts){
+  if (!ts) return '<span class="d">—</span>';
+  const d = new Date(ts);
+  return '<span class="d">'+d.toLocaleDateString('nl-NL')+'</span> '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtShort(ts){
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+}
+// Parse een logregel als "01/06/2026 14:20 — bewerkt door Jan"
+function parseLogLine(line, fallbackTs, truck){
+  const m = String(line).match(/^\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s+(\d{1,2}):(\d{2})\s*[—\-–]\s*(.*)$/);
+  let ts = fallbackTs, rest = line;
+  if (m){
+    let yr = parseInt(m[3],10); if (yr < 100) yr += 2000;
+    ts = new Date(yr, parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10)).getTime();
+    rest = m[6];
+  }
+  const pm = String(rest).match(/door\s+([^,—–\-]+?)(?:\s+op\b|$)/i);
+  const person = pm ? pm[1].trim() : '';
+  return { ts, action: String(rest).trim(), person };
+}
+
+// ─────────────────────────────────────────────────────────────
+// NORMALISATIE → events[]
+// ─────────────────────────────────────────────────────────────
+function rebuild(){
+  const ev = [];
+
+  // 1) Check-ins (ft_ops_v2): check-in zelf + log-regels + defect + poets
+  Object.values(src.ops || {}).forEach(c => {
+    if (!c || !c.id) return;
+    const truck = c.truck || 'Onbekende truck';
+    // De check-in zelf
+    ev.push({
+      ts: c.timestamp || 0, cat: 'checkin', person: c.employee || 'Onbekend',
+      action: 'Check-in', target: truck,
+      detail: [(c.statuses||[]).join(', '), c.notes, c.kantoorNote].filter(Boolean).join(' · ')
+    });
+    // Defect gemeld (zichtbaar zolang open of via log) — toon als event op check-in-tijd
+    if (c.hasDefect && (c.defectWat || c.defectText)){
+      ev.push({
+        ts: c.timestamp || 0, cat: 'defect-open', person: c.employee || 'Onbekend',
+        action: 'Defect gemeld', target: truck,
+        detail: [c.defectWat, c.defectText].filter(Boolean).join(' — ')
+      });
+    }
+    // Defect opgelost
+    if (c.defectResolvedAt){
+      ev.push({
+        ts: c.defectResolvedAt, cat: 'defect-resolved', person: c.defectResolvedBy || 'Onbekend',
+        action: 'Defect opgelost', target: truck, detail: c.defectWat || ''
+      });
+    }
+    // Poetsbeurt rechtstreeks op check-in
+    if (c.cleanedAt){
+      ev.push({ ts: c.cleanedAt, cat: 'poets', person: c.employee || 'Poets', action: 'Gepoetst', target: truck, detail: '' });
+    }
+    // Logboek-regels (bewerkingen, markeringen…)
+    (c.log || []).forEach(line => {
+      const p = parseLogLine(line, c.timestamp || 0, truck);
+      ev.push({ ts: p.ts, cat: 'edit', person: p.person || '—', action: p.action || String(line), target: truck, detail: '' });
+    });
+  });
+
+  // 2) Notities (ft_notities_v1)
+  Object.entries(src.notities || {}).forEach(([k, n]) => {
+    if (!n) return;
+    ev.push({
+      ts: n.ts || tsFrom(n.date), cat: 'notitie', person: n.name || 'Onbekend',
+      action: n.broken ? 'Notitie (stuk gemeld)' : 'Notitie', target: n.event || '',
+      detail: n.text || ''
+    });
+    if (n.resolvedAt){
+      ev.push({
+        ts: n.resolvedAt, cat: 'stuk-resolved', person: n.resolvedBy || 'Onbekend',
+        action: 'Stuk opgelost', target: n.event || '', detail: n.text || ''
+      });
+    }
+  });
+
+  // 3) Eindstock (ft_eindstock_v1)
+  Object.values(src.eindstock || {}).forEach(es => {
+    if (!es) return;
+    ev.push({
+      ts: tsFrom(es.ingediend), cat: 'eindstock', person: es.medewerker || 'Onbekend',
+      action: 'Eindstock ingediend', target: es.wagen || '', detail: es.eventNaam || ''
+    });
+  });
+
+  // 4) Poets-historie (ft_poets_history) — append-only
+  Object.values(src.poetsHist || {}).forEach(h => {
+    if (!h) return;
+    ev.push({ ts: h.cleanedAt || 0, cat: 'poets', person: h.by || 'Poets Dashboard', action: 'Gepoetst', target: h.truck || '', detail: '' });
+  });
+
+  // 5) Poets-prioriteit (ft_priority_v1)
+  Object.values(src.prio || {}).forEach(p => {
+    if (!p || p.priority !== true) return;
+    ev.push({ ts: p.setAt || 0, cat: 'prio', person: p.by || '—', action: 'Poets-prioriteit gezet', target: p.truck || '', detail: '' });
+  });
+
+  // 6) Verhuur-handtekeningen (ft_planning_v1 → signature / returnSignature)
+  Object.values(src.planning || {}).forEach(r => {
+    if (!r) return;
+    const who = r.title || r.name || r.klant || r.contact || 'Verhuur';
+    if (r.signature && (r.signature.signedAt || r.signature.name)){
+      ev.push({
+        ts: tsFrom(r.signature.signedAt), cat: 'verhuur-sign', person: r.signature.name || 'Onbekend',
+        action: 'Aflevering getekend' + (r.signature.role ? ' ('+r.signature.role+')' : ''), target: who, detail: ''
+      });
+    }
+    if (r.returnSignature && (r.returnSignature.signedAt || r.returnSignature.name)){
+      ev.push({
+        ts: tsFrom(r.returnSignature.signedAt), cat: 'verhuur-return', person: r.returnSignature.name || 'Onbekend',
+        action: 'Terugname getekend' + (r.returnSignature.role ? ' ('+r.returnSignature.role+')' : ''), target: who, detail: ''
+      });
+    }
+  });
+
+  // 7) Login-activiteit (_userActivity)
+  Object.values(src.activity || {}).forEach(u => {
+    if (!u) return;
+    ev.push({
+      ts: u.lastSeen || 0, cat: 'login', person: u.displayName || u.email || 'Onbekend',
+      action: 'Laatst actief', target: u.email || '', detail: ''
+    });
+  });
+
+  events = ev.filter(e => e.ts && e.ts > 0).sort((a,b) => b.ts - a.ts);
+  render();
+}
+
+// ─────────────────────────────────────────────────────────────
+// FILTER + RENDER
+// ─────────────────────────────────────────────────────────────
+function periodStart(){
+  const p = document.getElementById('period').value;
+  const now = new Date();
+  if (p === 'today') return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (p === 'week'){ const d = now.getDay() || 7; return new Date(now.getFullYear(), now.getMonth(), now.getDate()-d+1).getTime(); }
+  if (p === 'month') return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  return 0;
+}
+function getFiltered(){
+  const start = periodStart();
+  const q = (document.getElementById('search').value || '').trim().toLowerCase();
+  return events.filter(e => {
+    if (e.ts < start) return false;
+    if (!activeCats.has(e.cat)) return false;
+    if (q){
+      const hay = (e.person+' '+e.action+' '+e.target+' '+e.detail).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function render(){
+  const list = getFiltered();
+  const body = document.getElementById('audit-body');
+
+  // Stats
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  document.getElementById('st-total').textContent = list.length;
+  document.getElementById('st-today').textContent = list.filter(e => e.ts >= todayStart.getTime()).length;
+  document.getElementById('st-people').textContent = new Set(list.map(e => (e.person||'').trim()).filter(p => p && p !== '—')).size;
+  document.getElementById('st-last').textContent = list.length ? fmtShort(list[0].ts) : '—';
+  document.getElementById('subtitle').textContent =
+    `${list.length} gebeurtenis${list.length!==1?'sen':''} getoond · ${events.length} totaal · bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+
+  if (!list.length){
+    body.innerHTML = '<div class="empty"><div class="empty-icon">🗂️</div><div>Geen gebeurtenissen voor dit filter.</div></div>';
+    return;
+  }
+  body.innerHTML = list.slice(0, 1000).map(e => {
+    const c = CATS[e.cat] || { label: e.cat, color: '#888' };
+    const chip = `<span class="chip" style="background:${c.color}1f;color:${c.color}"><span class="cdot"></span>${esc(c.label)}</span>`;
+    const target = e.target ? `<span class="target">${esc(e.target)}</span>` : '';
+    return `<div class="audit-row">
+      <div class="ar-time">${fmtDateTime(e.ts)}</div>
+      <div class="ar-cat">${chip}</div>
+      <div class="ar-person">${esc(e.person || '—')}</div>
+      <div class="ar-action">${esc(e.action || '')}${target}</div>
+      <div class="ar-detail">${esc(e.detail || '')}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('load-note').textContent = list.length > 1000
+    ? `Toont eerste 1000 van ${list.length}. Verfijn met filters of export naar CSV voor de volledige set.`
+    : '';
+}
+
+// ─────────────────────────────────────────────────────────────
+// CATEGORIE-FILTERS UI
+// ─────────────────────────────────────────────────────────────
+function buildCatFilters(){
+  const wrap = document.getElementById('cat-filters');
+  wrap.innerHTML = CAT_KEYS.map(k => {
+    const c = CATS[k];
+    return `<button class="cat-pill active" data-cat="${k}" style="--c:${c.color}" onclick="toggleCat('${k}')">
+      <span class="cdot" style="background:${c.color}"></span>${esc(c.label)}</button>`;
+  }).join('');
+  syncCatUI();
+}
+function toggleCat(k){
+  if (activeCats.has(k)) activeCats.delete(k); else activeCats.add(k);
+  syncCatUI(); render();
+}
+function toggleAllCats(){
+  if (activeCats.size === CAT_KEYS.length) activeCats = new Set();
+  else activeCats = new Set(CAT_KEYS);
+  syncCatUI(); render();
+}
+function syncCatUI(){
+  document.querySelectorAll('.cat-pill').forEach(p => {
+    const k = p.getAttribute('data-cat');
+    const on = activeCats.has(k);
+    p.classList.toggle('active', on);
+    p.style.background = on ? CATS[k].color : 'var(--surface)';
+    p.style.color = on ? '#fff' : 'var(--text2)';
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// CSV EXPORT
+// ─────────────────────────────────────────────────────────────
+function exportCsv(){
+  const list = getFiltered();
+  const rows = [['Datum','Tijd','Categorie','Persoon','Actie','Object','Detail']];
+  list.forEach(e => {
+    const d = new Date(e.ts);
+    rows.push([
+      d.toLocaleDateString('nl-NL'),
+      d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}),
+      (CATS[e.cat]||{}).label || e.cat,
+      e.person || '', e.action || '', e.target || '', e.detail || ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'senorsnacks-auditlog-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────
+// DATA LADEN (pas na admin-gate)
+// ─────────────────────────────────────────────────────────────
+function markLoaded(name){
+  loaded[name] = true;
+  rebuild();
+}
+function startListeners(){
+  fbdb.ref('ft_ops_v2').on('value',       s => { src.ops       = s.val() || {}; markLoaded('ops'); });
+  fbdb.ref('ft_notities_v1').on('value',   s => { src.notities  = s.val() || {}; markLoaded('notities'); });
+  fbdb.ref('ft_eindstock_v1').on('value',  s => { src.eindstock = s.val() || {}; markLoaded('eindstock'); });
+  fbdb.ref('ft_poets_history').on('value', s => { src.poetsHist = s.val() || {}; markLoaded('poetsHist'); });
+  fbdb.ref('ft_priority_v1').on('value',   s => { src.prio      = s.val() || {}; markLoaded('prio'); });
+  fbdb.ref('ft_planning_v1').on('value',   s => { src.planning  = s.val() || {}; markLoaded('planning'); });
+  fbdb.ref('_userActivity').on('value',    s => { src.activity  = s.val() || {}; markLoaded('activity'); }, () => {});
+  setInterval(render, 60000); // klok/relatieve weergave fris houden
+}
+
+function boot(roleNote){
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('wrap').style.display = 'block';
+  buildCatFilters();
+  startListeners();
+  if (roleNote) document.getElementById('whoami').textContent = roleNote;
+}
+function denyAccess(detail){
+  const t = document.getElementById('gate-title');
+  const m = document.getElementById('gate-msg');
+  t.textContent = '⛔ Geen toegang';
+  m.innerHTML = 'Het audit-log is alleen voor <b>admins</b>.' +
+    (detail && detail.email ? '<br><span class="sub">Ingelogd als ' + esc(detail.email) + (detail.role ? ' · rol: ' + esc(detail.role) : ' · geen rol') + '</span>' : '');
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADMIN-GATE
+//   V2 (hostname bevat -login / -v2): vereist window.__auth.isAdmin
+//   V1 (legacy): rollen bestaan nog niet → reeds achter code-014, doorlaten
+// ─────────────────────────────────────────────────────────────
+(function gate(){
+  const host = (location.hostname || '').toLowerCase();
+  const isV2 = host.indexOf('-login') !== -1 || host.indexOf('-v2') !== -1;
+
+  if (!isV2){
+    document.getElementById('v1-badge').style.display = 'inline-block';
+    boot('V1 · code-014');
+    return;
+  }
+  function handle(auth){
+    if (auth && auth.isAdmin) boot(auth.email + ' · admin');
+    else denyAccess(auth);
+  }
+  if (window.__auth) { handle(window.__auth); return; }
+  window.addEventListener('auth-ready', e => handle(e.detail));
+  // Vangnet: als auth na 12s nog niet klaar is, blijft de gate "controleren…" staan
+  // (auth.js stuurt niet-ingelogde gebruikers zelf door naar /login.html).
+})();
+</script>
+</body>
+</html>
