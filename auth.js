@@ -11,9 +11,14 @@
   var hostname = (location.hostname || '').toLowerCase();
   var hash = location.hash || '';
 
+  // Login-modus staat overal aan. De V1 (code 014) tak blijft hieronder
+  // staan voor referentie maar wordt niet meer gestart.
+  startV2();
+  return;
+  /* eslint-disable no-unreachable */
   var isV2 = hostname.indexOf('-login') !== -1 || hostname.indexOf('-v2') !== -1;
-
   if (isV2) { startV2(); } else { startV1(); }
+  /* eslint-enable no-unreachable */
 
   // ─────────────────────────────────────────────────────────────
   // V1 — legacy: code 014 in localStorage
