@@ -82,6 +82,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="page-sub">Bestellingen, tellingen en de productcatalogus — opgesplitst in Postel en Standaard.</div>
   </div>
 
+  <div class="grouptitle">Laadlijsten</div>
+  <div class="grid">
+    <a class="tile" href="checklists.html">
+      <span class="badge" id="badge-laadlijsten">0</span>
+      <span class="ico">📋</span>
+      <span class="t">Laadlijsten overzicht</span>
+      <span class="d">Alle laad- en checklijsten per status: nieuw, laden, retour, te factureren, gefactureerd.</span>
+      <span class="arrow">Openen →</span>
+    </a>
+    <a class="tile" href="laadlijst-beheer.html">
+      <span class="ico">📦</span>
+      <span class="t">Laadlijst-beheer</span>
+      <span class="d">Nieuwe laadlijst aanmaken uit PDF, koppelen aan event + truck en fiches met QR maken.</span>
+      <span class="arrow">Openen →</span>
+    </a>
+  </div>
+
   <div class="grouptitle">Postel</div>
   <div class="grid">
     <a class="tile" href="bestellingen-dashboard.html">
@@ -133,6 +150,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     const v = snap.val() || {};
     const nieuw = Object.values(v).filter(o=>o && o.status!=='verwerkt').length;
     const b = document.getElementById('badge-postel');
+    b.textContent = nieuw;
+    b.classList.toggle('show', nieuw>0);
+  }, ()=>{});
+  fbdb.ref('ft_laadlijsten_v1').on('value', snap=>{
+    const v = snap.val() || {};
+    // lijsten zonder status tellen als "nieuw" (zie checklists.html)
+    const nieuw = Object.values(v).filter(o=>o && (!o.status || o.status==='nieuw')).length;
+    const b = document.getElementById('badge-laadlijsten');
     b.textContent = nieuw;
     b.classList.toggle('show', nieuw>0);
   }, ()=>{});

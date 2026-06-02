@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Laadlijsten overzicht</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<script src="checklist-types.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --blue:#1f76e8;--blue-bg:#e8f0fd;
+  --amber:#b45309;--amber-bg:#fef3e2;
+  --purple:#7c3aed;--purple-bg:#f1ebfe;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+.save-state{font-size:12px;color:var(--text3);font-family:var(--mono);}
+.save-state.saved{color:var(--green);}
+
+.main{max-width:1080px;margin:0 auto;padding:20px 18px 60px;}
+.page-hdr{margin-bottom:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.page-title{font-family:var(--font-cond);font-size:30px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:6px;}
+
+/* Tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.tab{padding:8px 14px;border-radius:999px;border:1px solid var(--border2);background:var(--surface);font-size:13px;font-weight:700;cursor:pointer;color:var(--text2);display:inline-flex;align-items:center;gap:7px;font-family:var(--font);}
+.tab:hover{background:var(--surface2);color:var(--text);}
+.tab.active{background:var(--text);color:#fff;border-color:var(--text);}
+.tab .cnt{font-family:var(--mono);font-size:11px;font-weight:600;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--surface3);color:var(--text2);display:inline-flex;align-items:center;justify-content:center;}
+.tab.active .cnt{background:rgba(255,255,255,.22);color:#fff;}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.toolbar input{padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);flex:1;min-width:200px;}
+.toolbar input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tbody tr:hover{background:var(--surface2);}
+.ev{font-weight:600;color:var(--text);text-decoration:none;}
+.ev:hover{color:var(--blue);text-decoration:underline;}
+.muted{color:var(--text3);}
+.truck{font-family:var(--mono);font-size:12.5px;}
+.nowrap{white-space:nowrap;}
+.cnt-pill{font-family:var(--mono);font-size:12px;color:var(--text2);}
+
+.badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;display:inline-block;border:1px solid transparent;cursor:pointer;}
+.badge.nieuw{color:var(--blue);background:var(--blue-bg);}
+.badge.laden{color:var(--amber);background:var(--amber-bg);}
+.badge.retour{color:var(--purple);background:var(--purple-bg);}
+.badge.te_factureren{color:var(--red);background:rgba(232,0,29,.08);}
+.badge.gefactureerd{color:var(--green);background:var(--green-bg);}
+.badge.archief{color:var(--text2);background:var(--surface3);}
+
+.acts{display:flex;gap:5px;justify-content:flex-end;}
+.iconbtn{width:32px;height:32px;border:1px solid var(--border2);background:#fff;border-radius:7px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text2);}
+.iconbtn:hover{background:var(--surface2);color:var(--text);}
+.iconbtn.del{color:var(--red);}
+.iconbtn.del:hover{background:rgba(232,0,29,.08);}
+
+.empty{text-align:center;padding:50px 20px;color:var(--text3);}
+
+/* Eenmalige types-import-balk */
+.seedbar{display:none;align-items:center;gap:12px;background:var(--amber-bg);border:1px solid rgba(180,83,9,.25);color:var(--amber);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:13.5px;}
+.seedbar.show{display:flex;}
+.seedbar .sb-txt{flex:1;}
+.seedbar button{padding:8px 14px;border-radius:8px;border:none;background:var(--amber);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
+.seedbar button:disabled{opacity:.55;cursor:not-allowed;}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:200;padding:16px;}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:520px;max-height:88vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);}
+.modal-h .t{font-family:var(--font-cond);font-size:20px;font-weight:800;}
+.modal-x{width:32px;height:32px;border:none;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:16px;color:var(--text2);}
+.modal-x:hover{background:var(--surface3);color:var(--text);}
+.modal-b{padding:18px;}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px;}
+.field label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
+.field textarea{resize:vertical;min-height:64px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.modal-f{display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface);}
+.btn{padding:10px 16px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;color:var(--text);}
+.btn:hover{background:var(--surface2);}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{background:#1660c4;}
+
+/* Items view */
+.catblock{margin-bottom:14px;}
+.catblock h4{font-family:var(--font-cond);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:4px;}
+.itemrow{display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0;}
+.itemrow .qn{font-family:var(--mono);color:var(--text2);}
+.meta-line{font-size:12.5px;color:var(--text2);margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap;}
+.meta-line b{color:var(--text);font-weight:600;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Laadlijsten</span>
+  </a>
+  <div class="topbar-right">
+    <span class="save-state" id="save-state"></span>
+    <a class="back-link" href="laadlijst-beheer.html">+ Nieuwe lijst</a>
+    <a class="back-link" href="lijsten.html">← Lijsten</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-hdr">
+    <div>
+      <div class="page-title">Laadlijsten</div>
+      <div class="page-sub">Overzicht van alle laad- en checklijsten, ingedeeld per status.</div>
+    </div>
+  </div>
+
+  <div class="seedbar" id="seedbar">
+    <span class="sb-txt" id="sb-txt"></span>
+    <button id="sb-btn" onclick="importTypes()">Types importeren</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="toolbar">
+    <input type="text" id="q-search" placeholder="🔍 Zoek op evenement, truck of naam…" oninput="render()">
+  </div>
+
+  <div class="card">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Evenement</th>
+          <th>Klant</th>
+          <th>Truck</th>
+          <th>Datum</th>
+          <th class="nowrap">Items</th>
+          <th>Geladen door</th>
+          <th style="text-align:right;">Acties</th>
+        </tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="8"><div class="empty">Laden…</div></td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Bewerk-modal (lifecycle-velden) -->
+<div class="overlay" id="edit-overlay">
+  <div class="modal">
+    <div class="modal-h"><span class="t">Lijst bewerken</span><button class="modal-x" onclick="closeEdit()">✕</button></div>
+    <div class="modal-b">
+      <div class="field">
+        <label for="e-status">Status</label>
+        <select id="e-status"></select>
+      </div>
+      <div class="field">
+        <label for="e-klant">Klant</label>
+        <input type="text" id="e-klant" placeholder="Naam klant">
+      </div>
+      <div class="field">
+        <label for="e-geladen">Geladen door</label>
+        <input type="text" id="e-geladen" placeholder="Naam medewerker">
+      </div>
+      <div class="field">
+        <label for="e-opmerking">Opmerking</label>
+        <textarea id="e-opmerking" placeholder="Vrije notitie…"></textarea>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeEdit()">Annuleer</button>
+      <button class="btn btn-blue" onclick="saveEdit()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bekijk-modal (items) -->
+<div class="overlay" id="view-overlay">
+  <div class="modal">
+    <div class="modal-h"><span class="t" id="v-title">Laadlijst</span><button class="modal-x" onclick="closeView()">✕</button></div>
+    <div class="modal-b" id="v-body"></div>
+    <div class="modal-f">
+      <a class="btn btn-blue" id="v-edit-link" href="laadlijst-beheer.html">Producten bewerken →</a>
+      <button class="btn" onclick="closeView()">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LL_PATH = 'ft_laadlijsten_v1';
+const STATUSES = [
+  {key:'nieuw',         label:'Nieuw'},
+  {key:'laden',         label:'Laden'},
+  {key:'retour',        label:'Retour'},
+  {key:'te_factureren', label:'Te factureren'},
+  {key:'gefactureerd',  label:'Gefactureerd'},
+  {key:'archief',       label:'Archief'},
+];
+const LABEL = Object.fromEntries(STATUSES.map(s=>[s.key,s.label]));
+const CAT_ORDER = ['DIEPVRIES','KOELING','DROOG','SAUZEN','DRANK','MATERIALEN'];
+
+let ITEMS = [];          // [{key, ...record, status}]
+let activeTab = 'alle';  // 'alle' of een status-key
+let editingKey = null;
+
+(async function init(){
+  if(window.fbAuthReady) await window.fbAuthReady;
+  fbdb.ref(LL_PATH).on('value', snap=>{
+    const v = snap.val() || {};
+    ITEMS = Object.entries(v).map(([key,it])=>({
+      key,
+      naam: it.naam || '',
+      eventId: it.eventId || '',
+      eventNaam: it.eventNaam || it.pdfEvent || '',
+      wagen: it.wagen || it.pdfWagen || '',
+      datum: it.datum || it.pdfDatum || '',
+      aangemaakt: it.aangemaakt || '',
+      klant: it.klant || '',
+      geladenDoor: it.geladenDoor || '',
+      opmerking: it.opmerking || '',
+      status: STATUSES.some(s=>s.key===it.status) ? it.status : 'nieuw',
+      categorieën: it.categorieën || {}
+    }));
+    renderTabs();
+    render();
+  }, err=>{
+    document.getElementById('rows').innerHTML =
+      '<tr><td colspan="8"><div class="empty">⚠️ Kon laadlijsten niet laden ('+(err.code||err.message)+').</div></td></tr>';
+  });
+  checkTypesSeed();
+})();
+
+/* ---------- Eenmalige types-import (zelf-verdwijnend) ---------- */
+async function checkTypesSeed(){
+  if(!window.CHECKLIST_TYPES || typeof window.seedChecklistTypes!=='function') return;
+  try{
+    const snap = await fbdb.ref('ft_checklist_types_v1').once('value');
+    const n = snap.exists() ? Object.keys(snap.val()).length : 0;
+    if(n>0) return; // al geseed → balk niet tonen
+    document.getElementById('sb-txt').textContent =
+      'De ' + window.CHECKLIST_TYPES.length + ' laadlijst-types staan nog niet in de database. Importeer ze eenmalig om "type kiezen → standaard laden" te activeren.';
+    document.getElementById('seedbar').classList.add('show');
+  }catch(e){ /* stil: geen balk bij leesfout */ }
+}
+async function importTypes(){
+  const btn = document.getElementById('sb-btn');
+  btn.disabled = true; btn.textContent = 'Bezig…';
+  try{
+    const res = await window.seedChecklistTypes(fbdb);
+    if(res.skipped){ document.getElementById('seedbar').classList.remove('show'); return; }
+    flashSaved();
+    document.getElementById('sb-txt').textContent = '✅ ' + res.seeded + ' types geïmporteerd.';
+    btn.style.display = 'none';
+    setTimeout(()=>document.getElementById('seedbar').classList.remove('show'), 2500);
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Types importeren';
+    alert('Importeren mislukt: ' + (e.code||e.message));
+  }
+}
+
+function itemCount(it){
+  return Object.values(it.categorieën||{}).reduce((s,a)=>s+(Array.isArray(a)?a.length:0),0);
+}
+
+function renderTabs(){
+  const counts = {alle: ITEMS.length};
+  STATUSES.forEach(s=>counts[s.key] = ITEMS.filter(i=>i.status===s.key).length);
+  const tabsEl = document.getElementById('tabs');
+  const all = [{key:'alle',label:'Alle'}, ...STATUSES];
+  tabsEl.innerHTML = all.map(t=>
+    '<button class="tab'+(activeTab===t.key?' active':'')+'" onclick="setTab(\''+t.key+'\')">'
+    + esc(t.label) + '<span class="cnt">'+(counts[t.key]||0)+'</span></button>'
+  ).join('');
+}
+
+function setTab(key){ activeTab = key; renderTabs(); render(); }
+
+function render(){
+  const term = (document.getElementById('q-search').value||'').trim().toLowerCase();
+  let list = ITEMS.filter(i=>{
+    if(activeTab!=='alle' && i.status!==activeTab) return false;
+    if(term){
+      const hay = (i.eventNaam+' '+i.wagen+' '+i.naam+' '+i.klant).toLowerCase();
+      if(hay.indexOf(term)===-1) return false;
+    }
+    return true;
+  });
+  list.sort((a,b)=> (b.datum||'').localeCompare(a.datum||'') || (b.aangemaakt||'').localeCompare(a.aangemaakt||''));
+
+  const tbody = document.getElementById('rows');
+  if(!list.length){
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty">'
+      + (ITEMS.length ? 'Geen lijsten in deze status.' : 'Nog geen laadlijsten.<br>Maak er een via <a href="laadlijst-beheer.html">Laadlijst-beheer</a>.')
+      + '</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(i=>{
+    const ev = i.eventNaam
+      ? (i.eventId ? '<a class="ev" href="planning.html" title="Open planning">'+esc(i.eventNaam)+'</a>' : '<span class="ev">'+esc(i.eventNaam)+'</span>')
+      : '<span class="ev muted">'+(i.naam?esc(i.naam):'—')+'</span>';
+    return '<tr>'
+      + '<td><span class="badge '+i.status+'" title="Klik om te wijzigen" onclick="openEdit(\''+i.key+'\')">'+esc(LABEL[i.status])+'</span></td>'
+      + '<td>'+ev+'</td>'
+      + '<td>'+(i.klant?esc(i.klant):'<span class="muted">—</span>')+'</td>'
+      + '<td class="truck">'+(i.wagen?esc(i.wagen):'<span class="muted">—</span>')+'</td>'
+      + '<td class="nowrap">'+(i.datum?esc(fmtDate(i.datum)):'<span class="muted">—</span>')+'</td>'
+      + '<td class="cnt-pill">'+itemCount(i)+'</td>'
+      + '<td>'+(i.geladenDoor?esc(i.geladenDoor):'<span class="muted">—</span>')+'</td>'
+      + '<td><div class="acts">'
+        + '<button class="iconbtn" title="Bekijken" onclick="openView(\''+i.key+'\')">👁</button>'
+        + '<button class="iconbtn" title="Status / info bewerken" onclick="openEdit(\''+i.key+'\')">✏️</button>'
+        + '<a class="iconbtn" title="Producten bewerken" href="laadlijst-beheer.html">📦</a>'
+        + '<button class="iconbtn del" title="Verwijderen" onclick="delItem(\''+i.key+'\')">🗑</button>'
+      + '</div></td>'
+    + '</tr>';
+  }).join('');
+}
+
+/* ---------- Bewerk-modal ---------- */
+function openEdit(key){
+  const it = ITEMS.find(i=>i.key===key); if(!it) return;
+  editingKey = key;
+  const sel = document.getElementById('e-status');
+  sel.innerHTML = STATUSES.map(s=>'<option value="'+s.key+'">'+esc(s.label)+'</option>').join('');
+  sel.value = it.status;
+  document.getElementById('e-klant').value = it.klant || '';
+  document.getElementById('e-geladen').value = it.geladenDoor || '';
+  document.getElementById('e-opmerking').value = it.opmerking || '';
+  document.getElementById('edit-overlay').classList.add('show');
+}
+function closeEdit(){ document.getElementById('edit-overlay').classList.remove('show'); editingKey=null; }
+function saveEdit(){
+  if(!editingKey) return;
+  const patch = {
+    status: document.getElementById('e-status').value,
+    klant: document.getElementById('e-klant').value.trim(),
+    geladenDoor: document.getElementById('e-geladen').value.trim(),
+    opmerking: document.getElementById('e-opmerking').value.trim(),
+    aangepast_op: new Date().toISOString()
+  };
+  fbdb.ref(LL_PATH+'/'+editingKey).update(patch)
+    .then(()=>{ flashSaved(); closeEdit(); })
+    .catch(e=>alert('Opslaan mislukt: '+(e.code||e.message)));
+}
+
+/* ---------- Bekijk-modal ---------- */
+function openView(key){
+  const it = ITEMS.find(i=>i.key===key); if(!it) return;
+  document.getElementById('v-title').textContent = it.eventNaam || it.naam || 'Laadlijst';
+  const cats = it.categorieën || {};
+  const order = [...CAT_ORDER, ...Object.keys(cats).filter(k=>!CAT_ORDER.includes(k))];
+  let body = '<div class="meta-line">'
+    + (it.wagen?'<span>Truck: <b>'+esc(it.wagen)+'</b></span>':'')
+    + (it.datum?'<span>Datum: <b>'+esc(fmtDate(it.datum))+'</b></span>':'')
+    + '<span>Status: <b>'+esc(LABEL[it.status])+'</b></span>'
+    + '</div>';
+  let any = false;
+  order.forEach(cat=>{
+    const arr = cats[cat];
+    if(!Array.isArray(arr) || !arr.length) return;
+    any = true;
+    body += '<div class="catblock"><h4>'+esc(cat)+'</h4>'
+      + arr.map(p=>'<div class="itemrow"><span>'+esc(p.naam||'')+'</span><span class="qn">'+esc(p.aantal!=null?p.aantal:'')+'</span></div>').join('')
+      + '</div>';
+  });
+  if(!any) body += '<div class="empty">Geen producten in deze lijst.</div>';
+  if(it.opmerking) body += '<div class="catblock"><h4>Opmerking</h4><div style="font-size:13.5px;">'+esc(it.opmerking)+'</div></div>';
+  document.getElementById('v-body').innerHTML = body;
+  document.getElementById('view-overlay').classList.add('show');
+}
+function closeView(){ document.getElementById('view-overlay').classList.remove('show'); }
+
+/* ---------- Verwijderen ---------- */
+function delItem(key){
+  const it = ITEMS.find(i=>i.key===key); if(!it) return;
+  const naam = it.eventNaam || it.naam || 'deze lijst';
+  if(!confirm('"'+naam+'" definitief verwijderen?')) return;
+  fbdb.ref(LL_PATH+'/'+key).remove().then(flashSaved)
+    .catch(e=>alert('Verwijderen mislukt: '+(e.code||e.message)));
+}
+
+/* ---------- Helpers ---------- */
+function fmtDate(d){
+  if(!d) return '';
+  // d is doorgaans "YYYY-MM-DD"
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if(m) return m[3]+'-'+m[2]+'-'+m[1];
+  try{ return new Date(d).toLocaleDateString('nl-BE'); }catch(e){ return d; }
+}
+function flashSaved(){
+  const el = document.getElementById('save-state');
+  el.textContent = '✓ bewaard'; el.classList.add('saved');
+  clearTimeout(el._t); el._t = setTimeout(()=>{ el.textContent=''; el.classList.remove('saved'); }, 1500);
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* sluit modals met Escape / klik op overlay */
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); closeView(); } });
+['edit-overlay','view-overlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', e=>{ if(e.target.id===id){ closeEdit(); closeView(); } });
+});
+</script>
+</body>
+</html>
