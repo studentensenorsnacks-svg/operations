@@ -75,6 +75,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .crow .name{flex:2;min-width:160px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;}
 .crow .art{width:120px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:13px;}
 .crow .art:disabled{background:var(--surface2);color:var(--text3);}
+.pd-wrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;}
+.crow .perdoos{width:62px;padding:8px 8px;border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:13px;text-align:center;}
 .crow .cat{width:170px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;background:#fff;}
 .crow input:focus,.crow select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
 .nvz-wrap{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);white-space:nowrap;font-weight:600;}
@@ -125,6 +127,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="addrow">
       <div class="field" style="flex:2;min-width:160px;"><label for="a-name">Naam</label><input type="text" id="a-name" placeholder="bv. Loempia"></div>
       <div class="field" style="width:130px;"><label for="a-art">Artikelnr</label><input type="text" id="a-art" inputmode="numeric" placeholder="optioneel"></div>
+      <div class="field" style="width:90px;"><label for="a-perdoos">Per doos</label><input type="text" id="a-perdoos" inputmode="numeric" placeholder="bv. 24"></div>
       <div class="field" style="width:180px;"><label for="a-cat">Categorie</label>
         <select id="a-cat" onchange="onAddCatChange()"></select>
       </div>
@@ -142,7 +145,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <script>
 const CAT_PATH = 'ft_bestel_catalogus_v1';
-const CATEGORY_ORDER = ['Snacks','Kruidenierswaren / Vers','Sauzen','Dranken','Brood','Verpakking','Eigen producten'];
+const CATEGORY_ORDER = ['Snacks','Kruidenierswaren / Vers','Sauzen','Dranken','Brood','Verpakking','Eigen producten','Diepvries','Koeling','Droog','Drank'];
 function catOrderIndex(cat){ const i = CATEGORY_ORDER.indexOf(cat); return i===-1 ? 998 : i; }
 
 // Standaardlijst (seed) — alleen gebruikt als de catalogus nog leeg is
@@ -183,6 +186,385 @@ function seedMap(){
   return map;
 }
 
+// Standaard-catalogus (seed) — uit senorsnacks_producten.csv; perDoos = "aantal per doos"
+const STANDAARD_SEED = [
+  { cat:"Diepvries", items:[
+    ["Aardappelpuree",1],
+    ["Amigo ( Mexicano ) OVI",24],
+    ["Appelcake",1],
+    ["Baguette 27 Cm",42],
+    ["Bami",20],
+    ["Bami Laan 24 St",24],
+    ["Beef Burger",1],
+    ["Beef Burger Nederland",30],
+    ["Beef Burger Rato ( Nederland )",20],
+    ["Belcanto",15],
+    ["Bickey Broodjes Sesam",24],
+    ["Bitterballen Agora",80],
+    ["Bitterballen De Jong ( De Luxe )",80],
+    ["Bockworst Van Reusel",24],
+    ["Boeletstick",24],
+    ["Bouletten 24st",24],
+    ["Braadworst OVI",24],
+    ["Braadworsten Van Reusel",24],
+    ["Brioche Broodje",1],
+    ["Broodjes Lang",60],
+    ["Brusselse Wafel",24],
+    ["Calippo Orange",12],
+    ["Callippo Cola",12],
+    ["Cervela Vers",20],
+    ["Cervela's Van Reusel",30],
+    ["Chicken Burger",24],
+    ["Chicken Strips",1],
+    ["Chicken Wings",1],
+    ["Chickenwings",1],
+    ["Chocomouse",1],
+    ["Churros",1],
+    ["Cornetto",12],
+    ["Crocacoq(kipcorn) Van Reusel",24],
+    ["Croque Monsieur",12],
+    ["Curryworst Halal",40],
+    ["Curryworst OVI",40],
+    ["Curryworst Rood",40],
+    ["Curryworst Van Reusel",40],
+    ["Curryworst ZERO",24],
+    ["Curryworstenbrood",24],
+    ["De Perlut",18],
+    ["Donuts",1],
+    ["Flatbread ( Voor Kebab)",1],
+    ["Frisko",15],
+    ["Fusili",1],
+    ["Gerookte Zalm",1],
+    ["Gerookte Zalm  ( Stuk )",1],
+    ["Gesneden Ajuin Diepvries",1],
+    ["Glutenvrije Kaaskroket BONI",1],
+    ["Goudstaaf (viandel)",27],
+    ["Goulashkroket De Jong",1],
+    ["Goulashkroket PB Snacks",24],
+    ["Groenten Mix Ardo",1],
+    ["Haggis",1],
+    ["Hamburger OVI",30],
+    ["Hamburgers 30 St Van Reusel",30],
+    ["Hot En Spicy Chicken Strips",1],
+    ["Hotwings",1],
+    ["Ijsblokjes",1],
+    ["Kaasballetjes",1],
+    ["Kaaskroket  OVI",20],
+    ["Kaaskroket ( De Jong ) 28st",28],
+    ["Kaaskroket PB",24],
+    ["Kaassoufle",1],
+    ["Kebab Broden",8],
+    ["Kebabvlees",2],
+    ["Kibbeling",1],
+    ["Kipcorn 36 St",36],
+    ["Kipnuggets",1],
+    ["Kippenblokjes",1],
+    ["Kipsate",5],
+    ["Klein Mix Hapjes Van Reusel",1],
+    ["Kroketten",1],
+    ["Loempia Met Kip Vr",20],
+    ["Loempia Veggi Vr",20],
+    ["Luikse Wafel",32],
+    ["Magnum Almond",12],
+    ["Magnum Bruin",12],
+    ["Magnum Wit",12],
+    ["MAXIBOL PASTRIDOR",44],
+    ["Mexicano Halal",15],
+    ["Mini Loempia Veggi",1],
+    ["Mini Loempia Veggi Van Reusel",1],
+    ["Mini Megamix Buitenhuis",96],
+    ["Mini Mexicano",1],
+    ["Mini Sandwich",1],
+    ["Pannenkoek",24],
+    ["Party Mix Elite",1],
+    ["Pasta Glutenvrij",10],
+    ["Penne ARDO ( Dz )",4],
+    ["Pitta Brood",1],
+    ["Pittavlees",1],
+    ["Pizza 4 Kazen ( Veggi )",1],
+    ["Pizza BBQ",1],
+    ["Pizza Margaritha",1],
+    ["Pizza Plaat Margaritha",1],
+    ["Pizza Plaat Salami",1],
+    ["Pizza Plaat Verduna Veggi",1],
+    ["Pizza Proscuitto",1],
+    ["Pizza Spinazi",6],
+    ["Pizza Spinazie Vegan",6],
+    ["Poke Bowl Falafel",1],
+    ["Poke Bowl Kip",1],
+    ["Poke Bowl Zalm",1],
+    ["Pretzel",96],
+    ["Pulled Chicken",1],
+    ["Pulled Porc (vlees)",1],
+    ["Raket",12],
+    ["REUZE BRAADWORST Witte Dozen OVI",26],
+    ["Rijst Met Groenten",10],
+    ["Rijst Met Groenten Ardo ( Dz)",1],
+    ["Ronde Broodje Crystal Rustic",60],
+    ["Ronde Broodjes Hamb Pastridor",60],
+    ["Ronde Broodjes Maxi Bol Pastridor",1],
+    ["Ronde Broodjes Pastridor Pistolet Gesneden",60],
+    ["Samosa Dz",1],
+    ["Sate Horeca Grote Snit",24],
+    ["Saté Van Hout",24],
+    ["Sitostick",1],
+    ["Sitostick Mora",21],
+    ["Sunbrero ( Mexicano ) Halal",15],
+    ["Tiramisu",1],
+    ["Vanille Schepijs",1],
+    ["Veggi Bitterballen",1],
+    ["Veggi Burgers Chickless",24],
+    ["Veggi Mini Belet",1],
+    ["Vleeskroket De Jong",24],
+    ["Vleeskroket PB Snacks",24],
+    ["Wedges",1],
+    ["Wok Met Kip Kant En Klaar",1],
+  ]},
+  { cat:"Koeling", items:[
+    ["Ajuin Gesneden",1],
+    ["Appelsienen",1],
+    ["Bierbakken",24],
+    ["Bierbakken 0.0%",24],
+    ["Boter",1],
+    ["Cava",12],
+    ["Chester Cheese",1],
+    ["Chili Con Carne",1],
+    ["Chocomelk",12],
+    ["Coca Cola Flessen",24],
+    ["Coca Cola Pet",1],
+    ["Coca Zero Pet",1],
+    ["Cola Flessen",6],
+    ["Cola Zero Flessen 1/1",6],
+    ["Eieren Gekookt Gepeld",70],
+    ["Fanta Glazen Flesjes",24],
+    ["Fanta Pet",1],
+    ["Frieten 10 Kg Lutosa",10],
+    ["Geraspte Kaas ( Zak )",1],
+    ["Gerookte Zalm Vers",1],
+    ["Gesneden Ajuin Per Kg",1],
+    ["Gesneden Ham",1],
+    ["Gesneden Wortelen",1],
+    ["Kaas 5/15 Gesneden",1],
+    ["Kaasblokjes",1],
+    ["Kip Curry",1],
+    ["Kool Mix",1],
+    ["Koolsla (1.5kg)",1],
+    ["Kruidenkaas Helleman",1],
+    ["Leffe Donker",24],
+    ["Limonade Flessen 1/1",6],
+    ["Mocktail  Spritz",6],
+    ["Mocktail Mojito",6],
+    ["Rode Ajuin",1],
+    ["Rode Wijn",12],
+    ["Salami Blokjes",1],
+    ["Sla",1],
+    ["Slagroom",1],
+    ["Snipper Ajuin Zak",1],
+    ["Snipper Ui",1],
+    ["Spek Dun Gesneden Beef Burger",1],
+    ["Stoofvlees Ovi",1],
+    ["Tomaten",1],
+    ["Tomato Relisch",1],
+    ["Tonijnsalade",1],
+    ["Vaten Bier",1],
+    ["Vers Stoofvlees 1kg Bartis",1],
+    ["Verse Frieten 10 Kg",10],
+    ["Verse Sate",5],
+    ["Videe Ovi",1],
+    ["Vleessalade",1],
+    ["Water Bruis Flessen 1/1",12],
+    ["Water Plat Flessen 1/1",12],
+    ["Witte Wijn",12],
+  ]},
+  { cat:"Droog", items:[
+    ["Ajuin Zak 25kg",1],
+    ["Augurken Pot",1],
+    ["Bakje Vorm Boot",1],
+    ["Bakplaat Electr",1],
+    ["Bakplaat Gas",1],
+    ["Bicky Uitjes Zak 500g",1],
+    ["Bloemsuiker",1],
+    ["Bologniase Van De Chef Manna ( Dz )",3],
+    ["Boulet Bakje Bruin A7",250],
+    ["Boulet Schaal Wit",250],
+    ["Brood Gesneden",1],
+    ["Bruine suiker",1],
+    ["Bruine Suiker ( Candij )",1],
+    ["Cabonara Saus D Lis",6],
+    ["Carbonara Saus Smiling Cook ( Dz )",1],
+    ["Cecemel Bekers",50],
+    ["Chili Sin Carne",1],
+    ["Chips Paprika",1],
+    ["Chips Zout",1],
+    ["Curry Saus Groenten Mars",1],
+    ["Currysaus Uncle Bens",6],
+    ["Curryworst Schaal Bruin A16L",250],
+    ["Curryworst Schaal Wit",250],
+    ["Emmers",1],
+    ["Flatbread Kebab",62],
+    ["Frietbak Bruin Vip 75",250],
+    ["Frietbakje 80",250],
+    ["Frietbakje 85",250],
+    ["Frietbakje Bruin 85",250],
+    ["Frietbakje Stoofvlees",250],
+    ["Frietvorkjes Hout Klein",1000],
+    ["Frituurolie 15L",1],
+    ["Gedroogde Appelsien",1],
+    ["Gedroogde Limoen",1],
+    ["Ginger Lemon Saus",1],
+    ["Groentensaus Manna ( Pot )",1],
+    ["Grote Vorken",1],
+    ["Hamburger Zakjes",100],
+    ["Herbruikbaar Frietbakje",1],
+    ["Herbruikbaar Frietbakje Stoofvlees",1],
+    ["Herbruikbaar Pasta Bajke",1],
+    ["Herbruikbare Bierbeker",1],
+    ["Herbruikbare Koffie Beker",1],
+    ["Hoorntjes Voor Ijs",1],
+    ["HOT DOG WORSTEN",15],
+    ["Houten Tandenstokers",1],
+    ["Karton Bord 18 Cm Bruin",1],
+    ["Karton Bord 23 Cm Bruin",100],
+    ["Karton Saus Potje 50cc",1],
+    ["Karton Schaal Nr 0 Wit",250],
+    ["Kartonnen Draagplateau",1],
+    ["Kartonnen Drank Bekers",1],
+    ["Kartonnen Houder Luikse Wafel",50],
+    ["Kartonnen Pizza Schaaltjes",1],
+    ["Kippekruiden",1],
+    ["Koffie Bonen",1],
+    ["Koffie Gemalen",1],
+    ["Leffe Licht",24],
+    ["Lepeltjes  Voor Ijs",1],
+    ["Lichte Bruine Suiker",1],
+    ["Melk Porties",200],
+    ["Messen Hout",100],
+    ["Nootjes",1],
+    ["Nutella Pomp",1],
+    ["Nutella Pot",1],
+    ["Olie",1],
+    ["Pansavers 1/2",1],
+    ["Pansavers 1/3",1],
+    ["Paty Spray",1],
+    ["Patyspray",1],
+    ["Plastiek Schaal",1],
+    ["Potjes Voor Ijs",1],
+    ["Pretzel Gebakken",1],
+    ["Red Bull Tray",1],
+    ["Rijst",1],
+    ["Rijstolie",1],
+    ["Roerstaafjes Hout",1000],
+    ["Rose Wijn",12],
+    ["Salade  Bowl",1],
+    ["Salade Bowl 500 Ml",100],
+    ["Satékruiden",1],
+    ["Servietten ( 500st )",500],
+    ["Servietten ( 500st )  Tork",500],
+    ["Servietten Houder",1],
+    ["Sierprikker",100],
+    ["Siroop",1],
+    ["SNOEPZAK",1],
+    ["Soja Saus",1],
+    ["Soja Scheuten",1],
+    ["Speuloos Verpakt ( Voor Bij Koffie )",50],
+    ["Steekkar",1],
+    ["Stoofvlees",1],
+    ["Stoofvleessaus",null],
+    ["Suiker Klontjes Verpakt",1000],
+    ["Suikerwafel Individueel Verpakt",1],
+    ["Sweet Chili Met Groenten Saus Mars",1],
+    ["Tabasco",1],
+    ["Thee Zakjes",100],
+    ["Tipzak Karton Nr 2",1000],
+    ["Torkrol",1],
+    ["Vet 10 kg",10],
+    ["Vet Lopend",1],
+    ["Vuilzakken",1],
+    ["Vuilzakken 240 L",2],
+    ["Wrap ( Tortilla Zelf )",1],
+    ["Wrap ( Tortilla Zelf ) Stuks",1],
+    ["Zemst",1],
+    ["Zonnebloemolie",1],
+    ["Zuurkool Blik",1],
+  ]},
+  { cat:"Sauzen", items:[
+    ["Americaine",1],
+    ["Andalouse 3L",1],
+    ["Andalouse 5 L",1],
+    ["Bicky Dressing 3L",1],
+    ["Bicky Dressing 5l",1],
+    ["Bicky Hot",1],
+    ["Bicky Hot 3L",1],
+    ["Bicky Hot 5 L",1],
+    ["Bolognaise Saus Manna",1],
+    ["Box 5 L + Pompen",1],
+    ["Cocktail Saus 10 L",1],
+    ["Cocktail Saus 3l",1],
+    ["Curry Ketchup 5L Bib",5],
+    ["Currysaus Geel 3l",1],
+    ["Emmer Tomaten Ketchup Pauwels 10l",1],
+    ["Gele Curry",1],
+    ["Giga Saus Pauwels",1],
+    ["Happy ( Joppi ) Saus 5 L",1],
+    ["HELA Curry Ketchup",1],
+    ["Hollandse Mayo Oliehoorn 10L",1],
+    ["Joppi Saus (smoelsaus) 3L",1],
+    ["Ketchup Pomp Curry",1],
+    ["Ketchup Pomp Tomaat",1],
+    ["Looksaus 3l",1],
+    ["Mayo 10L",1],
+    ["Mosterd 3L",1],
+    ["Pickles 3L",1],
+    ["Pomp 3 L",1],
+    ["Pomp 3l Zoveel Mogelijk Potten Met Pomp Nemen",1],
+    ["Pomp Mayo 10l",1],
+    ["Samurai 3L",1],
+    ["Samurai 5l Zak",1],
+    ["Satesaus",1],
+    ["Smockey Bbq Saus",1],
+    ["Sweet Chili Saus",24],
+    ["Tartaar 3L",1],
+    ["Tartaar 5 L",1],
+    ["Tomaten Ketchup Bib",5],
+  ]},
+  { cat:"Drank", items:[
+    ["Aperol Spritsz",1],
+    ["Appelsap Tray",1],
+    ["Bier Blik Tray",1],
+    ["Caprisonne Karton",1],
+    ["Casis Blik Tray",1],
+    ["Coca Cola Flesjes Glas Klein",24],
+    ["Coca Cola Zero",5],
+    ["Cola Blik Tray",1],
+    ["Cola Zero Blik Tray",1],
+    ["Cola Zero Klein Flesjes",24],
+    ["Dr Pepper Blik Tray",1],
+    ["Fanta Blik Tray",1],
+    ["Fristi Tray",1],
+    ["Fruitsap",8],
+    ["Gluhwijn",1],
+    ["Hot Cecemel",1],
+    ["Ice Tea Blik Tray",1],
+    ["Ice Tea Green Blik Tray",1],
+    ["Ice Tea Klein Flesjes",24],
+    ["Jenever",1],
+    ["Klein Flesjes Plat Water",24],
+    ["Melk",1],
+    ["Mojito",1],
+    ["Plat Water Pet Tray",1],
+    ["Sprite Blik Tray",1],
+    ["Tongerlo Blond",24],
+    ["Tongerlo Donder",24],
+    ["Water Bruis Klein Flesjes",24],
+    ["Water Bruis Pet Tray",1],
+  ]},
+];
+function standaardSeedMap(){
+  const map={}; let idx=0;
+  STANDAARD_SEED.forEach(c=>c.items.forEach(it=>{ map['s'+idx]={ name:it[0], art:null, cat:c.cat, perDoos:(it[1]==null?null:it[1]), order:idx, ts:0, inPostel:false, inStandaard:true }; idx++; }));
+  return map;
+}
+
 // Een product zonder vlaggen is "legacy" (uit de oude, gedeelde catalogus) → hoort bij Postel.
 function prodInPostel(p){ return p.inPostel===true || (p.inPostel==null && p.inStandaard==null); }
 function prodInStandaard(p){ return p.inStandaard===true; }
@@ -205,11 +587,16 @@ let renderedSig = '';
       Object.entries(v).forEach(([key,p])=>{ if(p && p.inPostel==null && p.inStandaard==null) mig[key+'/inPostel']=true; });
       if(Object.keys(mig).length) await ref.update(mig);
     }
+    // Standaard-catalogus eenmalig vullen met de CSV-producten als die nog leeg is
+    if(!Object.keys(v).some(k=>k.charAt(0)==='s')){
+      await ref.update(standaardSeedMap());
+    }
   }catch(e){ console.error('seed/migratie mislukt', e); }
   ref.on('value', snap=>{
     const v = snap.val() || {};
     PRODS = Object.entries(v).map(([key,p])=>({
       key, name:p.name||'', art:(p.art==null?null:p.art), cat:p.cat||'Eigen producten', order:(p.order!=null?p.order:(p.ts||0)),
+      perDoos:(p.perDoos==null?null:p.perDoos),
       inPostel:prodInPostel(p), inStandaard:prodInStandaard(p)
     }));
     fillAddCats();
@@ -284,6 +671,7 @@ function render(){
       + '<input class="name" type="text" value="'+esc(p.name)+'" onchange="saveField(\''+p.key+'\',\'name\',this.value)">'
       + '<input class="art" type="text" inputmode="numeric" value="'+esc(p.art==null?'':p.art)+'"'+(nvz?' disabled placeholder="—"':'')+' onchange="saveField(\''+p.key+'\',\'art\',this.value)">'
       + '<label class="nvz-wrap"><input type="checkbox"'+(nvz?' checked':'')+' onchange="toggleNvz(\''+p.key+'\',this.checked)"> n.v. Zon</label>'
+      + '<label class="pd-wrap"><input class="perdoos" type="text" inputmode="numeric" value="'+esc(p.perDoos==null?'':p.perDoos)+'" placeholder="—" title="Aantal per doos" onchange="saveField(\''+p.key+'\',\'perDoos\',this.value)"> /doos</label>'
       + '<select class="cat" onchange="saveField(\''+p.key+'\',\'cat\',this.value)">'+catOpts+'</select>'
       + '<label class="also-wrap'+(alsoOn?' on':'')+'"><input type="checkbox"'+(alsoOn?' checked':'')+' onchange="toggleAlso(\''+p.key+'\',\''+otherField+'\',this.checked)"> '+otherLabel+'</label>'
       + '<button class="del" type="button" title="Verwijderen" onclick="delProduct(\''+p.key+'\')">×</button>'
@@ -303,6 +691,7 @@ function flashSaved(){
 function saveField(key, field, value){
   let val = value;
   if(field==='art'){ val = (value||'').trim() || null; }
+  if(field==='perDoos'){ const n = parseInt((value||'').trim(),10); val = (isNaN(n)||n<=0) ? null : n; }
   if(field==='name'){ val = (value||'').trim(); if(!val){ alert('Naam mag niet leeg zijn.'); render(); return; } }
   fbdb.ref(CAT_PATH+'/'+key+'/'+field).set(val).then(flashSaved).catch(e=>{ console.error(e); alert('Opslaan mislukt.'); });
 }
@@ -317,13 +706,16 @@ function toggleNvz(key, checked){
 function addProduct(){
   const name = (document.getElementById('a-name').value||'').trim();
   const art = (document.getElementById('a-art').value||'').trim() || null;
+  const pdN = parseInt((document.getElementById('a-perdoos').value||'').trim(),10);
+  const perDoos = (isNaN(pdN)||pdN<=0) ? null : pdN;
   let cat = document.getElementById('a-cat').value;
   if(cat==='__new') cat = (document.getElementById('a-cat-new').value||'').trim();
   if(!name){ alert('Vul een naam in.'); return; }
   if(!cat){ alert('Kies of vul een categorie in.'); return; }
   const flags = { inPostel: SCOPE==='postel', inStandaard: SCOPE==='standaard' };
-  fbdb.ref(CAT_PATH).push().set({ name, art, cat, order: Date.now(), ts: Date.now(), ...flags }).then(()=>{
+  fbdb.ref(CAT_PATH).push().set({ name, art, perDoos, cat, order: Date.now(), ts: Date.now(), ...flags }).then(()=>{
     document.getElementById('a-name').value=''; document.getElementById('a-art').value='';
+    document.getElementById('a-perdoos').value='';
     document.getElementById('a-cat-new').value=''; document.getElementById('a-cat-new').classList.add('hide');
     document.getElementById('a-cat').value = cat;
     flashSaved();
