@@ -26,7 +26,6 @@ firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-<script src="firebase-anon-auth.js"></script>
 <style>
 :root{
   --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;
@@ -156,6 +155,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .wnav-btn:hover{border-color:var(--red);color:var(--red);}
 .wnav-btn.today{background:var(--red);color:#fff;border-color:var(--red);}
 .week-label{font-family:var(--font-cond);font-size:1.1rem;font-weight:800;flex:1;text-align:center;}
+.ll-weekcount{flex-shrink:0;font-family:var(--font);font-size:0.82rem;font-weight:700;padding:6px 12px;border-radius:6px;background:#eef2ff;color:#1d4ed8;border:1px solid #c7d2fe;white-space:nowrap;}
+.ll-weekcount.done{background:#dcfce7;color:#15803d;border-color:#bbf7d0;}
+.ll-weekcount b{font-weight:800;}
 
 .week-grid{flex:1;display:grid;grid-template-columns:repeat(7,1fr);overflow:hidden;min-height:0;}
 .day-col{border-right:1px solid var(--border);display:flex;flex-direction:column;background:var(--white);}
@@ -495,6 +497,7 @@ textarea{resize:vertical;min-height:70px;}
       <button class="wnav-btn today" onclick="goToday()">Vandaag</button>
       <div class="week-label" id="week-label"></div>
       <button class="wnav-btn" onclick="shiftWeek(1)">Volgende ▶</button>
+      <div class="ll-weekcount" id="ll-weekcount" style="display:none" title="Laadlijsten deze week"></div>
     </div>
     <div class="week-outer" id="week-outer"></div>
   </div>
@@ -1213,12 +1216,40 @@ function shiftWeek(n){wkStart=addD(wkStart,n*7);renderWeek();}
 function goToday(){wkStart=monday(new Date());renderWeek();}
 function toggleSidebar(){const p=document.querySelector('.truck-panel');p.classList.toggle('open');}
 
+// Teller: hoeveel laadlijsten moeten er deze (getoonde) week gemaakt worden?
+// Per gepland event telt elke foodtruck als één lijst; "gemaakt" = gekoppeld
+// (ft_laadlijsten_v1 met eventId + wagen die in de planning staat).
+function weekLLStats(wkS, wkE){
+  const pairs = new Set();
+  filterEvents(events).filter(ev=>ev.startDate<=wkE && ev.endDate>=wkS).forEach(ev=>{
+    const trucks = new Set();
+    (ev.trucks||[]).forEach(t=>t&&trucks.add(t));
+    if(ev.truckDays) Object.values(ev.truckDays).forEach(a=>(a||[]).forEach(t=>t&&trucks.add(t)));
+    trucks.forEach(t=>pairs.add(String(ev.id)+'||'+t));
+  });
+  const covered = new Set();
+  for(const l of Object.values(laadlijsten||{})){
+    if(l && l.eventId && l.wagen){ const k=String(l.eventId)+'||'+l.wagen; if(pairs.has(k)) covered.add(k); }
+  }
+  return { need: pairs.size, made: covered.size };
+}
+function updateWeekLLCount(wkS, wkE){
+  const el = document.getElementById('ll-weekcount'); if(!el) return;
+  if(currentMode!=='wagens'){ el.style.display='none'; return; }
+  const s = weekLLStats(wkS, wkE);
+  el.style.display='';
+  el.innerHTML = '📄 <b>'+s.made+'</b> / '+s.need+' lijsten';
+  el.title = s.need ? (s.made+' van '+s.need+' laadlijsten gemaakt deze week') : 'Geen wagens gepland deze week';
+  el.classList.toggle('done', s.need>0 && s.made>=s.need);
+}
+
 function renderWeek(){
   const tp=document.querySelector('.truck-panel');
   const pdfBtn=document.getElementById('btn-weekpdf');
   if(currentMode==='agenda'){
     if(tp) tp.style.display='none';
     if(pdfBtn) pdfBtn.style.display='none';
+    const llc=document.getElementById('ll-weekcount'); if(llc) llc.style.display='none';
     renderAgenda();
     return;
   }
@@ -1228,6 +1259,7 @@ function renderWeek(){
   const f=days[0],l=days[6];
   const wkS=toStr(f),wkE=toStr(l);
   document.getElementById('week-label').textContent=`Week ${wkNum(f)} — ${f.toLocaleDateString('nl-NL',{day:'numeric',month:'long'})} t/m ${l.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}`;
+  updateWeekLLCount(wkS, wkE);
 
   const allVis=filterEvents(events).filter(ev=>ev.startDate<=wkE&&ev.endDate>=wkS);
 

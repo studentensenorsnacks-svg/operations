@@ -23,7 +23,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
-<script src="firebase-anon-auth.js"></script>
 <script src="checklist-types.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -111,6 +110,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 .empty{text-align:center;padding:50px 20px;color:var(--text3);}
 
+/* Week-teller */
+.weekstat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:9px 16px;min-width:148px;text-align:center;}
+.weekstat .ws-top{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);}
+.weekstat .ws-num{font-family:var(--font-cond);font-size:25px;font-weight:800;line-height:1.15;}
+.weekstat .ws-num b{color:var(--amber);}
+.weekstat.done .ws-num b{color:var(--green);}
+.weekstat .ws-lbl{font-size:11px;color:var(--text2);}
+.weekstat .ws-bar{height:6px;border-radius:4px;background:var(--surface3);margin-top:7px;overflow:hidden;}
+.weekstat .ws-fill{height:100%;width:0;background:var(--amber);transition:width .3s;}
+.weekstat.done .ws-fill{background:var(--green);}
+
 /* Eenmalige types-import-balk */
 .seedbar{display:none;align-items:center;gap:12px;background:var(--amber-bg);border:1px solid rgba(180,83,9,.25);color:var(--amber);border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:13.5px;}
 .seedbar.show{display:flex;}
@@ -167,6 +177,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div>
       <div class="page-title">Laadlijsten</div>
       <div class="page-sub">Overzicht van alle laad- en checklijsten, ingedeeld per status.</div>
+    </div>
+    <div class="weekstat" id="weekstat" title="Laadlijsten die deze week gemaakt moeten worden — per gepland event + foodtruck">
+      <div class="ws-top">Deze week</div>
+      <div class="ws-num"><b id="ws-made">–</b> / <span id="ws-need">–</span></div>
+      <div class="ws-lbl">laadlijsten gemaakt</div>
+      <div class="ws-bar"><div class="ws-fill" id="ws-fill"></div></div>
     </div>
   </div>
 
@@ -289,16 +305,65 @@ const EINDSTOCK_BASE = 'https://operationssenorsnacks.web.app/eindstock.html?fic
     }));
     renderTabs();
     render();
+    renderWeekStat();
   }, err=>{
     document.getElementById('rows').innerHTML =
       '<tr><td colspan="8"><div class="empty">⚠️ Kon laadlijsten niet laden ('+(err.code||err.message)+').</div></td></tr>';
   });
   fbdb.ref('ft_fiches_v1').on('value', snap=>{ FICHES = snap.val() || {}; render(); }, ()=>{});
+  loadPlanningForStat();
   checkTypesSeed();
 })();
 
 function ficheCount(llKey){
   return Object.values(FICHES).filter(f=>f && f.laadlijstId===llKey).length;
+}
+
+/* ---------- Week-teller (deze week te maken laadlijsten) ---------- */
+let PEVENTS = [];                       // [{id, startDate, endDate, trucks:Set}]
+const WEEK = weekRange(new Date());
+function isoLocal(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function weekRange(d){
+  const dt = new Date(d); const day=(dt.getDay()+6)%7; // 0 = maandag
+  dt.setHours(0,0,0,0); dt.setDate(dt.getDate()-day);
+  const end = new Date(dt); end.setDate(end.getDate()+6);
+  return { start: isoLocal(dt), end: isoLocal(end) };
+}
+function truckSetP(ev){
+  const s = new Set();
+  (ev.trucks||[]).forEach(t=>t&&s.add(t));
+  if(ev.truckDays) Object.values(ev.truckDays).forEach(a=>(a||[]).forEach(t=>t&&s.add(t)));
+  return s;
+}
+function loadPlanningForStat(){
+  fbdb.ref('ft_planning_v1').once('value').then(snap=>{
+    const v = snap.val() || {};
+    PEVENTS = [];
+    Object.values(v).forEach(ev=>{
+      if(!ev || ev.id==null) return;
+      PEVENTS.push({ id:String(ev.id), startDate:ev.startDate||'', endDate:ev.endDate||ev.startDate||'', trucks:truckSetP(ev) });
+    });
+    renderWeekStat();
+  }).catch(()=>{});
+}
+function renderWeekStat(){
+  const needEl = document.getElementById('ws-need'); if(!needEl) return;
+  const pairs = new Set();
+  PEVENTS.forEach(ev=>{
+    const s = ev.startDate, e = ev.endDate || ev.startDate;
+    if(!s) return;
+    if(s<=WEEK.end && e>=WEEK.start) ev.trucks.forEach(t=>pairs.add(ev.id+'||'+t));
+  });
+  const need = pairs.size;
+  const covered = new Set();
+  ITEMS.forEach(it=>{
+    if(it.eventId && it.wagen){ const k=String(it.eventId)+'||'+it.wagen; if(pairs.has(k)) covered.add(k); }
+  });
+  const made = covered.size;
+  needEl.textContent = need;
+  document.getElementById('ws-made').textContent = made;
+  document.getElementById('ws-fill').style.width = (need? Math.round(made/need*100):0) + '%';
+  document.getElementById('weekstat').classList.toggle('done', need>0 && made>=need);
 }
 
 /* ---------- Eenmalige types-import (zelf-verdwijnend) ---------- */
