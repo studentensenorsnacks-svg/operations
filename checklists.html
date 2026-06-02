@@ -25,6 +25,7 @@ const fbdb = firebase.database();
 </script>
 <script src="firebase-anon-auth.js"></script>
 <script src="checklist-types.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root{
   --red:#e8001d;--red-dark:#b8001a;
@@ -96,6 +97,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .iconbtn:hover{background:var(--surface2);color:var(--text);}
 .iconbtn.del{color:var(--red);}
 .iconbtn.del:hover{background:rgba(232,0,29,.08);}
+.iconbtn.has-fiche{border-color:var(--green);background:var(--green-bg);}
+
+/* Fiche modal */
+.fiche-info{font-size:13px;color:var(--text2);margin-bottom:12px;display:flex;gap:14px;flex-wrap:wrap;}
+.fiche-info b{color:var(--text);font-weight:600;}
+#qr-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px;border:1px solid var(--border);border-radius:10px;margin-top:6px;}
+#qr-box .cap{font-size:12px;color:var(--text2);text-align:center;}
+#qr-url{font-family:var(--mono);font-size:11px;color:var(--text3);word-break:break-all;text-align:center;}
+.fiche-list .f{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;}
+.fiche-list .f .fn{flex:1;font-size:13.5px;}
+.fiche-list .f .fn small{display:block;color:var(--text3);font-family:var(--mono);font-size:11px;}
 
 .empty{text-align:center;padding:50px 20px;color:var(--text3);}
 
@@ -229,6 +241,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
+<!-- Fiche / QR-modal -->
+<div class="overlay" id="fiche-overlay">
+  <div class="modal">
+    <div class="modal-h"><span class="t" id="fiche-title">Fiche & QR</span><button class="modal-x" onclick="closeFiche()">✕</button></div>
+    <div class="modal-b" id="fiche-body"></div>
+  </div>
+</div>
+
 <script>
 const LL_PATH = 'ft_laadlijsten_v1';
 const STATUSES = [
@@ -245,6 +265,9 @@ const CAT_ORDER = ['DIEPVRIES','KOELING','DROOG','SAUZEN','DRANK','MATERIALEN'];
 let ITEMS = [];          // [{key, ...record, status}]
 let activeTab = 'alle';  // 'alle' of een status-key
 let editingKey = null;
+let FICHES = {};         // ft_fiches_v1 — live
+let ficheKey = null;     // laadlijst-key waarvoor de fiche-modal open is
+const EINDSTOCK_BASE = 'https://operationssenorsnacks.web.app/eindstock.html?fiche=';
 
 (async function init(){
   if(window.fbAuthReady) await window.fbAuthReady;
@@ -270,8 +293,13 @@ let editingKey = null;
     document.getElementById('rows').innerHTML =
       '<tr><td colspan="8"><div class="empty">⚠️ Kon laadlijsten niet laden ('+(err.code||err.message)+').</div></td></tr>';
   });
+  fbdb.ref('ft_fiches_v1').on('value', snap=>{ FICHES = snap.val() || {}; render(); }, ()=>{});
   checkTypesSeed();
 })();
+
+function ficheCount(llKey){
+  return Object.values(FICHES).filter(f=>f && f.laadlijstId===llKey).length;
+}
 
 /* ---------- Eenmalige types-import (zelf-verdwijnend) ---------- */
 async function checkTypesSeed(){
@@ -353,6 +381,7 @@ function render(){
         + '<button class="iconbtn" title="Bekijken" onclick="openView(\''+i.key+'\')">👁</button>'
         + '<button class="iconbtn" title="Status / info bewerken" onclick="openEdit(\''+i.key+'\')">✏️</button>'
         + '<a class="iconbtn" title="Volledig bewerken" href="checklist-detail.html?id='+i.key+'">📦</a>'
+        + '<button class="iconbtn'+(ficheCount(i.key)?' has-fiche':'')+'" title="Fiche / QR" onclick="openFiche(\''+i.key+'\')">🏷️</button>'
         + '<button class="iconbtn del" title="Verwijderen" onclick="delItem(\''+i.key+'\')">🗑</button>'
       + '</div></td>'
     + '</tr>';
@@ -423,6 +452,93 @@ function delItem(key){
     .catch(e=>alert('Verwijderen mislukt: '+(e.code||e.message)));
 }
 
+/* ---------- Fiche / QR ---------- */
+function openFiche(key){
+  const it = ITEMS.find(i=>i.key===key); if(!it) return;
+  ficheKey = key;
+  document.getElementById('fiche-title').textContent = 'Fiche & QR — ' + (it.eventNaam||it.naam||'Laadlijst');
+  renderFiche();
+  document.getElementById('fiche-overlay').classList.add('show');
+}
+function closeFiche(){ document.getElementById('fiche-overlay').classList.remove('show'); ficheKey=null; }
+function renderFiche(){
+  const it = ITEMS.find(i=>i.key===ficheKey); if(!it) return;
+  const mine = Object.entries(FICHES).filter(([k,f])=>f && f.laadlijstId===ficheKey);
+  let html = '<div class="fiche-info">'
+    + (it.wagen?'<span>Truck: <b>'+esc(it.wagen)+'</b></span>':'')
+    + (it.eventNaam?'<span>Event: <b>'+esc(it.eventNaam)+'</b></span>':'')
+    + (it.datum?'<span>Datum: <b>'+esc(fmtDate(it.datum))+'</b></span>':'')
+    + '</div>';
+  if(!it.wagen) html += '<div style="font-size:12px;color:var(--amber);margin-bottom:8px;">⚠️ Deze lijst heeft nog geen truck — vul die in voor een volledige fiche.</div>';
+  html += '<div class="field" style="margin-bottom:10px;"><label for="fiche-mw">Naam medewerker</label>'
+    + '<input type="text" id="fiche-mw" placeholder="Voornaam Naam" value="'+esc(it.geladenDoor||'')+'"></div>';
+  html += '<button class="btn btn-blue" onclick="generateFiche()">Fiche + QR genereren</button>';
+  if(mine.length){
+    html += '<div style="font-size:12px;color:var(--text2);margin:16px 0 8px;font-weight:700;">Bestaande fiches ('+mine.length+')</div><div class="fiche-list">'
+      + mine.map(([k,f])=>'<div class="f"><div class="fn">'+esc(f.medewerker||'—')+'<small>'+esc(f.datum||'')+'</small></div>'
+        + '<button class="iconbtn" title="QR tonen" onclick="showQR(\''+k+'\')">🔳</button>'
+        + '<button class="iconbtn del" title="Verwijderen" onclick="delFiche(\''+k+'\')">🗑</button></div>').join('')
+      + '</div>';
+  }
+  html += '<div id="qr-box" style="display:none;"></div>';
+  document.getElementById('fiche-body').innerHTML = html;
+}
+async function generateFiche(){
+  const it = ITEMS.find(i=>i.key===ficheKey); if(!it) return;
+  const mw = (document.getElementById('fiche-mw').value||'').trim();
+  if(!mw){ alert('Vul de naam van de medewerker in.'); return; }
+  try{
+    const ref = await fbdb.ref('ft_fiches_v1').push({
+      medewerker: mw, wagen: it.wagen||'', eventNaam: it.eventNaam||it.naam||'',
+      datum: it.datum||'', laadlijstId: ficheKey, aangemaakt: new Date().toISOString()
+    });
+    flashSaved();
+    showQR(ref.key);
+  }catch(e){ alert('Fiche aanmaken mislukt: '+(e.code||e.message)); }
+}
+function showQR(ficheId){
+  const url = EINDSTOCK_BASE + ficheId;
+  const box = document.getElementById('qr-box'); if(!box) return;
+  box.style.display='flex';
+  box.innerHTML = '<div id="qr-canvas"></div>'
+    + '<div class="cap">Scan aan het einde van het event om de eindstock in te vullen.</div>'
+    + '<div id="qr-url">'+esc(url)+'</div>'
+    + '<button class="btn" onclick="printFiche(\''+ficheId+'\')">🖨️ Afdrukken</button>';
+  const cont = document.getElementById('qr-canvas'); cont.innerHTML='';
+  try{ new QRCode(cont, {text:url, width:180, height:180, correctLevel: QRCode.CorrectLevel.M}); }
+  catch(e){ cont.textContent='QR-bibliotheek niet geladen.'; }
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function printFiche(ficheId){
+  const f = FICHES[ficheId] || {};
+  const url = EINDSTOCK_BASE + ficheId;
+  const cont = document.getElementById('qr-canvas');
+  const cv = cont && cont.querySelector('canvas');
+  const im = cont && cont.querySelector('img');
+  let img = '';
+  try{ img = cv ? cv.toDataURL('image/png') : (im ? im.src : ''); }catch(e){ img = im?im.src:''; }
+  const w = window.open('', '_blank', 'width=480,height=680');
+  if(!w){ alert('Pop-up geblokkeerd — sta pop-ups toe om af te drukken.'); return; }
+  w.document.write('<html><head><title>Fiche</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:24px;}h1{font-size:20px;}table{margin:14px auto;border-collapse:collapse}td{padding:4px 10px;text-align:left}td.l{color:#666;font-size:12px;text-transform:uppercase}</style></head><body>'
+    + '<h1>Señor Snacks — Eindstock</h1>'
+    + '<table>'
+    + '<tr><td class="l">Medewerker</td><td>'+esc(f.medewerker||'')+'</td></tr>'
+    + '<tr><td class="l">Wagen</td><td>'+esc(f.wagen||'')+'</td></tr>'
+    + '<tr><td class="l">Event</td><td>'+esc(f.eventNaam||'')+'</td></tr>'
+    + '<tr><td class="l">Datum</td><td>'+esc(f.datum||'')+'</td></tr>'
+    + '</table>'
+    + (img?'<img src="'+img+'" width="200" height="200">':'')
+    + '<div style="font-size:12px;color:#666;margin-top:10px">Scan deze QR aan het einde van het event om de eindstock in te vullen.</div>'
+    + '</body></html>');
+  w.document.close();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 300);
+}
+async function delFiche(id){
+  if(!confirm('Fiche verwijderen?')) return;
+  try{ await fbdb.ref('ft_fiches_v1/'+id).remove(); renderFiche(); flashSaved(); }
+  catch(e){ alert('Verwijderen mislukt: '+(e.code||e.message)); }
+}
+
 /* ---------- Helpers ---------- */
 function fmtDate(d){
   if(!d) return '';
@@ -439,9 +555,9 @@ function flashSaved(){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 /* sluit modals met Escape / klik op overlay */
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); closeView(); } });
-['edit-overlay','view-overlay'].forEach(id=>{
-  document.getElementById(id).addEventListener('click', e=>{ if(e.target.id===id){ closeEdit(); closeView(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEdit(); closeView(); closeFiche(); } });
+['edit-overlay','view-overlay','fiche-overlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', e=>{ if(e.target.id===id){ closeEdit(); closeView(); closeFiche(); } });
 });
 </script>
 </body>
