@@ -1591,8 +1591,17 @@ function llRenderList(){
     : '<div class="ll-empty">Nog geen laadlijst gekoppeld aan deze truck.</div>';
   document.getElementById('ll-body').innerHTML = html;
   document.getElementById('ll-foot').innerHTML =
-    `<button class="btn-primary" type="button" onclick="llRenderChooser()">+ Laadlijst koppelen</button>`
+    `<button class="btn-primary" type="button" onclick="nieuweLaadlijst()">+ Nieuwe maken</button>`
+    + `<button class="btn-cancel" type="button" onclick="llRenderChooser()">Koppelen / PDF</button>`
     + `<button class="btn-cancel" type="button" onclick="closeLaadlijst()">Sluiten</button>`;
+}
+
+// Brug naar het nieuwe laadlijst-systeem: maak een gestructureerde lijst,
+// voorgevuld met dit event + deze truck (koppelt automatisch via eventId+wagen).
+function nieuweLaadlijst(){
+  if(!llCtx) return;
+  location.href = 'checklist-detail.html?event=' + encodeURIComponent(llCtx.eventId)
+               + '&truck=' + encodeURIComponent(llCtx.wagen);
 }
 
 // Eén gekoppelde laadlijst bekijken (items per categorie)

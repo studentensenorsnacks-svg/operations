@@ -53,20 +53,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
 .card-h{font-family:var(--font-cond);font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
-@media(max-width:620px){.grid2,.grid3{grid-template-columns:1fr;}}
+@media(max-width:620px){.grid2{grid-template-columns:1fr;}}
 .field{display:flex;flex-direction:column;gap:5px;}
 .field label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
 .field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
 .field textarea{resize:vertical;min-height:60px;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.field .hint{font-size:11px;color:var(--text3);}
+.link-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--green-bg);color:var(--green);}
+.link-pill.off{background:var(--amber-bg);color:var(--amber);}
 .chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--text);}
 
 .catsec{margin-bottom:14px;}
 .catsec h4{font-family:var(--font-cond);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);border-bottom:2px solid var(--blue-bg);padding-bottom:5px;margin-bottom:8px;display:flex;justify-content:space-between;}
 .catsec h4 .c{color:var(--text3);font-family:var(--mono);font-size:11px;}
 .irow{display:grid;grid-template-columns:1fr 78px 34px;gap:8px;align-items:center;margin-bottom:6px;}
-.irow.mat{grid-template-columns:1fr 78px 34px;}
 .irow input[type=text]{padding:8px 10px;border:1px solid var(--border2);border-radius:7px;font-size:13.5px;font-family:var(--font);}
 .irow input[type=number]{padding:8px 8px;border:1px solid var(--border2);border-radius:7px;font-size:13.5px;font-family:var(--mono);text-align:right;width:100%;}
 .irow input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
@@ -78,7 +79,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .muted{color:var(--text3);font-size:13px;}
 
 .actionbar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 18px;display:flex;gap:10px;justify-content:flex-end;z-index:90;}
-.btn{padding:11px 18px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;color:var(--text);}
+.btn{padding:11px 18px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;}
 .btn:hover{background:var(--surface2);}
 .btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
 .btn-blue:hover{background:#1660c4;}
@@ -115,7 +116,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 <div class="main">
   <div class="page-title" id="page-title">Nieuwe laadlijst</div>
-  <div class="page-sub">Kies een type om de standaardproducten te laden, vul de gegevens aan en sla op.</div>
+  <div class="page-sub">Koppel aan een event uit de agenda, kies een type voor de standaardproducten en sla op. De laadlijst verschijnt dan groen bij de truck in de planning.</div>
+
+  <!-- KOPPELING -->
+  <div class="card">
+    <div class="card-h"><span>Koppeling aan agenda</span><span id="link-status"></span></div>
+    <div class="grid2">
+      <div class="field">
+        <label for="f-event">Event (agenda)</label>
+        <select id="f-event" onchange="onEventChange()"><option value="">— Geen event (losse lijst) —</option></select>
+        <span class="hint" id="event-hint"></span>
+      </div>
+      <div class="field">
+        <label for="f-truck">Truck</label>
+        <select id="f-truck"><option value="">— Kies truck —</option></select>
+        <span class="hint">Kies de truck van dit event; daarop koppelt de planning de lijst.</span>
+      </div>
+    </div>
+  </div>
 
   <!-- GEGEVENS -->
   <div class="card">
@@ -128,16 +146,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <div class="field">
         <label for="f-naam">Naam lijst</label>
         <input type="text" id="f-naam" placeholder="bv. Frituur — Tuinfeest Jan">
-      </div>
-      <div class="field">
-        <label for="f-event">Evenement</label>
-        <input type="text" id="f-event" list="dl-events" placeholder="Naam evenement">
-        <datalist id="dl-events"></datalist>
-      </div>
-      <div class="field">
-        <label for="f-truck">Truck</label>
-        <input type="text" id="f-truck" list="dl-trucks" placeholder="bv. 404">
-        <datalist id="dl-trucks"></datalist>
       </div>
       <div class="field">
         <label for="f-klant">Klant</label>
@@ -231,12 +239,15 @@ const CATS = ['DIEPVRIES','KOELING','DROOG','SAUZEN','DRANK'];
 let products = [];   // [{_id, categorie, naam, aantal}]
 let materials = [];  // [{_id, naam, aantal}]
 let catalog = [];    // [{naam, cat}]
+let EVENTS = {};     // id -> {id,name,startDate,endDate,location,trucks[]}
+let ALLTRUCKS = [];
 let seq = 1;
 let editKey = null;
 
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function normCat(c){ const u=String(c||'').trim().toUpperCase(); return CATS.includes(u)?u:'DROOG'; }
+function fmtD(d){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||''); return m?m[3]+'-'+m[2]+'-'+m[1]:(d||''); }
 
 (async function init(){
   // Type-dropdown (uit checklist-types.js, geen DB nodig)
@@ -250,35 +261,90 @@ function normCat(c){ const u=String(c||'').trim().toUpperCase(); return CATS.inc
   (window.CHECKLIST_TYPES||[]).forEach(t=>(t.materialen||[]).forEach(m=>matNames.add(m.naam)));
   $('dl-materials').innerHTML = Array.from(matNames).sort((a,b)=>a.localeCompare(b,'nl')).map(n=>'<option value="'+esc(n)+'">').join('');
 
-  renderProducts(); renderMaterials();
+  renderProducts(); renderMaterials(); updLinkStatus();
 
   if(window.fbAuthReady) await window.fbAuthReady;
 
-  // Catalogus voor de productpicker
+  // Catalogus voor de productpicker (niet kritisch)
   fbdb.ref('ft_bestel_catalogus_v1').once('value').then(snap=>{
     const v = snap.val() || {};
     catalog = Object.values(v).filter(p=>p && p.name).map(p=>({naam:p.name, cat:p.cat||''}))
       .sort((a,b)=>a.naam.localeCompare(b.naam,'nl'));
   }).catch(()=>{});
 
-  // Event- en truck-suggesties uit de planning
-  fbdb.ref('ft_planning_v1').once('value').then(snap=>{
+  // Events uit de agenda laden → koppeling
+  await loadPlanningEvents();
+
+  // Bestaande lijst bewerken of via planning voorgevuld
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if(id){ loadExisting(id); return; }
+  const ev = params.get('event'), tr = params.get('truck');
+  if(ev && EVENTS[ev]){ $('f-event').value = ev; onEventChange(); }
+  if(tr){ selectTruck(tr); }
+  updLinkStatus();
+})();
+
+/* ---------- Agenda-koppeling ---------- */
+async function loadPlanningEvents(){
+  try{
+    const snap = await fbdb.ref('ft_planning_v1').once('value');
     const v = snap.val() || {};
-    const events = new Set(), trucks = new Set();
+    const arr = [], allT = new Set();
     Object.values(v).forEach(ev=>{
-      if(!ev) return;
-      const nm = ev.name || ev.naam; if(nm) events.add(nm);
+      if(!ev || ev.id==null) return;
+      const trucks = new Set();
       (ev.trucks||[]).forEach(t=>t&&trucks.add(t));
       if(ev.truckDays) Object.values(ev.truckDays).forEach(a=>(a||[]).forEach(t=>t&&trucks.add(t)));
+      trucks.forEach(t=>allT.add(t));
+      const e = { id:String(ev.id), name:ev.name||ev.naam||'(naamloos)', startDate:ev.startDate||'',
+                  endDate:ev.endDate||ev.startDate||'', location:ev.location||'', trucks:Array.from(trucks) };
+      EVENTS[e.id]=e; arr.push(e);
     });
-    $('dl-events').innerHTML = Array.from(events).sort((a,b)=>a.localeCompare(b,'nl')).map(n=>'<option value="'+esc(n)+'">').join('');
-    $('dl-trucks').innerHTML = Array.from(trucks).sort((a,b)=>a.localeCompare(b,'nl')).map(n=>'<option value="'+esc(n)+'">').join('');
-  }).catch(()=>{});
-
-  // Bewerken? ?id=KEY
-  const id = new URLSearchParams(location.search).get('id');
-  if(id){ loadExisting(id); }
-})();
+    ALLTRUCKS = Array.from(allT).sort((a,b)=>a.localeCompare(b,'nl'));
+    arr.sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+    $('f-event').innerHTML = '<option value="">— Geen event (losse lijst) —</option>'
+      + arr.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.name)+(e.startDate?' · '+fmtD(e.startDate):'')+'</option>').join('');
+    fillTruckOptions(ALLTRUCKS, $('f-truck').value);
+  }catch(e){ $('event-hint').textContent='Kon agenda niet laden ('+(e.code||e.message)+').'; }
+}
+function fillTruckOptions(list, selected){
+  let opts = '<option value="">— Kies truck —</option>'
+    + list.map(t=>'<option value="'+esc(t)+'"'+(t===selected?' selected':'')+'>'+esc(t)+'</option>').join('');
+  if(selected && !list.includes(selected)) opts += '<option value="'+esc(selected)+'" selected>'+esc(selected)+' (niet op event)</option>';
+  $('f-truck').innerHTML = opts;
+}
+function selectTruck(tr){
+  if(!tr) return;
+  if(![...$('f-truck').options].some(o=>o.value===tr))
+    $('f-truck').insertAdjacentHTML('beforeend','<option value="'+esc(tr)+'">'+esc(tr)+'</option>');
+  $('f-truck').value = tr;
+  updLinkStatus();
+}
+function onEventChange(){
+  const id = $('f-event').value;
+  const ev = id ? EVENTS[id] : null;
+  if(ev){
+    fillTruckOptions(ev.trucks.length?ev.trucks:ALLTRUCKS, $('f-truck').value);
+    if(ev.startDate) $('f-van').value = ev.startDate;
+    if(ev.endDate)   $('f-tot').value = ev.endDate;
+    if(!$('f-naam').value.trim()) $('f-naam').value = ev.name;
+    if(!$('f-straat').value.trim() && ev.location) $('f-straat').value = ev.location;
+    $('event-hint').textContent = ev.location ? ('📍 '+ev.location) : '';
+  } else {
+    fillTruckOptions(ALLTRUCKS, $('f-truck').value);
+    $('event-hint').textContent = '';
+  }
+  updLinkStatus();
+}
+function updLinkStatus(){
+  const ev = $('f-event') && EVENTS[$('f-event').value];
+  const tr = $('f-truck') ? $('f-truck').value : '';
+  const el = $('link-status'); if(!el) return;
+  if(ev && tr) el.innerHTML = '<span class="link-pill">🔗 gekoppeld aan planning</span>';
+  else el.innerHTML = '<span class="link-pill off">losse lijst — niet in planning</span>';
+}
+document.addEventListener('change', e=>{ if(e.target && e.target.id==='f-truck') updLinkStatus(); });
 
 function onTypeChange(){
   const id = $('f-type').value;
@@ -290,7 +356,6 @@ function onTypeChange(){
   products = (t.producten||[]).map(p=>({_id:seq++, categorie:normCat(p.categorie), naam:p.naam, aantal:Number(p.aantal)||0}));
   materials = (t.materialen||[]).map(m=>({_id:seq++, naam:m.naam, aantal:Number(m.aantal)||0}));
   if(!$('f-naam').value.trim()) $('f-naam').value = t.naam;
-  // type-naam onthouden voor opslaan
   $('f-type').dataset.naam = t.naam;
   renderProducts(); renderMaterials();
 }
@@ -298,8 +363,7 @@ function onTypeChange(){
 /* ---------- Producten ---------- */
 function renderProducts(){
   const wrap = $('prod-sections');
-  let html = '';
-  let total = 0;
+  let html = '', total = 0;
   CATS.forEach(cat=>{
     const items = products.filter(p=>p.categorie===cat);
     if(!items.length) return;
@@ -335,7 +399,7 @@ function renderMaterials(){
   const wrap = $('mat-list');
   if(!materials.length){ wrap.innerHTML = '<div class="muted">Nog geen materialen.</div>'; $('mat-count').textContent='0 materialen'; return; }
   wrap.innerHTML = materials.map(m=>
-    '<div class="irow mat">'
+    '<div class="irow">'
     + '<input type="text" value="'+esc(m.naam)+'" oninput="updMat('+m._id+',\'naam\',this.value)" placeholder="Materiaal">'
     + '<input type="number" min="0" step="1" value="'+esc(m.aantal)+'" oninput="updMat('+m._id+',\'aantal\',this.value)">'
     + '<button class="xbtn" title="Verwijderen" onclick="delMat('+m._id+')">×</button>'
@@ -373,11 +437,14 @@ function loadExisting(key){
     const r = snap.val(); if(!r){ alert('Lijst niet gevonden.'); return; }
     editKey = key;
     $('page-title').textContent = 'Laadlijst bewerken';
-    $('f-naam').value = r.naam||''; $('f-event').value = r.eventNaam||r.pdfEvent||'';
-    $('f-truck').value = r.wagen||r.pdfWagen||''; $('f-klant').value = r.klant||'';
-    $('f-tel').value = r.telefoon||''; $('f-straat').value = r.straat||'';
-    $('f-gemeente').value = [r.postcode,r.gemeente].filter(Boolean).join(' ');
-    $('f-van').value = r.datum||r.datum_van||''; $('f-tot').value = r.datum_tot||'';
+    if(r.eventId && EVENTS[String(r.eventId)]) $('f-event').value = String(r.eventId);
+    onEventChange();
+    selectTruck(r.wagen||r.pdfWagen||'');
+    $('f-naam').value = r.naam||'';
+    $('f-klant').value = r.klant||''; $('f-tel').value = r.telefoon||'';
+    $('f-straat').value = r.straat||''; $('f-gemeente').value = [r.postcode,r.gemeente].filter(Boolean).join(' ');
+    if(r.datum||r.datum_van) $('f-van').value = r.datum||r.datum_van;
+    if(r.datum_tot) $('f-tot').value = r.datum_tot;
     $('f-geladen').value = r.geladenDoor||''; $('f-telform').value = r.telformulier||'geen';
     $('f-verhuur').checked = !!r.verhuur; $('f-opmerking').value = r.opmerking||'';
     if(r.type_id){ $('f-type').value = String(r.type_id); $('f-type').dataset.naam = r.type_naam||''; }
@@ -388,7 +455,7 @@ function loadExisting(key){
       if(cat==='MATERIALEN'){ arr.forEach(m=>materials.push({_id:seq++, naam:m.naam||'', aantal:Number(m.aantal)||0})); }
       else arr.forEach(p=>products.push({_id:seq++, categorie:normCat(cat), naam:p.naam||'', aantal:Number(p.aantal)||0}));
     });
-    renderProducts(); renderMaterials();
+    renderProducts(); renderMaterials(); updLinkStatus();
   }).catch(e=>alert('Laden mislukt: '+(e.code||e.message)));
 }
 
@@ -408,14 +475,17 @@ function splitGemeente(s){
   return m ? {postcode:m[1], gemeente:m[2]} : {postcode:'', gemeente:s};
 }
 async function save(){
-  const naam = $('f-naam').value.trim() || $('f-event').value.trim() || $('f-type').dataset.naam || '';
-  if(!naam){ alert('Geef minstens een naam, evenement of type op.'); return; }
+  const eventId = $('f-event').value;
+  const ev = eventId ? EVENTS[eventId] : null;
+  const naam = $('f-naam').value.trim() || (ev?ev.name:'') || $('f-type').dataset.naam || '';
+  if(!naam){ alert('Geef minstens een naam, event of type op.'); return; }
   const g = splitGemeente($('f-gemeente').value);
   const rec = {
     naam,
     type_id: $('f-type').value ? Number($('f-type').value) : '',
     type_naam: $('f-type').dataset.naam || '',
-    eventNaam: $('f-event').value.trim(),
+    eventId: eventId || '',
+    eventNaam: ev ? ev.name : '',
     wagen: $('f-truck').value.trim(),
     klant: $('f-klant').value.trim(),
     telefoon: $('f-tel').value.trim(),
@@ -446,9 +516,7 @@ async function save(){
     alert('Opslaan mislukt: '+(e.code||e.message));
   }
 }
-function flashSaved(){
-  const el = $('save-state'); el.textContent='✓ bewaard'; el.classList.add('saved');
-}
+function flashSaved(){ const el = $('save-state'); el.textContent='✓ bewaard'; el.classList.add('saved'); }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePicker(); });
 $('picker').addEventListener('click', e=>{ if(e.target.id==='picker') closePicker(); });
 </script>
