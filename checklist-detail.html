@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Laadlijst maken</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<script src="checklist-types.js"></script>
+<style>
+:root{
+  --red:#e8001d;--bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;--blue:#1f76e8;--blue-bg:#e8f0fd;--amber:#b45309;--amber-bg:#fef3e2;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.save-state{font-size:12px;color:var(--text3);font-family:var(--mono);}
+.save-state.saved{color:var(--green);}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;cursor:pointer;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+
+.main{max-width:880px;margin:0 auto;padding:20px 18px 100px;}
+.page-title{font-family:var(--font-cond);font-size:30px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:6px;margin-bottom:16px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.card-h{font-family:var(--font-cond);font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+@media(max-width:620px){.grid2,.grid3{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:14px;background:#fff;color:var(--text);}
+.field textarea{resize:vertical;min-height:60px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--text);}
+
+.catsec{margin-bottom:14px;}
+.catsec h4{font-family:var(--font-cond);font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);border-bottom:2px solid var(--blue-bg);padding-bottom:5px;margin-bottom:8px;display:flex;justify-content:space-between;}
+.catsec h4 .c{color:var(--text3);font-family:var(--mono);font-size:11px;}
+.irow{display:grid;grid-template-columns:1fr 78px 34px;gap:8px;align-items:center;margin-bottom:6px;}
+.irow.mat{grid-template-columns:1fr 78px 34px;}
+.irow input[type=text]{padding:8px 10px;border:1px solid var(--border2);border-radius:7px;font-size:13.5px;font-family:var(--font);}
+.irow input[type=number]{padding:8px 8px;border:1px solid var(--border2);border-radius:7px;font-size:13.5px;font-family:var(--mono);text-align:right;width:100%;}
+.irow input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.xbtn{width:34px;height:34px;border:1px solid var(--border2);background:#fff;border-radius:7px;cursor:pointer;color:var(--red);font-size:15px;}
+.xbtn:hover{background:rgba(232,0,29,.08);}
+.addrow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.smallbtn{padding:8px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-size:13px;font-weight:700;cursor:pointer;color:var(--text);}
+.smallbtn:hover{background:var(--surface2);}
+.muted{color:var(--text3);font-size:13px;}
+
+.actionbar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 18px;display:flex;gap:10px;justify-content:flex-end;z-index:90;}
+.btn{padding:11px 18px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;color:var(--text);}
+.btn:hover{background:var(--surface2);}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue);}
+.btn-blue:hover{background:#1660c4;}
+.btn:disabled{opacity:.55;cursor:not-allowed;}
+
+/* Productpicker modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:200;padding:16px;}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border);}
+.modal-h .t{font-family:var(--font-cond);font-size:20px;font-weight:800;}
+.modal-x{width:32px;height:32px;border:none;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:16px;color:var(--text2);}
+.modal-b{padding:14px 18px;overflow:auto;}
+.modal-b input.search{width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-size:14px;margin-bottom:10px;}
+.pick{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;}
+.pick:hover{border-color:var(--blue);background:var(--blue-bg);}
+.pick .pn{font-size:13.5px;font-weight:600;}
+.pick .pc{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:10px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="checklists.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Laadlijst maken</span>
+  </a>
+  <div class="topbar-right">
+    <span class="save-state" id="save-state"></span>
+    <a class="back-link" href="checklists.html">← Overzicht</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title" id="page-title">Nieuwe laadlijst</div>
+  <div class="page-sub">Kies een type om de standaardproducten te laden, vul de gegevens aan en sla op.</div>
+
+  <!-- GEGEVENS -->
+  <div class="card">
+    <div class="card-h">Gegevens</div>
+    <div class="grid2">
+      <div class="field">
+        <label for="f-type">Type</label>
+        <select id="f-type"><option value="">— Kies een type —</option></select>
+      </div>
+      <div class="field">
+        <label for="f-naam">Naam lijst</label>
+        <input type="text" id="f-naam" placeholder="bv. Frituur — Tuinfeest Jan">
+      </div>
+      <div class="field">
+        <label for="f-event">Evenement</label>
+        <input type="text" id="f-event" list="dl-events" placeholder="Naam evenement">
+        <datalist id="dl-events"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-truck">Truck</label>
+        <input type="text" id="f-truck" list="dl-trucks" placeholder="bv. 404">
+        <datalist id="dl-trucks"></datalist>
+      </div>
+      <div class="field">
+        <label for="f-klant">Klant</label>
+        <input type="text" id="f-klant" placeholder="Naam klant">
+      </div>
+      <div class="field">
+        <label for="f-tel">Telefoon</label>
+        <input type="text" id="f-tel" placeholder="Telefoonnummer">
+      </div>
+      <div class="field">
+        <label for="f-straat">Straat + nr</label>
+        <input type="text" id="f-straat" placeholder="Straat en huisnummer">
+      </div>
+      <div class="field">
+        <label for="f-gemeente">Postcode + gemeente</label>
+        <input type="text" id="f-gemeente" placeholder="bv. 2400 Mol">
+      </div>
+      <div class="field">
+        <label for="f-van">Datum van</label>
+        <input type="date" id="f-van">
+      </div>
+      <div class="field">
+        <label for="f-tot">Datum tot</label>
+        <input type="date" id="f-tot">
+      </div>
+      <div class="field">
+        <label for="f-geladen">Geladen door</label>
+        <input type="text" id="f-geladen" placeholder="Naam medewerker">
+      </div>
+      <div class="field">
+        <label for="f-telform">Telformulier</label>
+        <select id="f-telform">
+          <option value="geen">Geen</option>
+          <option value="geld">Geld</option>
+          <option value="bonnen">Bonnen</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <label class="chk"><input type="checkbox" id="f-verhuur"> Verhuur</label>
+    </div>
+  </div>
+
+  <!-- PRODUCTEN -->
+  <div class="card">
+    <div class="card-h"><span>Producten</span><span class="muted" id="prod-count">0</span></div>
+    <div id="prod-sections"></div>
+    <div class="addrow">
+      <button class="smallbtn" onclick="openPicker()">+ Product uit catalogus</button>
+      <button class="smallbtn" onclick="addBlankProduct()">+ Lege regel</button>
+    </div>
+  </div>
+
+  <!-- MATERIALEN -->
+  <div class="card">
+    <div class="card-h"><span>Materialen</span><span class="muted" id="mat-count">0</span></div>
+    <div id="mat-list"></div>
+    <div class="addrow">
+      <input type="text" id="mat-new" list="dl-materials" placeholder="Materiaal toevoegen…" style="flex:1;min-width:180px;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-size:14px;">
+      <datalist id="dl-materials"></datalist>
+      <button class="smallbtn" onclick="addMaterialFromInput()">+ Toevoegen</button>
+    </div>
+  </div>
+
+  <!-- OPMERKING -->
+  <div class="card">
+    <div class="card-h">Opmerking</div>
+    <div class="field"><textarea id="f-opmerking" placeholder="Vrije notitie…"></textarea></div>
+  </div>
+</div>
+
+<div class="actionbar">
+  <a class="btn" href="checklists.html">Annuleer</a>
+  <button class="btn btn-blue" id="btn-save" onclick="save()">Opslaan</button>
+</div>
+
+<!-- Productpicker -->
+<div class="overlay" id="picker">
+  <div class="modal">
+    <div class="modal-h"><span class="t">Product toevoegen</span><button class="modal-x" onclick="closePicker()">✕</button></div>
+    <div class="modal-b">
+      <input type="text" class="search" id="pick-search" placeholder="🔍 Zoek product…" oninput="renderPicker()">
+      <div id="pick-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LL_PATH = 'ft_laadlijsten_v1';
+const CATS = ['DIEPVRIES','KOELING','DROOG','SAUZEN','DRANK'];
+let products = [];   // [{_id, categorie, naam, aantal}]
+let materials = [];  // [{_id, naam, aantal}]
+let catalog = [];    // [{naam, cat}]
+let seq = 1;
+let editKey = null;
+
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function normCat(c){ const u=String(c||'').trim().toUpperCase(); return CATS.includes(u)?u:'DROOG'; }
+
+(async function init(){
+  // Type-dropdown (uit checklist-types.js, geen DB nodig)
+  const types = (window.CHECKLIST_TYPES||[]).slice().sort((a,b)=>a.naam.localeCompare(b.naam,'nl'));
+  $('f-type').innerHTML = '<option value="">— Kies een type —</option>'
+    + types.map(t=>'<option value="'+t.id+'">'+esc(t.naam)+(t.aantalProducten?' ('+t.aantalProducten+'p/'+t.aantalMaterialen+'m)':'')+'</option>').join('');
+  $('f-type').addEventListener('change', onTypeChange);
+
+  // Materiaal-suggesties uit alle types
+  const matNames = new Set();
+  (window.CHECKLIST_TYPES||[]).forEach(t=>(t.materialen||[]).forEach(m=>matNames.add(m.naam)));
+  $('dl-materials').innerHTML = Array.from(matNames).sort((a,b)=>a.localeCompare(b,'nl')).map(n=>'<option value="'+esc(n)+'">').join('');
+
+  renderProducts(); renderMaterials();
+
+  if(window.fbAuthReady) await window.fbAuthReady;
+
+  // Catalogus voor de productpicker
+  fbdb.ref('ft_bestel_catalogus_v1').once('value').then(snap=>{
+    const v = snap.val() || {};
+    catalog = Object.values(v).filter(p=>p && p.name).map(p=>({naam:p.name, cat:p.cat||''}))
+      .sort((a,b)=>a.naam.localeCompare(b.naam,'nl'));
+  }).catch(()=>{});
+
+  // Event- en truck-suggesties uit de planning
+  fbdb.ref('ft_planning_v1').once('value').then(snap=>{
+    const v = snap.val() || {};
+    const events = new Set(), trucks = new Set();
+    Object.values(v).forEach(ev=>{
+      if(!ev) return;
+      const nm = ev.name || ev.naam; if(nm) events.add(nm);
+      (ev.trucks||[]).forEach(t=>t&&trucks.add(t));
+      if(ev.truckDays) Object.values(ev.truckDays).forEach(a=>(a||[]).forEach(t=>t&&trucks.add(t)));
+    });
+    $('dl-events').innerHTML = Array.from(events).sort((a,b)=>a.localeCompare(b,'nl')).map(n=>'<option value="'+esc(n)+'">').join('');
+    $('dl-trucks').innerHTML = Array.from(trucks).sort((a,b)=>a.localeCompare(b,'nl')).map(n=>'<option value="'+esc(n)+'">').join('');
+  }).catch(()=>{});
+
+  // Bewerken? ?id=KEY
+  const id = new URLSearchParams(location.search).get('id');
+  if(id){ loadExisting(id); }
+})();
+
+function onTypeChange(){
+  const id = $('f-type').value;
+  if(!id) return;
+  const t = (window.CHECKLIST_TYPES||[]).find(x=>String(x.id)===String(id));
+  if(!t) return;
+  const hasData = products.length || materials.length;
+  if(hasData && !confirm('Producten en materialen vervangen door de standaard van "'+t.naam+'"?')){ return; }
+  products = (t.producten||[]).map(p=>({_id:seq++, categorie:normCat(p.categorie), naam:p.naam, aantal:Number(p.aantal)||0}));
+  materials = (t.materialen||[]).map(m=>({_id:seq++, naam:m.naam, aantal:Number(m.aantal)||0}));
+  if(!$('f-naam').value.trim()) $('f-naam').value = t.naam;
+  // type-naam onthouden voor opslaan
+  $('f-type').dataset.naam = t.naam;
+  renderProducts(); renderMaterials();
+}
+
+/* ---------- Producten ---------- */
+function renderProducts(){
+  const wrap = $('prod-sections');
+  let html = '';
+  let total = 0;
+  CATS.forEach(cat=>{
+    const items = products.filter(p=>p.categorie===cat);
+    if(!items.length) return;
+    total += items.length;
+    html += '<div class="catsec"><h4><span>'+cat+'</span><span class="c">'+items.length+'</span></h4>'
+      + items.map(p=>rowProduct(p)).join('') + '</div>';
+  });
+  if(!total) html = '<div class="muted">Nog geen producten. Kies een type of voeg toe uit de catalogus.</div>';
+  wrap.innerHTML = html;
+  $('prod-count').textContent = products.length + ' producten';
+}
+function rowProduct(p){
+  const opts = CATS.map(c=>'<option value="'+c+'"'+(c===p.categorie?' selected':'')+'>'+c+'</option>').join('');
+  return '<div class="irow">'
+    + '<input type="text" value="'+esc(p.naam)+'" oninput="updProd('+p._id+',\'naam\',this.value)" placeholder="Productnaam">'
+    + '<input type="number" min="0" step="1" value="'+esc(p.aantal)+'" oninput="updProd('+p._id+',\'aantal\',this.value)">'
+    + '<button class="xbtn" title="Verwijderen" onclick="delProd('+p._id+')">×</button>'
+    + '<div style="grid-column:1 / -1;margin:-2px 0 4px;"><select onchange="updProd('+p._id+',\'categorie\',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border2);border-radius:6px;color:var(--text2);">'+opts+'</select></div>'
+    + '</div>';
+}
+function updProd(id, field, val){
+  const p = products.find(x=>x._id===id); if(!p) return;
+  if(field==='aantal') p.aantal = val===''?0:Number(val);
+  else p[field] = val;
+  if(field==='categorie') renderProducts();
+}
+function delProd(id){ products = products.filter(x=>x._id!==id); renderProducts(); }
+function addBlankProduct(){ products.push({_id:seq++, categorie:'DROOG', naam:'', aantal:0}); renderProducts(); }
+function addProduct(naam, cat){ products.push({_id:seq++, categorie:normCat(cat), naam:naam, aantal:1}); renderProducts(); }
+
+/* ---------- Materialen ---------- */
+function renderMaterials(){
+  const wrap = $('mat-list');
+  if(!materials.length){ wrap.innerHTML = '<div class="muted">Nog geen materialen.</div>'; $('mat-count').textContent='0 materialen'; return; }
+  wrap.innerHTML = materials.map(m=>
+    '<div class="irow mat">'
+    + '<input type="text" value="'+esc(m.naam)+'" oninput="updMat('+m._id+',\'naam\',this.value)" placeholder="Materiaal">'
+    + '<input type="number" min="0" step="1" value="'+esc(m.aantal)+'" oninput="updMat('+m._id+',\'aantal\',this.value)">'
+    + '<button class="xbtn" title="Verwijderen" onclick="delMat('+m._id+')">×</button>'
+    + '</div>'
+  ).join('');
+  $('mat-count').textContent = materials.length + ' materialen';
+}
+function updMat(id, field, val){
+  const m = materials.find(x=>x._id===id); if(!m) return;
+  if(field==='aantal') m.aantal = val===''?0:Number(val); else m[field]=val;
+}
+function delMat(id){ materials = materials.filter(x=>x._id!==id); renderMaterials(); }
+function addMaterialFromInput(){
+  const inp = $('mat-new'); const naam = inp.value.trim(); if(!naam) return;
+  materials.push({_id:seq++, naam:naam, aantal:1}); inp.value=''; renderMaterials();
+}
+
+/* ---------- Productpicker ---------- */
+function openPicker(){ $('pick-search').value=''; renderPicker(); $('picker').classList.add('show'); $('pick-search').focus(); }
+function closePicker(){ $('picker').classList.remove('show'); }
+function renderPicker(){
+  const term = ($('pick-search').value||'').trim().toLowerCase();
+  let list = catalog;
+  if(term) list = catalog.filter(p=>p.naam.toLowerCase().indexOf(term)!==-1);
+  list = list.slice(0,80);
+  $('pick-list').innerHTML = list.length
+    ? list.map(p=>'<div class="pick" onclick="pickAdd('+catalog.indexOf(p)+')"><span class="pn">'+esc(p.naam)+'</span><span class="pc">'+esc(p.cat||'—')+'</span></div>').join('')
+    : '<div class="muted">Geen producten gevonden.'+(catalog.length?'':' (Catalogus nog niet geladen.)')+'</div>';
+}
+function pickAdd(idx){ const p = catalog[idx]; if(!p) return; addProduct(p.naam, p.cat); closePicker(); }
+
+/* ---------- Bewerken laden ---------- */
+function loadExisting(key){
+  fbdb.ref(LL_PATH+'/'+key).once('value').then(snap=>{
+    const r = snap.val(); if(!r){ alert('Lijst niet gevonden.'); return; }
+    editKey = key;
+    $('page-title').textContent = 'Laadlijst bewerken';
+    $('f-naam').value = r.naam||''; $('f-event').value = r.eventNaam||r.pdfEvent||'';
+    $('f-truck').value = r.wagen||r.pdfWagen||''; $('f-klant').value = r.klant||'';
+    $('f-tel').value = r.telefoon||''; $('f-straat').value = r.straat||'';
+    $('f-gemeente').value = [r.postcode,r.gemeente].filter(Boolean).join(' ');
+    $('f-van').value = r.datum||r.datum_van||''; $('f-tot').value = r.datum_tot||'';
+    $('f-geladen').value = r.geladenDoor||''; $('f-telform').value = r.telformulier||'geen';
+    $('f-verhuur').checked = !!r.verhuur; $('f-opmerking').value = r.opmerking||'';
+    if(r.type_id){ $('f-type').value = String(r.type_id); $('f-type').dataset.naam = r.type_naam||''; }
+    const cats = r.categorieën || {};
+    products = []; materials = [];
+    Object.keys(cats).forEach(cat=>{
+      const arr = cats[cat]; if(!Array.isArray(arr)) return;
+      if(cat==='MATERIALEN'){ arr.forEach(m=>materials.push({_id:seq++, naam:m.naam||'', aantal:Number(m.aantal)||0})); }
+      else arr.forEach(p=>products.push({_id:seq++, categorie:normCat(cat), naam:p.naam||'', aantal:Number(p.aantal)||0}));
+    });
+    renderProducts(); renderMaterials();
+  }).catch(e=>alert('Laden mislukt: '+(e.code||e.message)));
+}
+
+/* ---------- Opslaan ---------- */
+function buildCategorieen(){
+  const out = {};
+  CATS.forEach(cat=>{
+    const items = products.filter(p=>p.categorie===cat && (p.naam||'').trim());
+    if(items.length) out[cat] = items.map(p=>({naam:p.naam.trim(), aantal:Number(p.aantal)||0}));
+  });
+  const mats = materials.filter(m=>(m.naam||'').trim());
+  if(mats.length) out.MATERIALEN = mats.map(m=>({naam:m.naam.trim(), aantal:Number(m.aantal)||0}));
+  return out;
+}
+function splitGemeente(s){
+  s = (s||'').trim(); const m = /^(\d{4})\s+(.*)$/.exec(s);
+  return m ? {postcode:m[1], gemeente:m[2]} : {postcode:'', gemeente:s};
+}
+async function save(){
+  const naam = $('f-naam').value.trim() || $('f-event').value.trim() || $('f-type').dataset.naam || '';
+  if(!naam){ alert('Geef minstens een naam, evenement of type op.'); return; }
+  const g = splitGemeente($('f-gemeente').value);
+  const rec = {
+    naam,
+    type_id: $('f-type').value ? Number($('f-type').value) : '',
+    type_naam: $('f-type').dataset.naam || '',
+    eventNaam: $('f-event').value.trim(),
+    wagen: $('f-truck').value.trim(),
+    klant: $('f-klant').value.trim(),
+    telefoon: $('f-tel').value.trim(),
+    straat: $('f-straat').value.trim(),
+    postcode: g.postcode, gemeente: g.gemeente,
+    datum: $('f-van').value, datum_tot: $('f-tot').value,
+    geladenDoor: $('f-geladen').value.trim(),
+    telformulier: $('f-telform').value,
+    verhuur: $('f-verhuur').checked,
+    opmerking: $('f-opmerking').value.trim(),
+    categorieën: buildCategorieen(),
+    aangepast_op: new Date().toISOString()
+  };
+  const btn = $('btn-save'); btn.disabled = true; btn.textContent = 'Bezig…';
+  try{
+    if(editKey){
+      await fbdb.ref(LL_PATH+'/'+editKey).update(rec);
+    }else{
+      rec.status = 'nieuw';
+      rec.automatisch_aangemaakt = false;
+      rec.aangemaakt = new Date().toISOString();
+      await fbdb.ref(LL_PATH).push(rec);
+    }
+    flashSaved();
+    location.href = 'checklists.html';
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Opslaan';
+    alert('Opslaan mislukt: '+(e.code||e.message));
+  }
+}
+function flashSaved(){
+  const el = $('save-state'); el.textContent='✓ bewaard'; el.classList.add('saved');
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePicker(); });
+$('picker').addEventListener('click', e=>{ if(e.target.id==='picker') closePicker(); });
+</script>
+</body>
+</html>

@@ -145,7 +145,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </a>
   <div class="topbar-right">
     <span class="save-state" id="save-state"></span>
-    <a class="back-link" href="laadlijst-beheer.html">+ Nieuwe lijst</a>
+    <a class="back-link" href="checklist-detail.html">+ Nieuwe lijst</a>
     <a class="back-link" href="lijsten.html">← Lijsten</a>
   </div>
 </div>
@@ -333,7 +333,7 @@ function render(){
   const tbody = document.getElementById('rows');
   if(!list.length){
     tbody.innerHTML = '<tr><td colspan="8"><div class="empty">'
-      + (ITEMS.length ? 'Geen lijsten in deze status.' : 'Nog geen laadlijsten.<br>Maak er een via <a href="laadlijst-beheer.html">Laadlijst-beheer</a>.')
+      + (ITEMS.length ? 'Geen lijsten in deze status.' : 'Nog geen laadlijsten.<br><a href="checklist-detail.html">+ Maak een nieuwe lijst</a>')
       + '</div></td></tr>';
     return;
   }
@@ -352,7 +352,7 @@ function render(){
       + '<td><div class="acts">'
         + '<button class="iconbtn" title="Bekijken" onclick="openView(\''+i.key+'\')">👁</button>'
         + '<button class="iconbtn" title="Status / info bewerken" onclick="openEdit(\''+i.key+'\')">✏️</button>'
-        + '<a class="iconbtn" title="Producten bewerken" href="laadlijst-beheer.html">📦</a>'
+        + '<a class="iconbtn" title="Volledig bewerken" href="checklist-detail.html?id='+i.key+'">📦</a>'
         + '<button class="iconbtn del" title="Verwijderen" onclick="delItem(\''+i.key+'\')">🗑</button>'
       + '</div></td>'
     + '</tr>';
@@ -390,6 +390,7 @@ function saveEdit(){
 function openView(key){
   const it = ITEMS.find(i=>i.key===key); if(!it) return;
   document.getElementById('v-title').textContent = it.eventNaam || it.naam || 'Laadlijst';
+  document.getElementById('v-edit-link').href = 'checklist-detail.html?id=' + it.key;
   const cats = it.categorieën || {};
   const order = [...CAT_ORDER, ...Object.keys(cats).filter(k=>!CAT_ORDER.includes(k))];
   let body = '<div class="meta-line">'
