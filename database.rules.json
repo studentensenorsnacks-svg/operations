@@ -55,6 +55,15 @@
     },
     "vet_tonnen":             { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
 
+    "_userPages": {
+      ".read": "auth != null && auth.token.role == 'admin'",
+      "$uid": {
+        ".read":  "auth != null && (auth.uid == $uid || auth.token.role == 'admin')",
+        ".write": "auth != null && auth.token.role == 'admin'",
+        "$pageKey": { ".validate": "newData.isBoolean()" }
+      }
+    },
+
     "_userActivity": {
       ".read": "auth != null && auth.token.role == 'admin'",
       "$uid": {

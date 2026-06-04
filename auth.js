@@ -205,6 +205,7 @@
           '/checkin.html',
           '/ocb.html',
           '/qr-codes.html',
+          '/portaal.html',
           '/login.html', '/qr.html'
         ];
         var pn = (location.pathname || '').toLowerCase();

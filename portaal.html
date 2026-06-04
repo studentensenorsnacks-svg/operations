@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Mijn portaal — Señor Snacks</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+</script>
+<script src="portal-pages.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,Inter,"Segoe UI",sans-serif;
+  background:#fdf8f0;color:#3a2415;
+  min-height:100vh;padding:26px 18px 60px;
+}
+.topbar{
+  max-width:1080px;margin:0 auto 8px;display:flex;align-items:center;
+  gap:14px;padding-bottom:18px;border-bottom:1px solid rgba(120,60,20,.12);
+}
+.topbar img{width:42px;height:auto}
+.topbar .brand{flex:1}
+.topbar .brand h1{font-size:21px;font-weight:800;line-height:1.15}
+.topbar .brand .who{font-size:12.5px;color:#7a5a40;margin-top:2px}
+.topbar button.logout{
+  background:transparent;border:1px solid rgba(120,60,20,.22);
+  border-radius:9px;padding:9px 14px;font-size:13px;color:#7a5a40;
+  cursor:pointer;font-family:inherit;font-weight:600;flex-shrink:0;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.topbar button.logout:hover{background:#fef0e2;border-color:#e8662b;color:#3a2415}
+
+.wrap{max-width:1080px;margin:0 auto}
+.greeting{margin:22px 0 16px}
+.greeting h2{font-size:24px;font-weight:800;letter-spacing:-.01em}
+.greeting p{font-size:13.5px;color:#7a5a40;margin-top:4px}
+
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:14px;
+}
+.tile{
+  display:flex;flex-direction:column;gap:10px;
+  background:#fff;border:1px solid rgba(120,60,20,.12);
+  border-radius:16px;padding:22px 20px;
+  text-decoration:none;color:inherit;cursor:pointer;
+  transition:transform .12s,box-shadow .15s,border-color .15s;
+  position:relative;overflow:hidden;
+}
+.tile::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:4px;
+  background:#e8662b;border-radius:16px 16px 0 0;
+}
+.tile:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 28px rgba(120,60,20,.14);
+  border-color:rgba(232,102,43,.4);
+}
+.tile .ico{font-size:34px;line-height:1}
+.tile .name{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.tile .desc{font-size:12.5px;color:#7a5a40;line-height:1.4}
+.tile .ext{
+  position:absolute;top:14px;right:14px;font-size:11px;color:#b89878;
+  font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+}
+
+.state{
+  max-width:460px;margin:50px auto;text-align:center;
+  background:#fff;border:1px solid rgba(120,60,20,.12);border-radius:16px;
+  padding:34px 28px;
+}
+.state .ico{font-size:40px;margin-bottom:12px}
+.state h3{font-size:18px;font-weight:800;margin-bottom:8px}
+.state p{font-size:13.5px;color:#7a5a40;line-height:1.55}
+.state.hidden{display:none}
+.grid.hidden{display:none}
+
+.admin-note{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:#fef0e2;border:1px solid rgba(232,102,43,.25);
+  border-radius:12px;padding:12px 16px;margin-bottom:16px;
+  font-size:13px;color:#7a4d12;
+}
+.admin-note a{color:#e8662b;font-weight:700;text-decoration:none}
+.admin-note a:hover{text-decoration:underline}
+.admin-note.hidden{display:none}
+
+@media(max-width:560px){
+  body{padding:18px 12px 50px}
+  .topbar img{width:36px}
+  .topbar .brand h1{font-size:18px}
+  .greeting h2{font-size:20px}
+  .grid{grid-template-columns:1fr 1fr;gap:10px}
+  .tile{padding:16px 14px;border-radius:13px}
+  .tile .ico{font-size:28px}
+  .tile .name{font-size:15px}
+}
+@media(max-width:380px){
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="senorsnacks-logo.png" alt="Señor Snacks">
+  <div class="brand">
+    <h1>Mijn portaal</h1>
+    <div class="who" id="who"></div>
+  </div>
+  <button class="logout" id="btn-logout">Uitloggen</button>
+</div>
+
+<div class="wrap">
+  <div class="admin-note hidden" id="admin-note">
+    <span>👋 Je bent admin — je ziet hier alle pagina's.</span>
+    <span>Toegang per gebruiker instellen kan via <a href="users.html">Gebruikers →</a></span>
+  </div>
+
+  <div class="greeting">
+    <h2 id="greet">Welkom</h2>
+    <p id="greet-sub">Kies een onderdeel om te openen.</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="state hidden" id="empty-state">
+    <div class="ico">🔒</div>
+    <h3>Nog geen pagina's toegekend</h3>
+    <p>Er zijn voor jou nog geen onderdelen vrijgegeven. Vraag een beheerder om je toegang te geven.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]);
+    });
+  }
+
+  var PAGES = window.PORTAL_PAGES || [];
+
+  function firstName(a) {
+    var n = (a.displayName || '').trim();
+    if (n) return n.split(/\s+/)[0];
+    var email = (a.email || '').trim();
+    if (email) return email.split('@')[0];
+    return '';
+  }
+
+  function renderTiles(keys) {
+    var grid = document.getElementById('grid');
+    var emptyState = document.getElementById('empty-state');
+    // Behoud de catalogus-volgorde; toon alleen toegekende sleutels.
+    var pages = PAGES.filter(function (p) { return keys.indexOf(p.key) !== -1; });
+    if (!pages.length) {
+      grid.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      return;
+    }
+    emptyState.classList.add('hidden');
+    grid.classList.remove('hidden');
+    grid.innerHTML = pages.map(function (p) {
+      var target = p.external ? ' target="_blank" rel="noopener"' : '';
+      return ''
+        + '<a class="tile" href="' + esc(p.url) + '"' + target + '>'
+        +   (p.external ? '<span class="ext">↗ extern</span>' : '')
+        +   '<span class="ico">' + esc(p.icon || '▣') + '</span>'
+        +   '<span class="name">' + esc(p.label) + '</span>'
+        +   '<span class="desc">' + esc(p.desc || '') + '</span>'
+        + '</a>';
+    }).join('');
+  }
+
+  window.addEventListener('auth-ready', function (e) {
+    var a = e.detail;
+    document.getElementById('who').textContent =
+      (a.email || '') + (a.role ? ' · ' + a.role : '');
+    document.getElementById('btn-logout').onclick = a.logout;
+    var fn = firstName(a);
+    document.getElementById('greet').textContent = fn ? ('Welkom, ' + fn) : 'Welkom';
+
+    // Admins zien altijd alle tegels.
+    if (a.isAdmin) {
+      document.getElementById('admin-note').classList.remove('hidden');
+      renderTiles(PAGES.map(function (p) { return p.key; }));
+      return;
+    }
+
+    // Andere gebruikers: lees toegekende pagina's uit RTDB.
+    firebase.database().ref('_userPages/' + a.uid).once('value')
+      .then(function (snap) {
+        var val = snap.val() || {};
+        var keys = Object.keys(val).filter(function (k) { return val[k] === true; });
+        renderTiles(keys);
+      })
+      .catch(function () {
+        // Bij een leesfout: toon de lege staat i.p.v. een blanco scherm.
+        renderTiles([]);
+      });
+  });
+})();
+</script>
+
+</body>
+</html>
