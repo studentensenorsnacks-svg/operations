@@ -128,6 +128,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .badge.manager{background:#fdf0d4;color:#7a4d12}
 .badge.medewerker{background:#eaf2dc;color:#3f5a18}
 .badge.viewer{background:#e0ebef;color:#1e4a5c}
+.badge.bakker{background:#f5e6c7;color:#7a4d12}
 .badge.none{background:#f0e7da;color:#856042}
 
 .empty{padding:30px;text-align:center;color:#b89878;font-size:13px}
@@ -292,6 +293,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         <option value="medewerker">medewerker</option>
         <option value="manager">manager</option>
         <option value="admin">admin</option>
+        <option value="bakker">bakker</option>
         <option value="viewer">alleen-lezen</option>
       </select>
       <div class="modal-actions">
@@ -321,6 +323,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
             <option value="admin">admin</option>
             <option value="manager">manager</option>
             <option value="medewerker">medewerker</option>
+            <option value="bakker">bakker</option>
             <option value="viewer">alleen-lezen</option>
           </select>
           <button class="primary" id="d-save-role" onclick="saveRole()">Opslaan</button>
@@ -441,7 +444,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
   // ── Stats ───────────────────────────────────────────────────
   function updateStats() {
     var total = allUsers.length;
-    var byRole = { admin: 0, manager: 0, medewerker: 0, viewer: 0, none: 0 };
+    var byRole = { admin: 0, manager: 0, medewerker: 0, bakker: 0, viewer: 0, none: 0 };
     allUsers.forEach(function (u) {
       var r = u.role || 'none';
       byRole[r] = (byRole[r] || 0) + 1;

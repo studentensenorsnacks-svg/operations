@@ -134,6 +134,29 @@
     }
     function redirectToLogin() { location.replace('/login.html?next=' + nextUrl); }
 
+    // Leg een uitlog-gebeurtenis vast in _userActivity voordat we afmelden,
+    // zodat het audit-log echte logout-events toont. Faalt stilletjes en
+    // wacht maximaal kort zodat uitloggen nooit blijft hangen.
+    function signOutWithLog() {
+      var done = false;
+      function finish() { if (done) return; done = true; firebase.auth().signOut().then(redirectToLogin); }
+      try {
+        var user = firebase.auth().currentUser;
+        if (user && typeof firebase.database === 'function') {
+          var actRef = firebase.database().ref('_userActivity/' + user.uid);
+          var now = Date.now();
+          var ua = (navigator.userAgent || '').slice(0, 380);
+          actRef.update({ lastLogout: now }).catch(function () {});
+          actRef.child('loginHistory/' + now)
+            .set({ type: 'logout', userAgent: ua })
+            .then(finish).catch(finish);
+          setTimeout(finish, 1500); // vangnet: nooit langer dan 1,5s wachten
+          return;
+        }
+      } catch (e) { /* noop */ }
+      finish();
+    }
+
     function showWaiting(user) {
       if (!document.body) { return setTimeout(function () { showWaiting(user); }, 10); }
       var existing = document.getElementById('__auth_overlay');
@@ -165,7 +188,7 @@
         firebase.auth().currentUser.getIdToken(true).then(function () { location.reload(); });
       };
       document.getElementById('__auth_logout').onclick = function () {
-        firebase.auth().signOut().then(redirectToLogin);
+        signOutWithLog();
       };
     }
 
@@ -178,8 +201,9 @@
         role: role,
         isAdmin:   role === 'admin',
         canManage: role === 'admin' || role === 'manager',
-        canWrite:  role === 'admin' || role === 'manager' || role === 'medewerker',
-        logout: function () { firebase.auth().signOut().then(redirectToLogin); },
+        canWrite:  role === 'admin' || role === 'manager' || role === 'medewerker' || role === 'bakker',
+        isBakker:  role === 'bakker',
+        logout: function () { signOutWithLog(); },
       };
       if (!window.__auth.canWrite) {
         var s = document.createElement('style');

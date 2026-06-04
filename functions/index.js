@@ -327,7 +327,7 @@ exports.vetTonnenApi = onRequest(
 //   manager   - alle operationele pagina's schrijven, geen user-beheer
 //   medewerker- operationele writes (checkin, eindstock, poets, notities, …)
 //   viewer    - alleen lezen
-const VALID_ROLES = ['admin', 'manager', 'medewerker', 'viewer'];
+const VALID_ROLES = ['admin', 'manager', 'medewerker', 'viewer', 'bakker'];
 const BOOTSTRAP_ADMIN_EMAIL = 'jelle@senorsnacks.be';
 
 function requireAdmin(request) {

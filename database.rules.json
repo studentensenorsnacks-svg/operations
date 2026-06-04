@@ -14,16 +14,34 @@
     },
 
     "ft_ops_v1":          { ".read": "auth != null", ".write": "auth != null" },
-    "ft_ops_v2":          { ".read": "auth != null", ".write": "auth != null" },
+    "ft_ops_v2": {
+      ".read":  "auth != null",
+      ".write": "auth != null && auth.token.role != 'bakker'",
+      "$id": {
+        ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists())"
+      }
+    },
     "ft_priority_v1":     { ".read": "auth != null", ".write": "auth != null" },
     "ft_laadlijst_v1":    { ".read": "auth != null", ".write": "auth != null" },
     "ft_laadlijsten_v1":  { ".read": "auth != null", ".write": "auth != null" },
     "ft_horeca_laadlijst_v1": { ".read": "auth != null", ".write": "auth != null" },
     "ft_eindstock_v1":    { ".read": "auth != null", ".write": "auth != null" },
     "ft_fiches_v1":       { ".read": "auth != null", ".write": "auth != null" },
-    "ft_notities_v1":     { ".read": "auth != null", ".write": "auth != null" },
-    "ft_qrcodes_meta_v1": { ".read": "auth != null", ".write": "auth != null" },
-    "ft_qrcodes_v1":      { ".read": "auth != null", ".write": "auth != null" },
+    "ft_notities_v1": {
+      ".read":  "auth != null",
+      ".write": "auth != null && auth.token.role != 'bakker'",
+      "$id": {
+        ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists())"
+      }
+    },
+    "ft_qrcodes_meta_v1": {
+      ".read":  "auth != null",
+      ".write": "auth != null && auth.token.role != 'bakker'"
+    },
+    "ft_qrcodes_v1": {
+      ".read":  "auth != null",
+      ".write": "auth != null && auth.token.role != 'bakker'"
+    },
     "ft_stroomaanvraag_v1": { ".read": "auth != null", ".write": "auth != null" },
     "ft_bestellingen_v1":     { ".read": "auth != null", ".write": "auth != null" },
     "ft_bestel_catalogus_v1": { ".read": "auth != null", ".write": "auth != null" },
@@ -31,7 +49,10 @@
     "ft_trucks_v1":       { ".read": "auth != null", ".write": "auth != null" },
     "ft_poets_history":   { ".read": "auth != null", ".write": "auth != null" },
     "foldtable_requests": { ".read": "auth != null", ".write": "auth != null" },
-    "ocb_keuringen":      { ".read": "auth != null", ".write": "auth != null" },
+    "ocb_keuringen": {
+      ".read":  "auth != null",
+      ".write": "auth != null && auth.token.role != 'bakker'"
+    },
     "vet_tonnen":         { ".read": "auth != null", ".write": "auth != null" },
 
     "_userActivity": {
@@ -41,6 +62,7 @@
         ".read":  "auth != null && (auth.uid == $uid || auth.token.role == 'admin')",
         "lastSeen":       { ".validate": "newData.isNumber()" },
         "lastLogin":      { ".validate": "newData.isNumber()" },
+        "lastLogout":     { ".validate": "newData.isNumber()" },
         "loginCount":     { ".validate": "newData.isNumber()" },
         "email":          { ".validate": "newData.isString() && newData.val().length < 200" },
         "displayName":    { ".validate": "newData.isString() && newData.val().length < 200" },
@@ -49,6 +71,7 @@
         "loginHistory": {
           "$ts": {
             ".validate": "newData.hasChildren()",
+            "type":      { ".validate": "newData.isString() && newData.val().length < 20" },
             "provider":  { ".validate": "newData.isString() && newData.val().length < 40" },
             "userAgent": { ".validate": "newData.isString() && newData.val().length < 400" },
             "$other":    { ".validate": false }
