@@ -3,57 +3,109 @@
     ".read": false,
     ".write": false,
 
-    "ft_planning_v1":              { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_planning_outlook_archief": { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_planning_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))"
+    },
+    "ft_planning_outlook_archief": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))"
+    },
 
     "ft_planning_backup": {
-      ".read": "auth != null && auth.token.role != 'bakker'",
+      ".read": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
       "$ts": {
-        ".write": "auth != null && auth.token.role != 'bakker' && (!data.exists() || !newData.exists())"
+        ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|'))) && (!data.exists() || !newData.exists())"
       }
     },
 
-    "ft_ops_v1":          { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_ops_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|ops|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|ops|')))"
+    },
     "ft_ops_v2": {
-      ".read":  "auth != null",
-      ".write": "auth != null && auth.token.role != 'bakker'",
+      ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|checkin|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|checkin|')))",
       "$id": {
-        ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists())"
+        ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists()) && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|checkin|')))"
       }
     },
-    "ft_priority_v1":          { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_laadlijst_v1":         { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_laadlijsten_v1":       { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_horeca_laadlijst_v1":  { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_eindstock_v1":         { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_fiches_v1":            { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+
+    "ft_priority_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|poets|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|poets|')))"
+    },
+    "ft_laadlijst_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))"
+    },
+    "ft_laadlijsten_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))"
+    },
+    "ft_horeca_laadlijst_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|horeca|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|horeca|')))"
+    },
+    "ft_eindstock_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|eindstock|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|eindstock|')))"
+    },
+    "ft_fiches_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))"
+    },
     "ft_notities_v1": {
-      ".read":  "auth != null",
-      ".write": "auth != null && auth.token.role != 'bakker'",
+      ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|notities|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|notities|')))",
       "$id": {
-        ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists())"
+        ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists()) && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|notities|')))"
       }
     },
     "ft_qrcodes_meta_v1": {
-      ".read":  "auth != null",
-      ".write": "auth != null && auth.token.role != 'bakker'"
+      ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|qrcodes|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|qrcodes|')))"
     },
     "ft_qrcodes_v1": {
-      ".read":  "auth != null",
-      ".write": "auth != null && auth.token.role != 'bakker'"
+      ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|qrcodes|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|qrcodes|')))"
     },
-    "ft_stroomaanvraag_v1":   { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_bestellingen_v1":     { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_bestel_catalogus_v1": { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_archief_v1":          { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_trucks_v1":           { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "ft_poets_history":       { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
-    "foldtable_requests":     { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_stroomaanvraag_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|stroomaanvraag|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|stroomaanvraag|')))"
+    },
+    "ft_bestellingen_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))"
+    },
+    "ft_bestel_catalogus_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))"
+    },
+    "ft_archief_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|archief|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|archief|')))"
+    },
+    "ft_trucks_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|trucks|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|trucks|')))"
+    },
+    "ft_poets_history": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|poets|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|poets|')))"
+    },
+    "foldtable_requests": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))"
+    },
     "ocb_keuringen": {
-      ".read":  "auth != null",
-      ".write": "auth != null && auth.token.role != 'bakker'"
+      ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))"
     },
-    "vet_tonnen":             { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "vet_tonnen": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|vet|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|vet|')))"
+    },
 
     "_userPages": {
       ".read": "auth != null && auth.token.role == 'admin'",

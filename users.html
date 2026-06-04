@@ -130,8 +130,14 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .badge.medewerker{background:#eaf2dc;color:#3f5a18}
 .badge.viewer{background:#e0ebef;color:#1e4a5c}
 .badge.bakker{background:#f5e6c7;color:#7a4d12}
+.badge.custom{background:#ece4f0;color:#4a2871}
 .badge.finance{background:#e0ebef;color:#1e4a5c;border:1px solid #c1d3da}
 .badge.none{background:#f0e7da;color:#856042}
+.pages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
+.pages-grid label{display:flex;align-items:center;gap:7px;padding:7px 10px;background:#fff;border:1px solid rgba(120,60,20,.12);border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:#3a2415;text-transform:none;letter-spacing:0;margin:0;transition:border-color .12s,background .12s}
+.pages-grid label:hover{border-color:#e8662b}
+.pages-grid label input{width:auto;margin:0;cursor:pointer}
+.pages-grid label.on{background:#fde2dd;border-color:#e8662b}
 
 .empty{padding:30px;text-align:center;color:#b89878;font-size:13px}
 
@@ -304,13 +310,18 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         </div>
       </div>
       <label>Rol</label>
-      <select id="add-role">
+      <select id="add-role" onchange="onAddRoleChange()">
         <option value="medewerker">medewerker</option>
         <option value="manager">manager</option>
         <option value="admin">admin</option>
         <option value="bakker">bakker</option>
         <option value="viewer">alleen-lezen</option>
+        <option value="custom">custom — kies tabs zelf</option>
       </select>
+      <div id="add-pages-row" style="display:none;margin-top:12px;padding:12px;background:#fef0e2;border:1px solid rgba(120,60,20,.12);border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;color:#7a5a40;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Toegankelijke tabs</div>
+        <div id="add-pages-grid" class="pages-grid"></div>
+      </div>
       <label style="display:flex;align-items:center;gap:8px;margin:14px 0 0;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;text-transform:none;letter-spacing:0;">
         <input id="add-finance" type="checkbox" style="width:auto;margin:0;cursor:pointer;">
         <span>💳 Finance-toegang (kan EventPay zien)</span>
@@ -344,8 +355,16 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
             <option value="medewerker">medewerker</option>
             <option value="bakker">bakker</option>
             <option value="viewer">alleen-lezen</option>
+            <option value="custom">custom — kies tabs zelf</option>
           </select>
           <button class="primary" id="d-save-role" onclick="saveRole()">Opslaan</button>
+        </div>
+        <div id="d-pages-row" style="display:none;margin-top:12px;padding:12px;background:#fef0e2;border:1px solid rgba(120,60,20,.12);border-radius:8px;">
+          <div style="font-size:11px;font-weight:700;color:#7a5a40;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>Toegankelijke tabs</span>
+            <span id="d-pages-state" style="font-weight:400;color:#b89878;font-size:10.5px;text-transform:none;letter-spacing:0;"></span>
+          </div>
+          <div id="d-pages-grid" class="pages-grid"></div>
         </div>
         <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;">
           <input id="d-finance" type="checkbox" onchange="saveFinance(this.checked)" style="width:auto;margin:0;cursor:pointer;">
@@ -390,8 +409,52 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
   var fnCreate     = fns.httpsCallable('createUser');
   var fnSetRole    = fns.httpsCallable('setUserRole');
   var fnSetFinance = fns.httpsCallable('setUserFinance');
+  var fnSetPages   = fns.httpsCallable('setUserPages');
   var fnList       = fns.httpsCallable('listUsers');
   var fnDelete     = fns.httpsCallable('deleteUser');
+
+  // Tabs die je in een custom-rol per gebruiker kan aan/uit zetten.
+  // Page-codes moeten matchen met VALID_PAGES in functions/index.js
+  // én met de pages.contains('|x|') checks in database.rules.json.
+  var PAGE_DEFS = [
+    { code: 'notities',       label: '📝 Notities' },
+    { code: 'checkin',        label: '🚚 Check-in' },
+    { code: 'planning',       label: '📅 Planning' },
+    { code: 'laadlijsten',    label: '📦 Laadlijsten / Lijsten' },
+    { code: 'ops',            label: '👥 Personeelsfiche' },
+    { code: 'qrcodes',        label: '🔳 QR codes' },
+    { code: 'poets',          label: '🧼 Poets' },
+    { code: 'keuringen',      label: '✅ Keuringen (OCB)' },
+    { code: 'vet',            label: '🛢️ Vet / tonnen' },
+    { code: 'bestellingen',   label: '🛒 Bestellingen (Postel)' },
+    { code: 'stroomaanvraag', label: '⚡ Stroomaanvraag' },
+    { code: 'archief',        label: '🗂️ Archief' },
+    { code: 'eindstock',      label: '📊 Eindstock' },
+    { code: 'horeca',         label: '🍔 Horeca Planning' },
+    { code: 'trucks',         label: '🚛 Trucks' },
+  ];
+
+  function renderPagesGrid(containerId, selected, onChange) {
+    var el = document.getElementById(containerId);
+    var sel = new Set(selected || []);
+    el.innerHTML = PAGE_DEFS.map(function (p) {
+      var on = sel.has(p.code);
+      return '<label class="' + (on ? 'on' : '') + '" data-code="' + p.code + '">'
+        + '<input type="checkbox" ' + (on ? 'checked' : '') + ' data-code="' + p.code + '">'
+        + '<span>' + p.label + '</span>'
+        + '</label>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('input[type=checkbox]'), function (cb) {
+      cb.onchange = function () {
+        var code = cb.getAttribute('data-code');
+        if (cb.checked) sel.add(code); else sel.delete(code);
+        cb.parentNode.classList.toggle('on', cb.checked);
+        if (typeof onChange === 'function') onChange(Array.from(sel));
+      };
+    });
+    return function () { return Array.from(sel); };
+  }
+  var getAddPages = null;
 
   var allUsers = [];      // van listUsers
   var activity = {};      // _userActivity per uid
@@ -482,7 +545,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
   // ── Stats ───────────────────────────────────────────────────
   function updateStats() {
     var total = allUsers.length;
-    var byRole = { admin: 0, manager: 0, medewerker: 0, bakker: 0, viewer: 0, none: 0 };
+    var byRole = { admin: 0, manager: 0, medewerker: 0, bakker: 0, viewer: 0, custom: 0, none: 0 };
     allUsers.forEach(function (u) {
       var r = u.role || 'none';
       byRole[r] = (byRole[r] || 0) + 1;
@@ -554,7 +617,10 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         +       esc(providers)
         +     '</div>'
         +   '</div>'
-        +   '<div class="cell">' + badge(u.role) + (u.finance ? ' <span class="badge finance" title="Heeft Finance-toegang">💳 finance</span>' : '') + '</div>'
+        +   '<div class="cell">' + badge(u.role)
+        +     (u.role === 'custom' && u.pages && u.pages.length ? ' <span class="badge custom" style="background:#f7ecd8;color:#7a5a40;border:1px solid rgba(120,60,20,.18)" title="Aantal toegankelijke tabs">' + u.pages.length + ' tabs</span>' : '')
+        +     (u.finance ? ' <span class="badge finance" title="Heeft Finance-toegang">💳 finance</span>' : '')
+        +   '</div>'
         +   '<div class="cell"><div class="last-seen">'
         +     '<span class="dot ' + pres.cls + '"></span>'
         +     esc(ls ? fmtRelative(ls) : '—')
@@ -596,6 +662,16 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('d-finance').checked = !!u.finance;
     document.getElementById('d-finance').disabled = false;
     document.getElementById('d-finance-state').textContent = u.finance ? 'aan' : 'uit';
+    // Pages-grid alleen tonen voor custom rol.
+    var pagesRow = document.getElementById('d-pages-row');
+    if (u.role === 'custom') {
+      pagesRow.style.display = '';
+      renderPagesGrid('d-pages-grid', u.pages || [], function (newPages) { savePages(newPages); });
+      document.getElementById('d-pages-state').textContent =
+        (u.pages || []).length + ' tab' + ((u.pages || []).length === 1 ? '' : 's');
+    } else {
+      pagesRow.style.display = 'none';
+    }
     var me = firebase.auth().currentUser;
     document.getElementById('d-delete').disabled = me && me.uid === uid;
 
@@ -703,6 +779,22 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     });
   };
 
+  window.savePages = function (pages) {
+    if (!currentDetailUid) return;
+    var state = document.getElementById('d-pages-state');
+    state.textContent = 'opslaan…';
+    fnSetPages({ uid: currentDetailUid, pages: pages || [] }).then(function () {
+      toast('Tabs bijgewerkt.');
+      var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
+      if (u) u.pages = pages || [];
+      state.textContent = (pages || []).length + ' tab' + ((pages || []).length === 1 ? '' : 's');
+      render();
+    }).catch(function (e) {
+      toast((e && e.message) || 'Wijzigen mislukt.', true);
+      state.textContent = 'fout';
+    });
+  };
+
   window.saveFinance = function (val) {
     if (!currentDetailUid) return;
     var box = document.getElementById('d-finance');
@@ -749,8 +841,21 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('add-name').value = '';
     document.getElementById('add-role').value = 'medewerker';
     document.getElementById('add-finance').checked = false;
+    document.getElementById('add-pages-row').style.display = 'none';
+    getAddPages = null;
     document.getElementById('add-modal').classList.add('show');
     setTimeout(function () { document.getElementById('add-email').focus(); }, 80);
+  };
+  window.onAddRoleChange = function () {
+    var role = document.getElementById('add-role').value;
+    var row = document.getElementById('add-pages-row');
+    if (role === 'custom') {
+      row.style.display = '';
+      getAddPages = renderPagesGrid('add-pages-grid', [], null);
+    } else {
+      row.style.display = 'none';
+      getAddPages = null;
+    }
   };
   window.closeAddModal = function () {
     document.getElementById('add-modal').classList.remove('show');
@@ -761,10 +866,15 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     var name    = (document.getElementById('add-name').value || '').trim();
     var role    = document.getElementById('add-role').value;
     var finance = document.getElementById('add-finance').checked;
+    var pages   = (role === 'custom' && typeof getAddPages === 'function') ? getAddPages() : [];
     if (!email) { toast('E-mail vereist.', true); return; }
+    if (role === 'custom' && !pages.length) {
+      toast('Vink minstens 1 tab aan voor een custom rol.', true);
+      return;
+    }
     var btn = document.getElementById('add-submit');
     btn.disabled = true; btn.textContent = 'Bezig…';
-    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance })
+    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance, pages: pages })
       .then(function () {
         toast('Gebruiker aangemaakt.');
         closeAddModal();

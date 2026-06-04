@@ -327,7 +327,28 @@ exports.vetTonnenApi = onRequest(
 //   manager   - alle operationele pagina's schrijven, geen user-beheer
 //   medewerker- operationele writes (checkin, eindstock, poets, notities, …)
 //   viewer    - alleen lezen
-const VALID_ROLES = ['admin', 'manager', 'medewerker', 'viewer', 'bakker'];
+const VALID_ROLES = ['admin', 'manager', 'medewerker', 'viewer', 'bakker', 'custom'];
+
+// Tabs die een 'custom'-user kan krijgen. Page-codes zijn ook hoe ze
+// gecodeerd worden in de Auth-claim 'pages' (pipe-delimited:
+// "|notities|checkin|qrcodes|"). Houd ze kort en strikt zonder
+// substring-overlap zodat de RTDB-rule .contains('|x|') uniek is.
+const VALID_PAGES = [
+  'notities', 'checkin', 'planning', 'laadlijsten', 'ops',
+  'qrcodes', 'poets', 'keuringen', 'vet', 'bestellingen',
+  'stroomaanvraag', 'archief', 'eindstock', 'trucks', 'horeca',
+];
+
+function buildPagesClaim(pages) {
+  if (!Array.isArray(pages)) return '';
+  const set = new Set();
+  pages.forEach((p) => {
+    const s = String(p || '').trim().toLowerCase();
+    if (VALID_PAGES.indexOf(s) !== -1) set.add(s);
+  });
+  if (!set.size) return '';
+  return '|' + Array.from(set).join('|') + '|';
+}
 const BOOTSTRAP_ADMIN_EMAIL = 'jelle@senorsnacks.be';
 
 function requireAdmin(request) {
@@ -393,14 +414,32 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
   } catch (e) {
     throw new HttpsError('already-exists', e && e.message ? e.message : String(e));
   }
-  await admin.auth().setCustomUserClaims(user.uid, { role, finance });
+  const pages = buildPagesClaim(request.data && request.data.pages);
+  const claims = { role, finance };
+  if (pages) claims.pages = pages;
+  await admin.auth().setCustomUserClaims(user.uid, claims);
   return {
     uid: user.uid,
     email: user.email || '',
     displayName: user.displayName || '',
     role,
     finance,
+    pages,
   };
+});
+
+// Pas de toegankelijke tabs aan voor een custom-rol gebruiker.
+// pages: array van page-codes (zie VALID_PAGES). Wordt opgeslagen als
+// pipe-delimited string '|x|y|' in de Auth-claim 'pages'.
+exports.setUserPages = onCall({ region: REGION }, async (request) => {
+  requireAdmin(request);
+  const uid = String((request.data && request.data.uid) || '');
+  const pages = buildPagesClaim(request.data && request.data.pages);
+  if (!uid) throw new HttpsError('invalid-argument', 'uid vereist.');
+  const userRec = await admin.auth().getUser(uid);
+  const newClaims = Object.assign({}, userRec.customClaims || {}, { pages });
+  await admin.auth().setCustomUserClaims(uid, newClaims);
+  return { uid, pages };
 });
 
 // Vlag een gebruiker met (of zonder) finance-toegang. Bewaart de rol
@@ -443,19 +482,26 @@ exports.setUserRole = onCall({ region: REGION }, async (request) => {
 exports.listUsers = onCall({ region: REGION }, async (request) => {
   requireAdmin(request);
   const result = await admin.auth().listUsers(1000);
-  const users = result.users.map((u) => ({
+  const users = result.users.map((u) => {
+    const pagesStr = (u.customClaims && u.customClaims.pages) || '';
+    const pages = typeof pagesStr === 'string' && pagesStr.indexOf('|') === 0
+      ? pagesStr.replace(/^\|/, '').replace(/\|$/, '').split('|').filter(Boolean)
+      : [];
+    return {
     uid: u.uid,
     email: u.email || '',
     displayName: u.displayName || '',
     role: (u.customClaims && u.customClaims.role) || null,
     finance: !!(u.customClaims && u.customClaims.finance),
+    pages: pages,
     disabled: !!u.disabled,
     providers: (u.providerData || []).map((p) => p.providerId),
     lastSignInAt: u.metadata && u.metadata.lastSignInTime
       ? new Date(u.metadata.lastSignInTime).getTime() : 0,
     createdAt: u.metadata && u.metadata.creationTime
       ? new Date(u.metadata.creationTime).getTime() : 0,
-  }));
+    };
+  });
   // Sorteer: admins eerst, dan op recentste login.
   users.sort((a, b) => {
     const ra = a.role === 'admin' ? 0 : 1;

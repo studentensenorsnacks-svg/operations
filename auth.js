@@ -115,9 +115,11 @@
   // V2 — nieuwe URL: Firebase Auth + custom-claim rollen
   // ─────────────────────────────────────────────────────────────
   function startV2() {
-    // Bypass: login-pagina zelf, publieke QR-viewer, leveranciers-portaal.
+    // Bypass: login-pagina zelf, publieke QR-viewer, vettonnen-ophaling
+    // (publiek deelbaar met de ophaler), leveranciers-portaal.
     if (pathname.endsWith('/login.html') || pathname === '/login') return;
     if (pathname.endsWith('/qr.html')) return;
+    if (pathname.endsWith('/vet-tonnen.html')) return;
     if (hash.indexOf('#portal/') === 0) return;
 
     var hide = document.createElement('style');
@@ -195,6 +197,27 @@
     function letThrough(user, claims) {
       var role = claims.role || null;
 
+      // Mapping: tab-code → bijhorende HTML-pagina's. Houdt synchroon met
+      // VALID_PAGES (functions) en de page-codes in users.html.
+      var PAGE_FILES = {
+        notities:       ['/notities.html', '/notitie.html'],
+        checkin:        ['/checkin.html'],
+        planning:       ['/planning.html', '/verhuur.html', '/served_verhuur.html'],
+        laadlijsten:    ['/lijsten.html', '/checklists.html', '/checklist-detail.html', '/laadlijst-beheer.html', '/laadlijst-koppeling.html'],
+        ops:            ['/ops.html'],
+        qrcodes:        ['/qr-codes.html'],
+        poets:          ['/poets.html'],
+        keuringen:      ['/ocb.html'],
+        vet:            ['/vet.html', '/vet-tonnen.html'],
+        bestellingen:   ['/bestelling.html', '/bestellingen-dashboard.html', '/bestel-catalogus.html'],
+        stroomaanvraag: ['/stroomaanvraag.html'],
+        archief:        ['/archief.html'],
+        eindstock:      ['/eindstock.html'],
+        horeca:         ['/horeca-planning.html'],
+        trucks:         []
+      };
+      var ALWAYS_OK = ['/login.html', '/qr.html'];
+
       // Bakker: harde redirect weg van elke pagina die niet expliciet
       // toegelaten is. Voorkomt dat een bakker bv. /dashboard.html of
       // /bestellingen-dashboard.html opent en de data ziet die de
@@ -205,13 +228,41 @@
           '/checkin.html',
           '/ocb.html',
           '/qr-codes.html',
-          '/portaal.html',
-          '/login.html', '/qr.html'
-        ];
+          '/portaal.html'
+        ].concat(ALWAYS_OK);
         var pn = (location.pathname || '').toLowerCase();
         var bakkerOk = bakkerAllowed.some(function (p) { return pn === p || pn.endsWith(p); });
         if (!bakkerOk) {
           location.replace('/notities.html');
+          return;
+        }
+      }
+
+      // Custom rol: allowlist opbouwen uit claims.pages ('|x|y|z|').
+      // Pages die niet meekomen zijn dicht; navigatie buiten allowlist
+      // redirect naar de eerste toegestane pagina.
+      var customPages = [];
+      if (role === 'custom') {
+        var raw = typeof claims.pages === 'string' ? claims.pages : '';
+        if (raw && raw.charAt(0) === '|') {
+          customPages = raw.replace(/^\|/, '').replace(/\|$/, '').split('|').filter(Boolean);
+        }
+        var customAllowed = ALWAYS_OK.slice();
+        customPages.forEach(function (code) {
+          var files = PAGE_FILES[code] || [];
+          files.forEach(function (f) { customAllowed.push(f); });
+        });
+        var pn2 = (location.pathname || '').toLowerCase();
+        var customOk = customAllowed.some(function (p) { return pn2 === p || pn2.endsWith(p); });
+        if (!customOk) {
+          // Geen toegestane pagina-match → ga naar eerste toegestane
+          // file van de eerste page-claim, of /login als er niks is.
+          var target = '/login.html';
+          for (var i = 0; i < customPages.length; i++) {
+            var files2 = PAGE_FILES[customPages[i]] || [];
+            if (files2.length) { target = files2[0]; break; }
+          }
+          location.replace(target);
           return;
         }
       }
@@ -223,8 +274,10 @@
         role: role,
         isAdmin:   role === 'admin',
         canManage: role === 'admin' || role === 'manager',
-        canWrite:  role === 'admin' || role === 'manager' || role === 'medewerker' || role === 'bakker',
+        canWrite:  role === 'admin' || role === 'manager' || role === 'medewerker' || role === 'bakker' || role === 'custom',
         isBakker:  role === 'bakker',
+        isCustom:  role === 'custom',
+        pages:     customPages,
         isFinance: claims.finance === true,
         logout: function () { signOutWithLog(); },
       };
@@ -238,6 +291,41 @@
         var sf = document.createElement('style');
         sf.textContent = '[data-finance="1"]{display:none!important}';
         document.head.appendChild(sf);
+      }
+      // Custom rol: verberg alle nav-links naar pagina's die NIET in de
+      // pages-claim zitten. We doen dit door eerst alle bekende pagina-
+      // links te verbergen, dan de toegestane weer zichtbaar te maken.
+      if (window.__auth.isCustom) {
+        var allFiles = [];
+        Object.keys(PAGE_FILES).forEach(function (k) {
+          (PAGE_FILES[k] || []).forEach(function (f) { allFiles.push(f); });
+        });
+        var hideSel = allFiles.concat([
+          '/dashboard.html', '/audit.html', '/users.html',
+        ]).map(function (f) {
+          return 'a[href*="' + f.replace(/^\//, '') + '"]';
+        }).join(',');
+        var sc = document.createElement('style');
+        sc.textContent = hideSel + '{display:none!important}';
+        document.head.appendChild(sc);
+        // Toegestane terug zichtbaar maken (overrided !important met
+        // hogere specificiteit via attribute selector chain).
+        var allowedFiles = [];
+        customPages.forEach(function (code) {
+          (PAGE_FILES[code] || []).forEach(function (f) { allowedFiles.push(f); });
+        });
+        if (allowedFiles.length) {
+          var showSel = allowedFiles.map(function (f) {
+            return 'html body a[href*="' + f.replace(/^\//, '') + '"]';
+          }).join(',');
+          var sc2 = document.createElement('style');
+          sc2.textContent = showSel + '{display:revert!important}';
+          document.head.appendChild(sc2);
+        }
+        // Externe links (eventpay, keuringen-saas) altijd dicht voor custom.
+        var sc3 = document.createElement('style');
+        sc3.textContent = 'a[href*="senorsnacks-eventpay"],a[href*="senorkeuringqr"]{display:none!important}';
+        document.head.appendChild(sc3);
       }
       // Verberg voor bakker alle navigatie naar paden die ze niet mogen
       // openen — zodat ze niet kunnen klikken op iets dat hen toch
