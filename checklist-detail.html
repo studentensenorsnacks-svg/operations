@@ -98,6 +98,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .pick:hover{border-color:var(--blue);background:var(--blue-bg);}
 .pick .pn{font-size:13.5px;font-weight:600;}
 .pick .pc{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text3);background:var(--surface2);padding:2px 7px;border-radius:10px;}
+.lz-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.lz-item:hover{background:var(--surface);}
+.lz-item:last-child{border-bottom:none;}
+.lz-item .lz-info{flex:1;min-width:0;}
+.lz-item .lz-naam{font-weight:600;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lz-item .lz-sub{font-size:11.5px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+.lz-item .lz-count{font-size:11.5px;color:var(--text2);font-weight:600;flex-shrink:0;background:var(--surface);padding:4px 10px;border-radius:99px;border:1px solid var(--border2);white-space:nowrap;}
+.lz-item .lz-take{font-size:12px;font-weight:700;color:var(--blue);flex-shrink:0;}
+.lz-empty{padding:30px;text-align:center;color:var(--text3);font-size:13px;}
+.lz-loading{padding:30px;text-align:center;color:var(--text3);font-size:13px;font-style:italic;}
 </style>
 </head>
 <body>
@@ -137,7 +147,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
   <!-- GEGEVENS -->
   <div class="card">
-    <div class="card-h">Gegevens</div>
+    <div class="card-h">
+      <span>Gegevens</span>
+      <button type="button" class="smallbtn" onclick="openLijstZoeker()" style="font-weight:600;">📋 Begin vanuit bestaande lijst</button>
+    </div>
     <div class="grid2">
       <div class="field">
         <label for="f-type">Type</label>
@@ -229,6 +242,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <div class="modal-b">
       <input type="text" class="search" id="pick-search" placeholder="🔍 Zoek product…" oninput="renderPicker()">
       <div id="pick-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Lijst-zoeker: gebruik bestaande lijst als basis -->
+<div class="overlay" id="lz-overlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-h"><span class="t">📋 Kies een lijst als basis</span><button class="modal-x" onclick="closeLijstZoeker()">✕</button></div>
+    <div class="modal-b">
+      <input type="text" class="search" id="lz-search" placeholder="🔍 Zoek op naam, event, klant, truck of datum…" oninput="renderLijstZoeker(this.value)" autocomplete="off">
+      <div id="lz-list" style="max-height:48vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface2);min-height:240px;"></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:10px;">Producten + materialen + aantallen worden geladen in dit formulier. Je past aan en slaat op als <b>nieuwe</b> lijst — het origineel blijft onaangeraakt.</div>
     </div>
   </div>
 </div>
@@ -430,6 +455,102 @@ function renderPicker(){
     : '<div class="muted">Geen producten gevonden.'+(catalog.length?'':' (Catalogus nog niet geladen.)')+'</div>';
 }
 function pickAdd(idx){ const p = catalog[idx]; if(!p) return; addProduct(p.naam, p.cat); closePicker(); }
+
+/* ---------- Lijst-zoeker (gebruik bestaande lijst als basis) ---------- */
+let allLaadlijsten = null; // cache: { key: rec } na 1e fetch
+function openLijstZoeker(){
+  const ov = $('lz-overlay'); ov.classList.add('show');
+  const inp = $('lz-search'); inp.value = '';
+  if(allLaadlijsten){ renderLijstZoeker(''); }
+  else {
+    $('lz-list').innerHTML = '<div class="lz-loading">Lijsten ophalen…</div>';
+    fbdb.ref(LL_PATH).once('value').then(snap=>{
+      allLaadlijsten = snap.val() || {};
+      renderLijstZoeker('');
+    }).catch(e=>{
+      $('lz-list').innerHTML = '<div class="lz-empty">Laden mislukt: '+esc(e.message||e.code||'fout')+'</div>';
+    });
+  }
+  setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 80);
+}
+function closeLijstZoeker(){ $('lz-overlay').classList.remove('show'); }
+function countLijstItems(r){
+  const c = r.categorieën || {};
+  let n = 0;
+  Object.keys(c).forEach(k=>{ if(Array.isArray(c[k])) n += c[k].length; });
+  return n;
+}
+function renderLijstZoeker(q){
+  q = (q||'').toLowerCase().trim();
+  if(!allLaadlijsten){ return; }
+  const items = Object.entries(allLaadlijsten)
+    .map(([id,r])=>({id, r: r||{}}))
+    .filter(({r})=>{
+      if(!r || !r.naam) return false;
+      if(!q) return true;
+      const hay = [r.naam, r.eventNaam, r.klant, r.wagen, r.datum, r.datum_van, r.type_naam, r.straat, r.gemeente]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.indexOf(q) !== -1;
+    })
+    .sort((a,b)=>{
+      const ta = a.r.aangepast_op || a.r.aangemaakt || '';
+      const tb = b.r.aangepast_op || b.r.aangemaakt || '';
+      return tb.localeCompare(ta);
+    });
+  const el = $('lz-list');
+  if(!items.length){
+    el.innerHTML = '<div class="lz-empty">'+(q?'Geen lijsten gevonden voor "'+esc(q)+'".':'Nog geen lijsten in het archief.')+'</div>';
+    return;
+  }
+  el.innerHTML = items.map(({id,r})=>{
+    const totaal = countLijstItems(r);
+    const sub = [r.eventNaam, r.klant, r.wagen, r.datum||r.datum_van].filter(Boolean).join(' · ');
+    return '<div class="lz-item" onclick="useLijstAlsBasis(\''+id+'\')">'
+      +   '<div class="lz-info">'
+      +     '<div class="lz-naam">'+esc(r.naam)+'</div>'
+      +     (sub ? '<div class="lz-sub">'+esc(sub)+'</div>' : '')
+      +   '</div>'
+      +   '<span class="lz-count">'+totaal+' items</span>'
+      +   '<span class="lz-take">Gebruik →</span>'
+      + '</div>';
+  }).join('');
+}
+function useLijstAlsBasis(key){
+  const r = (allLaadlijsten||{})[key];
+  if(!r){ closeLijstZoeker(); return; }
+  // Belangrijk: editKey NIET zetten — dit wordt een NIEUWE lijst.
+  editKey = null;
+  $('page-title').textContent = 'Nieuwe laadlijst';
+  // Producten + materialen overnemen
+  const cats = r.categorieën || {};
+  products = []; materials = [];
+  Object.keys(cats).forEach(cat=>{
+    const arr = cats[cat]; if(!Array.isArray(arr)) return;
+    if(cat==='MATERIALEN'){ arr.forEach(m=>materials.push({_id:seq++, naam:m.naam||'', aantal:Number(m.aantal)||0})); }
+    else arr.forEach(p=>products.push({_id:seq++, categorie:normCat(cat), naam:p.naam||'', aantal:Number(p.aantal)||0}));
+  });
+  // Naam-suggestie: voorvoegsel "(kopie)" — gebruiker past meestal aan
+  $('f-naam').value = r.naam ? (r.naam + ' (kopie)') : '';
+  // Type overnemen indien gezet
+  if(r.type_id){
+    const sel = $('f-type'); sel.value = String(r.type_id);
+    sel.dataset.naam = r.type_naam || '';
+  }
+  // Klant/contact/telformulier/opmerking overnemen — handig bij stamklanten
+  $('f-klant').value = r.klant || '';
+  $('f-tel').value = r.telefoon || '';
+  $('f-telform').value = r.telformulier || 'geen';
+  $('f-opmerking').value = r.opmerking || '';
+  // Adres, datum, geladenDoor, eventId, truck NIET overnemen — verschilt per nieuwe lijst
+  renderProducts(); renderMaterials(); updLinkStatus();
+  closeLijstZoeker();
+  // Focus op naam-veld zodat user die meteen kan aanpassen
+  setTimeout(()=>{ try{ $('f-naam').focus(); $('f-naam').select(); }catch(e){} }, 200);
+}
+// Sluit modal bij klik op overlay
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'lz-overlay') closeLijstZoeker();
+});
 
 /* ---------- Bewerken laden ---------- */
 function loadExisting(key){
