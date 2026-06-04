@@ -107,15 +107,6 @@
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|vet|')))"
     },
 
-    "_userPages": {
-      ".read": "auth != null && auth.token.role == 'admin'",
-      "$uid": {
-        ".read":  "auth != null && (auth.uid == $uid || auth.token.role == 'admin')",
-        ".write": "auth != null && auth.token.role == 'admin'",
-        "$pageKey": { ".validate": "newData.isBoolean()" }
-      }
-    },
-
     "_userActivity": {
       ".read": "auth != null && auth.token.role == 'admin'",
       "$uid": {

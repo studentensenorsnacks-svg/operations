@@ -177,10 +177,11 @@ body{
     }
     emptyState.classList.add('hidden');
     grid.classList.remove('hidden');
+    // We navigeren via data-href (niet via href) zodat de custom-rol
+    // nav-verberg-CSS in auth.js deze tegels niet raakt.
     grid.innerHTML = pages.map(function (p) {
-      var target = p.external ? ' target="_blank" rel="noopener"' : '';
       return ''
-        + '<a class="tile" href="' + esc(p.url) + '"' + target + '>'
+        + '<a class="tile" data-href="' + esc(p.url) + '"' + (p.external ? ' data-ext="1"' : '') + ' role="link" tabindex="0">'
         +   (p.external ? '<span class="ext">↗ extern</span>' : '')
         +   '<span class="ico">' + esc(p.icon || '▣') + '</span>'
         +   '<span class="name">' + esc(p.label) + '</span>'
@@ -188,6 +189,22 @@ body{
         + '</a>';
     }).join('');
   }
+
+  function openTile(el) {
+    var url = el.getAttribute('data-href');
+    if (!url) return;
+    if (el.getAttribute('data-ext') === '1') window.open(url, '_blank', 'noopener');
+    else window.location.href = url;
+  }
+  document.getElementById('grid').addEventListener('click', function (ev) {
+    var t = ev.target.closest && ev.target.closest('.tile');
+    if (t) openTile(t);
+  });
+  document.getElementById('grid').addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var t = ev.target.closest && ev.target.closest('.tile');
+    if (t) { ev.preventDefault(); openTile(t); }
+  });
 
   window.addEventListener('auth-ready', function (e) {
     var a = e.detail;
@@ -204,17 +221,15 @@ body{
       return;
     }
 
-    // Andere gebruikers: lees toegekende pagina's uit RTDB.
-    firebase.database().ref('_userPages/' + a.uid).once('value')
-      .then(function (snap) {
-        var val = snap.val() || {};
-        var keys = Object.keys(val).filter(function (k) { return val[k] === true; });
-        renderTiles(keys);
-      })
-      .catch(function () {
-        // Bij een leesfout: toon de lege staat i.p.v. een blanco scherm.
-        renderTiles([]);
-      });
+    // Custom-rol: toon enkel de toegekende tabs (uit de auth-claim 'pages').
+    if (a.isCustom) {
+      renderTiles(a.pages || []);
+      return;
+    }
+
+    // Overige rollen (manager, medewerker, alleen-lezen): toon alle tegels —
+    // hun toegang wordt elders al door de rol/regels bepaald.
+    renderTiles(PAGES.map(function (p) { return p.key; }));
   });
 })();
 </script>

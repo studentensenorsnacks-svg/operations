@@ -177,19 +177,6 @@ input,select{
 input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
 
-.pages-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.page-check{
-  display:flex;align-items:center;gap:8px;cursor:pointer;
-  border:1px solid rgba(120,60,20,.16);border-radius:9px;
-  padding:8px 10px;font-size:13px;font-weight:600;color:#3a2415;
-  background:#fff;transition:border-color .12s,background .12s;
-}
-.page-check:hover{border-color:#e8662b;background:#fef7ef}
-.page-check.on{border-color:#e8662b;background:#fef0e2}
-.page-check input{width:auto;margin:0;cursor:pointer;flex-shrink:0}
-.page-check .pc-ico{font-size:15px;line-height:1}
-.page-check .pc-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
 .detail-list{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#7a5a40}
 .detail-list b{color:#3a2415;font-weight:600}
 .detail-list code{font-family:monospace;font-size:12px;background:#fef0e2;padding:2px 6px;border-radius:5px;color:#3a2415}
@@ -371,19 +358,6 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
           <span>💳 Finance-toegang (kan EventPay zien)</span>
           <span id="d-finance-state" style="font-size:11px;color:#b89878;font-weight:400;margin-left:auto;"></span>
         </label>
-      </div>
-
-      <div class="modal-section" data-role="write">
-        <div class="lbl">Toegankelijke pagina's (portaal)</div>
-        <p style="font-size:11.5px;color:#b89878;margin:-2px 0 9px;line-height:1.45">
-          Vink aan welke tegels deze gebruiker ziet op <code>portaal.html</code>. Admins zien altijd alles.
-        </p>
-        <div class="pages-grid" id="d-pages"></div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-          <button class="ghost" type="button" onclick="togglePagesAll(true)">Alles aan</button>
-          <button class="ghost" type="button" onclick="togglePagesAll(false)">Alles uit</button>
-          <button class="primary" id="d-save-pages" type="button" onclick="savePages()" style="margin-left:auto">Pagina's opslaan</button>
-        </div>
       </div>
 
       <div class="modal-section">
@@ -697,65 +671,8 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
           + '</div>';
       }).join('');
     }
-    renderPagesSection(uid);
     document.getElementById('detail-modal').classList.add('show');
   }
-
-  // ── Portaal-pagina's per gebruiker ──────────────────────────
-  var PORTAL_PAGES = window.PORTAL_PAGES || [];
-  function renderPagesSection(uid) {
-    var wrap = document.getElementById('d-pages');
-    wrap.innerHTML = PORTAL_PAGES.map(function (p) {
-      return ''
-        + '<label class="page-check" data-key="' + esc(p.key) + '">'
-        +   '<input type="checkbox" value="' + esc(p.key) + '">'
-        +   '<span class="pc-ico">' + esc(p.icon || '▣') + '</span>'
-        +   '<span class="pc-lbl">' + esc(p.label) + '</span>'
-        + '</label>';
-    }).join('');
-    // Vink-state visueel bijhouden.
-    Array.prototype.forEach.call(wrap.querySelectorAll('.page-check'), function (lab) {
-      var box = lab.querySelector('input');
-      box.addEventListener('change', function () { lab.classList.toggle('on', box.checked); });
-    });
-    var saveBtn = document.getElementById('d-save-pages');
-    saveBtn.disabled = true; saveBtn.textContent = 'Laden…';
-    firebase.database().ref('_userPages/' + uid).once('value')
-      .then(function (snap) {
-        var val = snap.val() || {};
-        Array.prototype.forEach.call(wrap.querySelectorAll('.page-check'), function (lab) {
-          var box = lab.querySelector('input');
-          var on = val[box.value] === true;
-          box.checked = on;
-          lab.classList.toggle('on', on);
-        });
-      })
-      .catch(function () { /* leeg laten staan */ })
-      .then(function () { saveBtn.disabled = false; saveBtn.textContent = "Pagina's opslaan"; });
-  }
-  window.togglePagesAll = function (on) {
-    Array.prototype.forEach.call(
-      document.getElementById('d-pages').querySelectorAll('.page-check'),
-      function (lab) {
-        var box = lab.querySelector('input');
-        box.checked = on;
-        lab.classList.toggle('on', on);
-      });
-  };
-  window.savePages = function () {
-    if (!currentDetailUid) return;
-    var wrap = document.getElementById('d-pages');
-    var out = {};
-    Array.prototype.forEach.call(wrap.querySelectorAll('.page-check input'), function (box) {
-      if (box.checked) out[box.value] = true;
-    });
-    var btn = document.getElementById('d-save-pages');
-    btn.disabled = true; btn.textContent = 'Bezig…';
-    firebase.database().ref('_userPages/' + currentDetailUid).set(out)
-      .then(function () { toast('Pagina-toegang opgeslagen.'); })
-      .catch(function (e) { toast((e && e.message) || 'Opslaan mislukt.', true); })
-      .then(function () { btn.disabled = false; btn.textContent = "Pagina's opslaan"; });
-  };
 
   function closeDetailModal() {
     document.getElementById('detail-modal').classList.remove('show');

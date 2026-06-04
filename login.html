@@ -313,7 +313,10 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
     // Forceer token-refresh om de meest recente custom claims op te halen.
     user.getIdTokenResult(true).then(function (tokenResult) {
       var role = tokenResult && tokenResult.claims && tokenResult.claims.role;
-      if (role) {
+      if (role === 'custom') {
+        // Custom-rol woont op het persoonlijke portaal.
+        location.replace('/portaal.html');
+      } else if (role) {
         leaveToApp();
       } else {
         showWaitingScreen(user);

@@ -248,6 +248,7 @@
           customPages = raw.replace(/^\|/, '').replace(/\|$/, '').split('|').filter(Boolean);
         }
         var customAllowed = ALWAYS_OK.slice();
+        customAllowed.push('/portaal.html'); // de hub is altijd toegankelijk
         customPages.forEach(function (code) {
           var files = PAGE_FILES[code] || [];
           files.forEach(function (f) { customAllowed.push(f); });
@@ -255,14 +256,8 @@
         var pn2 = (location.pathname || '').toLowerCase();
         var customOk = customAllowed.some(function (p) { return pn2 === p || pn2.endsWith(p); });
         if (!customOk) {
-          // Geen toegestane pagina-match → ga naar eerste toegestane
-          // file van de eerste page-claim, of /login als er niks is.
-          var target = '/login.html';
-          for (var i = 0; i < customPages.length; i++) {
-            var files2 = PAGE_FILES[customPages[i]] || [];
-            if (files2.length) { target = files2[0]; break; }
-          }
-          location.replace(target);
+          // Geen toegestane pagina-match → terug naar het persoonlijke portaal.
+          location.replace('/portaal.html');
           return;
         }
       }

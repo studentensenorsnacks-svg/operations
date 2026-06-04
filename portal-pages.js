@@ -1,31 +1,26 @@
-// Gedeelde catalogus van toewijsbare pagina's voor het persoonlijke portaal.
+// Catalogus van tegels voor het persoonlijke portaal (portaal.html).
 //
-// Eén bron van waarheid: zowel portaal.html (toont de tegels) als
-// users.html (laat een admin tegels per gebruiker aan/uit zetten) lezen
-// deze lijst. Voeg hier een pagina toe en ze verschijnt automatisch op
-// beide plekken.
+// De sleutels (key) zijn EXACT de page-codes uit VALID_PAGES in
+// functions/index.js en PAGE_DEFS in users.html, en de url's vallen
+// binnen de toegestane paden (PAGE_FILES) in auth.js. Zo komt elke tegel
+// die een 'custom'-gebruiker mag zien overeen met een pagina die hij ook
+// echt mag openen.
 //
-// Elke tegel:
-//   key      - stabiele sleutel, opgeslagen in RTDB _userPages/<uid>/<key>
-//   label    - tekst op de tegel
-//   icon     - emoji
-//   url      - waar de tegel naartoe linkt
-//   desc     - korte omschrijving onder het label
-//   external - true → opent in een nieuw tabblad (externe app)
+// Let op: de code 'trucks' is een data-rechten-scope zonder eigen pagina
+// en staat daarom bewust NIET als tegel in deze lijst.
 window.PORTAL_PAGES = [
-  { key: 'checkin',      label: 'Check-in',        icon: '🚚', url: 'checkin.html',                          desc: 'Trucks in- en uitchecken' },
-  { key: 'poets',        label: 'Poets Dashboard', icon: '🧼', url: 'poets.html',                            desc: 'Poetsstatus van de trucks' },
-  { key: 'vet',          label: 'Vet Status',      icon: '🛢️', url: 'vet.html',                              desc: 'Vettonnen & frituurvet' },
-  { key: 'verhuur',      label: 'Verhuur',         icon: '🚐', url: 'verhuur.html',                          desc: 'Verhuringen beheren' },
-  { key: 'planning',     label: 'Planning',        icon: '📅', url: 'planning.html',                         desc: 'Event- en truckplanning' },
-  { key: 'notities',     label: 'Notities',        icon: '📝', url: 'notities.html',                         desc: 'Notities & stukken' },
-  { key: 'ops',          label: 'Personeelsfiche', icon: '👥', url: 'ops.html',                              desc: 'Personeel' },
-  { key: 'horeca',       label: 'Horeca Planning', icon: '🍔', url: 'horeca-planning.html',                  desc: 'Horeca-planning' },
-  { key: 'lijsten',      label: 'Lijsten',         icon: '📋', url: 'lijsten.html',                          desc: 'Catalogus-lijsten' },
-  { key: 'stroom',       label: 'Stroomaanvraag',  icon: '⚡', url: 'stroomaanvraag.html',                   desc: 'Stroomaanvragen' },
-  { key: 'checklists',   label: 'Laadlijsten',     icon: '📦', url: 'checklists.html',                       desc: 'Laad-checklists' },
-  { key: 'qrcodes',      label: 'QR codes',        icon: '🔳', url: 'qr-codes.html',                         desc: 'QR-codes' },
-  { key: 'dashboard',    label: 'Ops Dashboard',   icon: '📊', url: 'dashboard.html',                        desc: 'Volledig ops-dashboard' },
-  { key: 'bestellingen', label: 'Bestellingen',    icon: '🛒', url: 'bestellingen-dashboard.html',           desc: 'Bestellingen' },
-  { key: 'keuringen',    label: 'Keuringen',       icon: '🧾', url: 'https://senorkeuringqr.web.app/index.html', desc: 'Keuringen (extern)', external: true },
+  { key: 'notities',       label: 'Notities',        icon: '📝', url: 'notities.html',               desc: 'Notities & stukken' },
+  { key: 'checkin',        label: 'Check-in',        icon: '🚚', url: 'checkin.html',                desc: 'Trucks in- en uitchecken' },
+  { key: 'planning',       label: 'Planning',        icon: '📅', url: 'planning.html',               desc: 'Event-, truck- & verhuurplanning' },
+  { key: 'laadlijsten',    label: 'Laadlijsten',     icon: '📦', url: 'lijsten.html',                desc: 'Laadlijsten & catalogus-lijsten' },
+  { key: 'ops',            label: 'Personeelsfiche', icon: '👥', url: 'ops.html',                    desc: 'Personeel' },
+  { key: 'qrcodes',        label: 'QR codes',        icon: '🔳', url: 'qr-codes.html',               desc: 'QR-codes' },
+  { key: 'poets',          label: 'Poets',           icon: '🧼', url: 'poets.html',                  desc: 'Poetsstatus van de trucks' },
+  { key: 'keuringen',      label: 'Keuringen',       icon: '✅', url: 'ocb.html',                    desc: 'Keuringen (OCB)' },
+  { key: 'vet',            label: 'Vet / tonnen',    icon: '🛢️', url: 'vet.html',                    desc: 'Vettonnen & frituurvet' },
+  { key: 'bestellingen',   label: 'Bestellingen',    icon: '🛒', url: 'bestellingen-dashboard.html', desc: 'Bestellingen (Postel)' },
+  { key: 'stroomaanvraag', label: 'Stroomaanvraag',  icon: '⚡', url: 'stroomaanvraag.html',         desc: 'Stroomaanvragen' },
+  { key: 'archief',        label: 'Archief',         icon: '🗂️', url: 'archief.html',                desc: 'Archief' },
+  { key: 'eindstock',      label: 'Eindstock',       icon: '📊', url: 'eindstock.html',              desc: 'Eindstock' },
+  { key: 'horeca',         label: 'Horeca Planning', icon: '🍔', url: 'horeca-planning.html',        desc: 'Horeca-planning' },
 ];
