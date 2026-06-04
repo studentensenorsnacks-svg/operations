@@ -128,6 +128,11 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
 
     <div class="divider">of</div>
 
+    <div id="name-row" style="display:none">
+      <label for="name">Naam <span style="font-weight:400;text-transform:none;color:#b89878">(optioneel)</span></label>
+      <input id="name" type="text" autocomplete="name" placeholder="Voor- en achternaam">
+    </div>
+
     <label for="email">E-mailadres</label>
     <input id="email" type="email" autocomplete="email" placeholder="jij@senorsnacks.be">
     <label for="password">Wachtwoord</label>
@@ -138,6 +143,7 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
     </div>
 
     <button id="btn-reset" type="button" class="link">Wachtwoord vergeten?</button>
+    <button id="btn-toggle-mode" type="button" class="link" style="margin-top:0">Nog geen account? Maak er een aan</button>
 
     <div id="error" class="error"></div>
     <div id="success" class="success"></div>
@@ -171,12 +177,40 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
   var waiting  = document.getElementById('waiting');
   var emailIn  = document.getElementById('email');
   var passIn   = document.getElementById('password');
+  var nameIn   = document.getElementById('name');
+  var nameRow  = document.getElementById('name-row');
   var errEl    = document.getElementById('error');
   var okEl     = document.getElementById('success');
   var btnLogin = document.getElementById('btn-login');
   var btnGoogle= document.getElementById('btn-google');
   var btnReset = document.getElementById('btn-reset');
+  var btnToggle= document.getElementById('btn-toggle-mode');
+  var formH1   = form.querySelector('h1');
+  var formSub  = form.querySelector('.sub');
   var waitErr  = document.getElementById('waiting-error');
+
+  var mode = 'login'; // 'login' | 'signup'
+  function setMode(m) {
+    mode = m;
+    clearMsg();
+    if (m === 'signup') {
+      formH1.textContent  = 'Account aanmaken';
+      formSub.innerHTML   = 'Na het aanmaken vraagt een admin om je rol toe te kennen.';
+      nameRow.style.display = '';
+      passIn.setAttribute('autocomplete', 'new-password');
+      btnLogin.textContent  = 'Account aanmaken';
+      btnReset.style.display  = 'none';
+      btnToggle.textContent   = 'Heb je al een account? Inloggen';
+    } else {
+      formH1.textContent  = 'Operations';
+      formSub.textContent = 'Log in om verder te gaan.';
+      nameRow.style.display = 'none';
+      passIn.setAttribute('autocomplete', 'current-password');
+      btnLogin.textContent  = 'Inloggen';
+      btnReset.style.display  = '';
+      btnToggle.textContent   = 'Nog geen account? Maak er een aan';
+    }
+  }
 
   function showError(msg) {
     errEl.textContent = msg;
@@ -199,6 +233,9 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
     if (c === 'auth/user-not-found')         return 'Geen account gevonden voor dit e-mailadres.';
     if (c === 'auth/wrong-password')         return 'Wachtwoord klopt niet.';
     if (c === 'auth/invalid-credential')     return 'Inloggegevens kloppen niet.';
+    if (c === 'auth/email-already-in-use')   return 'Er bestaat al een account met dit e-mailadres. Probeer in te loggen of klik op "Wachtwoord vergeten?".';
+    if (c === 'auth/weak-password')          return 'Wachtwoord te zwak — kies er een van minstens 6 karakters.';
+    if (c === 'auth/operation-not-allowed')  return 'E-mail/wachtwoord-registratie staat uit. Vraag een admin om je account aan te maken.';
     if (c === 'auth/popup-closed-by-user')   return 'Google-login afgebroken.';
     if (c === 'auth/popup-blocked')          return 'Pop-up geblokkeerd. Sta pop-ups toe voor deze site.';
     if (c === 'auth/network-request-failed') return 'Netwerkfout. Controleer je internetverbinding.';
@@ -228,10 +265,12 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
   }
 
   function setBusy(busy) {
-    [btnLogin, btnGoogle].forEach(function (b) { if (b) b.disabled = !!busy; });
+    [btnLogin, btnGoogle, btnToggle].forEach(function (b) { if (b) b.disabled = !!busy; });
+    var idleLabel = (mode === 'signup') ? 'Account aanmaken' : 'Inloggen';
+    var busyLabel = (mode === 'signup') ? 'Aanmaken…' : 'Inloggen…';
     btnLogin.innerHTML = busy
-      ? '<span class="spinner"></span> Inloggen…'
-      : 'Inloggen';
+      ? '<span class="spinner"></span> ' + busyLabel
+      : idleLabel;
   }
 
   function logLoginEvent(user) {
@@ -288,18 +327,46 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
   btnLogin.onclick = function () {
     clearMsg();
     var email = (emailIn.value || '').trim();
-    var pwd = passIn.value || '';
+    var pwd   = passIn.value || '';
     if (!email || !pwd) {
-      showError('Vul e-mailadres en wachtwoord in.');
+      showError(mode === 'signup'
+        ? 'Vul e-mailadres en wachtwoord in om een account aan te maken.'
+        : 'Vul e-mailadres en wachtwoord in.');
+      return;
+    }
+    if (mode === 'signup' && pwd.length < 6) {
+      showError('Wachtwoord moet minstens 6 karakters zijn.');
       return;
     }
     setBusy(true);
-    auth.signInWithEmailAndPassword(email, pwd)
-      .then(function (cred) { afterSignIn(cred.user); })
-      .catch(function (err) {
-        showError(nlError(err));
-        setBusy(false);
-      });
+    if (mode === 'signup') {
+      var name = (nameIn.value || '').trim();
+      auth.createUserWithEmailAndPassword(email, pwd)
+        .then(function (cred) {
+          if (name && cred.user.updateProfile) {
+            return cred.user.updateProfile({ displayName: name })
+              .catch(function () {})
+              .then(function () { return cred.user; });
+          }
+          return cred.user;
+        })
+        .then(function (user) { afterSignIn(user); })
+        .catch(function (err) {
+          showError(nlError(err));
+          setBusy(false);
+        });
+    } else {
+      auth.signInWithEmailAndPassword(email, pwd)
+        .then(function (cred) { afterSignIn(cred.user); })
+        .catch(function (err) {
+          showError(nlError(err));
+          setBusy(false);
+        });
+    }
+  };
+
+  btnToggle.onclick = function () {
+    setMode(mode === 'signup' ? 'login' : 'signup');
   };
 
   btnGoogle.onclick = function () {
