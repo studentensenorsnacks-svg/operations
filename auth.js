@@ -392,7 +392,7 @@
       if (window.__auth.canUseAi && !document.getElementById('__ai_chat_js')) {
         var aiScript = document.createElement('script');
         aiScript.id = '__ai_chat_js';
-        aiScript.src = '/ai-chat.js?v=5';
+        aiScript.src = '/ai-chat.js?v=6';
         aiScript.defer = true;
         (document.body || document.documentElement).appendChild(aiScript);
       }

@@ -36,13 +36,14 @@
   var model = MODELS[modelKey];
   var pending = null;         // {id, desc}: actie die mogelijk een reload uitlokt
   var resumeAfterLoad = false;
+  var agentMode = false;      // false = enkel vragen/lezen; true = mag handelen
 
   // ── Persistentie over paginawissels ─────────────────────────────
   function persist() {
     try {
       sessionStorage.setItem(STATE_KEY, JSON.stringify({
         messages: messages, modelKey: modelKey, open: isOpen(),
-        pending: pending, resume: resumeAfterLoad,
+        pending: pending, resume: resumeAfterLoad, agent: agentMode,
       }));
     } catch (e) { /* quota/serialisatie — niet kritiek */ }
   }
@@ -52,8 +53,8 @@
   function systemPrompt() {
     var u = window.__auth || {};
     var snap = buildSnapshot();
-    return [
-      'Je bent de ingebouwde AI-assistent én agent van het Señor Snacks "Operations"-systeem,',
+    var parts = [
+      'Je bent de ingebouwde AI-assistent van het Señor Snacks "Operations"-systeem,',
       'een interne web-app voor de foodtruck-operatie.',
       '',
       'Antwoord in het Nederlands, kort en concreet.',
@@ -74,23 +75,39 @@
       'ft_bestel_catalogus_v1, ocb_keuringen, ft_qrcodes_v1, ft_notities_v1, ft_archief_v1, ft_trucks_v1.',
       'Krijg je "geen data"/fout, dan mag deze gebruiker die node niet zien. Verzin nooit data.',
       '',
-      '== AGENT: HANDELINGEN ==',
-      'Je kunt de app bedienen met de tools click, fill en navigate. Elke handeling moet de gebruiker',
-      'eerst GOEDKEUREN; voer nooit iets uit zonder dat. Werkwijze:',
-      '- Verwijs naar elementen met het [nummer] uit het live-overzicht onderaan deze prompt.',
-      '- Eén stap per keer. Na elke handeling krijg je een verse weergave van het scherm — bekijk die',
-      '  voor je de volgende stap kiest.',
-      '- click [n]: klikt knop/tab/link [n]. fill [n] "waarde": vult veld [n]. navigate "/x.html": opent',
-      '  een andere pagina (het gesprek loopt gewoon door op de nieuwe pagina).',
-      '- Voor je begint met een taak: vat in één zin samen wat je gaat doen. Wees extra voorzichtig met',
-      '  verwijder-/verstuur-acties en zeg expliciet wat het gevolg is.',
-      '- Kan de gebruiker iets sneller zelf? Leg het dan gewoon uit i.p.v. te handelen.',
-      '',
+    ];
+    if (agentMode) {
+      parts.push(
+        '== AGENT-MODUS AAN: HANDELINGEN ==',
+        'Je kunt de app bedienen met de tools click, fill en navigate. Elke handeling moet de gebruiker',
+        'eerst GOEDKEUREN; voer nooit iets uit zonder dat. Werkwijze:',
+        '- Verwijs naar elementen met het [nummer] uit het live-overzicht onderaan deze prompt.',
+        '- Eén stap per keer. Na elke handeling krijg je een verse weergave van het scherm — bekijk die',
+        '  voor je de volgende stap kiest.',
+        '- click [n]: klikt knop/tab/link [n]. fill [n] "waarde": vult veld [n]. navigate "/x.html": opent',
+        '  een andere pagina (het gesprek loopt gewoon door op de nieuwe pagina).',
+        '- Voor je begint met een taak: vat in één zin samen wat je gaat doen. Wees extra voorzichtig met',
+        '  verwijder-/verstuur-acties en zeg expliciet wat het gevolg is.',
+        '- Kan de gebruiker iets sneller zelf? Leg het dan gewoon uit i.p.v. te handelen.',
+        ''
+      );
+    } else {
+      parts.push(
+        '== VRAGEN-MODUS (alleen-lezen) ==',
+        'Je beantwoordt vragen en mag data LEZEN, maar je kunt NIETS bedienen of bewerken: er zijn geen',
+        'klik-/invul-/navigeer-tools in deze modus. Wil de gebruiker dat je iets DOET in de app, zeg dan',
+        'dat ze rechtsboven in de chat de "Agent"-modus moeten aanzetten. Je mag wel in tekst uitleggen',
+        'waar een knop/tab staat (gebruik de labels uit het scherm-overzicht hieronder).',
+        ''
+      );
+    }
+    parts.push(
       'Context: gebruiker = ' + (u.email || 'onbekend') + ' (rol: ' + (u.role || '?') + '), ' +
         'pagina = ' + location.pathname + ' — "' + (document.title || '') + '".',
       '',
-      snap.text,
-    ].join('\n');
+      snap.text
+    );
+    return parts.join('\n');
   }
 
   // ── Snapshot: tag interactieve elementen met refs + tekstweergave ─
@@ -148,7 +165,7 @@
   function refLabel(el) { return (el && el.getAttribute('data-ai-label')) || 'element'; }
 
   // ── Tools ────────────────────────────────────────────────────────
-  var TOOLS = [
+  var READ_TOOLS = [
     {
       name: 'read_rtdb',
       description: 'Lees de data op een RTDB-pad als JSON (alleen-lezen). Grote resultaten worden afgekapt.',
@@ -159,6 +176,8 @@
       description: 'Lijst de child-keys + types op een RTDB-pad (alleen-lezen). Niet op "/" (afgeschermd).',
       input_schema: { type: 'object', properties: { path: { type: 'string', description: 'bv. "ft_laadlijsten_v1".' } }, required: ['path'] },
     },
+  ];
+  var ACTION_TOOLS = [
     {
       name: 'click',
       description: 'Klik op een element (knop, tab, link) via het [nummer] uit het scherm-overzicht. ' +
@@ -178,6 +197,7 @@
       input_schema: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
     },
   ];
+  function activeTools() { return agentMode ? READ_TOOLS.concat(ACTION_TOOLS) : READ_TOOLS; }
 
   function db() {
     if (!window.firebase || typeof firebase.database !== 'function') return null;
@@ -277,7 +297,7 @@
     return fetch(model.api, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: model.id, max_tokens: MAX_TOKENS, system: systemPrompt(), tools: TOOLS, messages: messages }),
+      body: JSON.stringify({ model: model.id, max_tokens: MAX_TOKENS, system: systemPrompt(), tools: activeTools(), messages: messages }),
     }).then(function (r) { return r.json(); });
   }
 
@@ -360,7 +380,13 @@
   }
 
   // ── UI ──────────────────────────────────────────────────────────
-  var panel, log, input, btnSend;
+  var panel, log, input, btnSend, modeBtn;
+
+  function updateModeBtn() {
+    if (!modeBtn) return;
+    modeBtn.textContent = agentMode ? '🛠️ Agent' : '💬 Vragen';
+    modeBtn.className = agentMode ? 'agent' : '';
+  }
 
   function injectStyles() {
     var s = document.createElement('style');
@@ -377,6 +403,8 @@
       '#ai-head{padding:12px 14px;background:#fff;border-bottom:1px solid rgba(120,60,20,.12);display:flex;align-items:center;gap:8px}',
       '#ai-head b{font-size:14px;flex:1}',
       '#ai-model{font-size:12px;border:1px solid rgba(120,60,20,.2);border-radius:8px;padding:4px 6px;background:#fdf8f0;color:#3a2415}',
+      '#ai-mode{font-size:12px;font-weight:600;border:1px solid rgba(120,60,20,.2);border-radius:8px;padding:4px 7px;background:#fdf8f0;color:#7a5a40;cursor:pointer;white-space:nowrap;font-family:inherit}',
+      '#ai-mode.agent{background:#e8662b;color:#fff;border-color:#e8662b}',
       '#ai-clear,#ai-close{background:none;border:none;cursor:pointer;color:#7a5a40;line-height:1;padding:0 4px}',
       '#ai-clear{font-size:13px}#ai-close{font-size:20px}',
       '#ai-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}',
@@ -461,8 +489,9 @@
     panel.id = 'ai-panel';
     panel.innerHTML =
       '<div id="ai-head">' +
-        '<b>✦ AI-assistent</b>' +
-        '<select id="ai-model" title="Model"><option value="sonnet">Slim (Sonnet)</option><option value="haiku">Snel (Haiku)</option><option value="mistral">Mistral</option></select>' +
+        '<b>✦ AI</b>' +
+        '<button id="ai-mode" title="Wissel tussen alleen vragen en agent (bewerken)">💬 Vragen</button>' +
+        '<select id="ai-model" title="Model"><option value="sonnet">Slim</option><option value="haiku">Snel</option><option value="mistral">Mistral</option></select>' +
         '<button id="ai-clear" title="Nieuw gesprek">⟲</button>' +
         '<button id="ai-close" title="Sluiten">×</button>' +
       '</div>' +
@@ -476,6 +505,7 @@
     log = panel.querySelector('#ai-log');
     input = panel.querySelector('#ai-input');
     btnSend = panel.querySelector('#ai-send');
+    modeBtn = panel.querySelector('#ai-mode');
     var modelSel = panel.querySelector('#ai-model');
 
     // Eerdere sessie herstellen?
@@ -486,6 +516,7 @@
       messages = restored.messages;
       modelKey = MODELS[restored.modelKey] ? restored.modelKey : 'sonnet';
       model = MODELS[modelKey]; modelSel.value = modelKey;
+      agentMode = !!restored.agent;
       renderHistory();
       pending = restored.pending || null;
       resumeAfterLoad = !!restored.resume;
@@ -496,8 +527,9 @@
         pending = null; resumeAfterLoad = true;
       }
     } else {
-      addBubble('assistant', 'Hoi! Stel een vraag over het systeem of de data, of geef me een opdracht (ik vraag bij elke handeling jouw goedkeuring).');
+      addBubble('assistant', 'Hoi! In de "Vragen"-modus beantwoord ik vragen over het systeem en de data. Wil je dat ik dingen voor je DOE in de app, zet dan rechtsboven "Agent" aan — elke handeling vraag ik je dan eerst goed te keuren.');
     }
+    updateModeBtn();
 
     fab.onclick = function () { panel.classList.toggle('open'); if (isOpen()) setTimeout(function () { input.focus(); }, 50); };
     panel.querySelector('#ai-close').onclick = function () { panel.classList.remove('open'); persist(); };
@@ -508,6 +540,14 @@
       addBubble('assistant', 'Nieuw gesprek. Waarmee kan ik helpen?');
     };
     modelSel.onchange = function () { modelKey = this.value; model = MODELS[modelKey] || MODELS.sonnet; persist(); };
+    modeBtn.onclick = function () {
+      if (busy) return;
+      agentMode = !agentMode;
+      updateModeBtn(); persist();
+      addBubble('assistant', agentMode
+        ? '🛠️ Agent-modus aan. Ik kan nu handelingen voorstellen (klikken, invullen, navigeren) — elke stap vraag ik je goed te keuren.'
+        : '💬 Vragen-modus. Ik beantwoord enkel vragen en lees data; ik bedien de app niet.');
+    };
 
     function submit() { var v = input.value; setInput(''); send(v); }
     btnSend.onclick = submit;
