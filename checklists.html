@@ -194,7 +194,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="tabs" id="tabs"></div>
 
   <div class="toolbar">
-    <input type="text" id="q-search" placeholder="🔍 Zoek op evenement, truck of naam…" oninput="render()">
+    <input type="text" id="q-search" placeholder="🔍 Zoek in volledig archief op evenement, klant, truck of naam…" oninput="render()">
   </div>
 
   <div class="card">
@@ -446,6 +446,7 @@ function render(){
         + '<button class="iconbtn" title="Bekijken" onclick="openView(\''+i.key+'\')">👁</button>'
         + '<button class="iconbtn" title="Status / info bewerken" onclick="openEdit(\''+i.key+'\')">✏️</button>'
         + '<a class="iconbtn" title="Volledig bewerken" href="checklist-detail.html?id='+i.key+'">📦</a>'
+        + '<a class="iconbtn" title="Gebruik als basis voor nieuwe lijst" href="checklist-detail.html?base='+i.key+'">📋</a>'
         + '<button class="iconbtn'+(ficheCount(i.key)?' has-fiche':'')+'" title="Fiche / QR" onclick="openFiche(\''+i.key+'\')">🏷️</button>'
         + '<button class="iconbtn del" title="Verwijderen" onclick="delItem(\''+i.key+'\')">🗑</button>'
       + '</div></td>'

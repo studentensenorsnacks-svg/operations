@@ -304,11 +304,25 @@ function fmtD(d){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||''); return m?m[3]+
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
   if(id){ loadExisting(id); return; }
+  const baseKey = params.get('base');
+  if(baseKey){ await loadAsBase(baseKey); return; }
   const ev = params.get('event'), tr = params.get('truck');
   if(ev && EVENTS[ev]){ $('f-event').value = ev; onEventChange(); }
   if(tr){ selectTruck(tr); }
   updLinkStatus();
 })();
+
+/* ---------- Laad één lijst als basis (direct via ?base=KEY) ---------- */
+async function loadAsBase(key){
+  try{
+    const snap = await fbdb.ref(LL_PATH+'/'+key).once('value');
+    const r = snap.val();
+    if(!r){ alert('Basis-lijst niet gevonden.'); return; }
+    if(!allLaadlijsten) allLaadlijsten = {};
+    allLaadlijsten[key] = r;
+    useLijstAlsBasis(key);
+  }catch(e){ alert('Laden basis mislukt: '+(e.message||e.code||'fout')); }
+}
 
 /* ---------- Agenda-koppeling ---------- */
 async function loadPlanningEvents(){
