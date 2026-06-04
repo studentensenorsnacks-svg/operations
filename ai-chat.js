@@ -67,8 +67,103 @@
       'mag deze gebruiker die node simpelweg niet zien. Verzin nooit data — lees het op of zeg dat je het',
       'niet vindt. Je kunt NIETS wijzigen; bij wijzig-verzoeken leg je uit wat de gebruiker zelf moet doen.',
       '',
+      'Navigeren: je navigeert NOOIT zelf. Wil je de gebruiker ergens heen sturen, gebruik dan de',
+      'show_nav_button tool: die plaatst een klikbare knop in de chat die de gebruiker zelf kan',
+      'aanklikken. kind "tab" wisselt van tab op de HUIDIGE pagina (gebruik exact de [tab:CODE] uit het',
+      'live overzicht hieronder); kind "page" opent een andere pagina via de URL uit de paginakaart.',
+      'Verwijs in je tekst naar de echte labels van knoppen/tabs zoals ze hieronder staan.',
+      '',
+      'Paginakaart (URL — waarvoor):',
+      PAGE_MAP.map(function (p) { return '- ' + p[0] + ' — ' + p[1]; }).join('\n'),
+      '',
       'Huidige context: gebruiker = ' + (u.email || 'onbekend') + ' (rol: ' + (u.role || '?') + '), pagina = ' + location.pathname + '.',
+      '',
+      pageContext(),
     ].join('\n');
+  }
+
+  // Statische kaart van de hoofdpagina's, zodat de assistent ook pagina's
+  // kent waar de gebruiker nu NIET op staat (voor kind:"page" navigatie).
+  var PAGE_MAP = [
+    ['/portaal.html', 'Portaal — persoonlijk tegel-dashboard / hub'],
+    ['/dashboard.html', 'Dashboard — overzicht'],
+    ['/planning.html', 'Planning — events inplannen'],
+    ['/verhuur.html', 'Verhuur'],
+    ['/lijsten.html', 'Lijsten — laadlijsten & checklists'],
+    ['/checklists.html', 'Checklists'],
+    ['/laadlijst-beheer.html', 'Laadlijst-beheer'],
+    ['/ops.html', 'Ops — eventfiche'],
+    ['/eindstock.html', 'Eindstock'],
+    ['/vet.html', 'Vet'],
+    ['/vet-tonnen.html', 'Vet-tonnen'],
+    ['/poets.html', 'Poets'],
+    ['/ocb.html', 'Keuringen (OCB)'],
+    ['/bestelling.html', 'Bestellingen'],
+    ['/bestel-catalogus.html', 'Bestel-catalogus'],
+    ['/bestellingen-dashboard.html', 'Bestellingen-dashboard'],
+    ['/qr-codes.html', 'QR-codes'],
+    ['/notities.html', 'Notities'],
+    ['/stroomaanvraag.html', 'Stroomaanvraag'],
+    ['/horeca-planning.html', 'Horeca-planning'],
+    ['/archief.html', 'Archief'],
+    ['/checkin.html', 'Check-in'],
+    ['/users.html', 'Gebruikers — beheer'],
+    ['/audit.html', 'Audit-log'],
+  ];
+
+  // Leest de HUIDIGE pagina live uit zodat de assistent ziet welke tabs,
+  // knoppen en links er nu op het scherm staan (en welke tab actief is).
+  // Alleen zichtbare elementen — dat is wat de gebruiker echt ziet.
+  function pageContext() {
+    function visible(el) {
+      return !!(el && (el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+    }
+    function txt(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 70); }
+    var lines = ['== Wat er NU op het scherm staat (titel: ' + (document.title || '') + ') =='];
+
+    // In-page tabs (div/.nav-item met showPage()).
+    var tabs = [];
+    var tabEls = document.querySelectorAll('.nav-item, [onclick*="showPage("]');
+    Array.prototype.forEach.call(tabEls, function (el) {
+      if (!visible(el)) return;
+      var t = txt(el); if (!t) return;
+      var m = (el.getAttribute('onclick') || '').match(/showPage\(['"]([^'"]+)['"]\)/);
+      var act = /(^|\s)active(\s|$)/.test(el.className) ? ' (ACTIEF)' : '';
+      tabs.push('  ' + t + (m ? ' [tab:' + m[1] + ']' : '') + act);
+    });
+    if (tabs.length) lines.push('Tabs op deze pagina:', tabs.slice(0, 40).join('\n'));
+
+    // Links naar andere pagina's.
+    var links = [], seen = {};
+    Array.prototype.forEach.call(document.querySelectorAll('a[href]'), function (a) {
+      if (!visible(a)) return;
+      var href = a.getAttribute('href') || '';
+      if (!/\.html(\?|#|$)/.test(href) || /^https?:|^mailto:/.test(href)) return;
+      if (seen[href]) return; seen[href] = true;
+      var t = txt(a); if (t) links.push('  ' + t + ' -> ' + href);
+    });
+    if (links.length) lines.push('Links naar pagina\'s:', links.slice(0, 30).join('\n'));
+
+    // Zichtbare knoppen.
+    var btns = [], seenB = {};
+    var bEls = document.querySelectorAll('button, .btn, [role="button"], input[type="button"], input[type="submit"]');
+    Array.prototype.forEach.call(bEls, function (b) {
+      if (!visible(b)) return;
+      var t = txt(b) || b.value || ''; t = String(t).trim();
+      if (!t || seenB[t]) return; seenB[t] = true;
+      btns.push('  ' + t);
+    });
+    if (btns.length) lines.push('Zichtbare knoppen:', btns.slice(0, 50).join('\n'));
+
+    // Koppen voor extra oriëntatie.
+    var heads = [];
+    Array.prototype.forEach.call(document.querySelectorAll('h1, h2, h3'), function (h) {
+      if (!visible(h)) return; var t = txt(h); if (t) heads.push('  ' + t);
+    });
+    if (heads.length) lines.push('Koppen:', heads.slice(0, 20).join('\n'));
+
+    var ctx = lines.join('\n');
+    return ctx.length > 4000 ? ctx.slice(0, 4000) + '\n…(ingekort)' : ctx;
   }
 
   // ── Tools (alleen-lezen, client-side via de admin-sessie) ───────
@@ -90,8 +185,24 @@
         'Grote resultaten worden afgekapt; verfijn dan met een dieper pad. Alleen-lezen.',
       input_schema: {
         type: 'object',
-        properties: { path: { type: 'string', description: 'RTDB-pad, bv. "ft_checklist_types_v1/abc123".' } },
+        properties: { path: { type: 'string', description: 'RTDB-pad, bv. "ft_planning_v1/2026".' } },
         required: ['path'],
+      },
+    },
+    {
+      name: 'show_nav_button',
+      description: 'Plaats een klikbare navigatieknop in de chat. Navigeer NOOIT zelf — bied dit aan ' +
+        'wanneer je de gebruiker ergens heen wil sturen; de gebruiker klikt zelf. kind "tab" wisselt van ' +
+        'tab op de HUIDIGE pagina (target = de showPage-code uit [tab:CODE]). kind "page" opent een andere ' +
+        'pagina (target = de URL uit de paginakaart, bv. "/planning.html").',
+      input_schema: {
+        type: 'object',
+        properties: {
+          label: { type: 'string', description: 'Tekst op de knop, bv. "Open Planning" of "Ga naar tab Events".' },
+          kind: { type: 'string', enum: ['tab', 'page'], description: '"tab" = tab op deze pagina; "page" = andere pagina.' },
+          target: { type: 'string', description: 'Bij tab: de showPage-code (bv. "events"). Bij page: de URL (bv. "/planning.html").' },
+        },
+        required: ['label', 'kind', 'target'],
       },
     },
   ];
@@ -111,6 +222,18 @@
   }
 
   function runTool(name, input) {
+    if (name === 'show_nav_button') {
+      var label = (input && input.label) || 'Open';
+      var kind = (input && input.kind) === 'page' ? 'page' : 'tab';
+      var target = (input && input.target) || '';
+      if (!target) return Promise.resolve('FOUT: geen target opgegeven.');
+      if (kind === 'tab' && typeof window.showPage !== 'function') {
+        return Promise.resolve('Kon geen tab-knop maken: deze pagina heeft geen showPage(). ' +
+          'Stel in plaats daarvan een page-knop voor of beschrijf de stap in tekst.');
+      }
+      addNavButton(label, kind, target);
+      return Promise.resolve('Navigatieknop "' + label + '" getoond aan de gebruiker (' + kind + ': ' + target + ').');
+    }
     var d = db();
     if (!d) return Promise.resolve('FOUT: geen database beschikbaar op deze pagina.');
     var path = normPath(input && input.path);
@@ -182,8 +305,9 @@
 
         if (data.stop_reason === 'tool_use' && guard++ < TOOL_LOOP_MAX) {
           var calls = content.filter(function (b) { return b.type === 'tool_use'; });
-          thinking.querySelector('.ai-txt').textContent = '🔎 ' + calls.map(function (c) {
-            return c.name + '(' + ((c.input && c.input.path) || '') + ')';
+          thinking.querySelector('.ai-txt').textContent = calls.map(function (c) {
+            if (c.name === 'show_nav_button') return '➜ navigatieknop';
+            return '🔎 ' + c.name + '(' + ((c.input && c.input.path) || '') + ')';
           }).join(', ');
           return Promise.all(calls.map(function (c) {
             return runTool(c.name, c.input).then(function (out) {
@@ -231,6 +355,11 @@
       '.ai-b.assistant{align-self:flex-start;background:#fff;border:1px solid rgba(120,60,20,.12);border-bottom-left-radius:4px}',
       '.ai-b.error{align-self:flex-start;background:#fde2dd;color:#7a2818;border:1px solid #f0a896}',
       '.ai-b.tool{align-self:flex-start;background:#f3ece1;color:#7a5a40;font-family:monospace;font-size:12px}',
+      '.ai-navbtn{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;background:#fff;color:#9a4410;',
+      'border:1px solid #f0c19a;border-radius:10px;padding:9px 13px;font-size:13.5px;font-weight:600;cursor:pointer;',
+      'font-family:inherit;text-align:left;transition:background .12s,border-color .12s}',
+      '.ai-navbtn:hover{background:#fde7d6;border-color:#e8662b}',
+      '.ai-navbtn.done{opacity:.55;cursor:default;font-weight:500}',
       '#ai-foot{padding:10px;border-top:1px solid rgba(120,60,20,.12);background:#fff;display:flex;gap:8px;align-items:flex-end}',
       '#ai-input{flex:1;resize:none;border:1px solid rgba(120,60,20,.2);border-radius:10px;padding:9px 11px;',
       'font-size:13.5px;font-family:inherit;color:#3a2415;outline:none;max-height:120px;line-height:1.4}',
@@ -256,6 +385,27 @@
     return div;
   }
   function setInput(v) { input.value = v; input.style.height = 'auto'; }
+
+  // Klikbare navigatieknop in de chat. De assistent navigeert nooit zelf;
+  // de gebruiker klikt deze knop bewust aan.
+  function addNavButton(label, kind, target) {
+    var btn = document.createElement('button');
+    btn.className = 'ai-navbtn';
+    btn.innerHTML = '<span>➜</span><span class="ai-txt">' + esc(label) + '</span>';
+    btn.onclick = function () {
+      if (btn.classList.contains('done')) return;
+      btn.classList.add('done');
+      if (kind === 'tab' && typeof window.showPage === 'function') {
+        try { window.showPage(target); } catch (e) {}
+        panel.classList.remove('open');
+      } else {
+        location.href = target;
+      }
+    };
+    log.appendChild(btn);
+    log.scrollTop = log.scrollHeight;
+    return btn;
+  }
 
   function build() {
     if (!document.body) { return setTimeout(build, 30); }
