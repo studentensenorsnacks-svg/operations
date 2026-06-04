@@ -116,10 +116,15 @@
   // ─────────────────────────────────────────────────────────────
   function startV2() {
     // Bypass: login-pagina zelf, publieke QR-viewer, vettonnen-ophaling
-    // (publiek deelbaar met de ophaler), leveranciers-portaal.
+    // (publiek deelbaar met de ophaler), leveranciers-portaal, en de
+    // externe read-only dashboards (vetstatus + poets) die zonder login
+    // gedeeld worden met externen. Die laden zelf geen auth.js, maar we
+    // zetten ze hier expliciet zodat de uitzondering app-breed geldt.
     if (pathname.endsWith('/login.html') || pathname === '/login') return;
     if (pathname.endsWith('/qr.html')) return;
     if (pathname.endsWith('/vet-tonnen.html')) return;
+    if (pathname.endsWith('/vet-tonnen-extern.html')) return;
+    if (pathname.endsWith('/poets-extern.html')) return;
     if (hash.indexOf('#portal/') === 0) return;
 
     var hide = document.createElement('style');

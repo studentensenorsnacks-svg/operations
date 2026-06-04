@@ -58,6 +58,14 @@
           "destination": "/poets-extern.html"
         },
         {
+          "source": "/vet-extern",
+          "destination": "/vet-tonnen-extern.html"
+        },
+        {
+          "source": "/vetstatus",
+          "destination": "/vet-tonnen-extern.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -127,6 +135,14 @@
         {
           "source": "/poetsen",
           "destination": "/poets-extern.html"
+        },
+        {
+          "source": "/vet-extern",
+          "destination": "/vet-tonnen-extern.html"
+        },
+        {
+          "source": "/vetstatus",
+          "destination": "/vet-tonnen-extern.html"
         },
         {
           "source": "**",
