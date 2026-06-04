@@ -503,9 +503,17 @@ function buildPDF(rec){
   if(sub.length){ doc.text(sub.join('     '), margin, 40); subY = 40; }
 
   const body = [];
+  const nvzRows = new Set();   // body-rij-indexen die NIET VAN ZON zijn (geel)
   body.push([{ content:'PRODUCTEN', colSpan:3, styles:{ fillColor:sect, textColor:sectTxt, fontStyle:'bold', fontSize:10 } }]);
   body.push([ 'KRAAM', { content:(rec.kraam||'').toUpperCase(), styles:{ halign:'left' } }, '' ]);
-  (rec.lines||[]).forEach(l=>{ body.push([ itemLabel(l.name,l.art), { content:String(l.qty), styles:{ halign:'center' } }, '' ]); });
+  (rec.lines||[]).forEach(l=>{
+    body.push([
+      itemLabel(l.name, l.art),
+      { content:String(l.qty), styles:{ halign:'center' } },
+      ''
+    ]);
+    if (!l.art) nvzRows.add(body.length - 1);
+  });
   if(rec.extraBest) body.push([ 'extra bestellingen', { content:rec.extraBest, styles:{ halign:'left' } }, '' ]);
   if(rec.extraOpm)  body.push([ 'extra opmerkingen',  { content:rec.extraOpm,  styles:{ halign:'left' } }, '' ]);
 
@@ -523,6 +531,13 @@ function buildPDF(rec){
     bodyStyles: { fontSize:10, textColor:[35,35,40], lineColor:[224,228,233], lineWidth:0.2 },
     styles: { cellPadding:2.4, valign:'middle' },
     columnStyles: { 0:{ cellWidth:'auto' }, 1:{ cellWidth:26, halign:'center' }, 2:{ cellWidth:20, halign:'center' } },
+    didParseCell: function (data) {
+      if (data.section === 'body' && nvzRows.has(data.row.index)) {
+        data.cell.styles.fillColor = [255, 236, 179];
+        data.cell.styles.textColor = [140, 70, 0];
+        data.cell.styles.fontStyle = 'bold';
+      }
+    },
   });
 
   const naamDeel = (rec.kraam||'bestelling').replace(/[^a-z0-9]+/gi,'_');
