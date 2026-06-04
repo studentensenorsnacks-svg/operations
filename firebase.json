@@ -83,6 +83,12 @@
           "headers": [
             { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
           ]
+        },
+        {
+          "source": "/@(auth|ai-chat).js",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
         }
       ]
     },
@@ -166,6 +172,12 @@
       "headers": [
         {
           "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        },
+        {
+          "source": "/@(auth|ai-chat).js",
           "headers": [
             { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
           ]
