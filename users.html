@@ -132,6 +132,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .badge.bakker{background:#f5e6c7;color:#7a4d12}
 .badge.custom{background:#ece4f0;color:#4a2871}
 .badge.finance{background:#e0ebef;color:#1e4a5c;border:1px solid #c1d3da}
+.badge.ai{background:#fde7d6;color:#9a4410;border:1px solid #f0c19a}
 .badge.none{background:#f0e7da;color:#856042}
 .pages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
 .pages-grid label{display:flex;align-items:center;gap:7px;padding:7px 10px;background:#fff;border:1px solid rgba(120,60,20,.12);border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:#3a2415;text-transform:none;letter-spacing:0;margin:0;transition:border-color .12s,background .12s}
@@ -313,6 +314,10 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         <input id="add-finance" type="checkbox" style="width:auto;margin:0;cursor:pointer;">
         <span>💳 Finance-toegang (kan EventPay zien)</span>
       </label>
+      <label style="display:flex;align-items:center;gap:8px;margin:10px 0 0;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;text-transform:none;letter-spacing:0;">
+        <input id="add-ai" type="checkbox" style="width:auto;margin:0;cursor:pointer;">
+        <span>✦ AI-assistent (kan de chat gebruiken)</span>
+      </label>
       <div class="modal-actions">
         <button onclick="closeAddModal()">Annuleren</button>
         <button class="primary" id="add-submit" onclick="submitAdd()">Aanmaken</button>
@@ -358,6 +363,11 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
           <span>💳 Finance-toegang (kan EventPay zien)</span>
           <span id="d-finance-state" style="font-size:11px;color:#b89878;font-weight:400;margin-left:auto;"></span>
         </label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;">
+          <input id="d-ai" type="checkbox" onchange="saveAi(this.checked)" style="width:auto;margin:0;cursor:pointer;">
+          <span>✦ AI-assistent (kan de chat gebruiken)</span>
+          <span id="d-ai-state" style="font-size:11px;color:#b89878;font-weight:400;margin-left:auto;"></span>
+        </label>
       </div>
 
       <div class="modal-section">
@@ -383,6 +393,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
   var fnCreate     = fns.httpsCallable('createUser');
   var fnSetRole    = fns.httpsCallable('setUserRole');
   var fnSetFinance = fns.httpsCallable('setUserFinance');
+  var fnSetAi      = fns.httpsCallable('setUserAi');
   var fnSetPages   = fns.httpsCallable('setUserPages');
   var fnList       = fns.httpsCallable('listUsers');
   var fnDelete     = fns.httpsCallable('deleteUser');
@@ -594,6 +605,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         +   '<div class="cell">' + badge(u.role)
         +     (u.role === 'custom' && u.pages && u.pages.length ? ' <span class="badge custom" style="background:#f7ecd8;color:#7a5a40;border:1px solid rgba(120,60,20,.18)" title="Aantal toegankelijke tabs">' + u.pages.length + ' tabs</span>' : '')
         +     (u.finance ? ' <span class="badge finance" title="Heeft Finance-toegang">💳 finance</span>' : '')
+        +     (u.ai ? ' <span class="badge ai" title="Mag de AI-assistent gebruiken">✦ ai</span>' : '')
         +   '</div>'
         +   '<div class="cell"><div class="last-seen">'
         +     '<span class="dot ' + pres.cls + '"></span>'
@@ -636,6 +648,12 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('d-finance').checked = !!u.finance;
     document.getElementById('d-finance').disabled = false;
     document.getElementById('d-finance-state').textContent = u.finance ? 'aan' : 'uit';
+    // AI-toegang: admins krijgen de chat altijd, dus toon dan vast aan + slot.
+    var aiBox = document.getElementById('d-ai');
+    var isAdminUser = u.role === 'admin';
+    aiBox.checked = isAdminUser || !!u.ai;
+    aiBox.disabled = isAdminUser;
+    document.getElementById('d-ai-state').textContent = isAdminUser ? 'altijd (admin)' : (u.ai ? 'aan' : 'uit');
     // Pages-grid alleen tonen voor custom rol.
     var pagesRow = document.getElementById('d-pages-row');
     if (u.role === 'custom') {
@@ -734,6 +752,27 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     });
   };
 
+  window.saveAi = function (val) {
+    if (!currentDetailUid) return;
+    var box = document.getElementById('d-ai');
+    var state = document.getElementById('d-ai-state');
+    box.disabled = true;
+    state.textContent = 'opslaan…';
+    fnSetAi({ uid: currentDetailUid, ai: !!val }).then(function () {
+      toast(val ? 'AI-toegang aan.' : 'AI-toegang uit.');
+      state.textContent = val ? 'aan' : 'uit';
+      var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
+      if (u) u.ai = !!val;
+      box.disabled = false;
+      render();
+    }).catch(function (e) {
+      toast((e && e.message) || 'Wijzigen mislukt.', true);
+      box.checked = !val;
+      state.textContent = (!val) ? 'aan' : 'uit';
+      box.disabled = false;
+    });
+  };
+
   window.deleteCurrent = function () {
     if (!currentDetailUid) return;
     var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
@@ -758,6 +797,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('add-name').value = '';
     document.getElementById('add-role').value = 'medewerker';
     document.getElementById('add-finance').checked = false;
+    document.getElementById('add-ai').checked = false;
     document.getElementById('add-pages-row').style.display = 'none';
     getAddPages = null;
     document.getElementById('add-modal').classList.add('show');
@@ -783,6 +823,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     var name    = (document.getElementById('add-name').value || '').trim();
     var role    = document.getElementById('add-role').value;
     var finance = document.getElementById('add-finance').checked;
+    var ai      = document.getElementById('add-ai').checked;
     var pages   = (role === 'custom' && typeof getAddPages === 'function') ? getAddPages() : [];
     if (!email) { toast('E-mail vereist.', true); return; }
     if (role === 'custom' && !pages.length) {
@@ -791,7 +832,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     }
     var btn = document.getElementById('add-submit');
     btn.disabled = true; btn.textContent = 'Bezig…';
-    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance, pages: pages })
+    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance, ai: ai, pages: pages })
       .then(function () {
         toast('Gebruiker aangemaakt.');
         closeAddModal();

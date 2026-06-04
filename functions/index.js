@@ -396,6 +396,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
   const displayName = String((request.data && request.data.displayName) || '').trim();
   const role = validateRole(request.data && request.data.role);
   const finance = !!(request.data && request.data.finance);
+  const ai = !!(request.data && request.data.ai);
 
   if (!email || !email.includes('@')) {
     throw new HttpsError('invalid-argument', 'Geldig e-mailadres vereist.');
@@ -415,7 +416,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
     throw new HttpsError('already-exists', e && e.message ? e.message : String(e));
   }
   const pages = buildPagesClaim(request.data && request.data.pages);
-  const claims = { role, finance };
+  const claims = { role, finance, ai };
   if (pages) claims.pages = pages;
   await admin.auth().setCustomUserClaims(user.uid, claims);
   return {
@@ -424,6 +425,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
     displayName: user.displayName || '',
     role,
     finance,
+    ai,
     pages,
   };
 });
@@ -453,6 +455,19 @@ exports.setUserFinance = onCall({ region: REGION }, async (request) => {
   const newClaims = Object.assign({}, userRec.customClaims || {}, { finance });
   await admin.auth().setCustomUserClaims(uid, newClaims);
   return { uid, finance };
+});
+
+// Vlag een gebruiker met (of zonder) AI-assistent-toegang. Net als finance
+// een losse claim; bewaart rol en overige claims ongemoeid.
+exports.setUserAi = onCall({ region: REGION }, async (request) => {
+  requireAdmin(request);
+  const uid = String((request.data && request.data.uid) || '');
+  const ai = !!(request.data && request.data.ai);
+  if (!uid) throw new HttpsError('invalid-argument', 'uid vereist.');
+  const userRec = await admin.auth().getUser(uid);
+  const newClaims = Object.assign({}, userRec.customClaims || {}, { ai });
+  await admin.auth().setCustomUserClaims(uid, newClaims);
+  return { uid, ai };
 });
 
 exports.setUserRole = onCall({ region: REGION }, async (request) => {
@@ -493,6 +508,7 @@ exports.listUsers = onCall({ region: REGION }, async (request) => {
     displayName: u.displayName || '',
     role: (u.customClaims && u.customClaims.role) || null,
     finance: !!(u.customClaims && u.customClaims.finance),
+    ai: !!(u.customClaims && u.customClaims.ai),
     pages: pages,
     disabled: !!u.disabled,
     providers: (u.providerData || []).map((p) => p.providerId),

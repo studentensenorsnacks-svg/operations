@@ -279,6 +279,9 @@
         isCustom:  role === 'custom',
         pages:     customPages,
         isFinance: claims.finance === true,
+        // AI-assistent: admins altijd, anderen via de losse 'ai'-claim
+        // (toggle in users.html, net als finance).
+        canUseAi:  role === 'admin' || claims.ai === true,
         logout: function () { signOutWithLog(); },
       };
       if (!window.__auth.canWrite) {
@@ -383,9 +386,10 @@
       try {
         window.dispatchEvent(new CustomEvent('auth-ready', { detail: window.__auth }));
       } catch (e) { /* oudere browsers */ }
-      // AI-assistent: alleen voor admins, en pas hier ingeladen zodat
-      // niet-admins het script niet eens binnenhalen. Verschijnt app-breed.
-      if (window.__auth.isAdmin && !document.getElementById('__ai_chat_js')) {
+      // AI-assistent: voor admins + gebruikers met de 'ai'-claim, en pas
+      // hier ingeladen zodat anderen het script niet eens binnenhalen.
+      // Verschijnt app-breed.
+      if (window.__auth.canUseAi && !document.getElementById('__ai_chat_js')) {
         var aiScript = document.createElement('script');
         aiScript.id = '__ai_chat_js';
         aiScript.src = '/ai-chat.js';

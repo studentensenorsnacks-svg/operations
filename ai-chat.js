@@ -17,9 +17,11 @@
   window.__aiChatLoaded = true;
 
   var API = '/api/anthropic';
+  // Opus is voor deze chat overkill/te duur. Sonnet is sterk genoeg voor
+  // systeemvragen + tool-gebruik; Haiku als snelle, goedkope optie.
   var MODELS = {
-    snel: 'claude-sonnet-4-6',   // standaard: snel & goedkoop
-    diep: 'claude-opus-4-8',     // diepere/complexere vragen
+    sonnet: 'claude-sonnet-4-6',            // standaard: slim
+    haiku:  'claude-haiku-4-5-20251001',    // snel & goedkoop
   };
   var MAX_TOKENS = 2048;
   var TOOL_LOOP_MAX = 8;          // vangnet tegen oneindige tool-lussen
@@ -28,36 +30,44 @@
   // ── Gesprekstoestand ────────────────────────────────────────────
   var messages = [];   // Anthropic messages-array (rollen user/assistant)
   var busy = false;
-  var model = MODELS.snel;
+  var model = MODELS.sonnet;
 
   // ── Systeem-prompt: wie Claude is + wat de app is ───────────────
   function systemPrompt() {
     var u = window.__auth || {};
     return [
       'Je bent de ingebouwde AI-assistent van het Señor Snacks "Operations"-systeem,',
-      'een interne web-app voor de foodtruck-operatie. Je praat met een ADMIN.',
+      'een interne web-app voor de foodtruck-operatie.',
       '',
       'Antwoord standaard in het Nederlands, kort en concreet. Geen overbodige uitleg.',
       '',
       'Wat de app doet (modules/pagina\'s):',
       '- Planning & verhuur: events en verhuringen inplannen (planning.html, verhuur.html).',
       '- Laadlijsten & checklists: wat er per foodtruck mee moet (lijsten.html, checklists.html,',
-      '  checklist-detail.html, laadlijst-beheer.html). RTDB o.a. ft_laadlijsten_v1, ft_checklist_types_v1.',
+      '  checklist-detail.html, laadlijst-beheer.html).',
       '- Ops/eventfiche (ops.html) en eindstock (eindstock.html).',
       '- Vet-tonnen (vet.html, vet-tonnen.html) en poets (poets.html) — met externe read-only dashboards.',
       '- Keuringen (ocb.html), bestellingen (bestelling.html, bestel-catalogus.html), QR-codes, notities.',
       '- Gebruikersbeheer (users.html) en audit (audit.html).',
       '',
       'Auth & rollen: Firebase Auth met custom-claim rollen: admin, manager, medewerker, bakker,',
-      'en custom (eigen allowlist van toegestane pagina\'s). Daarnaast een finance-vlag. Data staat in',
-      'Realtime Database (project operationssenorsnacks).',
+      'en custom (eigen allowlist van toegestane pagina\'s). Losse vlaggen: finance (EventPay) en',
+      'ai (mag deze chat gebruiken). Data staat in Realtime Database (project operationssenorsnacks).',
       '',
-      'Datavragen: je hebt read-only tools om de RTDB te verkennen (list_keys) en uit te lezen (read_rtdb).',
-      'Gebruik die om concrete vragen over de echte data te beantwoorden. Ken je de exacte node-naam niet,',
-      'begin dan met list_keys op "/" en werk naar beneden. Verzin nooit data — lees het op of zeg dat je',
-      'het niet vindt. Je kunt NIETS wijzigen; bij wijzig-verzoeken leg je uit wat de admin zelf moet doen.',
+      'Datavragen: je hebt read-only tools om de RTDB uit te lezen (read_rtdb) en child-keys op te',
+      'lijsten (list_keys). LET OP: de root "/" is afgeschermd — lees daar NOOIT; begin altijd bij een',
+      'specifieke top-level node. De belangrijkste nodes:',
+      '- ft_planning_v1 (planning/events), ft_planning_outlook_archief, ft_planning_backup',
+      '- ft_ops_v1, ft_ops_v2 (eventfiches / check-in)',
+      '- ft_laadlijst_v1, ft_laadlijsten_v1, ft_horeca_laadlijst_v1, ft_fiches_v1 (laadlijsten/checklists)',
+      '- ft_eindstock_v1 (eindstock), ft_priority_v1 + ft_poets_history (poets), vet_tonnen (vet)',
+      '- ft_bestellingen_v1, ft_bestel_catalogus_v1 (bestellingen), ocb_keuringen (keuringen)',
+      '- ft_qrcodes_v1, ft_qrcodes_meta_v1, ft_notities_v1, ft_stroomaanvraag_v1, ft_archief_v1, ft_trucks_v1',
+      'De lees-rechten volgen de rol/pagina-rechten van de gebruiker; krijg je "geen data"/een fout, dan',
+      'mag deze gebruiker die node simpelweg niet zien. Verzin nooit data — lees het op of zeg dat je het',
+      'niet vindt. Je kunt NIETS wijzigen; bij wijzig-verzoeken leg je uit wat de gebruiker zelf moet doen.',
       '',
-      'Huidige context: gebruiker = ' + (u.email || 'onbekend') + ', pagina = ' + location.pathname + '.',
+      'Huidige context: gebruiker = ' + (u.email || 'onbekend') + ' (rol: ' + (u.role || '?') + '), pagina = ' + location.pathname + '.',
     ].join('\n');
   }
 
@@ -262,7 +272,7 @@
     panel.innerHTML =
       '<div id="ai-head">' +
         '<b>✦ AI-assistent</b>' +
-        '<select id="ai-model" title="Model"><option value="snel">Snel</option><option value="diep">Diep</option></select>' +
+        '<select id="ai-model" title="Model"><option value="sonnet">Slim (Sonnet)</option><option value="haiku">Snel (Haiku)</option></select>' +
         '<button id="ai-close" title="Sluiten">×</button>' +
       '</div>' +
       '<div id="ai-log"></div>' +
@@ -283,7 +293,7 @@
       if (panel.classList.contains('open')) setTimeout(function () { input.focus(); }, 50);
     };
     panel.querySelector('#ai-close').onclick = function () { panel.classList.remove('open'); };
-    panel.querySelector('#ai-model').onchange = function () { model = MODELS[this.value] || MODELS.snel; };
+    panel.querySelector('#ai-model').onchange = function () { model = MODELS[this.value] || MODELS.sonnet; };
 
     function submit() { var v = input.value; setInput(''); send(v); }
     btnSend.onclick = submit;
