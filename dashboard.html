@@ -927,6 +927,20 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .menu-btn:hover { background:var(--surface2); }
 .menu-btn.open { background:var(--surface2); border-color:var(--text3); }
+
+/* ── UITLOG-knop ── */
+.logout-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  background:transparent; border:1px solid rgba(232,0,29,0.35);
+  font-family:var(--font); font-size:0.88rem; font-weight:700;
+  color:var(--red); padding:9px 14px; border-radius:8px; cursor:pointer;
+  transition:all 0.15s;
+}
+.logout-btn:hover { background:rgba(232,0,29,0.08); border-color:var(--red); }
+@media (max-width:600px) {
+  .logout-btn { padding:10px 11px; font-size:0.84rem; }
+  .logout-btn .logout-lbl { display:none; }
+}
 .menu-btn .menu-caret { font-size:0.7rem; transition:transform 0.2s; }
 .menu-btn.open .menu-caret { transform:rotate(180deg); }
 
@@ -1026,6 +1040,7 @@ textarea { resize: vertical; min-height: 72px; }
   <div class="topbar-right">
     <button type="button" class="nav-stukken" id="btn-stukken" onclick="openStukkenModal()" title="Open de lijst van gemelde stukken">🔧 <span class="lbl-stuk-full">Stukken</span> <span class="stukken-count" id="stukken-count">0</span></button>
     <button type="button" class="menu-btn" id="menu-btn" onclick="toggleMainMenu()" aria-haspopup="true" aria-expanded="false">≡ Menu <span class="menu-caret">▾</span></button>
+    <button type="button" class="logout-btn" id="logout-btn" onclick="opsLogout()" title="Uitloggen">⎋ <span class="logout-lbl">Uitloggen</span></button>
     <div class="clock" id="clock">--:--</div>
   </div>
 </div>
@@ -1442,6 +1457,17 @@ function closeMainMenu() {
   const btn = document.getElementById('menu-btn');
   btn.classList.remove('open');
   btn.setAttribute('aria-expanded', 'false');
+}
+// Uitloggen via de auth-gate (window.__auth.logout regelt signOut + redirect naar login)
+function opsLogout() {
+  if (!confirm('Wil je uitloggen?')) return;
+  if (window.__auth && typeof window.__auth.logout === 'function') {
+    window.__auth.logout();
+  } else if (window.firebase && firebase.auth) {
+    firebase.auth().signOut().then(function () { location.replace('/login.html'); });
+  } else {
+    location.replace('/login.html');
+  }
 }
 // Klik op een link in het menu → menu sluit (button-clicks regelen zelf hun close())
 document.getElementById('menu-dropdown').addEventListener('click', ev => {
