@@ -342,15 +342,18 @@ const CATS = {
   notitie:          { label: 'Notitie',         color: '#a855f7' },
   'stuk-resolved':  { label: 'Stuk opgelost',   color: '#15803d' },
   eindstock:        { label: 'Eindstock',       color: '#0d9488' },
+  laadlijst:        { label: 'Laadlijst',       color: '#ca8a04' },
   'verhuur-sign':   { label: 'Verhuur aflevering', color: '#b45309' },
   'verhuur-return': { label: 'Verhuur terugname',  color: '#92400e' },
-  login:            { label: 'Login-activiteit',color: '#64748b' },
+  login:            { label: 'Ingelogd',        color: '#0891b2' },
+  logout:           { label: 'Uitgelogd',       color: '#475569' },
+  actief:           { label: 'Laatst actief',   color: '#94a3b8' },
 };
 const CAT_KEYS = Object.keys(CATS);
 let activeCats = new Set(CAT_KEYS);
 
 // Ruwe bron-data
-let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{} };
+let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{} };
 let events = [];      // genormaliseerde audit-events
 const loaded = {};    // welke bronnen al binnen zijn
 
@@ -375,17 +378,52 @@ function fmtShort(ts){
   return d.toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
 }
 // Parse een logregel als "01/06/2026 14:20 — bewerkt door Jan"
+// Geeft een opgeschoonde actie (zonder "door X"), de persoon, en een
+// gestructureerde detail-regel terug zodat edit-events leesbaar zijn.
 function parseLogLine(line, fallbackTs, truck){
   const m = String(line).match(/^\s*(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\s+(\d{1,2}):(\d{2})\s*[—\-–]\s*(.*)$/);
-  let ts = fallbackTs, rest = line;
+  let ts = fallbackTs, rest = String(line);
   if (m){
     let yr = parseInt(m[3],10); if (yr < 100) yr += 2000;
     ts = new Date(yr, parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[4],10), parseInt(m[5],10)).getTime();
     rest = m[6];
   }
-  const pm = String(rest).match(/door\s+([^,—–\-]+?)(?:\s+op\b|$)/i);
+  rest = rest.trim();
+  // Persoon uit "door X" halen
+  const pm = rest.match(/\bdoor\s+([^,—–]+?)(?:\s+op\b|[,.;]|$)/i);
   const person = pm ? pm[1].trim() : '';
-  return { ts, action: String(rest).trim(), person };
+  // "door X" uit de actie strippen zodat alleen wat-er-gebeurde overblijft
+  let action = rest.replace(/\bdoor\s+[^,—–]+?(?=\s+op\b|[,.;]|$)/i, '').replace(/\s{2,}/g,' ').replace(/[\s,]+$/,'').trim();
+  if (!action) action = rest;
+  // Eerste letter een hoofdletter geven
+  if (action) action = action.charAt(0).toUpperCase() + action.slice(1);
+  return { ts, action, person, raw: rest };
+}
+// Leesbaar toestel uit een user-agent ("Chrome op Windows", "Safari op iPhone")
+function deviceFromUA(ua){
+  ua = String(ua || '');
+  if (!ua) return '';
+  let browser = 'browser';
+  if (/Edg\//.test(ua))               browser = 'Edge';
+  else if (/OPR\/|Opera/.test(ua))    browser = 'Opera';
+  else if (/Chrome\//.test(ua))       browser = 'Chrome';
+  else if (/Firefox\//.test(ua))      browser = 'Firefox';
+  else if (/Safari\//.test(ua))       browser = 'Safari';
+  let os = '';
+  if (/iPhone/.test(ua))              os = 'iPhone';
+  else if (/iPad/.test(ua))           os = 'iPad';
+  else if (/Android/.test(ua))        os = 'Android';
+  else if (/Windows/.test(ua))        os = 'Windows';
+  else if (/Mac OS X|Macintosh/.test(ua)) os = 'Mac';
+  else if (/Linux/.test(ua))          os = 'Linux';
+  return os ? browser + ' op ' + os : browser;
+}
+function providerLabel(p){
+  p = String(p || '');
+  if (/google/i.test(p)) return 'Google';
+  if (/password/i.test(p)) return 'e-mail';
+  if (p) return p.replace(/\.com$/,'');
+  return '';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -421,12 +459,17 @@ function rebuild(){
     }
     // Poetsbeurt rechtstreeks op check-in
     if (c.cleanedAt){
-      ev.push({ ts: c.cleanedAt, cat: 'poets', person: c.employee || 'Poets', action: 'Gepoetst', target: truck, detail: '' });
+      ev.push({ ts: c.cleanedAt, cat: 'poets', person: c.employee || 'Poets', action: 'Gepoetst', target: truck, detail: 'bij check-in' });
     }
     // Logboek-regels (bewerkingen, markeringen…)
     (c.log || []).forEach(line => {
       const p = parseLogLine(line, c.timestamp || 0, truck);
-      ev.push({ ts: p.ts, cat: 'edit', person: p.person || '—', action: p.action || String(line), target: truck, detail: '' });
+      ev.push({
+        ts: p.ts, cat: 'edit', person: p.person || '—',
+        action: p.action || String(line), target: truck,
+        // Toon de ruwe regel alleen als detail wanneer die meer bevat dan de actie
+        detail: (p.raw && p.raw.toLowerCase() !== (p.action||'').toLowerCase()) ? p.raw : ''
+      });
     });
   });
 
@@ -449,22 +492,28 @@ function rebuild(){
   // 3) Eindstock (ft_eindstock_v1)
   Object.values(src.eindstock || {}).forEach(es => {
     if (!es) return;
+    // Aantal ingevulde stockregels meetellen voor een concreter detail
+    let regels = 0;
+    const stock = es.stock || es.items || es.producten;
+    if (Array.isArray(stock)) regels = stock.filter(Boolean).length;
+    else if (stock && typeof stock === 'object') regels = Object.keys(stock).length;
+    const det = [es.eventNaam, regels ? regels + ' stockregels' : ''].filter(Boolean).join(' · ');
     ev.push({
       ts: tsFrom(es.ingediend), cat: 'eindstock', person: es.medewerker || 'Onbekend',
-      action: 'Eindstock ingediend', target: es.wagen || '', detail: es.eventNaam || ''
+      action: 'Eindstock ingediend', target: es.wagen || '', detail: det
     });
   });
 
   // 4) Poets-historie (ft_poets_history) — append-only
   Object.values(src.poetsHist || {}).forEach(h => {
     if (!h) return;
-    ev.push({ ts: h.cleanedAt || 0, cat: 'poets', person: h.by || 'Poets Dashboard', action: 'Gepoetst', target: h.truck || '', detail: '' });
+    ev.push({ ts: h.cleanedAt || 0, cat: 'poets', person: h.by || 'Poets Dashboard', action: 'Gepoetst', target: h.truck || '', detail: 'via Poets-dashboard' });
   });
 
   // 5) Poets-prioriteit (ft_priority_v1)
   Object.values(src.prio || {}).forEach(p => {
     if (!p || p.priority !== true) return;
-    ev.push({ ts: p.setAt || 0, cat: 'prio', person: p.by || '—', action: 'Poets-prioriteit gezet', target: p.truck || '', detail: '' });
+    ev.push({ ts: p.setAt || 0, cat: 'prio', person: p.by || '—', action: 'Poets-prioriteit gezet', target: p.truck || '', detail: 'truck met voorrang voor poetsbeurt' });
   });
 
   // 6) Verhuur-handtekeningen (ft_planning_v1 → signature / returnSignature)
@@ -485,13 +534,57 @@ function rebuild(){
     }
   });
 
-  // 7) Login-activiteit (_userActivity)
+  // 7) Login-activiteit (_userActivity): echte login-/uitlog-gebeurtenissen
   Object.values(src.activity || {}).forEach(u => {
     if (!u) return;
-    ev.push({
-      ts: u.lastSeen || 0, cat: 'login', person: u.displayName || u.email || 'Onbekend',
-      action: 'Laatst actief', target: u.email || '', detail: ''
+    const who = u.displayName || u.email || 'Onbekend';
+    // Elke loginHistory-entry is een concrete in- of uitlog-gebeurtenis
+    Object.entries(u.loginHistory || {}).forEach(([ts, h]) => {
+      h = h || {};
+      const when = parseInt(ts, 10) || 0;
+      const isOut = h.type === 'logout';
+      const dev = deviceFromUA(h.userAgent);
+      const prov = providerLabel(h.provider);
+      const det = isOut ? dev
+        : [prov ? 'via ' + prov : '', dev].filter(Boolean).join(' · ');
+      ev.push({
+        ts: when, cat: isOut ? 'logout' : 'login', person: who,
+        action: isOut ? 'Uitgelogd' : 'Ingelogd', target: u.email || '', detail: det
+      });
     });
+    // Laatst-gezien als losse, rustigere categorie (presentie-stempel)
+    if (u.lastSeen){
+      ev.push({
+        ts: u.lastSeen, cat: 'actief', person: who,
+        action: 'Laatst actief', target: u.email || '',
+        detail: u.loginCount ? u.loginCount + 'e login' : ''
+      });
+    }
+  });
+
+  // 8) Laadlijsten (ft_laadlijsten_v1): aanmaak + laatste wijziging/status
+  const LL_LABEL = { nieuw:'Nieuw', laden:'Laden', retour:'Retour', te_factureren:'Te factureren', gefactureerd:'Gefactureerd', archief:'Archief' };
+  Object.values(src.laadlijsten || {}).forEach(l => {
+    if (!l) return;
+    const naam = l.eventNaam || l.naam || 'Laadlijst';
+    const wie  = l.geladenDoor || '—';
+    const tCreate = tsFrom(l.aangemaakt);
+    const tEdit   = tsFrom(l.aangepast_op);
+    if (tCreate){
+      ev.push({
+        ts: tCreate, cat: 'laadlijst', person: l.automatisch_aangemaakt ? 'Automatisch' : wie,
+        action: 'Laadlijst aangemaakt', target: naam,
+        detail: [l.wagen, LL_LABEL[l.status] || l.status].filter(Boolean).join(' · ')
+      });
+    }
+    // Toon een wijziging alleen als die duidelijk ná de aanmaak ligt
+    if (tEdit && tEdit > tCreate + 1000){
+      ev.push({
+        ts: tEdit, cat: 'laadlijst', person: wie,
+        action: 'Laadlijst bijgewerkt', target: naam,
+        detail: ['status: ' + (LL_LABEL[l.status] || l.status || '?'), l.wagen].filter(Boolean).join(' · ')
+      });
+    }
   });
 
   events = ev.filter(e => e.ts && e.ts > 0).sort((a,b) => b.ts - a.ts);
@@ -626,6 +719,7 @@ function startListeners(){
   fbdb.ref('ft_poets_history').on('value', s => { src.poetsHist = s.val() || {}; markLoaded('poetsHist'); });
   fbdb.ref('ft_priority_v1').on('value',   s => { src.prio      = s.val() || {}; markLoaded('prio'); });
   fbdb.ref('ft_planning_v1').on('value',   s => { src.planning  = s.val() || {}; markLoaded('planning'); });
+  fbdb.ref('ft_laadlijsten_v1').on('value',s => { src.laadlijsten = s.val() || {}; markLoaded('laadlijsten'); });
   fbdb.ref('_userActivity').on('value',    s => { src.activity  = s.val() || {}; markLoaded('activity'); }, () => {});
   setInterval(render, 60000); // klok/relatieve weergave fris houden
 }
