@@ -149,7 +149,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="card">
     <div class="card-h">
       <span>Gegevens</span>
-      <button type="button" class="smallbtn" onclick="openLijstZoeker()" style="font-weight:600;">📋 Begin vanuit bestaande lijst</button>
+      <button type="button" class="smallbtn" onclick="openLijstZoeker()" style="font-weight:600;">🗄️ Begin vanuit het archief</button>
     </div>
     <div class="grid2">
       <div class="field">
@@ -249,18 +249,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- Lijst-zoeker: gebruik bestaande lijst als basis -->
 <div class="overlay" id="lz-overlay">
   <div class="modal" style="max-width:640px;">
-    <div class="modal-h"><span class="t">📋 Kies een lijst als basis</span><button class="modal-x" onclick="closeLijstZoeker()">✕</button></div>
+    <div class="modal-h"><span class="t">🗄️ Kies uit het archief als basis</span><button class="modal-x" onclick="closeLijstZoeker()">✕</button></div>
     <div class="modal-b">
-      <input type="text" class="search" id="lz-search" placeholder="🔍 Zoek op naam, event, klant, truck of datum…" oninput="renderLijstZoeker(this.value)" autocomplete="off">
+      <input type="text" class="search" id="lz-search" placeholder="🔍 Zoek op naam, event, klant, truck of map…" oninput="renderLijstZoeker(this.value)" autocomplete="off">
       <div id="lz-list" style="max-height:48vh;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface2);min-height:240px;"></div>
-      <div style="font-size:12px;color:var(--text3);margin-top:10px;">Producten + materialen + aantallen worden geladen in dit formulier. Je past aan en slaat op als <b>nieuwe</b> lijst — het origineel blijft onaangeraakt.</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:10px;">📋 = gearchiveerde lijst (meteen geladen) · 📄 = PDF (wordt met AI uitgelezen). Je past aan en slaat op als <b>nieuwe</b> lijst — het archief-origineel blijft onaangeraakt.</div>
     </div>
   </div>
 </div>
 
 <script>
 const LL_PATH = 'ft_laadlijsten_v1';
+const ARCH_PATH = 'ft_archief_v1';
 const CATS = ['DIEPVRIES','KOELING','DROOG','SAUZEN','DRANK'];
+// Extractie-prompt voor PDF's — zelfde afspraken als de bulk-uitlezer in laadlijst-beheer.html
+const LL_EXTRACT_PROMPT = 'Je extraheert laadlijsten van Señor Snacks foodtrucks. Geef ALLEEN raw JSON terug, geen uitleg, geen markdown. Gebruik exact deze categorienamen: DROOG, SAUZEN, KOELING, DIEPVRIES. Neem de categorie MATERIALEN NIET over — sla die volledig over. Elk item: {"naam":"string","aantal":number}. Als er geen aantal staat gebruik 0. Lees bovenaan de laadlijst ook deze drie velden, exact zoals ingevuld: "wagen" = het wagennummer, "event" = de evenementnaam, "datum" = de datum in formaat JJJJ-MM-DD (zet bv. 01/03/2026 om naar 2026-03-01). Ontbreekt een veld, geef dan een lege string "". Verzin niets zelf. Formaat: {"wagen":"","event":"","datum":"","categorieën":{"DROOG":[],"SAUZEN":[],"KOELING":[],"DIEPVRIES":[]}}';
 let products = [];   // [{_id, categorie, naam, aantal}]
 let materials = [];  // [{_id, naam, aantal}]
 let catalog = [];    // [{naam, cat}]
@@ -268,6 +271,7 @@ let EVENTS = {};     // id -> {id,name,startDate,endDate,location,trucks[]}
 let ALLTRUCKS = [];
 let seq = 1;
 let editKey = null;
+let editArchiefKey = null; // archief-item dat bij de bewerkte lijst hoort (voor sync)
 
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -306,22 +310,34 @@ function fmtD(d){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||''); return m?m[3]+
   if(id){ loadExisting(id); return; }
   const baseKey = params.get('base');
   if(baseKey){ await loadAsBase(baseKey); return; }
+  const archBase = params.get('archbase');
+  if(archBase){ await loadArchBase(archBase); return; }
   const ev = params.get('event'), tr = params.get('truck');
   if(ev && EVENTS[ev]){ $('f-event').value = ev; onEventChange(); }
   if(tr){ selectTruck(tr); }
   updLinkStatus();
 })();
 
-/* ---------- Laad één lijst als basis (direct via ?base=KEY) ---------- */
+/* ---------- Laad één lijst als basis (direct via ?base=KEY, gestructureerd) ---------- */
 async function loadAsBase(key){
   try{
     const snap = await fbdb.ref(LL_PATH+'/'+key).once('value');
     const r = snap.val();
     if(!r){ alert('Basis-lijst niet gevonden.'); return; }
-    if(!allLaadlijsten) allLaadlijsten = {};
-    allLaadlijsten[key] = r;
-    useLijstAlsBasis(key);
+    prefillFromLijst(r); afterPrefillFocus();
   }catch(e){ alert('Laden basis mislukt: '+(e.message||e.code||'fout')); }
+}
+
+/* ---------- Laad een archief-item als basis (via ?archbase=KEY) ---------- */
+async function loadArchBase(key){
+  try{
+    const snap = await fbdb.ref(ARCH_PATH+'/'+key).once('value');
+    const e = snap.val();
+    if(!e){ alert('Archief-item niet gevonden.'); return; }
+    e.key = key;
+    if(isLijstEntry(e)){ prefillFromLijst(e); afterPrefillFocus(); }
+    else { $('lz-overlay').classList.add('show'); await extractAndPrefill(e); }
+  }catch(err){ alert('Laden mislukt: '+(err.message||err.code||'fout')); }
 }
 
 /* ---------- Agenda-koppeling ---------- */
@@ -470,16 +486,18 @@ function renderPicker(){
 }
 function pickAdd(idx){ const p = catalog[idx]; if(!p) return; addProduct(p.naam, p.cat); closePicker(); }
 
-/* ---------- Lijst-zoeker (gebruik bestaande lijst als basis) ---------- */
-let allLaadlijsten = null; // cache: { key: rec } na 1e fetch
+/* ---------- Archief-zoeker (begin vanuit een gearchiveerde lijst of PDF) ---------- */
+let archItems = null; // cache na 1e fetch: [{key, ...entry}]
+
 function openLijstZoeker(){
   const ov = $('lz-overlay'); ov.classList.add('show');
   const inp = $('lz-search'); inp.value = '';
-  if(allLaadlijsten){ renderLijstZoeker(''); }
+  if(archItems){ renderLijstZoeker(''); }
   else {
-    $('lz-list').innerHTML = '<div class="lz-loading">Lijsten ophalen…</div>';
-    fbdb.ref(LL_PATH).once('value').then(snap=>{
-      allLaadlijsten = snap.val() || {};
+    $('lz-list').innerHTML = '<div class="lz-loading">Archief ophalen…</div>';
+    fbdb.ref(ARCH_PATH).once('value').then(snap=>{
+      const v = snap.val() || {};
+      archItems = Object.entries(v).map(([key,e])=>Object.assign({key}, e||{}));
       renderLijstZoeker('');
     }).catch(e=>{
       $('lz-list').innerHTML = '<div class="lz-empty">Laden mislukt: '+esc(e.message||e.code||'fout')+'</div>';
@@ -488,54 +506,69 @@ function openLijstZoeker(){
   setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 80);
 }
 function closeLijstZoeker(){ $('lz-overlay').classList.remove('show'); }
-function countLijstItems(r){
-  const c = r.categorieën || {};
-  let n = 0;
+
+// Een archief-item is een gestructureerde lijst (direct bruikbaar) als kind==='lijst'
+// of als het categorieën heeft zonder PDF-link. Anders is het een PDF → AI uitlezen.
+function isLijstEntry(e){ return e.kind==='lijst' || (!!e.categorieën && !e.url); }
+function archItemCount(e){
+  if(typeof e.itemCount==='number') return e.itemCount;
+  const c = e.categorieën || {}; let n=0;
   Object.keys(c).forEach(k=>{ if(Array.isArray(c[k])) n += c[k].length; });
   return n;
 }
+function fmtTs(ts){ if(!ts) return ''; try{ return new Date(ts).toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return ''; } }
+
 function renderLijstZoeker(q){
   q = (q||'').toLowerCase().trim();
-  if(!allLaadlijsten){ return; }
-  const items = Object.entries(allLaadlijsten)
-    .map(([id,r])=>({id, r: r||{}}))
-    .filter(({r})=>{
-      if(!r || !r.naam) return false;
+  if(!archItems){ return; }
+  const items = archItems
+    .filter(e=>{
+      const naam = e.name || e.naam || '';
+      if(!naam) return false;
       if(!q) return true;
-      const hay = [r.naam, r.eventNaam, r.klant, r.wagen, r.datum, r.datum_van, r.type_naam, r.straat, r.gemeente]
-        .filter(Boolean).join(' ').toLowerCase();
+      const hay = [naam, e.category, e.eventNaam, e.klant, e.wagen, e.datum].filter(Boolean).join(' ').toLowerCase();
       return hay.indexOf(q) !== -1;
     })
-    .sort((a,b)=>{
-      const ta = a.r.aangepast_op || a.r.aangemaakt || '';
-      const tb = b.r.aangepast_op || b.r.aangemaakt || '';
-      return tb.localeCompare(ta);
-    });
+    .sort((a,b)=>(b.ts||0)-(a.ts||0));
   const el = $('lz-list');
   if(!items.length){
-    el.innerHTML = '<div class="lz-empty">'+(q?'Geen lijsten gevonden voor "'+esc(q)+'".':'Nog geen lijsten in het archief.')+'</div>';
+    el.innerHTML = '<div class="lz-empty">'+(q
+      ? 'Geen lijsten gevonden voor "'+esc(q)+'".'
+      : 'Nog niets in het archief. Upload PDF\'s via de Archief-pagina of maak een lijst aan.')+'</div>';
     return;
   }
-  el.innerHTML = items.map(({id,r})=>{
-    const totaal = countLijstItems(r);
-    const sub = [r.eventNaam, r.klant, r.wagen, r.datum||r.datum_van].filter(Boolean).join(' · ');
-    return '<div class="lz-item" onclick="useLijstAlsBasis(\''+id+'\')">'
+  el.innerHTML = items.map(e=>{
+    const naam = e.name || e.naam || '(naamloos)';
+    const lijst = isLijstEntry(e);
+    const ico = lijst ? '📋' : '📄';
+    const sub = lijst
+      ? [e.eventNaam, e.klant, e.wagen, e.datum].filter(Boolean).join(' · ')
+      : [e.category, fmtTs(e.ts)].filter(Boolean).join(' · ');
+    const right = lijst
+      ? '<span class="lz-count">'+archItemCount(e)+' items</span><span class="lz-take">Gebruik →</span>'
+      : '<span class="lz-count">PDF</span><span class="lz-take">AI uitlezen →</span>';
+    return '<div class="lz-item" onclick="useArchItem(\''+e.key+'\')">'
       +   '<div class="lz-info">'
-      +     '<div class="lz-naam">'+esc(r.naam)+'</div>'
+      +     '<div class="lz-naam">'+ico+' '+esc(naam)+'</div>'
       +     (sub ? '<div class="lz-sub">'+esc(sub)+'</div>' : '')
       +   '</div>'
-      +   '<span class="lz-count">'+totaal+' items</span>'
-      +   '<span class="lz-take">Gebruik →</span>'
+      +   right
       + '</div>';
   }).join('');
 }
-function useLijstAlsBasis(key){
-  const r = (allLaadlijsten||{})[key];
-  if(!r){ closeLijstZoeker(); return; }
+
+function useArchItem(key){
+  const e = (archItems||[]).find(x=>x.key===key);
+  if(!e){ closeLijstZoeker(); return; }
+  if(isLijstEntry(e)){ prefillFromLijst(e); closeLijstZoeker(); afterPrefillFocus(); return; }
+  extractAndPrefill(e); // PDF → AI uitlezen (sluit modal zelf na succes)
+}
+
+// Voorvullen vanuit een gestructureerde lijst (archief-'lijst' óf ft_laadlijsten-record)
+function prefillFromLijst(r){
   // Belangrijk: editKey NIET zetten — dit wordt een NIEUWE lijst.
   editKey = null;
   $('page-title').textContent = 'Nieuwe laadlijst';
-  // Producten + materialen overnemen
   const cats = r.categorieën || {};
   products = []; materials = [];
   Object.keys(cats).forEach(cat=>{
@@ -543,23 +576,80 @@ function useLijstAlsBasis(key){
     if(cat==='MATERIALEN'){ arr.forEach(m=>materials.push({_id:seq++, naam:m.naam||'', aantal:Number(m.aantal)||0})); }
     else arr.forEach(p=>products.push({_id:seq++, categorie:normCat(cat), naam:p.naam||'', aantal:Number(p.aantal)||0}));
   });
-  // Naam-suggestie: voorvoegsel "(kopie)" — gebruiker past meestal aan
-  $('f-naam').value = r.naam ? (r.naam + ' (kopie)') : '';
-  // Type overnemen indien gezet
-  if(r.type_id){
-    const sel = $('f-type'); sel.value = String(r.type_id);
-    sel.dataset.naam = r.type_naam || '';
-  }
-  // Klant/contact/telformulier/opmerking overnemen — handig bij stamklanten
+  const naam = r.naam || r.name || '';
+  $('f-naam').value = naam ? (naam + ' (kopie)') : '';
+  if(r.type_id){ const sel = $('f-type'); sel.value = String(r.type_id); sel.dataset.naam = r.type_naam || ''; }
   $('f-klant').value = r.klant || '';
   $('f-tel').value = r.telefoon || '';
   $('f-telform').value = r.telformulier || 'geen';
   $('f-opmerking').value = r.opmerking || '';
   // Adres, datum, geladenDoor, eventId, truck NIET overnemen — verschilt per nieuwe lijst
   renderProducts(); renderMaterials(); updLinkStatus();
-  closeLijstZoeker();
-  // Focus op naam-veld zodat user die meteen kan aanpassen
-  setTimeout(()=>{ try{ $('f-naam').focus(); $('f-naam').select(); }catch(e){} }, 200);
+}
+function afterPrefillFocus(){ setTimeout(()=>{ try{ $('f-naam').focus(); $('f-naam').select(); }catch(e){} }, 200); }
+
+// PDF uit het archief met AI uitlezen → producten voorvullen
+async function extractAndPrefill(e){
+  const el = $('lz-list');
+  el.innerHTML = '<div class="lz-loading">🤖 PDF wordt uitgelezen met AI… dit kan 10–20 sec duren.</div>';
+  try{
+    if(!e.url) throw new Error('Geen downloadlink voor deze PDF');
+    const parsed = await extractFromArchive(e.url);
+    const cats = parsed.categorieën || {};
+    editKey = null;
+    $('page-title').textContent = 'Nieuwe laadlijst';
+    products = []; materials = [];
+    Object.keys(cats).forEach(cat=>{
+      const arr = cats[cat]; if(!Array.isArray(arr)) return;
+      arr.forEach(p=>products.push({_id:seq++, categorie:normCat(cat), naam:p.naam||'', aantal:Number(p.aantal)||0}));
+    });
+    const baseNaam = (e.name||'').replace(/\.pdf$/i,'').trim() || parsed.event || 'Lijst';
+    $('f-naam').value = baseNaam + ' (kopie)';
+    renderProducts(); renderMaterials(); updLinkStatus();
+    closeLijstZoeker();
+    afterPrefillFocus();
+  }catch(err){
+    el.innerHTML = '<div class="lz-empty">Uitlezen mislukt: '+esc(err.message||err.code||'fout')
+      +'<br><br>Probeer opnieuw of kies een andere lijst.</div>';
+  }
+}
+// Probeer eerst de URL-bron (Anthropic haalt de PDF zelf op → geen CORS, geen base64).
+// Lukt dat niet, val dan terug op base64 (de PDF wordt client-side opgehaald en meegestuurd).
+async function extractFromArchive(url){
+  try{
+    return await callExtract([{ type:'document', source:{ type:'url', url } }]);
+  }catch(e){
+    const base64 = await urlToBase64(url);
+    return await callExtract([{ type:'document', source:{ type:'base64', media_type:'application/pdf', data:base64 } }]);
+  }
+}
+async function callExtract(docBlocks){
+  const res = await fetch('/api/anthropic', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6', max_tokens:8000, system: LL_EXTRACT_PROMPT,
+      messages:[{ role:'user', content: docBlocks.concat([
+        { type:'text', text:'Extraheer alle items uit de LAADLIJST pagina (niet de checklijst). Gebruik de getallen uit het Aantal-veld. Geef ook wagen, event en datum terug. Geef terug als JSON.' }
+      ]) }]
+    })
+  });
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.message || data.error.type || 'API-fout');
+  if(!data.content) throw new Error('Geen antwoord van AI');
+  const raw = data.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim();
+  try{ return JSON.parse(raw); }
+  catch(e){ throw new Error(data.stop_reason==='max_tokens' ? 'Antwoord afgekapt — lijst te lang' : 'AI gaf geen geldige JSON'); }
+}
+async function urlToBase64(url){
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error('PDF ophalen mislukt ('+resp.status+')');
+  const blob = await resp.blob();
+  return await new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=>res(String(fr.result).split(',')[1]||'');
+    fr.onerror = ()=>rej(new Error('PDF lezen mislukt'));
+    fr.readAsDataURL(blob);
+  });
 }
 // Sluit modal bij klik op overlay
 document.addEventListener('click', function(e){
@@ -571,6 +661,7 @@ function loadExisting(key){
   fbdb.ref(LL_PATH+'/'+key).once('value').then(snap=>{
     const r = snap.val(); if(!r){ alert('Lijst niet gevonden.'); return; }
     editKey = key;
+    editArchiefKey = r.archiefKey || null;
     $('page-title').textContent = 'Laadlijst bewerken';
     if(r.eventId && EVENTS[String(r.eventId)]) $('f-event').value = String(r.eventId);
     onEventChange();
@@ -636,20 +727,49 @@ async function save(){
   };
   const btn = $('btn-save'); btn.disabled = true; btn.textContent = 'Bezig…';
   try{
+    let llKey;
     if(editKey){
       await fbdb.ref(LL_PATH+'/'+editKey).update(rec);
+      llKey = editKey;
     }else{
       rec.status = 'nieuw';
       rec.automatisch_aangemaakt = false;
       rec.aangemaakt = new Date().toISOString();
-      await fbdb.ref(LL_PATH).push(rec);
+      const ref = await fbdb.ref(LL_PATH).push(rec);
+      llKey = ref.key;
     }
+    // Voortaan elke lijst óók in het archief bewaren zodat ze herbruikbaar blijft
+    await syncArchive(llKey, rec, editKey ? editArchiefKey : null);
     flashSaved();
     location.href = 'checklists.html';
   }catch(e){
     btn.disabled = false; btn.textContent = 'Opslaan';
     alert('Opslaan mislukt: '+(e.code||e.message));
   }
+}
+
+// Schrijf/actualiseer een herbruikbaar 'lijst'-item in het archief (ft_archief_v1).
+// Mislukt dit, dan blokkeert het de opslag niet — de lijst zelf is al bewaard.
+async function syncArchive(llKey, rec, existingArchKey){
+  try{
+    const itemCount = Object.values(rec.categorieën||{})
+      .reduce((s,a)=>s+(Array.isArray(a)?a.length:0),0);
+    const entry = {
+      kind:'lijst', source:'operations', category:'Laadlijsten',
+      name: rec.naam, naam: rec.naam,
+      categorieën: rec.categorieën || {},
+      klant: rec.klant||'', telefoon: rec.telefoon||'', telformulier: rec.telformulier||'geen',
+      opmerking: rec.opmerking||'', type_id: rec.type_id||'', type_naam: rec.type_naam||'',
+      eventNaam: rec.eventNaam||'', wagen: rec.wagen||'', datum: rec.datum||'',
+      itemCount, laadlijstKey: llKey, ts: Date.now()
+    };
+    if(existingArchKey){
+      await fbdb.ref(ARCH_PATH+'/'+existingArchKey).update(entry);
+    }else{
+      const aref = await fbdb.ref(ARCH_PATH).push(entry);
+      await fbdb.ref(LL_PATH+'/'+llKey).update({ archiefKey: aref.key });
+    }
+  }catch(e){ console.warn('Archiveren van de lijst mislukt (lijst zelf is wel bewaard):', e); }
 }
 function flashSaved(){ const el = $('save-state'); el.textContent='✓ bewaard'; el.classList.add('saved'); }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePicker(); });

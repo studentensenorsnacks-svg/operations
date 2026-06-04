@@ -179,13 +179,15 @@ let ITEMS = [];
     const v = snap.val() || {};
     ITEMS = Object.entries(v).map(([key,it])=>({
       key,
-      name: it.name || 'bestand',
+      name: it.name || it.naam || 'bestand',
       path: it.path || '',
       url: it.url || '',
       size: (typeof it.size==='number'? it.size : null),
       contentType: it.contentType || '',
       category: (it.category||'').trim() || 'Algemeen',
       source: it.source === 'operations' ? 'operations' : 'upload',
+      kind: it.kind === 'lijst' ? 'lijst' : 'pdf',
+      itemCount: (typeof it.itemCount==='number' ? it.itemCount : null),
       ts: it.ts || 0
     }));
     fillCatFilters();
@@ -303,19 +305,31 @@ function render(){
       html += '<div class="cat-h"><span>'+esc(i.category)+'</span><span class="cnt">'+n+'</span></div>';
       lastCat = i.category;
     }
-    const badge = i.source==='operations'
-      ? '<span class="badge ops">⚙️ Operations</span>'
-      : '<span class="badge upload">📤 Geüpload</span>';
-    const meta = [i.size!=null?fmtSize(i.size):null, fmtDate(i.ts)].filter(Boolean).join(' · ');
-    const open = i.url ? '<a class="iconbtn" href="'+esc(i.url)+'" target="_blank" rel="noopener" title="Openen">↗</a>'
-                       + '<a class="iconbtn" href="'+esc(i.url)+'" download="'+esc(i.name)+'" title="Downloaden">⬇</a>' : '';
+    const isLijst = i.kind==='lijst';
+    const badge = isLijst
+      ? '<span class="badge ops">📋 Lijst</span>'
+      : (i.source==='operations'
+          ? '<span class="badge ops">⚙️ Operations</span>'
+          : '<span class="badge upload">📤 Geüpload</span>');
+    const meta = isLijst
+      ? [i.itemCount!=null?i.itemCount+' items':null, fmtDate(i.ts)].filter(Boolean).join(' · ')
+      : [i.size!=null?fmtSize(i.size):null, fmtDate(i.ts)].filter(Boolean).join(' · ');
+    // Lijst-items: geen download, wél "gebruik als basis". PDF's: openen + downloaden.
+    const acts = isLijst
+      ? '<a class="iconbtn" href="checklist-detail.html?archbase='+esc(i.key)+'" title="Gebruik als basis voor een nieuwe lijst">↻</a>'
+      : (i.url ? '<a class="iconbtn" href="'+esc(i.url)+'" target="_blank" rel="noopener" title="Openen">↗</a>'
+               + '<a class="iconbtn" href="'+esc(i.url)+'" download="'+esc(i.name)+'" title="Downloaden">⬇</a>'
+               + '<a class="iconbtn" href="checklist-detail.html?archbase='+esc(i.key)+'" title="Uitlezen met AI en gebruiken als basis">↻</a>' : '');
+    const nm = (!isLijst && i.url)
+      ? '<a class="nm" href="'+esc(i.url)+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>'
+      : '<span class="nm">'+esc(i.name)+'</span>';
     html += '<div class="arow">'
-      + '<span class="ico">📄</span>'
+      + '<span class="ico">'+(isLijst?'📋':'📄')+'</span>'
       + '<div class="body">'
-        + (i.url?'<a class="nm" href="'+esc(i.url)+'" target="_blank" rel="noopener">'+esc(i.name)+'</a>':'<span class="nm">'+esc(i.name)+'</span>')
+        + nm
         + '<div class="meta">'+badge+'<span>'+esc(meta)+'</span></div>'
       + '</div>'
-      + '<div class="acts">'+open+'<button class="iconbtn del" type="button" title="Verwijderen" onclick="delItem(\''+i.key+'\')">×</button></div>'
+      + '<div class="acts">'+acts+'<button class="iconbtn del" type="button" title="Verwijderen" onclick="delItem(\''+i.key+'\')">×</button></div>'
       + '</div>';
   });
   wrap.innerHTML = html;
