@@ -374,6 +374,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
   const password = String((request.data && request.data.password) || '');
   const displayName = String((request.data && request.data.displayName) || '').trim();
   const role = validateRole(request.data && request.data.role);
+  const finance = !!(request.data && request.data.finance);
 
   if (!email || !email.includes('@')) {
     throw new HttpsError('invalid-argument', 'Geldig e-mailadres vereist.');
@@ -392,13 +393,27 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
   } catch (e) {
     throw new HttpsError('already-exists', e && e.message ? e.message : String(e));
   }
-  await admin.auth().setCustomUserClaims(user.uid, { role });
+  await admin.auth().setCustomUserClaims(user.uid, { role, finance });
   return {
     uid: user.uid,
     email: user.email || '',
     displayName: user.displayName || '',
     role,
+    finance,
   };
+});
+
+// Vlag een gebruiker met (of zonder) finance-toegang. Bewaart de rol
+// en eventuele andere bestaande claims ongemoeid.
+exports.setUserFinance = onCall({ region: REGION }, async (request) => {
+  requireAdmin(request);
+  const uid = String((request.data && request.data.uid) || '');
+  const finance = !!(request.data && request.data.finance);
+  if (!uid) throw new HttpsError('invalid-argument', 'uid vereist.');
+  const userRec = await admin.auth().getUser(uid);
+  const newClaims = Object.assign({}, userRec.customClaims || {}, { finance });
+  await admin.auth().setCustomUserClaims(uid, newClaims);
+  return { uid, finance };
 });
 
 exports.setUserRole = onCall({ region: REGION }, async (request) => {
@@ -433,6 +448,7 @@ exports.listUsers = onCall({ region: REGION }, async (request) => {
     email: u.email || '',
     displayName: u.displayName || '',
     role: (u.customClaims && u.customClaims.role) || null,
+    finance: !!(u.customClaims && u.customClaims.finance),
     disabled: !!u.disabled,
     providers: (u.providerData || []).map((p) => p.providerId),
     lastSignInAt: u.metadata && u.metadata.lastSignInTime

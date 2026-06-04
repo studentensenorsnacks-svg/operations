@@ -129,6 +129,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .badge.medewerker{background:#eaf2dc;color:#3f5a18}
 .badge.viewer{background:#e0ebef;color:#1e4a5c}
 .badge.bakker{background:#f5e6c7;color:#7a4d12}
+.badge.finance{background:#e0ebef;color:#1e4a5c;border:1px solid #c1d3da}
 .badge.none{background:#f0e7da;color:#856042}
 
 .empty{padding:30px;text-align:center;color:#b89878;font-size:13px}
@@ -296,6 +297,10 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         <option value="bakker">bakker</option>
         <option value="viewer">alleen-lezen</option>
       </select>
+      <label style="display:flex;align-items:center;gap:8px;margin:14px 0 0;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;text-transform:none;letter-spacing:0;">
+        <input id="add-finance" type="checkbox" style="width:auto;margin:0;cursor:pointer;">
+        <span>💳 Finance-toegang (kan EventPay zien)</span>
+      </label>
       <div class="modal-actions">
         <button onclick="closeAddModal()">Annuleren</button>
         <button class="primary" id="add-submit" onclick="submitAdd()">Aanmaken</button>
@@ -328,6 +333,11 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
           </select>
           <button class="primary" id="d-save-role" onclick="saveRole()">Opslaan</button>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;">
+          <input id="d-finance" type="checkbox" onchange="saveFinance(this.checked)" style="width:auto;margin:0;cursor:pointer;">
+          <span>💳 Finance-toegang (kan EventPay zien)</span>
+          <span id="d-finance-state" style="font-size:11px;color:#b89878;font-weight:400;margin-left:auto;"></span>
+        </label>
       </div>
 
       <div class="modal-section">
@@ -350,10 +360,11 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
 <script>
 (function () {
   var fns       = firebase.app().functions('europe-west1');
-  var fnCreate  = fns.httpsCallable('createUser');
-  var fnSetRole = fns.httpsCallable('setUserRole');
-  var fnList    = fns.httpsCallable('listUsers');
-  var fnDelete  = fns.httpsCallable('deleteUser');
+  var fnCreate     = fns.httpsCallable('createUser');
+  var fnSetRole    = fns.httpsCallable('setUserRole');
+  var fnSetFinance = fns.httpsCallable('setUserFinance');
+  var fnList       = fns.httpsCallable('listUsers');
+  var fnDelete     = fns.httpsCallable('deleteUser');
 
   var allUsers = [];      // van listUsers
   var activity = {};      // _userActivity per uid
@@ -516,7 +527,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         +       esc(providers)
         +     '</div>'
         +   '</div>'
-        +   '<div class="cell">' + badge(u.role) + '</div>'
+        +   '<div class="cell">' + badge(u.role) + (u.finance ? ' <span class="badge finance" title="Heeft Finance-toegang">💳 finance</span>' : '') + '</div>'
         +   '<div class="cell"><div class="last-seen">'
         +     '<span class="dot ' + pres.cls + '"></span>'
         +     esc(ls ? fmtRelative(ls) : '—')
@@ -555,6 +566,9 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('d-meta').innerHTML = html;
 
     document.getElementById('d-role').value = u.role || 'medewerker';
+    document.getElementById('d-finance').checked = !!u.finance;
+    document.getElementById('d-finance').disabled = false;
+    document.getElementById('d-finance-state').textContent = u.finance ? 'aan' : 'uit';
     var me = firebase.auth().currentUser;
     document.getElementById('d-delete').disabled = me && me.uid === uid;
 
@@ -604,6 +618,28 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     });
   };
 
+  window.saveFinance = function (val) {
+    if (!currentDetailUid) return;
+    var box = document.getElementById('d-finance');
+    var state = document.getElementById('d-finance-state');
+    box.disabled = true;
+    state.textContent = 'opslaan…';
+    fnSetFinance({ uid: currentDetailUid, finance: !!val }).then(function () {
+      toast(val ? 'Finance-toegang aan.' : 'Finance-toegang uit.');
+      state.textContent = val ? 'aan' : 'uit';
+      // Lokale state bijwerken zodat een herloaded modal niet flikkert.
+      var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
+      if (u) u.finance = !!val;
+      box.disabled = false;
+      render();
+    }).catch(function (e) {
+      toast((e && e.message) || 'Wijzigen mislukt.', true);
+      box.checked = !val;
+      state.textContent = (!val) ? 'aan' : 'uit';
+      box.disabled = false;
+    });
+  };
+
   window.deleteCurrent = function () {
     if (!currentDetailUid) return;
     var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
@@ -627,6 +663,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('add-pwd').value = '';
     document.getElementById('add-name').value = '';
     document.getElementById('add-role').value = 'medewerker';
+    document.getElementById('add-finance').checked = false;
     document.getElementById('add-modal').classList.add('show');
     setTimeout(function () { document.getElementById('add-email').focus(); }, 80);
   };
@@ -634,14 +671,15 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('add-modal').classList.remove('show');
   };
   window.submitAdd = function () {
-    var email = (document.getElementById('add-email').value || '').trim();
-    var pwd   = (document.getElementById('add-pwd').value || '').trim();
-    var name  = (document.getElementById('add-name').value || '').trim();
-    var role  = document.getElementById('add-role').value;
+    var email   = (document.getElementById('add-email').value || '').trim();
+    var pwd     = (document.getElementById('add-pwd').value || '').trim();
+    var name    = (document.getElementById('add-name').value || '').trim();
+    var role    = document.getElementById('add-role').value;
+    var finance = document.getElementById('add-finance').checked;
     if (!email) { toast('E-mail vereist.', true); return; }
     var btn = document.getElementById('add-submit');
     btn.disabled = true; btn.textContent = 'Bezig…';
-    fnCreate({ email: email, password: pwd, displayName: name, role: role })
+    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance })
       .then(function () {
         toast('Gebruiker aangemaakt.');
         closeAddModal();

@@ -203,12 +203,19 @@
         canManage: role === 'admin' || role === 'manager',
         canWrite:  role === 'admin' || role === 'manager' || role === 'medewerker' || role === 'bakker',
         isBakker:  role === 'bakker',
+        isFinance: claims.finance === true,
         logout: function () { signOutWithLog(); },
       };
       if (!window.__auth.canWrite) {
         var s = document.createElement('style');
         s.textContent = '[data-role="write"]{display:none!important}';
         document.head.appendChild(s);
+      }
+      // Verberg finance-only items voor niet-finance gebruikers.
+      if (!window.__auth.isFinance) {
+        var sf = document.createElement('style');
+        sf.textContent = '[data-finance="1"]{display:none!important}';
+        document.head.appendChild(sf);
       }
       var hideEl = document.getElementById('__auth_hide');
       if (hideEl) hideEl.remove();
