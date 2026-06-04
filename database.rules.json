@@ -3,17 +3,17 @@
     ".read": false,
     ".write": false,
 
-    "ft_planning_v1":              { ".read": "auth != null", ".write": "auth != null" },
-    "ft_planning_outlook_archief": { ".read": "auth != null", ".write": "auth != null" },
+    "ft_planning_v1":              { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_planning_outlook_archief": { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
 
     "ft_planning_backup": {
-      ".read": "auth != null",
+      ".read": "auth != null && auth.token.role != 'bakker'",
       "$ts": {
-        ".write": "auth != null && (!data.exists() || !newData.exists())"
+        ".write": "auth != null && auth.token.role != 'bakker' && (!data.exists() || !newData.exists())"
       }
     },
 
-    "ft_ops_v1":          { ".read": "auth != null", ".write": "auth != null" },
+    "ft_ops_v1":          { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
     "ft_ops_v2": {
       ".read":  "auth != null",
       ".write": "auth != null && auth.token.role != 'bakker'",
@@ -21,12 +21,12 @@
         ".write": "auth != null && (auth.token.role != 'bakker' || newData.exists())"
       }
     },
-    "ft_priority_v1":     { ".read": "auth != null", ".write": "auth != null" },
-    "ft_laadlijst_v1":    { ".read": "auth != null", ".write": "auth != null" },
-    "ft_laadlijsten_v1":  { ".read": "auth != null", ".write": "auth != null" },
-    "ft_horeca_laadlijst_v1": { ".read": "auth != null", ".write": "auth != null" },
-    "ft_eindstock_v1":    { ".read": "auth != null", ".write": "auth != null" },
-    "ft_fiches_v1":       { ".read": "auth != null", ".write": "auth != null" },
+    "ft_priority_v1":          { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_laadlijst_v1":         { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_laadlijsten_v1":       { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_horeca_laadlijst_v1":  { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_eindstock_v1":         { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_fiches_v1":            { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
     "ft_notities_v1": {
       ".read":  "auth != null",
       ".write": "auth != null && auth.token.role != 'bakker'",
@@ -42,18 +42,18 @@
       ".read":  "auth != null",
       ".write": "auth != null && auth.token.role != 'bakker'"
     },
-    "ft_stroomaanvraag_v1": { ".read": "auth != null", ".write": "auth != null" },
-    "ft_bestellingen_v1":     { ".read": "auth != null", ".write": "auth != null" },
-    "ft_bestel_catalogus_v1": { ".read": "auth != null", ".write": "auth != null" },
-    "ft_archief_v1":          { ".read": "auth != null", ".write": "auth != null" },
-    "ft_trucks_v1":       { ".read": "auth != null", ".write": "auth != null" },
-    "ft_poets_history":   { ".read": "auth != null", ".write": "auth != null" },
-    "foldtable_requests": { ".read": "auth != null", ".write": "auth != null" },
+    "ft_stroomaanvraag_v1":   { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_bestellingen_v1":     { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_bestel_catalogus_v1": { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_archief_v1":          { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_trucks_v1":           { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "ft_poets_history":       { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
+    "foldtable_requests":     { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
     "ocb_keuringen": {
       ".read":  "auth != null",
       ".write": "auth != null && auth.token.role != 'bakker'"
     },
-    "vet_tonnen":         { ".read": "auth != null", ".write": "auth != null" },
+    "vet_tonnen":             { ".read": "auth != null && auth.token.role != 'bakker'", ".write": "auth != null && auth.token.role != 'bakker'" },
 
     "_userActivity": {
       ".read": "auth != null && auth.token.role == 'admin'",

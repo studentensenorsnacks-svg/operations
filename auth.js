@@ -194,6 +194,27 @@
 
     function letThrough(user, claims) {
       var role = claims.role || null;
+
+      // Bakker: harde redirect weg van elke pagina die niet expliciet
+      // toegelaten is. Voorkomt dat een bakker bv. /dashboard.html of
+      // /bestellingen-dashboard.html opent en de data ziet die de
+      // regels nu serverseitig blokkeren.
+      if (role === 'bakker') {
+        var bakkerAllowed = [
+          '/notities.html', '/notitie.html',
+          '/checkin.html',
+          '/ocb.html',
+          '/qr-codes.html',
+          '/login.html', '/qr.html'
+        ];
+        var pn = (location.pathname || '').toLowerCase();
+        var bakkerOk = bakkerAllowed.some(function (p) { return pn === p || pn.endsWith(p); });
+        if (!bakkerOk) {
+          location.replace('/notities.html');
+          return;
+        }
+      }
+
       window.__auth = {
         uid: user.uid,
         email: user.email || '',
@@ -216,6 +237,41 @@
         var sf = document.createElement('style');
         sf.textContent = '[data-finance="1"]{display:none!important}';
         document.head.appendChild(sf);
+      }
+      // Verberg voor bakker alle navigatie naar paden die ze niet mogen
+      // openen — zodat ze niet kunnen klikken op iets dat hen toch
+      // direct doorstuurt naar notities.html.
+      if (window.__auth.isBakker) {
+        var sb = document.createElement('style');
+        sb.textContent = [
+          'a[href*="dashboard.html"]',
+          'a[href*="planning.html"]',
+          'a[href*="verhuur.html"]',
+          'a[href*="served_verhuur.html"]',
+          'a[href*="poets.html"]',
+          'a[href*="vet.html"]',
+          'a[href*="vet-tonnen.html"]',
+          'a[href*="ops.html"]',
+          'a[href*="lijsten.html"]',
+          'a[href*="checklists.html"]',
+          'a[href*="checklist-detail.html"]',
+          'a[href*="laadlijst-beheer.html"]',
+          'a[href*="laadlijst-koppeling.html"]',
+          'a[href*="archief.html"]',
+          'a[href*="audit.html"]',
+          'a[href*="users.html"]',
+          'a[href*="bestelling.html"]',
+          'a[href*="bestellingen-dashboard.html"]',
+          'a[href*="bestel-catalogus.html"]',
+          'a[href*="horeca-planning.html"]',
+          'a[href*="stroomaanvraag.html"]',
+          'a[href*="event-sheet.html"]',
+          'a[href*="eindstock.html"]',
+          'a[href*="senorsnacks-eventpay"]',
+          'a[href*="senorkeuringqr"]',
+          '[data-bakker-hide]'
+        ].join(',') + '{display:none!important}';
+        document.head.appendChild(sb);
       }
       var hideEl = document.getElementById('__auth_hide');
       if (hideEl) hideEl.remove();
