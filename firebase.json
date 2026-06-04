@@ -36,6 +36,13 @@
           }
         },
         {
+          "source": "/api/mistral",
+          "function": {
+            "functionId": "mistralProxy",
+            "region": "europe-west1"
+          }
+        },
+        {
           "source": "/api/poets",
           "function": {
             "functionId": "poetsApi",
@@ -111,6 +118,13 @@
           "source": "/api/anthropic",
           "function": {
             "functionId": "anthropicProxy",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/mistral",
+          "function": {
+            "functionId": "mistralProxy",
             "region": "europe-west1"
           }
         },

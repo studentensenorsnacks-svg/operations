@@ -33,6 +33,7 @@ const ALLOWED_ORIGINS = [
 ];
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
+const MISTRAL_API_KEY = defineSecret('MISTRAL_API_KEY');
 
 // ── Rate limiter ────────────────────────────────────────────────
 // Fixed-window counter per (endpoint, ip), persisted in RTDB so it
@@ -100,6 +101,116 @@ exports.anthropicProxy = onRequest(
       res.status(response.status).json(data);
     } catch (e) {
       logger.error('anthropicProxy mislukt', e);
+      res.status(500).json({ error: { message: String(e?.message || e) } });
+    }
+  },
+);
+
+// ── HTTP: Mistral API proxy ─────────────────────────────────────
+// Achter /api/mistral. Houdt de Mistral-key serverside en vertaalt het
+// Anthropic-verzoekformaat (dat ai-chat.js gebruikt) naar Mistral's
+// OpenAI-compatibele chat/completions en het antwoord weer terug, zodat de
+// front-end z'n bestaande tool-loop ongewijzigd kan hergebruiken.
+function anthropicToMistral(body) {
+  const out = [];
+  if (body.system) out.push({ role: 'system', content: String(body.system) });
+  const msgs = Array.isArray(body.messages) ? body.messages : [];
+  for (const m of msgs) {
+    if (typeof m.content === 'string') {
+      out.push({ role: m.role, content: m.content });
+      continue;
+    }
+    const blocks = Array.isArray(m.content) ? m.content : [];
+    if (m.role === 'assistant') {
+      const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+      const toolCalls = blocks.filter((b) => b.type === 'tool_use').map((b) => ({
+        id: b.id,
+        type: 'function',
+        function: { name: b.name, arguments: JSON.stringify(b.input || {}) },
+      }));
+      const asg = { role: 'assistant', content: text || '' };
+      if (toolCalls.length) asg.tool_calls = toolCalls;
+      out.push(asg);
+    } else {
+      // user: kan tool_result-blokken en/of tekst bevatten.
+      const results = blocks.filter((b) => b.type === 'tool_result');
+      const text = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+      for (const r of results) {
+        out.push({ role: 'tool', tool_call_id: r.tool_use_id, content: String(r.content == null ? '' : r.content) });
+      }
+      if (text) out.push({ role: 'user', content: text });
+    }
+  }
+  const tools = Array.isArray(body.tools) ? body.tools.map((t) => ({
+    type: 'function',
+    function: { name: t.name, description: t.description, parameters: t.input_schema },
+  })) : undefined;
+  const req = {
+    model: body.model || 'mistral-large-latest',
+    max_tokens: body.max_tokens || 2048,
+    messages: out,
+  };
+  if (tools && tools.length) req.tools = tools;
+  return req;
+}
+
+function mistralToAnthropic(data) {
+  const choice = (data.choices && data.choices[0]) || {};
+  const msg = choice.message || {};
+  const content = [];
+  if (msg.content) content.push({ type: 'text', text: String(msg.content) });
+  const calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
+  for (const c of calls) {
+    let input = {};
+    try { input = JSON.parse((c.function && c.function.arguments) || '{}'); } catch (e) { input = {}; }
+    content.push({ type: 'tool_use', id: c.id, name: c.function && c.function.name, input });
+  }
+  const stop = calls.length ? 'tool_use' : 'end_turn';
+  return { role: 'assistant', content, stop_reason: stop, model: data.model };
+}
+
+exports.mistralProxy = onRequest(
+  {
+    region: REGION,
+    secrets: [MISTRAL_API_KEY],
+    cors: ALLOWED_ORIGINS,
+    timeoutSeconds: 120,
+    memory: '512MiB',
+  },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: { message: 'Gebruik POST.' } });
+      return;
+    }
+    const rl = await rateLimit(req, 'mistral', { limit: 20, windowSec: 60 });
+    if (rl) {
+      res.set('Retry-After', String(rl.retryAfter));
+      res.status(429).json({
+        error: { message: `Rate limit: max 20 calls/min. Probeer over ${rl.retryAfter}s opnieuw.` },
+      });
+      return;
+    }
+    try {
+      const mistralReq = anthropicToMistral(req.body || {});
+      const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ' + MISTRAL_API_KEY.value(),
+        },
+        body: JSON.stringify(mistralReq),
+      });
+      const data = await response.json();
+      res.set('Cache-Control', 'no-store');
+      if (!response.ok) {
+        const m = (data && data.message) || (data && data.error && data.error.message) || 'Mistral-fout.';
+        res.status(response.status).json({ error: { message: String(m) } });
+        return;
+      }
+      res.status(200).json(mistralToAnthropic(data));
+    } catch (e) {
+      logger.error('mistralProxy mislukt', e);
       res.status(500).json({ error: { message: String(e?.message || e) } });
     }
   },

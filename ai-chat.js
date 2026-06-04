@@ -16,12 +16,14 @@
   if (window.__aiChatLoaded) return;
   window.__aiChatLoaded = true;
 
-  var API = '/api/anthropic';
   // Opus is voor deze chat overkill/te duur. Sonnet is sterk genoeg voor
-  // systeemvragen + tool-gebruik; Haiku als snelle, goedkope optie.
+  // systeemvragen + tool-gebruik; Haiku als snelle, goedkope optie. Mistral
+  // loopt via een eigen proxy die het verzoek/antwoord naar Anthropic-vorm
+  // vertaalt, zodat de tool-loop hieronder identiek blijft werken.
   var MODELS = {
-    sonnet: 'claude-sonnet-4-6',            // standaard: slim
-    haiku:  'claude-haiku-4-5-20251001',    // snel & goedkoop
+    sonnet:  { id: 'claude-sonnet-4-6',         api: '/api/anthropic' }, // standaard: slim
+    haiku:   { id: 'claude-haiku-4-5-20251001', api: '/api/anthropic' }, // snel & goedkoop
+    mistral: { id: 'mistral-large-latest',      api: '/api/mistral' },
   };
   var MAX_TOKENS = 2048;
   var TOOL_LOOP_MAX = 8;          // vangnet tegen oneindige tool-lussen
@@ -30,7 +32,7 @@
   // ── Gesprekstoestand ────────────────────────────────────────────
   var messages = [];   // Anthropic messages-array (rollen user/assistant)
   var busy = false;
-  var model = MODELS.sonnet;
+  var model = MODELS.sonnet;   // {id, api}
 
   // ── Systeem-prompt: wie Claude is + wat de app is ───────────────
   function systemPrompt() {
@@ -262,11 +264,11 @@
 
   // ── API-call ────────────────────────────────────────────────────
   function callApi() {
-    return fetch(API, {
+    return fetch(model.api, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: model,
+        model: model.id,
         max_tokens: MAX_TOKENS,
         system: systemPrompt(),
         tools: TOOLS,
@@ -422,7 +424,7 @@
     panel.innerHTML =
       '<div id="ai-head">' +
         '<b>✦ AI-assistent</b>' +
-        '<select id="ai-model" title="Model"><option value="sonnet">Slim (Sonnet)</option><option value="haiku">Snel (Haiku)</option></select>' +
+        '<select id="ai-model" title="Model"><option value="sonnet">Slim (Sonnet)</option><option value="haiku">Snel (Haiku)</option><option value="mistral">Mistral</option></select>' +
         '<button id="ai-close" title="Sluiten">×</button>' +
       '</div>' +
       '<div id="ai-log"></div>' +
@@ -444,6 +446,7 @@
     };
     panel.querySelector('#ai-close').onclick = function () { panel.classList.remove('open'); };
     panel.querySelector('#ai-model').onchange = function () { model = MODELS[this.value] || MODELS.sonnet; };
+    // 'model' is een object {id, api}; bovenstaande zet beide ineens goed.
 
     function submit() { var v = input.value; setInput(''); send(v); }
     btnSend.onclick = submit;
