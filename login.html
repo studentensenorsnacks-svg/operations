@@ -129,7 +129,7 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
     <div class="divider">of</div>
 
     <div id="name-row" style="display:none">
-      <label for="name">Naam <span style="font-weight:400;text-transform:none;color:#b89878">(optioneel)</span></label>
+      <label for="name">Naam <span style="font-weight:400;text-transform:none;color:#e8662b">*</span></label>
       <input id="name" type="text" autocomplete="name" placeholder="Voor- en achternaam">
     </div>
 
@@ -288,6 +288,7 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
         userAgent: ua,
       }).catch(function () {});
       actRef.child('loginHistory/' + now).set({
+        type: 'login',
         provider: providerId,
         userAgent: ua,
       }).catch(function () {});
@@ -337,6 +338,14 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
     if (mode === 'signup' && pwd.length < 6) {
       showError('Wachtwoord moet minstens 6 karakters zijn.');
       return;
+    }
+    if (mode === 'signup') {
+      var nameCheck = (nameIn.value || '').trim();
+      if (nameCheck.length < 2) {
+        showError('Vul je naam in (voornaam en achternaam).');
+        try { nameIn.focus(); } catch (e) {}
+        return;
+      }
     }
     setBusy(true);
     if (mode === 'signup') {
