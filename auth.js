@@ -383,6 +383,15 @@
       try {
         window.dispatchEvent(new CustomEvent('auth-ready', { detail: window.__auth }));
       } catch (e) { /* oudere browsers */ }
+      // AI-assistent: alleen voor admins, en pas hier ingeladen zodat
+      // niet-admins het script niet eens binnenhalen. Verschijnt app-breed.
+      if (window.__auth.isAdmin && !document.getElementById('__ai_chat_js')) {
+        var aiScript = document.createElement('script');
+        aiScript.id = '__ai_chat_js';
+        aiScript.src = '/ai-chat.js';
+        aiScript.defer = true;
+        (document.body || document.documentElement).appendChild(aiScript);
+      }
     }
 
     function onUser(user) {
