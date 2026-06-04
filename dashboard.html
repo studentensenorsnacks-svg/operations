@@ -1049,7 +1049,10 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="event-sheet.html" target="_blank">📋 Event Sheet</a>
   <div class="menu-sep"></div>
   <a href="audit.html" target="_blank">🗂️ Audit log <span style="font-size:0.62rem;opacity:0.6;">(admin)</span></a>
+  <a href="users.html">🔐 Gebruikers <span style="font-size:0.62rem;opacity:0.6;">(admin)</span></a>
   <button type="button" id="backup-btn" onclick="downloadBackup(); closeMainMenu();">📥 Backup</button>
+  <div class="menu-sep"></div>
+  <button type="button" id="logout-btn" onclick="doLogout()" style="grid-column:1/-1;color:#7a2818;font-weight:700;">🚪 Uitloggen <span id="logout-who" style="font-weight:400;opacity:0.7;font-size:0.78rem;"></span></button>
 </div>
 
 <div class="layout">
@@ -1444,6 +1447,31 @@ function closeMainMenu() {
 document.getElementById('menu-dropdown').addEventListener('click', ev => {
   const a = ev.target.closest && ev.target.closest('a');
   if (a) closeMainMenu();
+});
+// Uitloggen-knop → laat auth.js de signOut + redirect afhandelen.
+function doLogout() {
+  closeMainMenu();
+  if (window.__auth && typeof window.__auth.logout === 'function') {
+    window.__auth.logout();
+  } else if (window.firebase && firebase.auth) {
+    firebase.auth().signOut().then(() => location.replace('/login.html'));
+  } else {
+    location.replace('/login.html');
+  }
+}
+// Toon wie ingelogd is naast de uitlog-knop zodra auth-ready is.
+window.addEventListener('auth-ready', ev => {
+  const a = ev.detail;
+  const who = document.getElementById('logout-who');
+  if (who && a && a.email) {
+    who.textContent = '· ' + a.email;
+  }
+  // Admin-only items verbergen voor niet-admins (audit + gebruikers).
+  if (a && !a.isAdmin) {
+    document.querySelectorAll('a[href="audit.html"], a[href="users.html"]').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
 });
 // Esc sluit het menu (modal-handler hieronder regelt zijn eigen Esc)
 document.addEventListener('keydown', ev => {
