@@ -119,6 +119,15 @@
     /* MODAL */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
     .modal-overlay.hidden{display:none;}
+    .lz-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+    .lz-item:hover{background:var(--surface);}
+    .lz-item:last-child{border-bottom:none;}
+    .lz-item .lz-info{flex:1;min-width:0;}
+    .lz-item .lz-naam{font-weight:600;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .lz-item .lz-sub{font-size:11.5px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
+    .lz-item .lz-count{font-size:11.5px;color:var(--text2);font-weight:600;flex-shrink:0;background:var(--surface);padding:4px 10px;border-radius:99px;border:1px solid var(--border2);}
+    .lz-item .lz-take{font-size:12px;font-weight:700;color:var(--red);flex-shrink:0;}
+    .lz-empty{padding:30px;text-align:center;color:var(--text3);font-size:13px;}
     .modal{background:var(--surface);border-radius:16px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;}
     .modal-hdr{padding:20px 22px 0;display:flex;justify-content:space-between;align-items:center;}
     .modal-title{font-family:var(--font-cond);font-size:20px;font-weight:700;}
@@ -270,6 +279,14 @@
         <div class="upload-sub">of sleep een bestand hierheen · AI extraheert de items automatisch</div>
       </div>
       <input type="file" id="pdf-input" accept=".pdf" onchange="handlePdfUpload(this.files[0])">
+      <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;">
+        <hr style="flex:1;border:0;border-top:1px solid var(--border);"/>
+        <span style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.08em;">OF</span>
+        <hr style="flex:1;border:0;border-top:1px solid var(--border);"/>
+      </div>
+      <button type="button" class="btn btn-outline" onclick="openLijstZoeker()" style="width:100%;justify-content:center;padding:13px;font-weight:600;">
+        📋 Begin vanuit een bestaande lijst (gebruik als basis)
+      </button>
       <div id="extract-status" style="display:none;margin-top:14px;"></div>
       <div id="extract-preview" style="display:none;margin-top:18px;">
         <div class="form-row" style="margin-bottom:16px;">
@@ -422,6 +439,21 @@
         <button class="btn btn-gray btn-sm" onclick="closeLLModal()">Annuleren</button>
         <button class="btn btn-red btn-sm" onclick="saveLaadlijstEdit()">💾 Opslaan</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LIJST-ZOEKER (gebruik bestaande lijst als basis voor een nieuwe) -->
+<div class="modal-overlay hidden" id="lijst-zoeker-modal">
+  <div class="modal" style="max-width:640px;max-height:88vh;display:flex;flex-direction:column;">
+    <div class="modal-hdr">
+      <span class="modal-title">📋 Kies een lijst als basis</span>
+      <button class="modal-close" onclick="closeLijstZoeker()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;overflow:hidden;flex:1;">
+      <input type="text" id="lijst-zoeker-search" class="form-input" placeholder="🔍 Zoek op naam, event, wagen of datum…" oninput="renderLijstZoekerList(this.value)" autocomplete="off">
+      <div id="lijst-zoeker-list" style="overflow-y:auto;flex:1;min-height:240px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);"></div>
+      <div style="font-size:12px;color:var(--text3);">De geselecteerde lijst wordt als sjabloon geladen — je kan items en aantallen aanpassen voor je opslaat als nieuwe lijst.</div>
     </div>
   </div>
 </div>
@@ -656,6 +688,81 @@ function cancelExtract() {
   document.getElementById('pdf-input').value = '';
   lastExtract = {};
 }
+
+// ── Lijst-zoeker: gebruik bestaande lijst als basis ───────────
+function openLijstZoeker() {
+  const modal = document.getElementById('lijst-zoeker-modal');
+  modal.classList.remove('hidden');
+  const inp = document.getElementById('lijst-zoeker-search');
+  inp.value = '';
+  renderLijstZoekerList('');
+  setTimeout(() => { try { inp.focus(); } catch (e) {} }, 80);
+}
+function closeLijstZoeker() {
+  document.getElementById('lijst-zoeker-modal').classList.add('hidden');
+}
+function countItems(ll) {
+  return Object.values(ll.categorieën || {}).reduce((s, a) => s + (a || []).length, 0);
+}
+function renderLijstZoekerList(q) {
+  q = (q || '').toLowerCase().trim();
+  const items = Object.entries(laadlijsten || {})
+    .map(([id, ll]) => ({ id, ll: ll || {} }))
+    .filter(({ ll }) => {
+      if (!ll || !ll.naam) return false;
+      if (!q) return true;
+      const hay = [ll.naam, ll.event, ll.eventNaam, ll.pdfEvent, ll.wagen, ll.pdfWagen, ll.datum, ll.pdfDatum]
+        .filter(Boolean).join(' ').toLowerCase();
+      return hay.indexOf(q) !== -1;
+    })
+    .sort((a, b) => {
+      const ta = a.ll.aangemaakt || '';
+      const tb = b.ll.aangemaakt || '';
+      return tb.localeCompare(ta);
+    });
+  const el = document.getElementById('lijst-zoeker-list');
+  if (!items.length) {
+    el.innerHTML = '<div class="lz-empty">' + (q ? 'Geen lijsten gevonden voor "' + escHtml(q) + '".' : 'Nog geen lijsten beschikbaar.') + '</div>';
+    return;
+  }
+  el.innerHTML = items.map(({ id, ll }) => {
+    const totaal = countItems(ll);
+    const sub = [ll.event || ll.eventNaam || ll.pdfEvent, ll.datum || ll.pdfDatum, ll.wagen || ll.pdfWagen]
+      .filter(Boolean).join(' · ');
+    return '<div class="lz-item" onclick="useLijstAlsBasis(\'' + id + '\')">'
+      +   '<div class="lz-info">'
+      +     '<div class="lz-naam">' + escHtml(ll.naam) + '</div>'
+      +     (sub ? '<div class="lz-sub">' + escHtml(sub) + '</div>' : '')
+      +   '</div>'
+      +   '<span class="lz-count">' + totaal + ' items</span>'
+      +   '<span class="lz-take">Gebruik →</span>'
+      + '</div>';
+  }).join('');
+}
+function useLijstAlsBasis(id) {
+  const ll = laadlijsten[id];
+  if (!ll) { closeLijstZoeker(); return; }
+  // Diepe kopie zodat bewerkingen niet op het origineel inwerken.
+  const kopie = JSON.parse(JSON.stringify(ll.categorieën || {}));
+  // Naam-suggestie: origineel + " (kopie)". User kan aanpassen.
+  const naamInput = document.getElementById('ll-naam');
+  naamInput.value = ll.naam ? (ll.naam + ' (kopie)') : '';
+  // Reset lastExtract: gebruiker maakt een nieuwe lijst — auto-koppel-info
+  // van de originele lijst nemen we NIET over, anders koppelt hij vanzelf
+  // aan hetzelfde event/truck.
+  lastExtract = {};
+  renderItemsEditor(kopie);
+  document.getElementById('extract-preview').style.display = 'block';
+  showStatus('📋 Geladen vanuit "' + escHtml(ll.naam) + '". Pas items aan en sla op als nieuwe lijst.', 'success');
+  closeLijstZoeker();
+  document.getElementById('extract-preview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => { try { naamInput.focus(); naamInput.select(); } catch (e) {} }, 300);
+}
+// Modal sluiten bij klik op overlay (niet op inhoud)
+document.addEventListener('click', function (e) {
+  const ov = document.getElementById('lijst-zoeker-modal');
+  if (ov && e.target === ov) closeLijstZoeker();
+});
 
 // ── Save Laadlijst ────────────────────────────────────────────
 async function saveLaadlijst() {
