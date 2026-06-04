@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const links: { href: string; label: string }[] = [
@@ -18,12 +18,32 @@ const links: { href: string; label: string }[] = [
   { href: '/reusables', label: 'Reusables' },
 ];
 
+interface Me {
+  username: string;
+  role: 'admin' | 'beheerder';
+}
+
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
     setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (active) setMe(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [pathname]);
 
   useEffect(() => {
@@ -38,6 +58,17 @@ export default function Nav() {
       document.body.style.overflow = '';
     };
   }, [open]);
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    router.replace('/login');
+    router.refresh();
+  };
+
+  const navLinks =
+    me?.role === 'admin'
+      ? [...links, { href: '/beheerders', label: 'Beheerders' }]
+      : links;
 
   return (
     <>
@@ -75,7 +106,7 @@ export default function Nav() {
           EventPay beheer
         </h1>
         <nav>
-          {links.map((l) => {
+          {navLinks.map((l) => {
             const isActive =
               l.href === '/' ? pathname === '/' : pathname?.startsWith(l.href);
             return (
@@ -90,9 +121,33 @@ export default function Nav() {
             );
           })}
         </nav>
-        <div className="footnote">
-          Productie-omgeving — er is geen testmodus. Bevestigingen verschijnen
-          voor acties die schrijven.
+
+        <div className="sidebar-account">
+          {me ? (
+            <>
+              <div className="sidebar-user">
+                <span className="sidebar-user-name">{me.username}</span>
+                <span
+                  className={`badge ${
+                    me.role === 'admin' ? 'badge-success' : ''
+                  }`}
+                >
+                  {me.role === 'admin' ? 'Centrale beheerder' : 'Beheerder'}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={logout}
+              >
+                Uitloggen
+              </button>
+            </>
+          ) : null}
+          <div className="footnote">
+            Productie-omgeving — er is geen testmodus. Bevestigingen verschijnen
+            voor acties die schrijven.
+          </div>
         </div>
       </aside>
     </>

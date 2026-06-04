@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Nav from '@/components/Nav';
+import Shell from '@/components/Shell';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -21,10 +21,7 @@ export default function RootLayout({
   return (
     <html lang="nl">
       <body>
-        <div className="app">
-          <Nav />
-          <main>{children}</main>
-        </div>
+        <Shell>{children}</Shell>
       </body>
     </html>
   );

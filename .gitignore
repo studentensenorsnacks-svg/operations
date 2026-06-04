@@ -14,3 +14,10 @@ Thumbs.db
 # Deploy logs
 *.log
 .eventpay-deploy.log
+
+# RTDB data-dumps / scratch backups (operationele data, hoort niet in git)
+/_archive.json
+/_backups.json
+/_check.json
+/_restore.json
+*-backup.html

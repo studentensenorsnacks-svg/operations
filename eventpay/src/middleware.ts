@@ -1,70 +1,68 @@
-// HTTP Basic Authentication voor alle pagina's en API-routes.
+// Auth-gate voor alle pagina's en API-routes van EventPay beheer.
 //
 // Werking:
-//   • Browser stuurt geen Authorization-header → we antwoorden 401 met
-//     WWW-Authenticate: Basic, waarop de browser een login-popup toont.
-//   • Browser stuurt Authorization: Basic base64(user:pass) → we vergelijken
-//     met AUTH_USERNAME / AUTH_PASSWORD uit env (server-side, in Firebase
-//     Secret Manager).
-//   • Lokaal (npm run dev) zonder secrets ingesteld → auth wordt
-//     overgeslagen, zodat ontwikkelen makkelijk blijft.
+//   • Geen geldige sessie-cookie → pagina's redirecten naar /login, API's
+//     krijgen 401. De cookie wordt gezet door /api/auth/login.
+//   • Wél een sessie → toegang. Rol staat in de cookie (admin | beheerder).
+//   • Admin-only zones (/beheerders en /api/admin/*) zijn enkel voor de
+//     centrale admin. Beheerders worden teruggestuurd (403 / naar dashboard).
 //
-// Belangrijk: dit beschermt zowel de HTML-pagina's als /api/* — geen enkele
-// EventPay-call kan zonder login.
+// De sessie wordt geverifieerd met Web Crypto (HMAC), edge-compatibel — zie
+// src/lib/session.ts. Geen node:* of firebase-admin hier.
 
 import { NextRequest, NextResponse } from 'next/server';
+import { verifySession, SESSION_COOKIE } from '@/lib/session';
 
-const REALM = 'EventPay beheer';
+// Paden die zonder sessie bereikbaar moeten zijn.
+const PUBLIC_PAGES = ['/login'];
+const PUBLIC_APIS = ['/api/auth/login'];
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return result === 0;
+function isAdminOnly(pathname: string): boolean {
+  return (
+    pathname === '/beheerders' ||
+    pathname.startsWith('/beheerders/') ||
+    pathname.startsWith('/api/admin')
+  );
 }
 
-export function middleware(req: NextRequest) {
-  const expectedUser = process.env.AUTH_USERNAME;
-  const expectedPass = process.env.AUTH_PASSWORD;
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const isApi = pathname.startsWith('/api/');
 
-  // Geen credentials geconfigureerd → ontwikkelmodus, laat door.
-  if (!expectedUser || !expectedPass) {
-    return NextResponse.next();
-  }
+  if (PUBLIC_APIS.includes(pathname)) return NextResponse.next();
+  if (PUBLIC_PAGES.includes(pathname)) return NextResponse.next();
 
-  const header = req.headers.get('authorization') ?? '';
-  if (header.toLowerCase().startsWith('basic ')) {
-    try {
-      const decoded = atob(header.slice(6).trim());
-      const sep = decoded.indexOf(':');
-      if (sep !== -1) {
-        const user = decoded.slice(0, sep);
-        const pass = decoded.slice(sep + 1);
-        if (
-          timingSafeEqual(user, expectedUser) &&
-          timingSafeEqual(pass, expectedPass)
-        ) {
-          return NextResponse.next();
-        }
-      }
-    } catch {
-      // base64 decode mislukt → behandelen als geen auth
+  const token = req.cookies.get(SESSION_COOKIE)?.value;
+  const session = await verifySession(token);
+
+  if (!session) {
+    if (isApi) {
+      return NextResponse.json({ message: 'Niet ingelogd.' }, { status: 401 });
     }
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = '';
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
   }
 
-  return new NextResponse('Authentication required.', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': `Basic realm="${REALM}", charset="UTF-8"`,
-      'Content-Type': 'text/plain; charset=utf-8',
-    },
-  });
+  if (isAdminOnly(pathname) && session.role !== 'admin') {
+    if (isApi) {
+      return NextResponse.json(
+        { message: 'Geen toegang — admin vereist.' },
+        { status: 403 },
+      );
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = '/';
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 // Beschermt alles behalve Next.js-interne assets en favicon.
-// /api/* zit hier WEL in: zelfs de proxy is alleen voor ingelogde users.
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',

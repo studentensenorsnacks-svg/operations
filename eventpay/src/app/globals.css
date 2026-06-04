@@ -135,6 +135,8 @@ textarea {
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar h1 {
@@ -173,10 +175,72 @@ textarea {
   font-weight: 600;
 }
 .sidebar .footnote {
-  margin: 24px 20px 0;
+  margin: 16px 20px 0;
   font-size: 0.75rem;
   color: #71717a;
   line-height: 1.5;
+}
+
+/* Account-blok onderaan de sidebar */
+.sidebar-account {
+  margin-top: auto;
+  padding-top: 16px;
+}
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 20px 10px;
+}
+.sidebar-user-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #fafafa;
+  word-break: break-all;
+}
+.sidebar-account .btn {
+  margin: 0 20px;
+}
+
+/* ── Loginscherm ─────────────────────────────────────── */
+.auth-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+}
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 26px;
+  width: 100%;
+  max-width: 360px;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.auth-brand .brand-bar {
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: var(--brand);
+  margin-right: 10px;
+  border-radius: 2px;
+}
+.auth-sub {
+  color: var(--text-muted);
+  margin: 6px 0 20px;
+  font-size: 0.9rem;
 }
 
 .sidebar-backdrop {
