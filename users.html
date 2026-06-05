@@ -318,6 +318,10 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         <input id="add-ai" type="checkbox" style="width:auto;margin:0;cursor:pointer;">
         <span>✦ AI-assistent (kan de chat gebruiken)</span>
       </label>
+      <label style="display:flex;align-items:center;gap:8px;margin:10px 0 0;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;text-transform:none;letter-spacing:0;">
+        <input id="add-agent" type="checkbox" style="width:auto;margin:0;cursor:pointer;">
+        <span>🛠️ Agent-modus (AI mag de app bedienen)</span>
+      </label>
       <div class="modal-actions">
         <button onclick="closeAddModal()">Annuleren</button>
         <button class="primary" id="add-submit" onclick="submitAdd()">Aanmaken</button>
@@ -368,6 +372,11 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
           <span>✦ AI-assistent (kan de chat gebruiken)</span>
           <span id="d-ai-state" style="font-size:11px;color:#b89878;font-weight:400;margin-left:auto;"></span>
         </label>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer;font-size:13px;color:#3a2415;font-weight:600;">
+          <input id="d-agent" type="checkbox" onchange="saveAgent(this.checked)" style="width:auto;margin:0;cursor:pointer;">
+          <span>🛠️ Agent-modus (AI mag de app bedienen)</span>
+          <span id="d-agent-state" style="font-size:11px;color:#b89878;font-weight:400;margin-left:auto;"></span>
+        </label>
       </div>
 
       <div class="modal-section">
@@ -394,6 +403,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
   var fnSetRole    = fns.httpsCallable('setUserRole');
   var fnSetFinance = fns.httpsCallable('setUserFinance');
   var fnSetAi      = fns.httpsCallable('setUserAi');
+  var fnSetAgent   = fns.httpsCallable('setUserAgent');
   var fnSetPages   = fns.httpsCallable('setUserPages');
   var fnList       = fns.httpsCallable('listUsers');
   var fnDelete     = fns.httpsCallable('deleteUser');
@@ -606,6 +616,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
         +     (u.role === 'custom' && u.pages && u.pages.length ? ' <span class="badge custom" style="background:#f7ecd8;color:#7a5a40;border:1px solid rgba(120,60,20,.18)" title="Aantal toegankelijke tabs">' + u.pages.length + ' tabs</span>' : '')
         +     (u.finance ? ' <span class="badge finance" title="Heeft Finance-toegang">💳 finance</span>' : '')
         +     (u.ai ? ' <span class="badge ai" title="Mag de AI-assistent gebruiken">✦ ai</span>' : '')
+        +     (u.agent ? ' <span class="badge agent" style="background:#fbe3d3;color:#9a4410;border:1px solid #e8662b" title="Mag agent-modus gebruiken (AI bedient de app)">🛠️ agent</span>' : '')
         +   '</div>'
         +   '<div class="cell"><div class="last-seen">'
         +     '<span class="dot ' + pres.cls + '"></span>'
@@ -654,6 +665,11 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     aiBox.checked = isAdminUser || !!u.ai;
     aiBox.disabled = isAdminUser;
     document.getElementById('d-ai-state').textContent = isAdminUser ? 'altijd (admin)' : (u.ai ? 'aan' : 'uit');
+    // Agent-modus: admins altijd, anderen via de losse 'agent'-vlag.
+    var agentBox = document.getElementById('d-agent');
+    agentBox.checked = isAdminUser || !!u.agent;
+    agentBox.disabled = isAdminUser;
+    document.getElementById('d-agent-state').textContent = isAdminUser ? 'altijd (admin)' : (u.agent ? 'aan' : 'uit');
     // Pages-grid alleen tonen voor custom rol.
     var pagesRow = document.getElementById('d-pages-row');
     if (u.role === 'custom') {
@@ -773,6 +789,27 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     });
   };
 
+  window.saveAgent = function (val) {
+    if (!currentDetailUid) return;
+    var box = document.getElementById('d-agent');
+    var state = document.getElementById('d-agent-state');
+    box.disabled = true;
+    state.textContent = 'opslaan…';
+    fnSetAgent({ uid: currentDetailUid, agent: !!val }).then(function () {
+      toast(val ? 'Agent-modus aan.' : 'Agent-modus uit.');
+      state.textContent = val ? 'aan' : 'uit';
+      var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
+      if (u) u.agent = !!val;
+      box.disabled = false;
+      render();
+    }).catch(function (e) {
+      toast((e && e.message) || 'Wijzigen mislukt.', true);
+      box.checked = !val;
+      state.textContent = (!val) ? 'aan' : 'uit';
+      box.disabled = false;
+    });
+  };
+
   window.deleteCurrent = function () {
     if (!currentDetailUid) return;
     var u = allUsers.find(function (x) { return x.uid === currentDetailUid; });
@@ -798,6 +835,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     document.getElementById('add-role').value = 'medewerker';
     document.getElementById('add-finance').checked = false;
     document.getElementById('add-ai').checked = false;
+    document.getElementById('add-agent').checked = false;
     document.getElementById('add-pages-row').style.display = 'none';
     getAddPages = null;
     document.getElementById('add-modal').classList.add('show');
@@ -824,6 +862,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     var role    = document.getElementById('add-role').value;
     var finance = document.getElementById('add-finance').checked;
     var ai      = document.getElementById('add-ai').checked;
+    var agent   = document.getElementById('add-agent').checked;
     var pages   = (role === 'custom' && typeof getAddPages === 'function') ? getAddPages() : [];
     if (!email) { toast('E-mail vereist.', true); return; }
     if (role === 'custom' && !pages.length) {
@@ -832,7 +871,7 @@ input:focus,select:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
     }
     var btn = document.getElementById('add-submit');
     btn.disabled = true; btn.textContent = 'Bezig…';
-    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance, ai: ai, pages: pages })
+    fnCreate({ email: email, password: pwd, displayName: name, role: role, finance: finance, ai: ai, agent: agent, pages: pages })
       .then(function () {
         toast('Gebruiker aangemaakt.');
         closeAddModal();

@@ -282,6 +282,9 @@
         // AI-assistent: admins altijd, anderen via de losse 'ai'-claim
         // (toggle in users.html, net als finance).
         canUseAi:  role === 'admin' || claims.ai === true,
+        // Agent-modus (de AI mag de app bedienen): admins altijd, anderen
+        // via de losse 'agent'-claim. Apart recht bovenop canUseAi.
+        canUseAgent: role === 'admin' || claims.agent === true,
         logout: function () { signOutWithLog(); },
       };
       if (!window.__auth.canWrite) {
@@ -392,7 +395,7 @@
       if (window.__auth.canUseAi && !document.getElementById('__ai_chat_js')) {
         var aiScript = document.createElement('script');
         aiScript.id = '__ai_chat_js';
-        aiScript.src = '/ai-chat.js?v=6';
+        aiScript.src = '/ai-chat.js?v=8';
         aiScript.defer = true;
         (document.body || document.documentElement).appendChild(aiScript);
       }

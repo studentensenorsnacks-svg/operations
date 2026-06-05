@@ -78,11 +78,11 @@ exports.anthropicProxy = onRequest(
       res.status(405).json({ error: { message: 'Gebruik POST.' } });
       return;
     }
-    const rl = await rateLimit(req, 'anthropic', { limit: 20, windowSec: 60 });
+    const rl = await rateLimit(req, 'anthropic', { limit: 60, windowSec: 60 });
     if (rl) {
       res.set('Retry-After', String(rl.retryAfter));
       res.status(429).json({
-        error: { message: `Rate limit: max 20 calls/min. Probeer over ${rl.retryAfter}s opnieuw.` },
+        error: { message: `Rate limit: max 60 calls/min. Probeer over ${rl.retryAfter}s opnieuw.` },
       });
       return;
     }
@@ -182,11 +182,11 @@ exports.mistralProxy = onRequest(
       res.status(405).json({ error: { message: 'Gebruik POST.' } });
       return;
     }
-    const rl = await rateLimit(req, 'mistral', { limit: 20, windowSec: 60 });
+    const rl = await rateLimit(req, 'mistral', { limit: 60, windowSec: 60 });
     if (rl) {
       res.set('Retry-After', String(rl.retryAfter));
       res.status(429).json({
-        error: { message: `Rate limit: max 20 calls/min. Probeer over ${rl.retryAfter}s opnieuw.` },
+        error: { message: `Rate limit: max 60 calls/min. Probeer over ${rl.retryAfter}s opnieuw.` },
       });
       return;
     }
@@ -508,6 +508,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
   const role = validateRole(request.data && request.data.role);
   const finance = !!(request.data && request.data.finance);
   const ai = !!(request.data && request.data.ai);
+  const agent = !!(request.data && request.data.agent);
 
   if (!email || !email.includes('@')) {
     throw new HttpsError('invalid-argument', 'Geldig e-mailadres vereist.');
@@ -527,7 +528,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
     throw new HttpsError('already-exists', e && e.message ? e.message : String(e));
   }
   const pages = buildPagesClaim(request.data && request.data.pages);
-  const claims = { role, finance, ai };
+  const claims = { role, finance, ai, agent };
   if (pages) claims.pages = pages;
   await admin.auth().setCustomUserClaims(user.uid, claims);
   return {
@@ -537,6 +538,7 @@ exports.createUser = onCall({ region: REGION }, async (request) => {
     role,
     finance,
     ai,
+    agent,
     pages,
   };
 });
@@ -581,6 +583,19 @@ exports.setUserAi = onCall({ region: REGION }, async (request) => {
   return { uid, ai };
 });
 
+// Vlag een gebruiker met (of zonder) agent-modus: de AI mag dan handelingen in
+// de app uitvoeren (na goedkeuring per stap). Apart recht bovenop 'ai'.
+exports.setUserAgent = onCall({ region: REGION }, async (request) => {
+  requireAdmin(request);
+  const uid = String((request.data && request.data.uid) || '');
+  const agent = !!(request.data && request.data.agent);
+  if (!uid) throw new HttpsError('invalid-argument', 'uid vereist.');
+  const userRec = await admin.auth().getUser(uid);
+  const newClaims = Object.assign({}, userRec.customClaims || {}, { agent });
+  await admin.auth().setCustomUserClaims(uid, newClaims);
+  return { uid, agent };
+});
+
 exports.setUserRole = onCall({ region: REGION }, async (request) => {
   const adminUid = requireAdmin(request);
   const uid = String((request.data && request.data.uid) || '');
@@ -620,6 +635,7 @@ exports.listUsers = onCall({ region: REGION }, async (request) => {
     role: (u.customClaims && u.customClaims.role) || null,
     finance: !!(u.customClaims && u.customClaims.finance),
     ai: !!(u.customClaims && u.customClaims.ai),
+    agent: !!(u.customClaims && u.customClaims.agent),
     pages: pages,
     disabled: !!u.disabled,
     providers: (u.providerData || []).map((p) => p.providerId),

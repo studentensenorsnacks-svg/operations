@@ -37,6 +37,9 @@
   var pending = null;         // {id, desc}: actie die mogelijk een reload uitlokt
   var resumeAfterLoad = false;
   var agentMode = false;      // false = enkel vragen/lezen; true = mag handelen
+  // Mag deze gebruiker überhaupt agent-modus gebruiken? Admins altijd, anderen
+  // via de losse 'agent'-claim (toggle in users.html). Default uit.
+  var canUseAgent = !!((window.__auth || {}).canUseAgent);
 
   // ── Persistentie over paginawissels ─────────────────────────────
   function persist() {
@@ -44,10 +47,62 @@
       sessionStorage.setItem(STATE_KEY, JSON.stringify({
         messages: messages, modelKey: modelKey, open: isOpen(),
         pending: pending, resume: resumeAfterLoad, agent: agentMode,
+        conv: convId,
       }));
     } catch (e) { /* quota/serialisatie — niet kritiek */ }
   }
   function clearPersist() { try { sessionStorage.removeItem(STATE_KEY); } catch (e) {} }
+
+  // ── AI-logboek ──────────────────────────────────────────────────
+  // Bewaart server-side (RTDB: _aiLogs/$uid/$convId) wie wat vraagt, wat de
+  // assistent antwoordt en welke agent-acties uitgevoerd/geweigerd worden.
+  // Zo kunnen admins gericht coachen waar mensen vastlopen of de software
+  // bijschaven. Logging faalt ALTIJD stil — het mag de chat nooit breken.
+  var convId = null;            // id van het huidige gesprek (push-key)
+  var convMetaWritten = false;  // meta-blok al weggeschreven voor dit gesprek?
+
+  function clipLog(s, n) { s = String(s == null ? '' : s); return s.length <= n ? s : s.slice(0, n) + '…'; }
+
+  // Lazy: maakt (en onthoudt) een gespreks-id zodra er iets te loggen valt.
+  function conversationId() {
+    if (convId) return convId;
+    var d = db(), u = window.__auth || {};
+    if (!d || !u.uid) return null;
+    try { convId = d.ref('_aiLogs/' + u.uid).push().key; } catch (e) { convId = null; }
+    convMetaWritten = false;
+    return convId;
+  }
+
+  function logAi(kind, extra) {
+    try {
+      var d = db(), u = window.__auth || {};
+      if (!d || !u.uid) return;
+      var cid = conversationId();
+      if (!cid) return;
+      var base = '_aiLogs/' + u.uid + '/' + cid;
+      var TS = firebase.database.ServerValue.TIMESTAMP;
+      if (!convMetaWritten) {
+        convMetaWritten = true;
+        d.ref(base + '/meta').update({
+          uid: u.uid,
+          email: clipLog(u.email, 190),
+          displayName: clipLog(u.displayName, 190),
+          role: clipLog(u.role || '', 30),
+          startedAt: TS,
+          firstPage: clipLog(location.pathname, 190),
+        }).catch(function () {});
+      }
+      var ev = {
+        t: TS, kind: clipLog(kind, 20), model: clipLog(modelKey, 30),
+        agent: !!agentMode, page: clipLog(location.pathname, 190),
+      };
+      if (extra) for (var k in extra) {
+        if (extra.hasOwnProperty(k) && extra[k] != null) ev[k] = extra[k];
+      }
+      d.ref(base + '/events').push(ev).catch(function () {});
+      d.ref(base + '/meta').update({ updatedAt: TS }).catch(function () {});
+    } catch (e) { /* logging mag de chat nooit breken */ }
+  }
 
   // ── Systeem-prompt ──────────────────────────────────────────────
   function systemPrompt() {
@@ -261,6 +316,7 @@
       var url = String((input && input.url) || '').trim();
       if (!url) return Promise.resolve('FOUT: geen url.');
       return requestApproval('Navigeren naar: ' + url).then(function (ok) {
+        logAi('action', { tool: 'navigate', target: clipLog(url, 300), approved: !!ok });
         // De eigenlijke navigatie gebeurt pas nadat alle tool_results van
         // deze beurt zijn weggeschreven (zie runLoop), zodat de messages
         // consistent blijven over de paginawissel heen.
@@ -274,6 +330,11 @@
       var lbl = refLabel(el);
       var desc = name === 'click' ? ('Klik op ' + lbl) : ('Vul ' + lbl + ' in met: "' + (input && input.value) + '"');
       return requestApproval(desc).then(function (ok) {
+        logAi('action', {
+          tool: name, target: clipLog(lbl, 300),
+          value: name === 'fill' ? clipLog(String(input && input.value), 500) : null,
+          approved: !!ok,
+        });
         if (!ok) return 'Door gebruiker geweigerd.';
         if (name === 'fill') {
           try { doFill(el, String(input.value)); } catch (e) { return 'FOUT bij invullen: ' + e.message; }
@@ -322,7 +383,7 @@
 
         var txt = content.filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('\n').trim();
         if (thinking) { thinking.remove(); thinking = null; }
-        if (txt) addBubble('assistant', txt);
+        if (txt) { addBubble('assistant', txt); logAi('answer', { text: clipLog(txt, 4000) }); }
 
         if (data.stop_reason === 'tool_use' && guard++ < TOOL_LOOP_MAX) {
           var calls = content.filter(function (b) { return b.type === 'tool_use'; });
@@ -375,6 +436,7 @@
     messages.push({ role: 'user', content: text });
     addBubble('user', text);
     setInput('');
+    logAi('question', { text: clipLog(text, 4000) });
     persist();
     runLoop();
   }
@@ -384,6 +446,12 @@
 
   function updateModeBtn() {
     if (!modeBtn) return;
+    // Geen agent-recht: knop verbergen en gebruiker vastzetten op Vragen-modus.
+    if (!canUseAgent) {
+      agentMode = false;
+      modeBtn.style.display = 'none';
+      return;
+    }
     modeBtn.textContent = agentMode ? '🛠️ Agent' : '💬 Vragen';
     modeBtn.className = agentMode ? 'agent' : '';
   }
@@ -516,7 +584,9 @@
       messages = restored.messages;
       modelKey = MODELS[restored.modelKey] ? restored.modelKey : 'sonnet';
       model = MODELS[modelKey]; modelSel.value = modelKey;
-      agentMode = !!restored.agent;
+      agentMode = canUseAgent && !!restored.agent;
+      // Zelfde gesprek voortzetten over de paginawissel heen → zelfde log-id.
+      if (restored.conv) { convId = restored.conv; convMetaWritten = true; }
       renderHistory();
       pending = restored.pending || null;
       resumeAfterLoad = !!restored.resume;
@@ -527,7 +597,9 @@
         pending = null; resumeAfterLoad = true;
       }
     } else {
-      addBubble('assistant', 'Hoi! In de "Vragen"-modus beantwoord ik vragen over het systeem en de data. Wil je dat ik dingen voor je DOE in de app, zet dan rechtsboven "Agent" aan — elke handeling vraag ik je dan eerst goed te keuren.');
+      addBubble('assistant', canUseAgent
+        ? 'Hoi! In de "Vragen"-modus beantwoord ik vragen over het systeem en de data. Wil je dat ik dingen voor je DOE in de app, zet dan rechtsboven "Agent" aan — elke handeling vraag ik je dan eerst goed te keuren.'
+        : 'Hoi! Ik beantwoord vragen over het systeem en de data. Waarmee kan ik helpen?');
     }
     updateModeBtn();
 
@@ -536,12 +608,13 @@
     panel.querySelector('#ai-clear').onclick = function () {
       if (busy) return;
       messages = []; pending = null; resumeAfterLoad = false; clearPersist();
+      convId = null; convMetaWritten = false; // nieuw gesprek → nieuw log-id
       log.innerHTML = '';
       addBubble('assistant', 'Nieuw gesprek. Waarmee kan ik helpen?');
     };
     modelSel.onchange = function () { modelKey = this.value; model = MODELS[modelKey] || MODELS.sonnet; persist(); };
     modeBtn.onclick = function () {
-      if (busy) return;
+      if (busy || !canUseAgent) return;
       agentMode = !agentMode;
       updateModeBtn(); persist();
       addBubble('assistant', agentMode

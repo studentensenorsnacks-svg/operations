@@ -348,12 +348,15 @@ const CATS = {
   login:            { label: 'Ingelogd',        color: '#0891b2' },
   logout:           { label: 'Uitgelogd',       color: '#475569' },
   actief:           { label: 'Laatst actief',   color: '#94a3b8' },
+  'ai-vraag':       { label: 'AI-vraag',        color: '#e8662b' },
+  'ai-antwoord':    { label: 'AI-antwoord',     color: '#d97706' },
+  'ai-actie':       { label: 'AI-actie',        color: '#9333ea' },
 };
 const CAT_KEYS = Object.keys(CATS);
 let activeCats = new Set(CAT_KEYS);
 
 // Ruwe bron-data
-let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{} };
+let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{}, ai:{} };
 let events = [];      // genormaliseerde audit-events
 const loaded = {};    // welke bronnen al binnen zijn
 
@@ -587,6 +590,40 @@ function rebuild(){
     }
   });
 
+  // 9) AI-logboek (_aiLogs): vragen, antwoorden en uitgevoerde agent-acties.
+  //    Per gebruiker → per gesprek → events. Geeft zicht op waar mensen de AI
+  //    voor gebruiken (coachen) en wat de agent in de app doet.
+  const aiSnip = t => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim(); return t.length > 240 ? t.slice(0, 240) + '…' : t; };
+  Object.values(src.ai || {}).forEach(userLogs => {
+    if (!userLogs) return;
+    Object.values(userLogs).forEach(conv => {
+      if (!conv) return;
+      const meta = conv.meta || {};
+      const who = meta.displayName || meta.email || 'Onbekend';
+      Object.values(conv.events || {}).forEach(e => {
+        e = e || {};
+        const when = parseInt(e.t, 10) || 0;
+        if (!when) return;
+        const modelTag = e.model ? e.model : '';
+        if (e.kind === 'question') {
+          ev.push({ ts: when, cat: 'ai-vraag', person: who,
+            action: 'Vroeg aan AI', target: '', detail: aiSnip(e.text) });
+        } else if (e.kind === 'answer') {
+          ev.push({ ts: when, cat: 'ai-antwoord', person: who,
+            action: 'AI antwoordde' + (modelTag ? ' (' + modelTag + ')' : ''),
+            target: '', detail: aiSnip(e.text) });
+        } else if (e.kind === 'action') {
+          const TOOL = { click: 'Klik', fill: 'Invullen', navigate: 'Navigeren' };
+          const verb = TOOL[e.tool] || e.tool || 'Actie';
+          const ok = e.approved === false ? ' — GEWEIGERD' : '';
+          ev.push({ ts: when, cat: 'ai-actie', person: who,
+            action: 'AI-actie: ' + verb + ok, target: e.target || '',
+            detail: e.value ? ('= ' + e.value) : (e.page || '') });
+        }
+      });
+    });
+  });
+
   events = ev.filter(e => e.ts && e.ts > 0).sort((a,b) => b.ts - a.ts);
   render();
 }
@@ -721,6 +758,7 @@ function startListeners(){
   fbdb.ref('ft_planning_v1').on('value',   s => { src.planning  = s.val() || {}; markLoaded('planning'); });
   fbdb.ref('ft_laadlijsten_v1').on('value',s => { src.laadlijsten = s.val() || {}; markLoaded('laadlijsten'); });
   fbdb.ref('_userActivity').on('value',    s => { src.activity  = s.val() || {}; markLoaded('activity'); }, () => {});
+  fbdb.ref('_aiLogs').on('value',          s => { src.ai        = s.val() || {}; markLoaded('ai'); }, () => {});
   setInterval(render, 60000); // klok/relatieve weergave fris houden
 }
 

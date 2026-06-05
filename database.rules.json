@@ -131,6 +131,43 @@
         },
         "$other": { ".validate": false }
       }
+    },
+
+    "_aiLogs": {
+      ".read": "auth != null && auth.token.role == 'admin'",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid && !auth.token.firebase.sign_in_provider.matches(/^anonymous$/i)",
+        ".read":  "auth != null && (auth.uid == $uid || auth.token.role == 'admin')",
+        "$conv": {
+          "meta": {
+            "uid":         { ".validate": "newData.isString() && newData.val().length < 200" },
+            "email":       { ".validate": "newData.isString() && newData.val().length < 200" },
+            "displayName": { ".validate": "newData.isString() && newData.val().length < 200" },
+            "role":        { ".validate": "newData.isString() && newData.val().length < 40" },
+            "startedAt":   { ".validate": "newData.isNumber()" },
+            "updatedAt":   { ".validate": "newData.isNumber()" },
+            "firstPage":   { ".validate": "newData.isString() && newData.val().length < 200" },
+            "$other":      { ".validate": false }
+          },
+          "events": {
+            "$eid": {
+              ".validate": "newData.hasChildren()",
+              "t":        { ".validate": "newData.isNumber()" },
+              "kind":     { ".validate": "newData.isString() && newData.val().length < 20" },
+              "model":    { ".validate": "newData.isString() && newData.val().length < 40" },
+              "agent":    { ".validate": "newData.isBoolean()" },
+              "page":     { ".validate": "newData.isString() && newData.val().length < 200" },
+              "text":     { ".validate": "newData.isString() && newData.val().length < 8000" },
+              "tool":     { ".validate": "newData.isString() && newData.val().length < 40" },
+              "target":   { ".validate": "newData.isString() && newData.val().length < 400" },
+              "value":    { ".validate": "newData.isString() && newData.val().length < 600" },
+              "approved": { ".validate": "newData.isBoolean()" },
+              "$other":   { ".validate": false }
+            }
+          },
+          "$other": { ".validate": false }
+        }
+      }
     }
   }
 }
