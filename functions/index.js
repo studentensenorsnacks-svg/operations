@@ -447,7 +447,7 @@ const VALID_ROLES = ['admin', 'manager', 'medewerker', 'viewer', 'bakker', 'cust
 const VALID_PAGES = [
   'notities', 'checkin', 'planning', 'laadlijsten', 'ops',
   'qrcodes', 'poets', 'keuringen', 'vet', 'bestellingen',
-  'stroomaanvraag', 'archief', 'eindstock', 'trucks', 'horeca',
+  'stroomaanvraag', 'archief', 'eindstock', 'trucks', 'horeca', 'krisdc',
 ];
 
 function buildPagesClaim(pages) {

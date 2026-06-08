@@ -219,6 +219,7 @@
         archief:        ['/archief.html'],
         eindstock:      ['/eindstock.html'],
         horeca:         ['/horeca-planning.html'],
+        krisdc:         ['/kris-dc.html', '/kris-dc-monitor.html'],
         trucks:         []
       };
       var ALWAYS_OK = ['/login.html', '/qr.html'];

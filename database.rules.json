@@ -51,6 +51,10 @@
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|eindstock|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|eindstock|')))"
     },
+    "ft_krisdc_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|krisdc|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|krisdc|')))"
+    },
     "ft_fiches_v1": {
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))"

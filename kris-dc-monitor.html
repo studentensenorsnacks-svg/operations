@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kris DC — Monitor — Señor Snacks</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;--red:#e8001d;--red-dark:#b8001a;--green:#22c55e;--amber:#f59e0b;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 18px;height:58px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo-area{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.logo-sq{width:30px;height:30px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.logo-sq span{font-family:var(--font-cond);font-weight:800;font-size:13px;color:#fff;}
+.brand{font-family:var(--font-cond);font-weight:700;font-size:18px;line-height:1;}
+.brand small{display:block;font-family:var(--font);font-weight:500;font-size:11px;color:var(--text3);letter-spacing:.4px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.link-btn{font-size:13px;font-weight:600;color:#fff;text-decoration:none;background:var(--red);
+  border-radius:8px;padding:8px 13px;transition:.15s;white-space:nowrap;}
+.link-btn:hover{background:var(--red-dark);}
+
+.wrap{max-width:900px;margin:0 auto;padding:20px 16px;}
+
+/* SUMMARY */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 16px 14px;position:relative;overflow:hidden;}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--red);}
+.sum-emoji{font-size:26px;line-height:1;}
+.sum-lbl{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);margin-top:8px;}
+.sum-val{font-family:var(--font-cond);font-size:34px;font-weight:800;line-height:1;margin-top:3px;}
+.sum-val small{font-family:var(--font);font-size:13px;font-weight:600;color:var(--text3);}
+.sum-trend{font-size:12px;font-weight:700;margin-top:5px;}
+.sum-trend.up{color:var(--green);} .sum-trend.down{color:var(--red);} .sum-trend.flat{color:var(--text3);}
+.sum-sub{font-size:11.5px;color:var(--text3);margin-top:8px;}
+
+.section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text2);
+  margin:24px 2px 10px;}
+
+/* TABLE */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+thead th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);
+  padding:12px 14px;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th.num{text-align:right;}
+tbody td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr.gap td{background:rgba(245,158,11,.06);}
+.td-date{font-weight:700;font-family:var(--font-cond);font-size:16px;white-space:nowrap;}
+.td-date small{display:block;font-family:var(--font);font-size:11px;font-weight:500;color:var(--text3);}
+.num{text-align:right;font-family:var(--mono);font-size:16px;font-weight:500;}
+.num.empty{color:var(--text3);}
+.chk{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:14px;}
+.chk.yes{background:rgba(34,197,94,.15);color:#15803d;}
+.chk.no{background:rgba(0,0,0,.05);color:var(--text3);}
+.who{font-size:12.5px;color:var(--text2);}
+.who small{display:block;color:var(--text3);font-size:11px;}
+.miss-tag{display:inline-block;font-size:10.5px;font-weight:700;color:var(--amber);background:rgba(245,158,11,.14);
+  border-radius:5px;padding:1px 7px;text-transform:uppercase;letter-spacing:.3px;margin-left:6px;}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2);}
+.empty-state .ico{font-size:44px;margin-bottom:14px;}
+.empty-state h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;}
+
+.loading{display:flex;align-items:center;justify-content:center;min-height:50vh;flex-direction:column;gap:14px;color:var(--text2);}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+@media(max-width:560px){
+  .summary{grid-template-columns:1fr;}
+  thead th.col-who,tbody td.col-who{display:none;}
+  .sum-val{font-size:30px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html">
+    <div class="logo-sq"><span>SS</span></div>
+    <div class="brand">Kris DC — Monitor<small>Wekelijkse stock</small></div>
+  </a>
+  <div class="topbar-right">
+    <a class="link-btn" href="kris-dc.html">✏️ Invullen</a>
+  </div>
+</div>
+
+<div id="loading" class="loading"><div class="spinner"></div><div>Laden…</div></div>
+
+<div class="wrap" id="main" style="display:none;">
+
+  <div class="summary" id="summary"></div>
+  <div class="sum-sub" id="last-updated" style="text-align:center;color:var(--text3);font-size:12px;margin-top:4px;"></div>
+
+  <div class="section-label">Wekelijkse historiek</div>
+  <div class="table-card" id="table-card"></div>
+
+</div>
+
+<script>
+const db = fbdb;
+const PATH = 'ft_krisdc_v1';
+
+const ITEMS = [
+  { key:'verseFrieten', emoji:'🍟', label:'Verse frieten', unit:'zakken' },
+  { key:'bonkajuin',    emoji:'🧅', label:'Bonkajuin',     unit:'zakken' },
+  { key:'verseSates',   emoji:'🍢', label:'Verse saté',    unit:'stuks'  },
+];
+
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function tuesdayOf(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+(2-x.getDay())); return x; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function parseIso(s){ const p=String(s).split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function fmtShort(d){ return d.toLocaleDateString('nl-BE',{weekday:'short',day:'numeric',month:'short'}); }
+function fmtYear(d){ return d.getFullYear(); }
+
+function render(rows){
+  // rows: array van {datum, ...} gesorteerd nieuw→oud
+  const sum = document.getElementById('summary');
+  const latest = rows[0] || null;
+  const prev = rows[1] || null;
+
+  sum.innerHTML = ITEMS.map(it => {
+    const cur = latest && latest[it.key] != null ? latest[it.key] : null;
+    const old = prev && prev[it.key] != null ? prev[it.key] : null;
+    let trend = '<span class="sum-trend flat">—</span>';
+    if (cur != null && old != null){
+      const diff = cur - old;
+      if (diff > 0)      trend = '<span class="sum-trend up">▲ +'+diff+' vs vorige week</span>';
+      else if (diff < 0) trend = '<span class="sum-trend down">▼ '+diff+' vs vorige week</span>';
+      else               trend = '<span class="sum-trend flat">= gelijk</span>';
+    }
+    return '<div class="sum-card">'
+      + '<div class="sum-emoji">'+it.emoji+'</div>'
+      + '<div class="sum-lbl">'+it.label+'</div>'
+      + '<div class="sum-val">'+(cur!=null?cur:'—')+' <small>'+it.unit+'</small></div>'
+      + trend
+      + '</div>';
+  }).join('');
+
+  document.getElementById('last-updated').textContent = latest
+    ? ('Laatste invoer: ' + fmtShort(parseIso(latest.datum)) + ' ' + fmtYear(parseIso(latest.datum)) + ' · door ' + (latest.ingevuldDoor||'onbekend'))
+    : '';
+
+  const card = document.getElementById('table-card');
+  if (!rows.length){
+    card.innerHTML = '<div class="empty-state"><div class="ico">📭</div><h3>Nog geen invoer</h3>'
+      + '<p>Er is nog geen wekelijkse stock ingevuld.</p></div>';
+    return;
+  }
+
+  // Detecteer ontbrekende dinsdagen tussen de oudste invoer en vandaag.
+  const present = new Set(rows.map(r => r.datum));
+  const allWeeks = [];
+  let cursor = tuesdayOf(new Date());
+  const oldest = parseIso(rows[rows.length-1].datum);
+  while (cursor >= oldest){
+    allWeeks.push(iso(cursor));
+    cursor = new Date(cursor); cursor.setDate(cursor.getDate()-7);
+  }
+  const byDate = {}; rows.forEach(r => byDate[r.datum] = r);
+
+  let html = '<table><thead><tr>'
+    + '<th>Dinsdag</th>'
+    + ITEMS.map(it => '<th class="num">'+it.emoji+' '+it.label+'</th>').join('')
+    + '<th>Afgevinkt</th><th class="col-who">Door</th>'
+    + '</tr></thead><tbody>';
+
+  allWeeks.forEach(dt => {
+    const r = byDate[dt];
+    const d = parseIso(dt);
+    if (!r){
+      html += '<tr class="gap"><td class="td-date">'+fmtShort(d)+'<small>'+fmtYear(d)+'</small></td>'
+        + '<td class="num empty" colspan="'+ITEMS.length+'">niet ingevuld <span class="miss-tag">leeg</span></td>'
+        + '<td><span class="chk no">—</span></td><td class="col-who"></td></tr>';
+      return;
+    }
+    const when = r.ingediend ? new Date(r.ingediend).toLocaleDateString('nl-BE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    html += '<tr><td class="td-date">'+fmtShort(d)+'<small>'+fmtYear(d)+'</small></td>'
+      + ITEMS.map(it => {
+          const v = r[it.key];
+          return v!=null ? '<td class="num">'+v+'</td>' : '<td class="num empty">—</td>';
+        }).join('')
+      + '<td><span class="chk '+(r.afgevinkt?'yes':'no')+'">'+(r.afgevinkt?'✓':'—')+'</span></td>'
+      + '<td class="col-who"><div class="who">'+esc(r.ingevuldDoor||'—')+'<small>'+esc(when)+'</small></div></td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table>';
+  card.innerHTML = html;
+}
+
+function start(){
+  db.ref(PATH).on('value', snap => {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    const val = snap.val() || {};
+    const rows = Object.keys(val).map(k => Object.assign({ datum: k }, val[k]))
+      .sort((a,b) => (a.datum < b.datum ? 1 : -1)); // nieuw → oud
+    render(rows);
+  }, err => {
+    console.error(err);
+    document.getElementById('loading').innerHTML = '<div>⚠️ Kan data niet laden: '+esc(err.message)+'</div>';
+  });
+}
+
+(window.fbAuthReady || Promise.resolve()).then(start);
+</script>
+</body>
+</html>

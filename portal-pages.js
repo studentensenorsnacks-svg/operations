@@ -23,4 +23,5 @@ window.PORTAL_PAGES = [
   { key: 'archief',        label: 'Archief',         icon: '🗂️', url: 'archief.html',                desc: 'Archief' },
   { key: 'eindstock',      label: 'Eindstock',       icon: '📊', url: 'eindstock.html',              desc: 'Eindstock' },
   { key: 'horeca',         label: 'Horeca Planning', icon: '🍔', url: 'horeca-planning.html',        desc: 'Horeca-planning' },
+  { key: 'krisdc',         label: 'Kris DC',         icon: '🍟', url: 'kris-dc.html',                desc: 'Wekelijkse stock (elke dinsdag)' },
 ];

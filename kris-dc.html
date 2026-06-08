@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kris DC — Wekelijkse stock — Señor Snacks</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;--red:#e8001d;--red-dark:#b8001a;--green:#22c55e;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:120px;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 18px;height:58px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo-area{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;}
+.logo-sq{width:30px;height:30px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.logo-sq span{font-family:var(--font-cond);font-weight:800;font-size:13px;color:#fff;}
+.brand{font-family:var(--font-cond);font-weight:700;font-size:18px;line-height:1;}
+.brand small{display:block;font-family:var(--font);font-weight:500;font-size:11px;color:var(--text3);letter-spacing:.4px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.link-btn{font-size:13px;font-weight:600;color:var(--text2);text-decoration:none;border:1px solid var(--border2);
+  border-radius:8px;padding:7px 12px;transition:.15s;white-space:nowrap;}
+.link-btn:hover{border-color:var(--red);color:var(--red);background:rgba(232,0,29,.05);}
+
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px;}
+
+/* WEEK NAV */
+.week-nav{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:10px 12px;margin-bottom:14px;}
+.week-nav button{width:40px;height:40px;border:1px solid var(--border2);background:var(--bg);border-radius:9px;
+  font-size:18px;cursor:pointer;color:var(--text2);transition:.15s;flex-shrink:0;}
+.week-nav button:hover{border-color:var(--red);color:var(--red);}
+.week-nav button:disabled{opacity:.35;cursor:not-allowed;}
+.week-info{flex:1;text-align:center;}
+.week-info .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
+.week-info .val{font-family:var(--font-cond);font-size:20px;font-weight:700;margin-top:1px;text-transform:capitalize;}
+.week-info .today-tag{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:700;color:var(--red);
+  background:rgba(232,0,29,.1);border-radius:5px;padding:1px 7px;text-transform:uppercase;letter-spacing:.4px;}
+
+.already-banner{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;
+  padding:12px 14px;font-size:13.5px;color:#166534;line-height:1.5;margin-bottom:14px;}
+.already-banner b{font-weight:700;}
+
+/* ITEM CARDS */
+.cat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--text2);padding:6px 2px;}
+.item-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;padding:13px 14px;}
+.item-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.item-emoji{font-size:24px;line-height:1;}
+.item-naam{font-weight:700;font-size:15.5px;line-height:1.2;flex:1;}
+.item-unit{font-size:11.5px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+.qty-row{display:flex;align-items:center;gap:10px;}
+.qty-btn{width:46px;height:50px;border:2px solid var(--border2);background:var(--bg);border-radius:10px;
+  font-size:24px;font-weight:600;cursor:pointer;color:var(--text2);transition:.12s;flex-shrink:0;}
+.qty-btn:hover{border-color:var(--red);color:var(--red);}
+.qty-btn:active{transform:scale(.95);}
+.item-input{flex:1;width:100%;padding:12px;border:2px solid var(--border2);border-radius:10px;
+  font-family:var(--mono);font-size:24px;font-weight:500;text-align:center;background:var(--bg);transition:.15s;color:var(--text);}
+.item-input:focus{outline:none;border-color:var(--red);background:#fff;}
+.item-input.filled{border-color:var(--green);background:rgba(34,197,94,.05);}
+
+/* CHECK */
+.check-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:14px 0 4px;padding:4px;}
+.check-card label{display:flex;align-items:center;gap:13px;padding:13px 12px;cursor:pointer;border-radius:9px;transition:.12s;}
+.check-card label:hover{background:var(--surface2);}
+.check-box{width:28px;height:28px;border:2px solid var(--border2);border-radius:8px;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:18px;color:#fff;transition:.15s;}
+.check-card input{display:none;}
+.check-card input:checked + .check-box{background:var(--green);border-color:var(--green);}
+.check-txt{font-weight:600;font-size:15px;}
+.check-txt small{display:block;font-weight:500;font-size:12px;color:var(--text3);margin-top:1px;}
+
+.name-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-top:10px;}
+.name-card .input-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px;}
+.name-input{width:100%;border:2px solid var(--border2);border-radius:9px;padding:11px;font-family:var(--font-cond);
+  font-size:18px;font-weight:600;background:var(--bg);color:var(--text);}
+.name-input:focus{outline:none;border-color:var(--red);background:#fff;}
+
+/* SUBMIT */
+.submit-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);
+  padding:12px 16px;box-shadow:0 -4px 16px rgba(0,0,0,.06);}
+.submit-bar .inner{max-width:560px;margin:0 auto;}
+.submit-btn{width:100%;padding:15px;background:var(--red);color:#fff;border:none;border-radius:11px;
+  font-family:var(--font);font-size:16px;font-weight:700;cursor:pointer;transition:.15s;}
+.submit-btn:hover{background:var(--red-dark);}
+.submit-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#1a1a1a;color:#fff;
+  padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:200;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.err{background:var(--red);}
+
+.loading{display:flex;align-items:center;justify-content:center;min-height:50vh;flex-direction:column;gap:14px;color:var(--text2);}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+@media(max-width:420px){
+  .brand{font-size:16px;}
+  .qty-btn{width:42px;height:48px;}
+  .item-input{font-size:21px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html">
+    <div class="logo-sq"><span>SS</span></div>
+    <div class="brand">Kris DC<small>Wekelijkse stock</small></div>
+  </a>
+  <div class="topbar-right">
+    <a class="link-btn" href="kris-dc-monitor.html">📊 Monitor</a>
+  </div>
+</div>
+
+<div id="loading" class="loading"><div class="spinner"></div><div>Laden…</div></div>
+
+<div class="wrap" id="main" style="display:none;">
+
+  <div class="week-nav">
+    <button id="prev-week" title="Vorige dinsdag">‹</button>
+    <div class="week-info">
+      <div class="lbl">Stock op dinsdag</div>
+      <div class="val" id="week-date">—</div>
+      <div id="today-tag" class="today-tag" style="display:none;">deze week</div>
+    </div>
+    <button id="next-week" title="Volgende dinsdag">›</button>
+  </div>
+
+  <div id="already-banner" class="already-banner" style="display:none;"></div>
+
+  <div class="cat-label">Huidige stocktoestand</div>
+
+  <div class="item-card">
+    <div class="item-top">
+      <span class="item-emoji">🍟</span>
+      <span class="item-naam">Verse frieten</span>
+      <span class="item-unit">zakken</span>
+    </div>
+    <div class="qty-row">
+      <button type="button" class="qty-btn" data-step="-1" data-for="verseFrieten">−</button>
+      <input type="number" class="item-input" id="verseFrieten" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="—">
+      <button type="button" class="qty-btn" data-step="1" data-for="verseFrieten">+</button>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-top">
+      <span class="item-emoji">🧅</span>
+      <span class="item-naam">Bonkajuin</span>
+      <span class="item-unit">zakken</span>
+    </div>
+    <div class="qty-row">
+      <button type="button" class="qty-btn" data-step="-1" data-for="bonkajuin">−</button>
+      <input type="number" class="item-input" id="bonkajuin" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="—">
+      <button type="button" class="qty-btn" data-step="1" data-for="bonkajuin">+</button>
+    </div>
+  </div>
+
+  <div class="item-card">
+    <div class="item-top">
+      <span class="item-emoji">🍢</span>
+      <span class="item-naam">Verse saté in diepvries</span>
+      <span class="item-unit">stuks</span>
+    </div>
+    <div class="qty-row">
+      <button type="button" class="qty-btn" data-step="-1" data-for="verseSates">−</button>
+      <input type="number" class="item-input" id="verseSates" min="0" inputmode="numeric" pattern="[0-9]*" placeholder="—">
+      <button type="button" class="qty-btn" data-step="1" data-for="verseSates">+</button>
+    </div>
+  </div>
+
+  <div class="check-card">
+    <label>
+      <input type="checkbox" id="afgevinkt">
+      <span class="check-box">✓</span>
+      <span class="check-txt">Stock gecontroleerd
+        <small>Vink af dat je de stock deze dinsdag hebt nagekeken</small>
+      </span>
+    </label>
+  </div>
+
+  <div class="name-card">
+    <div class="input-label">Ingevuld door</div>
+    <input type="text" class="name-input" id="ingevuldDoor" placeholder="Jouw naam…" autocomplete="name">
+  </div>
+
+</div>
+
+<div class="submit-bar">
+  <div class="inner">
+    <button class="submit-btn" id="submit-btn" disabled>Stock opslaan</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const db = fbdb;
+const PATH = 'ft_krisdc_v1';
+
+// ── Datum-helpers ──────────────────────────────────────────────
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+// De dinsdag van de week (zo–za) waarin d valt.
+function tuesdayOf(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() + (2 - x.getDay())); // 2 = dinsdag
+  return x;
+}
+function fmtDate(d){
+  return d.toLocaleDateString('nl-BE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+let selTuesday = tuesdayOf(new Date());   // geselecteerde dinsdag
+const thisTuesdayIso = iso(tuesdayOf(new Date()));
+let listenerRef = null;
+
+function toast(msg, err){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(() => { t.className = 'toast'; }, 2600);
+}
+
+function fldVal(id){
+  const v = document.getElementById(id).value;
+  return v === '' ? null : parseFloat(v);
+}
+
+function refreshSubmitState(){
+  const filledAny = ['verseFrieten','bonkajuin','verseSates'].some(id => document.getElementById(id).value !== '');
+  const checked = document.getElementById('afgevinkt').checked;
+  document.getElementById('submit-btn').disabled = !(filledAny || checked);
+}
+
+function loadWeek(){
+  document.getElementById('week-date').textContent = fmtDate(selTuesday);
+  document.getElementById('today-tag').style.display = (iso(selTuesday) === thisTuesdayIso) ? 'inline-block' : 'none';
+  // Niet vooruit in de toekomst klikken voorbij de huidige week.
+  document.getElementById('next-week').disabled = (iso(selTuesday) >= thisTuesdayIso);
+
+  if (listenerRef) listenerRef.off();
+  listenerRef = db.ref(PATH + '/' + iso(selTuesday));
+  listenerRef.on('value', snap => {
+    const d = snap.val() || {};
+    document.getElementById('verseFrieten').value = (d.verseFrieten != null) ? d.verseFrieten : '';
+    document.getElementById('bonkajuin').value    = (d.bonkajuin    != null) ? d.bonkajuin    : '';
+    document.getElementById('verseSates').value   = (d.verseSates   != null) ? d.verseSates   : '';
+    document.getElementById('afgevinkt').checked  = d.afgevinkt === true;
+    if (!document.getElementById('ingevuldDoor').value && d.ingevuldDoor)
+      document.getElementById('ingevuldDoor').value = d.ingevuldDoor;
+
+    document.querySelectorAll('.item-input').forEach(i => i.classList.toggle('filled', i.value !== ''));
+
+    const banner = document.getElementById('already-banner');
+    if (snap.exists() && d.ingediend){
+      const when = new Date(d.ingediend).toLocaleString('nl-BE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      banner.innerHTML = '✅ Reeds ingevuld door <b>' + (d.ingevuldDoor || 'onbekend') + '</b> op ' + when + '. Je kan hieronder aanpassen.';
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+    refreshSubmitState();
+  });
+}
+
+async function save(){
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Opslaan…';
+  const payload = {
+    datum: iso(selTuesday),
+    verseFrieten: fldVal('verseFrieten'),
+    bonkajuin: fldVal('bonkajuin'),
+    verseSates: fldVal('verseSates'),
+    afgevinkt: document.getElementById('afgevinkt').checked,
+    ingevuldDoor: (document.getElementById('ingevuldDoor').value || '').trim() || 'onbekend',
+    ingediend: new Date().toISOString(),
+  };
+  try {
+    await db.ref(PATH + '/' + iso(selTuesday)).set(payload);
+    toast('✅ Stock opgeslagen');
+  } catch(e){
+    console.error(e);
+    toast('Fout: ' + e.message, true);
+  } finally {
+    btn.textContent = 'Stock opslaan';
+    refreshSubmitState();
+  }
+}
+
+// ── Events ─────────────────────────────────────────────────────
+document.getElementById('prev-week').onclick = () => { selTuesday.setDate(selTuesday.getDate() - 7); loadWeek(); };
+document.getElementById('next-week').onclick = () => {
+  if (iso(selTuesday) >= thisTuesdayIso) return;
+  selTuesday.setDate(selTuesday.getDate() + 7); loadWeek();
+};
+document.querySelectorAll('.qty-btn').forEach(b => b.onclick = () => {
+  const inp = document.getElementById(b.dataset.for);
+  const cur = inp.value === '' ? 0 : parseFloat(inp.value);
+  inp.value = Math.max(0, cur + parseInt(b.dataset.step, 10));
+  inp.classList.add('filled');
+  refreshSubmitState();
+});
+document.querySelectorAll('.item-input').forEach(i => i.addEventListener('input', () => {
+  i.classList.toggle('filled', i.value !== ''); refreshSubmitState();
+}));
+document.getElementById('afgevinkt').addEventListener('change', refreshSubmitState);
+document.getElementById('submit-btn').onclick = save;
+
+window.addEventListener('auth-ready', e => {
+  const a = e.detail;
+  const nm = document.getElementById('ingevuldDoor');
+  if (!nm.value) nm.value = (a.displayName || (a.email ? a.email.split('@')[0] : '') || '');
+});
+
+(window.fbAuthReady || Promise.resolve()).then(() => {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  loadWeek();
+});
+</script>
+</body>
+</html>
