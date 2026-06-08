@@ -123,7 +123,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
   box-shadow:0 1px 2px rgba(0,0,0,0.04);
   transition:box-shadow 0.15s,transform 0.15s;
 }
-.multiday-event:hover{box-shadow:0 3px 8px rgba(0,0,0,0.1);transform:translateY(-1px);overflow:visible;z-index:5;height:auto;min-height:58px;}
+.multiday-event:hover,.multiday-event.stick{box-shadow:0 3px 8px rgba(0,0,0,0.1);transform:translateY(-1px);overflow:visible;z-index:5;height:auto;min-height:58px;}
 .multiday-event.drag-over{box-shadow:0 0 0 2px var(--red);}
 .multiday-event > *{pointer-events:none;}
 .multiday-event .mdev-btn,.multiday-event .at-rm,.multiday-event .btn-add-mini,.multiday-event .ll-icon{pointer-events:auto;}
@@ -134,12 +134,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .mdev-name{font-family:var(--font-cond);font-weight:700;font-size:0.85rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0.01em;}
 .mdev-loc{font-size:0.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;flex-shrink:0;}
 .mdev-btns{display:flex;gap:2px;opacity:0;transition:opacity 0.12s;flex-shrink:0;margin-left:auto;}
-.multiday-event:hover .mdev-btns{opacity:1;}
+.multiday-event:hover .mdev-btns,.multiday-event.stick .mdev-btns{opacity:1;}
 .mdev-btn{background:rgba(0,0,0,0.05);border:none;cursor:pointer;font-size:0.7rem;padding:2px 5px;border-radius:3px;line-height:1;}
 .mdev-btn:hover{background:rgba(0,0,0,0.12);}
 
 .mdev-trucks{display:flex;flex-wrap:nowrap;gap:3px;align-items:center;overflow:hidden;flex-shrink:0;height:22px;}
-.multiday-event:hover .mdev-trucks{flex-wrap:wrap;height:auto;}
+.multiday-event:hover .mdev-trucks,.multiday-event.stick .mdev-trucks{flex-wrap:wrap;height:auto;}
 .mdev-truck-pill{font-size:0.65rem;font-weight:700;padding:2px 4px 2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;line-height:1.4;}
 .mdev-truck-pill .at-rm{cursor:pointer;opacity:0.7;font-size:0.85rem;line-height:1;font-weight:900;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,0.08);transition:all 0.12s;}
 .mdev-truck-pill .at-rm:hover{opacity:1;background:rgba(220,0,0,0.85);color:#fff;}
@@ -2207,6 +2207,29 @@ function importSelected(){
   renderWeek();
   showToast(`✓ ${sel.length} event${sel.length!==1?'s':''} geïmporteerd!`);
 }
+
+// ── Hover-vertraging voor multi-dag balken ─────────────
+// De multi-dag balken klappen open bij hover (truck-pills + "+ Trucks"-knop
+// komen pas dan tevoorschijn). Bij een snelle muisbeweging viel de hover heel
+// even weg en klapte de balk meteen dicht, net voor je de knop bereikte — op
+// kleinere schermen lukte het daardoor amper. We houden de open staat nu 2,5s
+// vast nadat de muis de balk verlaat (.stick), zodat je rustig naar de knop
+// kunt schuiven. Gedelegeerd op document zodat het ook werkt na elke re-render.
+let _stickTimer = null;
+document.addEventListener('mouseover', e=>{
+  const bar = e.target.closest && e.target.closest('.multiday-event');
+  if(!bar) return;
+  clearTimeout(_stickTimer);
+  document.querySelectorAll('.multiday-event.stick').forEach(x=>{ if(x!==bar) x.classList.remove('stick'); });
+  bar.classList.add('stick');
+});
+document.addEventListener('mouseout', e=>{
+  const bar = e.target.closest && e.target.closest('.multiday-event');
+  if(!bar) return;
+  if(bar.contains(e.relatedTarget)) return;  // muis ging naar een kind-element → nog steeds binnen
+  clearTimeout(_stickTimer);
+  _stickTimer = setTimeout(()=>bar.classList.remove('stick'), 2500);
+});
 
 // Close overlays on outside click + ESC
 ['event-overlay','picker-overlay','pdf-overlay','import-overlay'].forEach(id=>{
