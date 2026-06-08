@@ -699,6 +699,10 @@ function attachFbListener(path) {
     const data = snap.val();
     if (data) {
       const live = sanitizeEvents(data);
+      // Oude id-botsingen herstellen en de opgeschoonde lijst terugschrijven.
+      // De write triggert deze listener opnieuw, maar dan vindt dedupeIds geen
+      // duplicaten meer (returnt false) → geen herschrijf-lus.
+      if (dedupeIds(live)) fbdb.ref(path).set(live).catch(()=>{});
       localStorage.setItem(path, JSON.stringify(live));  // cache enkel de live planning
       events = withArchive(live);
       renderWeek();
@@ -770,6 +774,38 @@ function filterEvents(evList) {
 
 const EVCOLORS=['#e8001d','#c2410c','#b45309','#1d4ed8','#15803d','#7c3aed','#0e7490','#be185d'];
 function rndColor(){return EVCOLORS[Math.floor(Math.random()*EVCOLORS.length)];}
+
+// Genereer een gegarandeerd uniek event-id. LET OP: de oude generator
+// `Date.now()+Math.random()` verloor te veel precisie — de grote ms-waarde
+// (~1.78e12) slokt vrijwel de hele fractie van Math.random() op, zodat bij het
+// importeren van een hele agenda in dezelfde milliseconde tientallen events
+// hetzelfde id kregen. Omdat alles via events.find(e=>e.id===id) werkt, opende
+// een klik op event A dan het detail van event B en gingen trucks naar het
+// verkeerde event. Hier: een integer-id (ruim binnen MAX_SAFE_INTEGER) met
+// dedupe-check tegen de bestaande lijst.
+function newEventId(){
+  let id;
+  do { id = Date.now()*1000 + Math.floor(Math.random()*1000); }
+  while (events.some(e=>e.id===id));
+  return id;
+}
+// Herstel reeds opgeslagen events die door de oude generator hetzelfde id
+// deelden: elke duplicaat krijgt een vers, uniek id. De trucks en overige data
+// reizen mee met het event-object, dus er gaat niets verloren. Geeft true terug
+// als er iets gewijzigd is (zodat de herstelde lijst teruggeschreven kan worden).
+function dedupeIds(list){
+  const seen=new Set(); let changed=false;
+  list.forEach(e=>{
+    if(seen.has(e.id)){
+      let nid;
+      do { nid = Date.now()*1000 + Math.floor(Math.random()*1000); }
+      while(seen.has(nid) || list.some(x=>x.id===nid));
+      e.id=nid; changed=true;
+    }
+    seen.add(e.id);
+  });
+  return changed;
+}
 function save(){
   // Archief-events nooit mee terugschrijven naar de live planning.
   const live = liveEvents();
@@ -1433,7 +1469,7 @@ function saveEvent(){
   if(!start){alert('Kies een startdatum.');return;}
   const end=toStr(addD(parseD(start),dur-1));
   if(editId){events=events.map(e=>e.id===editId?{...e,name,location:loc,startDate:start,endDate:end}:e);}
-  else{events.push({id:Date.now(),name,location:loc,startDate:start,endDate:end,trucks:[],color:rndColor()});}
+  else{events.push({id:newEventId(),name,location:loc,startDate:start,endDate:end,trucks:[],color:rndColor()});}
   save();closeEvModal();renderWeek();
 }
 function delEv(id){
@@ -2154,7 +2190,7 @@ function importSelected(){
   if(!sel.length){alert('Selecteer minstens één event.');return;}
   sel.forEach(e=>{
     events.push({
-      id:Date.now()+Math.random(),
+      id:newEventId(),
       name:e.name||'Event',
       location:e.location||'',
       startDate:e.startDate,
