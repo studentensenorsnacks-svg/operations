@@ -265,10 +265,9 @@ textarea{resize:vertical;min-height:70px;}
 .btn-primary{padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
 .btn-primary:hover{background:var(--red-dark);}
 .btn-cancel{padding:10px 20px;background:var(--white);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--font);font-size:0.9rem;font-weight:600;cursor:pointer;}
-.btn-del{padding:10px 20px;background:var(--white);border:1px solid #fca5a5;border-radius:5px;color:var(--red);font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
-.btn-del:hover{background:#fff5f5;}
-.import-ev-item.del.selected{background:#fff5f5;border-color:#fca5a5;}
-.import-ev-item.del.selected .icheck{background:var(--red);border-color:var(--red);}
+.import-ev-item.del{background:#fff5f5;border-color:#fca5a5;cursor:default;}
+.import-ev-item.del:hover{background:#fff5f5;}
+.import-ev-item.del .iev-name{text-decoration:line-through;color:var(--muted);}
 .btn-cancel:hover{border-color:#999;}
 
 /* EVENT DETAIL POPUP */
@@ -600,15 +599,14 @@ textarea{resize:vertical;min-height:70px;}
       <div class="import-events-list" id="import-ev-list"></div>
       <!-- Events die in Outlook verwijderd zijn — apart blok, los van de import -->
       <div id="import-del-wrap" style="display:none;margin-top:18px">
-        <div style="font-family:var(--font-cond);font-weight:800;font-size:0.9rem;color:var(--red);margin-bottom:8px">🗑️ Verdwenen uit Outlook</div>
-        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Deze events stonden in de planning maar staan niet meer in de Outlook-agenda. Vink aan wat je ook uit de planning wil halen — let op: toegekende trucks/notities gaan dan mee weg.</div>
+        <div style="font-family:var(--font-cond);font-weight:800;font-size:0.9rem;color:var(--red);margin-bottom:8px">🗑️ Verwijderd uit de planning</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Deze events stonden niet meer in de Outlook-agenda en zijn automatisch uit de planning gehaald. (Recupereerbaar via de automatische backups.)</div>
         <div class="import-events-list" id="import-del-list"></div>
       </div>
     </div>
     <div class="import-foot">
       <button class="btn-cancel" type="button" onclick="closeImport()">Annuleren</button>
       <button type="button" onclick="openScreenshotImport()" style="background:none;border:none;font-family:var(--font);font-size:0.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0" id="btn-screenshot-fallback">📷 Importeer via screenshot</button>
-      <button class="btn-del" type="button" id="btn-del-sel" onclick="removeSelectedDeleted()" style="display:none">🗑️ Geselecteerde verwijderen</button>
       <button class="btn-primary" type="button" id="btn-import-sel" onclick="importSelected()" style="display:none">✓ Geselecteerde events importeren</button>
     </div>
   </div>
@@ -855,7 +853,10 @@ function sanitizeEvents(arr){
     // Stabiele Outlook-sleutel (iCalUId/id) — gezet bij import/sync. Maakt het
     // mogelijk te detecteren of een uit Outlook afkomstig event daar verwijderd
     // is. Handmatig aangemaakte events hebben hier een lege string.
-    outlookId:e.outlookId||''
+    outlookId:e.outlookId||'',
+    // Herkomst: 'manual' = in de app aangemaakt (nooit auto-verwijderen),
+    // 'outlook' = uit de agenda geïmporteerd, '' = legacy (onbekend).
+    source:e.source||''
   }));
 }
 
@@ -1487,7 +1488,7 @@ function saveEvent(){
   if(!start){alert('Kies een startdatum.');return;}
   const end=toStr(addD(parseD(start),dur-1));
   if(editId){events=events.map(e=>e.id===editId?{...e,name,location:loc,startDate:start,endDate:end}:e);}
-  else{events.push({id:newEventId(),name,location:loc,startDate:start,endDate:end,trucks:[],color:rndColor()});}
+  else{events.push({id:newEventId(),name,location:loc,startDate:start,endDate:end,trucks:[],color:rndColor(),source:'manual'});}
   save();closeEvModal();renderWeek();
 }
 function delEv(id){
@@ -2102,7 +2103,6 @@ function openImport(){
   document.getElementById('import-ev-list').innerHTML='';
   document.getElementById('btn-import-sel').style.display='none';
   document.getElementById('import-del-wrap').style.display='none';
-  document.getElementById('btn-del-sel').style.display='none';
   document.getElementById('img-input').value='';
   document.getElementById('import-overlay').classList.remove('hidden');
 }
@@ -2137,7 +2137,6 @@ async function analyzeImage(){
   document.getElementById('import-ev-list').innerHTML='';
   document.getElementById('btn-import-sel').style.display='none';
   document.getElementById('import-del-wrap').style.display='none';
-  document.getElementById('btn-del-sel').style.display='none';
 
   try{
     const resp=await fetch('/api/anthropic',{
@@ -2220,7 +2219,8 @@ function importSelected(){
       trucks:[],
       notes:e.notes||'',
       color:e.color||rndColor(),  // gebruik Outlook kleur als beschikbaar
-      outlookId:e.outlookId||''   // stabiele sleutel voor latere verwijder-detectie
+      outlookId:e.outlookId||'',  // stabiele sleutel voor latere verwijder-detectie
+      source:'outlook'            // herkomst: uit de agenda geïmporteerd
     });
   });
   save();closeImport();
@@ -2620,7 +2620,6 @@ async function sync365() {
   document.getElementById('import-ev-list').innerHTML = '';
   document.getElementById('btn-import-sel').style.display = 'none';
   document.getElementById('import-del-wrap').style.display = 'none';
-  document.getElementById('btn-del-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 
   const status = document.getElementById('ai-status');
@@ -2721,10 +2720,18 @@ async function sync365() {
     const winStart = toStr(new Date(start));
     const winEnd   = toStr(new Date(end));
     const liveIds  = new Set(converted.map(c => c.outlookId).filter(Boolean));
+    const liveKeys = new Set(converted.map(c => c.name + '|' + c.startDate));
+    // Een planning-event geldt als "weg uit Outlook" wanneer het noch via de
+    // stabiele sleutel (outlookId) noch via naam+startdatum nog in de agenda
+    // voorkomt. We matchen óók op naam+datum zodat dit werkt op events die nog
+    // geen outlookId hebben (alles van vóór deze functie). Handmatig in de app
+    // aangemaakte events (source:'manual') blijven altijd staan — die horen
+    // niet bij Outlook.
     const verwijderd = liveEvents().filter(ev =>
-      ev.outlookId &&
+      ev.source !== 'manual' &&
+      ev.startDate >= winStart && ev.startDate <= winEnd &&
       !liveIds.has(ev.outlookId) &&
-      ev.startDate >= winStart && ev.startDate <= winEnd
+      !liveKeys.has(ev.name + '|' + ev.startDate)
     );
 
     // Stap 4: Duplicaten eruit (zelfde naam + startdatum staat al in de planning)
@@ -2736,7 +2743,7 @@ async function sync365() {
     status.textContent = `✓ ${converted.length} events gevonden`
       + (dupes > 0 ? ` · ${dupes} staan al in de planning` : '')
       + (verrijkt > 0 ? ` · ${verrijkt} bijgewerkt met notities` : '')
-      + (verwijderd.length > 0 ? ` · ${verwijderd.length} verdwenen uit Outlook` : '')
+      + (verwijderd.length > 0 ? ` · ${verwijderd.length} verwijderd (weg uit Outlook)` : '')
       + `. Selecteer wat je wil importeren.`;
 
     document.getElementById('import-modal-sub').textContent =
@@ -2779,7 +2786,6 @@ function openScreenshotImport() {
   document.getElementById('import-ev-list').innerHTML = '';
   document.getElementById('btn-import-sel').style.display = 'none';
   document.getElementById('import-del-wrap').style.display = 'none';
-  document.getElementById('btn-del-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 }
 
