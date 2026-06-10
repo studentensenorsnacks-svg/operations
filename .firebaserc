@@ -17,6 +17,9 @@
         ],
         "eventpay": [
           "senorsnacks-eventpay"
+        ],
+        "vsm-digital": [
+          "vsm-digital"
         ]
       }
     },
