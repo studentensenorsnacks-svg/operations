@@ -29,6 +29,7 @@ const fbdb = firebase.database();
 <style>
 :root{
   --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;--blue:#1d4ed8;
+  --bestel:#0891b2;--bestel-dark:#0e7490;--bestel-bg:#ecfeff;
   --bg:#efefef;--white:#fff;--text:#111;--muted:#666;--border:#d4d4d4;
   --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-mono:'DM Mono',monospace;
 }
@@ -65,6 +66,16 @@ select{cursor:pointer;}
 .broken-toggle .bt-sub{font-size:0.78rem;color:var(--muted);margin-top:2px;}
 .broken-toggle .bt-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:#fff;flex-shrink:0;transition:all 0.15s;}
 .broken-toggle.on .bt-chk{border-color:var(--orange);background:var(--orange);}
+.bestel-toggle{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;transition:all 0.15s;user-select:none;margin-top:10px;}
+.bestel-toggle:hover{border-color:var(--bestel);}
+.bestel-toggle.on{background:var(--bestel-bg);border-color:var(--bestel);box-shadow:0 0 0 3px rgba(8,145,178,0.12);}
+.bestel-toggle .bt-icon{font-size:1.3rem;flex-shrink:0;}
+.bestel-toggle .bt-body{flex:1;}
+.bestel-toggle .bt-title{font-size:0.92rem;font-weight:700;color:var(--text);}
+.bestel-toggle.on .bt-title{color:var(--bestel-dark);}
+.bestel-toggle .bt-sub{font-size:0.78rem;color:var(--muted);margin-top:2px;}
+.bestel-toggle .bt-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:#fff;flex-shrink:0;transition:all 0.15s;}
+.bestel-toggle.on .bt-chk{border-color:var(--bestel);background:var(--bestel);}
 .form-foot{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;}
 .btn-primary{padding:12px 28px;background:var(--red);color:#fff;border:none;border-radius:6px;font-family:var(--font);font-size:1rem;font-weight:700;cursor:pointer;transition:background 0.15s;}
 .btn-primary:hover{background:var(--red-dark);}
@@ -135,6 +146,14 @@ select{cursor:pointer;}
           <div class="bt-sub">Verschijnt apart op het dashboard onder “Stukken”.</div>
         </div>
         <div class="bt-chk" id="broken-chk">✓</div>
+      </div>
+      <div class="bestel-toggle" id="bestel-toggle" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleBestel()">
+        <div class="bt-icon">📦</div>
+        <div class="bt-body">
+          <div class="bt-title">Te bestellen — moet besteld worden</div>
+          <div class="bt-sub">Verschijnt apart op het dashboard onder “Bestellen”.</div>
+        </div>
+        <div class="bt-chk" id="bestel-chk">✓</div>
       </div>
     </div>
 
@@ -278,6 +297,17 @@ document.getElementById('broken-toggle').addEventListener('keydown', e=>{
 });
 function isBroken(){ return document.getElementById('broken-toggle').classList.contains('on'); }
 
+function toggleBestel(){
+  const el=document.getElementById('bestel-toggle');
+  const on=!el.classList.contains('on');
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+document.getElementById('bestel-toggle').addEventListener('keydown', e=>{
+  if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleBestel(); }
+});
+function isBestel(){ return document.getElementById('bestel-toggle').classList.contains('on'); }
+
 // ── NOTITIE OPSLAAN ────────────────────────────
 function saveNote(){
   const name = document.getElementById('in-name').value.trim();
@@ -287,6 +317,7 @@ function saveNote(){
   if(!text){ toast('De notitie is leeg','var(--red)'); document.getElementById('in-text').focus(); return; }
 
   const broken = isBroken();
+  const tebestellen = isBestel();
   const now=new Date();
   const ref=fbdb.ref(FB_PATH).push();
   const note={
@@ -300,6 +331,7 @@ function saveNote(){
     ts: now.getTime()
   };
   if(broken) note.broken = true;
+  if(tebestellen) note.tebestellen = true;
 
   // meteen lokaal bewaren (overleeft het sluiten van de pagina, geen zichtbare lijst)
   const mine=loadMine();
@@ -317,7 +349,13 @@ function saveNote(){
   document.getElementById('in-text').value='';
   const bt=document.getElementById('broken-toggle');
   bt.classList.remove('on'); bt.setAttribute('aria-checked','false');
-  toast(broken ? '🔧 Stuk doorgegeven — bedankt!' : '✓ Notitie doorgegeven — bedankt!');
+  const btb=document.getElementById('bestel-toggle');
+  btb.classList.remove('on'); btb.setAttribute('aria-checked','false');
+  const tmsg = broken && tebestellen ? '🔧📦 Stuk + bestelling doorgegeven — bedankt!'
+    : broken ? '🔧 Stuk doorgegeven — bedankt!'
+    : tebestellen ? '📦 Bestelling doorgegeven — bedankt!'
+    : '✓ Notitie doorgegeven — bedankt!';
+  toast(tmsg);
   btn.disabled=false;
 
   // wegschrijven naar Firebase (status volgt in "Door jou doorgegeven")
@@ -331,6 +369,7 @@ function flushPending(){
   loadMine().filter(n=>!n.synced).forEach(n=>{
     const clean={id:n.id,name:n.name,event:n.event,text:n.text,date:n.date,hour:n.hour,time:n.time,ts:n.ts};
     if(n.broken) clean.broken=true;
+    if(n.tebestellen) clean.tebestellen=true;
     fbdb.ref(FB_PATH+'/'+n.id).set(clean)
       .then(()=>markSynced(n.id))
       .catch(()=>{});

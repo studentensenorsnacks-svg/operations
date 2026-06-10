@@ -368,6 +368,8 @@ const CATS = {
   'defect-resolved':{ label: 'Defect opgelost', color: '#16a34a' },
   notitie:          { label: 'Notitie',         color: '#a855f7' },
   'stuk-resolved':  { label: 'Stuk opgelost',   color: '#15803d' },
+  'bestel-open':    { label: 'Te bestellen',    color: '#0891b2' },
+  'bestel-resolved':{ label: 'Besteld',         color: '#0e7490' },
   eindstock:        { label: 'Eindstock',       color: '#0d9488' },
   laadlijst:        { label: 'Laadlijst',       color: '#ca8a04' },
   'verhuur-sign':   { label: 'Verhuur aflevering', color: '#b45309' },
@@ -506,15 +508,33 @@ function rebuild(){
   // 2) Notities (ft_notities_v1)
   Object.entries(src.notities || {}).forEach(([k, n]) => {
     if (!n) return;
+    // Hoofd-notitie event — label hangt af van flags (stuk en/of bestel)
+    let baseAction = 'Notitie';
+    if (n.broken && n.tebestellen) baseAction = 'Notitie (stuk + te bestellen)';
+    else if (n.broken)             baseAction = 'Notitie (stuk gemeld)';
+    else if (n.tebestellen)        baseAction = 'Notitie (te bestellen)';
     ev.push({
       ts: n.ts || tsFrom(n.date), cat: 'notitie', person: n.name || 'Onbekend',
-      action: n.broken ? 'Notitie (stuk gemeld)' : 'Notitie', target: n.event || '',
+      action: baseAction, target: n.event || '',
       detail: n.text || ''
     });
+    // Indien als bestelling gemarkeerd → apart event om expliciet in bestel-categorie te zien
+    if (n.tebestellen === true){
+      ev.push({
+        ts: n.ts || tsFrom(n.date), cat: 'bestel-open', person: n.name || 'Onbekend',
+        action: 'Te bestellen gemeld', target: n.event || '', detail: n.text || ''
+      });
+    }
     if (n.resolvedAt){
       ev.push({
         ts: n.resolvedAt, cat: 'stuk-resolved', person: n.resolvedBy || 'Onbekend',
         action: 'Stuk opgelost', target: n.event || '', detail: n.text || ''
+      });
+    }
+    if (n.besteldAt){
+      ev.push({
+        ts: n.besteldAt, cat: 'bestel-resolved', person: n.besteldBy || 'Onbekend',
+        action: 'Besteld', target: n.event || '', detail: n.text || ''
       });
     }
   });

@@ -28,6 +28,7 @@ const fbdb = firebase.database();
 <style>
 :root{
   --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;--blue:#1d4ed8;
+  --bestel:#0891b2;--bestel-dark:#0e7490;--bestel-bg:#ecfeff;
   --bg:#efefef;--white:#fff;--text:#111;--muted:#666;--border:#d4d4d4;
   --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-mono:'DM Mono',monospace;
 }
@@ -93,17 +94,25 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
 /* NOTE CARD */
 .note{background:var(--white);border:1px solid var(--border);border-left:4px solid var(--red);border-radius:7px;padding:13px 15px;margin-bottom:9px;}
 .note.broken{border-left-color:var(--orange);background:#fffaf3;}
+.note.bestel{border-left-color:var(--bestel);background:var(--bestel-bg);}
+.note.broken.bestel{border-left:4px solid var(--orange);box-shadow:inset 4px 0 0 0 var(--bestel);padding-left:19px;background:linear-gradient(135deg,#fffaf3 0%,var(--bestel-bg) 100%);}
 .note-top{display:flex;align-items:center;gap:9px;margin-bottom:7px;flex-wrap:wrap;}
 .note-name{background:#fde8ea;color:var(--red-dark);font-weight:800;font-size:0.78rem;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:0.03em;}
 .note.broken .note-name{background:#fef0e2;color:var(--orange);}
+.note.bestel:not(.broken) .note-name{background:var(--bestel-bg);color:var(--bestel-dark);}
 .note-time{font-family:var(--font-mono);font-size:0.78rem;color:var(--muted);}
 .note-event{background:#e3edff;color:#1d4ed8;font-weight:700;font-size:0.76rem;padding:3px 10px;border-radius:5px;}
 .note-stuk-tag{background:#fef0e2;color:var(--orange);font-weight:800;font-size:0.74rem;padding:3px 9px;border-radius:5px;border:1px solid rgba(194,65,12,0.35);}
+.note-bestel-tag{background:var(--bestel-bg);color:var(--bestel-dark);font-weight:800;font-size:0.74rem;padding:3px 9px;border-radius:5px;border:1px solid rgba(8,145,178,0.35);}
 .note-acts{margin-left:auto;display:flex;align-items:center;gap:4px;}
 .note-stuk-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.92rem;cursor:pointer;padding:3px 8px;border-radius:5px;line-height:1;font-family:var(--font);font-weight:700;transition:all 0.12s;}
 .note-stuk-btn:hover{border-color:var(--orange);color:var(--orange);}
 .note-stuk-btn.on{background:var(--orange);color:#fff;border-color:var(--orange);}
 .note-stuk-btn.on:hover{background:#9c3409;border-color:#9c3409;}
+.note-bestel-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.92rem;cursor:pointer;padding:3px 8px;border-radius:5px;line-height:1;font-family:var(--font);font-weight:700;transition:all 0.12s;}
+.note-bestel-btn:hover{border-color:var(--bestel);color:var(--bestel-dark);}
+.note-bestel-btn.on{background:var(--bestel);color:#fff;border-color:var(--bestel);}
+.note-bestel-btn.on:hover{background:var(--bestel-dark);border-color:var(--bestel-dark);}
 .note-del{background:none;border:none;color:#bbb;font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1;}
 .note-del:hover{color:var(--red);background:#fde8ea;}
 .note-text{font-size:0.95rem;line-height:1.55;color:var(--text);white-space:pre-wrap;word-break:break-word;}
@@ -120,12 +129,29 @@ textarea{resize:vertical;min-height:120px;line-height:1.5;}
 .broken-toggle .bt-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:#fff;flex-shrink:0;transition:all 0.15s;}
 .broken-toggle.on .bt-chk{border-color:var(--orange);background:var(--orange);}
 
+/* BESTEL-TOGGLE — zelfde patroon, andere kleur */
+.bestel-toggle{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;transition:all 0.15s;user-select:none;margin-top:10px;}
+.bestel-toggle:hover{border-color:var(--bestel);}
+.bestel-toggle.on{background:var(--bestel-bg);border-color:var(--bestel);box-shadow:0 0 0 3px rgba(8,145,178,0.12);}
+.bestel-toggle .bt-icon{font-size:1.3rem;flex-shrink:0;}
+.bestel-toggle .bt-body{flex:1;}
+.bestel-toggle .bt-title{font-size:0.92rem;font-weight:700;color:var(--text);}
+.bestel-toggle.on .bt-title{color:var(--bestel-dark);}
+.bestel-toggle .bt-sub{font-size:0.78rem;color:var(--muted);margin-top:2px;}
+.bestel-toggle .bt-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:0.85rem;color:#fff;flex-shrink:0;transition:all 0.15s;}
+.bestel-toggle.on .bt-chk{border-color:var(--bestel);background:var(--bestel);}
+
 /* FILTER-knop voor 'enkel stukken' */
 .filter-stuk-btn{padding:9px 14px;background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
 .filter-stuk-btn:hover{border-color:var(--orange);color:var(--orange);}
 .filter-stuk-btn.on{background:var(--orange);color:#fff;border-color:var(--orange);}
 .filter-stuk-btn.on:hover{background:#9c3409;border-color:#9c3409;}
+.filter-bestel-btn{padding:9px 14px;background:var(--white);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.12s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.filter-bestel-btn:hover{border-color:var(--bestel);color:var(--bestel-dark);}
+.filter-bestel-btn.on{background:var(--bestel);color:#fff;border-color:var(--bestel);}
+.filter-bestel-btn.on:hover{background:var(--bestel-dark);border-color:var(--bestel-dark);}
 .stat.o .num{color:var(--orange);}
+.stat.c .num{color:var(--bestel-dark);}
 
 /* EMPTY */
 .empty{text-align:center;padding:60px 20px;color:var(--muted);}
@@ -272,6 +298,14 @@ body.selecting .note .note-del{display:none;}
           </div>
           <div class="bt-chk" id="broken-chk">✓</div>
         </div>
+        <div class="bestel-toggle" id="bestel-toggle" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleBestel()">
+          <div class="bt-icon">📦</div>
+          <div class="bt-body">
+            <div class="bt-title">Te bestellen — moet besteld worden</div>
+            <div class="bt-sub">Verschijnt apart op het dashboard onder “Bestellen”.</div>
+          </div>
+          <div class="bt-chk" id="bestel-chk">✓</div>
+        </div>
       </div>
       <div class="form-foot">
         <button class="btn-primary" id="btn-save" onclick="saveNote()">💾 Notitie opslaan</button>
@@ -287,12 +321,14 @@ body.selecting .note .note-del{display:none;}
       <div class="stat g"><div class="num" id="st-today">0</div><div class="lbl">Vandaag</div></div>
       <div class="stat b"><div class="num" id="st-people">0</div><div class="lbl">Personen</div></div>
       <div class="stat o"><div class="num" id="st-stukken">0</div><div class="lbl">🔧 Stukken open</div></div>
+      <div class="stat c"><div class="num" id="st-bestel">0</div><div class="lbl">📦 Te bestellen</div></div>
     </div>
     <div class="filters">
       <select id="f-name" onchange="renderBoard()"><option value="">Alle personen</option></select>
       <select id="f-event" onchange="renderBoard()"><option value="">Alle events</option></select>
       <input type="text" id="f-search" placeholder="🔍 Zoek in notities..." oninput="renderBoard()">
       <button type="button" class="filter-stuk-btn" id="filter-stuk-btn" onclick="toggleStukFilter()">🔧 Enkel stukken</button>
+      <button type="button" class="filter-bestel-btn" id="filter-bestel-btn" onclick="toggleBestelFilter()">📦 Enkel te bestellen</button>
     </div>
     <div class="actions-row">
       <button class="btn-sel" id="btn-toggle-sel" onclick="toggleSelectMode()">☑️ Selecteer notities</button>
@@ -320,6 +356,7 @@ body.selecting .note .note-del{display:none;}
 let notes = JSON.parse(localStorage.getItem('ft_notities_v1') || '[]');
 let selectMode = false;
 let stukFilterOn = false;
+let bestelFilterOn = false;
 const selectedIds = new Set();
 const FB_PATH = 'ft_notities_v1';
 const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
@@ -415,6 +452,7 @@ function saveNote(){
   if(!text){ toast('De notitie is leeg', 'var(--red)'); document.getElementById('in-text').focus(); return; }
 
   const broken = isFormBroken();
+  const tebestellen = isFormBestel();
   const now = new Date();
   const ref = fbdb.ref(FB_PATH).push();
   const note = {
@@ -428,6 +466,7 @@ function saveNote(){
     ts: now.getTime()
   };
   if(broken) note.broken = true;
+  if(tebestellen) note.tebestellen = true;
 
   const btn = document.getElementById('btn-save');
   btn.disabled = true;
@@ -438,7 +477,13 @@ function saveNote(){
       document.getElementById('in-text').value='';
       const bt=document.getElementById('broken-toggle');
       bt.classList.remove('on'); bt.setAttribute('aria-checked','false');
-      toast(broken ? '🔧 Stuk opgeslagen' : '✓ Notitie opgeslagen');
+      const btb=document.getElementById('bestel-toggle');
+      btb.classList.remove('on'); btb.setAttribute('aria-checked','false');
+      const msg = broken && tebestellen ? '🔧📦 Stuk + bestelling opgeslagen'
+        : broken ? '🔧 Stuk opgeslagen'
+        : tebestellen ? '📦 Bestelling opgeslagen'
+        : '✓ Notitie opgeslagen';
+      toast(msg);
     })
     .catch(()=>{
       // Offline fallback — lokaal bewaren
@@ -486,6 +531,7 @@ function refreshAll(){
   document.getElementById('st-today').textContent   = notes.filter(n=>n.date===today).length;
   document.getElementById('st-people').textContent  = names.length;
   document.getElementById('st-stukken').textContent = notes.filter(n=>n.broken===true).length;
+  document.getElementById('st-bestel').textContent  = notes.filter(n=>n.tebestellen===true).length;
 
   renderBoard();
 }
@@ -496,6 +542,11 @@ function toggleStukFilter(){
   document.getElementById('filter-stuk-btn').classList.toggle('on', stukFilterOn);
   renderBoard();
 }
+function toggleBestelFilter(){
+  bestelFilterOn = !bestelFilterOn;
+  document.getElementById('filter-bestel-btn').classList.toggle('on', bestelFilterOn);
+  renderBoard();
+}
 function toggleNoteBroken(id, isOn){
   // Optimistic update in lokaal state zodat de UI niet wacht op Firebase
   const n = notes.find(x=>x.id===id);
@@ -503,6 +554,15 @@ function toggleNoteBroken(id, isOn){
   localStorage.setItem(FB_PATH, JSON.stringify(notes));
   fbdb.ref(FB_PATH+'/'+id+'/broken').set(isOn ? null : true)
     .then(()=>toast(isOn ? '↩️ Stuk-markering verwijderd' : '🔧 Gemarkeerd als stuk'))
+    .catch(()=>toast('Kon niet opslaan','var(--red)'));
+  refreshAll();
+}
+function toggleNoteBestel(id, isOn){
+  const n = notes.find(x=>x.id===id);
+  if(n){ if(isOn){ delete n.tebestellen; } else { n.tebestellen = true; } }
+  localStorage.setItem(FB_PATH, JSON.stringify(notes));
+  fbdb.ref(FB_PATH+'/'+id+'/tebestellen').set(isOn ? null : true)
+    .then(()=>toast(isOn ? '↩️ Bestel-markering verwijderd' : '📦 Gemarkeerd als te bestellen'))
     .catch(()=>toast('Kon niet opslaan','var(--red)'));
   refreshAll();
 }
@@ -518,10 +578,24 @@ function isFormBroken(){
   const el=document.getElementById('broken-toggle');
   return !!(el && el.classList.contains('on'));
 }
+function toggleBestel(){
+  const el=document.getElementById('bestel-toggle');
+  const on=!el.classList.contains('on');
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-checked', on ? 'true' : 'false');
+}
+function isFormBestel(){
+  const el=document.getElementById('bestel-toggle');
+  return !!(el && el.classList.contains('on'));
+}
 document.addEventListener('DOMContentLoaded', ()=>{
   const bt=document.getElementById('broken-toggle');
   if(bt) bt.addEventListener('keydown', e=>{
     if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleBroken(); }
+  });
+  const btb=document.getElementById('bestel-toggle');
+  if(btb) btb.addEventListener('keydown', e=>{
+    if(e.key===' '||e.key==='Enter'){ e.preventDefault(); toggleBestel(); }
   });
 });
 
@@ -533,10 +607,11 @@ function renderBoard(){
   const searchF = document.getElementById('f-search').value.toLowerCase().trim();
 
   let list = notes.slice();
-  if(nameF)        list = list.filter(n=>n.name===nameF);
-  if(eventF)       list = list.filter(n=>n.event===eventF);
-  if(searchF)      list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF) || (n.event||'').toLowerCase().includes(searchF));
-  if(stukFilterOn) list = list.filter(n=>n.broken===true);
+  if(nameF)          list = list.filter(n=>n.name===nameF);
+  if(eventF)         list = list.filter(n=>n.event===eventF);
+  if(searchF)        list = list.filter(n=>(n.text||'').toLowerCase().includes(searchF) || (n.event||'').toLowerCase().includes(searchF));
+  if(stukFilterOn)   list = list.filter(n=>n.broken===true);
+  if(bestelFilterOn) list = list.filter(n=>n.tebestellen===true);
   list.sort((a,b)=>(b.ts||0)-(a.ts||0));
 
   if(!list.length){
@@ -571,16 +646,19 @@ function renderBoard(){
       byHour[h].forEach(n=>{
         const isSel = selectedIds.has(n.id);
         const isBroken = n.broken === true;
-        const classes = 'note'+(isSel?' selected':'')+(isBroken?' broken':'');
+        const isBestel = n.tebestellen === true;
+        const classes = 'note'+(isSel?' selected':'')+(isBroken?' broken':'')+(isBestel?' bestel':'');
         html += '<div class="'+classes+'" data-id="'+esc(n.id)+'" onclick="onNoteClick(event,\''+esc(n.id)+'\')">';
         html += '<input type="checkbox" class="note-check" '+(isSel?'checked':'')+' onclick="event.stopPropagation();toggleSelect(\''+esc(n.id)+'\')">';
         html += '<div class="note-top">';
         html += '<span class="note-name">'+esc(n.name||'?')+'</span>';
         if(n.event) html += '<span class="note-event">📌 '+esc(n.event)+'</span>';
         if(isBroken) html += '<span class="note-stuk-tag">🔧 STUK</span>';
+        if(isBestel) html += '<span class="note-bestel-tag">📦 BESTEL</span>';
         html += '<span class="note-time">🕒 '+esc(n.time||'')+'</span>';
         html += '<div class="note-acts">';
         html += '<button class="note-stuk-btn'+(isBroken?' on':'')+'" title="'+(isBroken?'Stuk-markering verwijderen':'Markeer als stuk / te maken')+'" onclick="event.stopPropagation();toggleNoteBroken(\''+esc(n.id)+'\','+(isBroken?'true':'false')+')">🔧</button>';
+        html += '<button class="note-bestel-btn'+(isBestel?' on':'')+'" title="'+(isBestel?'Bestel-markering verwijderen':'Markeer als te bestellen')+'" onclick="event.stopPropagation();toggleNoteBestel(\''+esc(n.id)+'\','+(isBestel?'true':'false')+')">📦</button>';
         html += '<button class="note-del" title="Verwijderen" onclick="event.stopPropagation();deleteNote(\''+esc(n.id)+'\')">✕</button>';
         html += '</div>';
         html += '</div>';

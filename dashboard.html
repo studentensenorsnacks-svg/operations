@@ -917,6 +917,28 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .nav-stukken.has-items .stukken-count { background:#c2410c; color:#fff; }
 
+/* ── BESTELLEN (notities met tebestellen-flag) ── */
+.nav-bestel {
+  display:inline-flex; align-items:center; gap:12px;
+  background:transparent; border:2px solid var(--border2);
+  font-family:var(--font); font-size:1.2rem; font-weight:800;
+  color:var(--text); padding:13px 26px; border-radius:11px; cursor:pointer;
+  transition:all 0.15s; letter-spacing:0.01em;
+}
+.nav-bestel:hover { background:var(--surface2); }
+.nav-bestel.has-items {
+  background:rgba(8,145,178,0.10); color:#0e7490; border-color:rgba(8,145,178,0.65);
+  box-shadow:0 0 0 4px rgba(8,145,178,0.12);
+}
+.nav-bestel.has-items:hover { background:rgba(8,145,178,0.18); }
+.bestel-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:28px; height:28px; padding:0 9px; border-radius:14px;
+  background:var(--border2); color:var(--text2);
+  font-family:var(--mono); font-size:0.95rem; font-weight:800;
+}
+.nav-bestel.has-items .bestel-count { background:#0891b2; color:#fff; }
+
 /* ── MENU-knop + uitvouw dropdown ── */
 .menu-btn {
   display:inline-flex; align-items:center; gap:8px;
@@ -982,6 +1004,9 @@ textarea { resize: vertical; min-height: 72px; }
   .nav-stukken { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
   .nav-stukken .lbl-stuk-full { display:none; }
   .stukken-count { min-width:24px; height:24px; font-size:0.85rem; }
+  .nav-bestel { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
+  .nav-bestel .lbl-bestel-full { display:none; }
+  .bestel-count { min-width:24px; height:24px; font-size:0.85rem; }
   .menu-btn { padding:10px 12px; font-size:0.84rem; }
   .es-modal-overlay { padding:10px; }
   .es-modal { border-radius:12px; }
@@ -993,6 +1018,7 @@ textarea { resize: vertical; min-height: 72px; }
 }
 @media (max-width:420px) {
   .nav-stukken { padding:9px 12px; font-size:0.95rem; }
+  .nav-bestel { padding:9px 12px; font-size:0.95rem; }
   .menu-btn { padding:9px 11px; font-size:0.8rem; }
   .menu-dropdown { grid-template-columns:1fr; padding:8px; }
   .stat-num { font-size:1.7rem; }
@@ -1017,6 +1043,9 @@ textarea { resize: vertical; min-height: 72px; }
 .stuk-list { display:flex; flex-direction:column; gap:10px; }
 .stuk-item { border:1px solid var(--border); border-left:3px solid #c2410c; border-radius:10px;
   padding:12px 14px; background:#fffaf3; }
+.stuk-list.bestel-mode .stuk-item { border-left-color:#0891b2; background:#ecfeff; }
+.stuk-list.bestel-mode .stuk-btn-done { background:#0891b2; }
+.stuk-list.bestel-mode .stuk-btn-done:hover { background:#0e7490; }
 .stuk-item-hdr { display:flex; align-items:baseline; justify-content:space-between; gap:10px;
   margin-bottom:6px; flex-wrap:wrap; }
 .stuk-item-who { font-weight:700; font-size:0.92rem; color:var(--text); }
@@ -1041,6 +1070,7 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
   <div class="topbar-right">
     <button type="button" class="nav-stukken" id="btn-stukken" onclick="openStukkenModal()" title="Open de lijst van gemelde stukken">🔧 <span class="lbl-stuk-full">Stukken</span> <span class="stukken-count" id="stukken-count">0</span></button>
+    <button type="button" class="nav-bestel" id="btn-bestel" onclick="openBestelModal()" title="Open de lijst van te bestellen items">📦 <span class="lbl-bestel-full">Bestellen</span> <span class="bestel-count" id="bestel-count">0</span></button>
     <button type="button" class="menu-btn" id="menu-btn" onclick="toggleMainMenu()" aria-haspopup="true" aria-expanded="false">≡ Menu <span class="menu-caret">▾</span></button>
     <button type="button" class="logout-btn" id="logout-btn" onclick="opsLogout()" title="Uitloggen">⎋ <span class="logout-lbl">Uitloggen</span></button>
     <div class="clock" id="clock">--:--</div>
@@ -1205,6 +1235,18 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 </div>
 
+<div class="stuk-modal-overlay hidden" id="bestel-modal-overlay" onclick="closeBestelModalIfBackdrop(event)">
+  <div class="stuk-modal">
+    <div class="stuk-modal-hdr">
+      <div class="stuk-modal-title">📦 Bestellen — open</div>
+      <button type="button" class="stuk-modal-close" onclick="closeBestelModal()" aria-label="Sluiten">✕</button>
+    </div>
+    <div class="stuk-modal-body" id="bestel-modal-body">
+      <div class="stuk-empty"><div class="stuk-empty-icon">…</div><div>Laden…</div></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast">✓ Opgeslagen!</div>
 
 <script>
@@ -1305,13 +1347,21 @@ fbdb.ref('ft_eindstock_v1').on('value', snap => {
 // ── STUKKEN: notities (broken=true) + check-ins (hasDefect=true) ──
 let stukNotes = [];       // samengevoegde lijst voor rendering
 let stukNotesRaw = [];    // notities met broken=true (ruwe items)
+// ── BESTELLEN: notities (tebestellen=true) ──
+let bestelNotes = [];     // notities met tebestellen=true (open)
 
 fbdb.ref('ft_notities_v1').on('value', snap => {
   const raw = snap.val() || {};
-  stukNotesRaw = Object.entries(raw)
-    .map(([k, v]) => ({ ...(v || {}), id: (v && v.id) || k }))
-    .filter(n => n.broken === true);
+  const all = Object.entries(raw).map(([k, v]) => ({ ...(v || {}), id: (v && v.id) || k }));
+  stukNotesRaw = all.filter(n => n.broken === true);
+  bestelNotes  = all.filter(n => n.tebestellen === true)
+                    .map(n => ({ ...n }))
+                    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
   recomputeStukNotes();
+  renderBestellingenUI();
+  if (!document.getElementById('bestel-modal-overlay').classList.contains('hidden')) {
+    renderBestelModal();
+  }
 });
 
 function recomputeStukNotes() {
@@ -1521,11 +1571,89 @@ function closeStukkenModal() {
 function closeStukkenModalIfBackdrop(ev) {
   if (ev.target.id === 'stuk-modal-overlay') closeStukkenModal();
 }
+
+// ── BESTELLEN: UI + modal ──────────────────────────────────────
+function renderBestellingenUI() {
+  const btn = document.getElementById('btn-bestel');
+  const cnt = document.getElementById('bestel-count');
+  if (!btn || !cnt) return;
+  cnt.textContent = bestelNotes.length;
+  btn.classList.toggle('has-items', bestelNotes.length > 0);
+  btn.title = bestelNotes.length
+    ? bestelNotes.length + ' item' + (bestelNotes.length === 1 ? '' : 's') + ' te bestellen'
+    : 'Geen openstaande bestellingen';
+}
+
+function renderBestelModal() {
+  const body = document.getElementById('bestel-modal-body');
+  if (!body) return;
+  if (!bestelNotes.length) {
+    body.innerHTML = '<div class="stuk-empty"><div class="stuk-empty-icon">✨</div>' +
+      '<div><strong>Niets te bestellen.</strong><br>Nieuwe bestelnotities verschijnen hier automatisch.</div></div>';
+    return;
+  }
+  body.innerHTML = '<div class="stuk-list bestel-mode">' + bestelNotes.map(n => {
+    const ev = n.event ? '<span class="stuk-item-ev">' + escapeHtml(n.event) + '</span>' : '';
+    return '<div class="stuk-item">' +
+      '<div class="stuk-item-hdr">' +
+        '<div><span class="stuk-item-who">' + escapeHtml(n.name || 'Onbekend') + '</span>' + ev + '</div>' +
+        '<div class="stuk-item-when">' + escapeHtml(fmtStukWhen({date:n.date, time:n.time})) + '</div>' +
+      '</div>' +
+      '<div class="stuk-item-text">' + escapeHtml(n.text || '') + '</div>' +
+      '<div class="stuk-item-act">' +
+        '<button class="stuk-btn-done" type="button" data-bestel-id="' + escapeHtml(n.id) + '">✓ Besteld</button>' +
+      '</div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function openBestelModal() {
+  document.getElementById('bestel-modal-overlay').classList.remove('hidden');
+  renderBestelModal();
+}
+function closeBestelModal() {
+  document.getElementById('bestel-modal-overlay').classList.add('hidden');
+}
+function closeBestelModalIfBackdrop(ev) {
+  if (ev.target.id === 'bestel-modal-overlay') closeBestelModal();
+}
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape') {
     const ov = document.getElementById('stuk-modal-overlay');
     if (ov && !ov.classList.contains('hidden')) closeStukkenModal();
+    const ovb = document.getElementById('bestel-modal-overlay');
+    if (ovb && !ovb.classList.contains('hidden')) closeBestelModal();
   }
+});
+
+// Markeer een bestelnotitie als besteld.
+// - Naam VERPLICHT (accountability)
+// - tebestellen → null; besteldBy / besteldAt / besteldDate / besteldTime worden gezet
+// - Audit log pikt deze velden op via ft_notities_v1 (zie audit.html)
+document.addEventListener('click', ev => {
+  const btn = ev.target.closest && ev.target.closest('button[data-bestel-id]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-bestel-id');
+  if (!id) return;
+
+  const besteldBy = (prompt('Wie heeft dit besteld? (naam verplicht)') || '').trim();
+  if (!besteldBy) { showToast('Naam is verplicht', true); return; }
+
+  const now = new Date();
+  const besteldAt = now.getTime();
+  const besteldDate = now.toLocaleDateString('nl-NL');
+  const besteldTime = now.toLocaleTimeString('nl-NL', {hour:'2-digit', minute:'2-digit'});
+
+  btn.disabled = true;
+  btn.textContent = '… bezig';
+  fbdb.ref('ft_notities_v1/' + id).update({
+    tebestellen: null,
+    besteldBy: besteldBy,
+    besteldAt: besteldAt,
+    besteldDate: besteldDate,
+    besteldTime: besteldTime
+  }).then(() => showToast('✓ Besteld door ' + besteldBy))
+    .catch(() => { btn.disabled = false; btn.textContent = '✓ Besteld'; showToast('Kon niet opslaan', true); });
 });
 
 // Markeer een stuk als opgelost.
