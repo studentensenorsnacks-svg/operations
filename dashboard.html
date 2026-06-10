@@ -949,6 +949,8 @@ textarea { resize: vertical; min-height: 72px; }
   background:var(--surface); border:1px solid var(--border2); border-radius:12px;
   box-shadow:0 12px 36px rgba(0,0,0,0.14);
   padding:10px; min-width:280px; max-width:calc(100vw - 32px);
+  max-height:calc(100vh - 74px); overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
   display:grid; grid-template-columns:repeat(2,minmax(140px,1fr)); gap:6px;
   animation:menu-in 0.16s ease-out;
 }
@@ -976,7 +978,7 @@ textarea { resize: vertical; min-height: 72px; }
   to   { opacity:1; transform:translateY(0); }
 }
 @media (max-width:600px) {
-  .menu-dropdown { left:8px; right:8px; min-width:0; grid-template-columns:1fr 1fr; top:54px; }
+  .menu-dropdown { left:8px; right:8px; min-width:0; grid-template-columns:1fr 1fr; top:54px; max-height:calc(100vh - 64px); }
   .nav-stukken { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
   .nav-stukken .lbl-stuk-full { display:none; }
   .stukken-count { min-width:24px; height:24px; font-size:0.85rem; }
