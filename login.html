@@ -46,6 +46,20 @@ input{
   transition:border-color .15s,box-shadow .15s;
 }
 input:focus{border-color:#e8662b;box-shadow:0 0 0 3px #fef0e2}
+.pwd-wrap{position:relative}
+.pwd-wrap input{padding-right:42px}
+.pwd-toggle{
+  position:absolute;top:50%;right:6px;transform:translateY(-50%);
+  width:34px;height:34px;padding:0;margin:0;border:none;background:transparent;
+  color:#7a5a40;cursor:pointer;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+}
+.pwd-toggle:hover{background:#fef0e2;color:#e8662b;border-color:transparent}
+.pwd-toggle:focus{outline:none;box-shadow:0 0 0 3px #fef0e2}
+.pwd-toggle svg{width:18px;height:18px;display:block}
+.pwd-toggle .icon-off{display:none}
+.pwd-toggle.is-visible .icon-on{display:none}
+.pwd-toggle.is-visible .icon-off{display:block}
 button{
   width:100%;padding:11px 14px;font-size:14px;font-weight:600;
   border:1px solid rgba(120,60,20,.22);border-radius:10px;
@@ -136,7 +150,21 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
     <label for="email">E-mailadres</label>
     <input id="email" type="email" autocomplete="email" placeholder="jij@senorsnacks.be">
     <label for="password">Wachtwoord</label>
-    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div class="pwd-wrap">
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+      <button id="btn-toggle-pwd" type="button" class="pwd-toggle" aria-label="Wachtwoord tonen" title="Wachtwoord tonen">
+        <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.77 19.77 0 0 1 5.06-5.94"/>
+          <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a19.86 19.86 0 0 1-3.16 4.19"/>
+          <path d="M14.12 14.12A3 3 0 1 1 9.88 9.88"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      </button>
+    </div>
 
     <div class="actions">
       <button id="btn-login" class="primary" type="button">Inloggen</button>
@@ -414,6 +442,18 @@ button.primary:hover:not(:disabled){background:#d05420;border-color:#d05420}
       if (e.key === 'Enter') btnLogin.click();
     });
   });
+
+  var btnTogglePwd = document.getElementById('btn-toggle-pwd');
+  if (btnTogglePwd) {
+    btnTogglePwd.addEventListener('click', function () {
+      var visible = passIn.type === 'text';
+      passIn.type = visible ? 'password' : 'text';
+      btnTogglePwd.classList.toggle('is-visible', !visible);
+      var label = visible ? 'Wachtwoord tonen' : 'Wachtwoord verbergen';
+      btnTogglePwd.setAttribute('aria-label', label);
+      btnTogglePwd.setAttribute('title', label);
+    });
+  }
 
   // Waiting-screen handlers ──────────────────────────────────────
   document.getElementById('btn-refresh').onclick = function () {
