@@ -265,9 +265,11 @@ textarea{resize:vertical;min-height:70px;}
 .btn-primary{padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
 .btn-primary:hover{background:var(--red-dark);}
 .btn-cancel{padding:10px 20px;background:var(--white);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--font);font-size:0.9rem;font-weight:600;cursor:pointer;}
-.import-ev-item.del{background:#fff5f5;border-color:#fca5a5;cursor:default;}
-.import-ev-item.del:hover{background:#fff5f5;}
-.import-ev-item.del .iev-name{text-decoration:line-through;color:var(--muted);}
+.btn-del{padding:10px 20px;background:var(--white);border:1px solid #fca5a5;border-radius:5px;color:var(--red);font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
+.btn-del:hover{background:#fff5f5;}
+.import-ev-item.del.selected{background:#fff5f5;border-color:#fca5a5;}
+.import-ev-item.del.selected .icheck{background:var(--red);border-color:var(--red);}
+.import-ev-item.del.selected .iev-name{text-decoration:line-through;}
 .btn-cancel:hover{border-color:#999;}
 
 /* EVENT DETAIL POPUP */
@@ -599,14 +601,15 @@ textarea{resize:vertical;min-height:70px;}
       <div class="import-events-list" id="import-ev-list"></div>
       <!-- Events die in Outlook verwijderd zijn — apart blok, los van de import -->
       <div id="import-del-wrap" style="display:none;margin-top:18px">
-        <div style="font-family:var(--font-cond);font-weight:800;font-size:0.9rem;color:var(--red);margin-bottom:8px">🗑️ Verwijderd uit de planning</div>
-        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Deze events stonden niet meer in de Outlook-agenda en zijn automatisch uit de planning gehaald. (Recupereerbaar via de automatische backups.)</div>
+        <div style="font-family:var(--font-cond);font-weight:800;font-size:0.9rem;color:var(--red);margin-bottom:8px">🗑️ Verdwenen uit Outlook</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Deze events staan niet meer in de Outlook-agenda. Standaard aangevinkt om te verwijderen — vink af wat je toch wil behouden en klik dan op <b>Aangevinkte verwijderen</b>. Let op: toegekende trucks/notities gaan mee weg.</div>
         <div class="import-events-list" id="import-del-list"></div>
       </div>
     </div>
     <div class="import-foot">
       <button class="btn-cancel" type="button" onclick="closeImport()">Annuleren</button>
       <button type="button" onclick="openScreenshotImport()" style="background:none;border:none;font-family:var(--font);font-size:0.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0" id="btn-screenshot-fallback">📷 Importeer via screenshot</button>
+      <button class="btn-del" type="button" id="btn-del-sel" onclick="removeSelectedDeleted()" style="display:none">🗑️ Aangevinkte verwijderen</button>
       <button class="btn-primary" type="button" id="btn-import-sel" onclick="importSelected()" style="display:none">✓ Geselecteerde events importeren</button>
     </div>
   </div>
@@ -2103,6 +2106,7 @@ function openImport(){
   document.getElementById('import-ev-list').innerHTML='';
   document.getElementById('btn-import-sel').style.display='none';
   document.getElementById('import-del-wrap').style.display='none';
+  document.getElementById('btn-del-sel').style.display='none';
   document.getElementById('img-input').value='';
   document.getElementById('import-overlay').classList.remove('hidden');
 }
@@ -2137,6 +2141,7 @@ async function analyzeImage(){
   document.getElementById('import-ev-list').innerHTML='';
   document.getElementById('btn-import-sel').style.display='none';
   document.getElementById('import-del-wrap').style.display='none';
+  document.getElementById('btn-del-sel').style.display='none';
 
   try{
     const resp=await fetch('/api/anthropic',{
@@ -2232,16 +2237,20 @@ function importSelected(){
 }
 
 // ── Events die in Outlook verwijderd zijn ──────────────
-// Worden bij de sync automatisch uit de planning gehaald; hier tonen we enkel
-// (alleen-lezen) welke dat waren, zodat duidelijk is wat er verdwenen is.
+// Tonen in een apart blok met checkboxes (standaard aangevinkt). De gebruiker
+// kan er afvinken wat hij wil behouden en verwijdert daarna met de knop.
+let deletedCandidates = [];
 function showDeletedEvents(evs){
+  deletedCandidates = (evs||[]).map((e,i)=>({...e,_di:i,_sel:true}));
   const wrap = document.getElementById('import-del-wrap');
   const list = document.getElementById('import-del-list');
-  if(!evs || !evs.length){ wrap.style.display='none'; list.innerHTML=''; return; }
-  list.innerHTML = evs.map(ev=>{
+  const btn  = document.getElementById('btn-del-sel');
+  if(!deletedCandidates.length){ wrap.style.display='none'; btn.style.display='none'; list.innerHTML=''; return; }
+  list.innerHTML = deletedCandidates.map((ev,i)=>{
     const trk = (ev.trucks&&ev.trucks.length)||0;
     return `
-    <div class="import-ev-item del">
+    <div class="import-ev-item del selected" id="dev-${i}" onclick="togDEv(${i})">
+      <div class="icheck"></div>
       <div class="iev-info">
         <div class="iev-name">${ev.name}</div>
         <div class="iev-meta">${fmtS(ev.startDate)}${ev.endDate!==ev.startDate?' → '+fmtS(ev.endDate):''}${ev.location?' · 📍 '+ev.location:''}${trk?' · 🚚 '+trk:''}</div>
@@ -2249,6 +2258,23 @@ function showDeletedEvents(evs){
     </div>`;
   }).join('');
   wrap.style.display='';
+  btn.style.display='block';
+}
+function togDEv(i){
+  deletedCandidates[i]._sel=!deletedCandidates[i]._sel;
+  document.getElementById('dev-'+i).classList.toggle('selected',deletedCandidates[i]._sel);
+}
+function removeSelectedDeleted(){
+  const sel=deletedCandidates.filter(e=>e._sel);
+  if(!sel.length){alert('Vink minstens één event aan om te verwijderen.');return;}
+  if(!confirm(`${sel.length} event${sel.length!==1?'s':''} uit de planning verwijderen? Toegekende trucks en notities gaan mee weg. (Recupereerbaar via de backups.)`)) return;
+  const ids=new Set(sel.map(e=>e.id));
+  events=events.filter(e=>!ids.has(e.id));
+  save();
+  document.getElementById('import-del-wrap').style.display='none';
+  document.getElementById('btn-del-sel').style.display='none';
+  renderWeek();
+  showToast(`✓ ${sel.length} event${sel.length!==1?'s':''} verwijderd uit de planning`);
 }
 
 // ── Hover-vertraging voor multi-dag balken ─────────────
@@ -2620,6 +2646,7 @@ async function sync365() {
   document.getElementById('import-ev-list').innerHTML = '';
   document.getElementById('btn-import-sel').style.display = 'none';
   document.getElementById('import-del-wrap').style.display = 'none';
+  document.getElementById('btn-del-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 
   const status = document.getElementById('ai-status');
@@ -2751,15 +2778,9 @@ async function sync365() {
       + `Importeer ze en koppel daarna trucks via drag & drop. Alles wordt opgeslagen in Firebase.`;
     document.getElementById('btn-screenshot-fallback').style.display = '';
 
-    // Events die in Outlook verwijderd zijn → automatisch uit de planning
-    // halen. Niet recupereerbaar via de UI, wél via de automatische backups
-    // (ft_planning_backup, bewaard bij elke save). Toon achteraf wat weg is.
-    if (verwijderd.length) {
-      const delIds = new Set(verwijderd.map(e => e.id));
-      events = events.filter(e => !delIds.has(e.id));
-      save();
-      renderWeek();
-    }
+    // Events die in Outlook verwijderd zijn → tonen in een apart blok met
+    // checkboxes. De gebruiker kiest zelf wat weg mag en bevestigt; niets
+    // wordt automatisch verwijderd.
     showDeletedEvents(verwijderd);
 
     if (nieuws.length === 0) {
@@ -2786,6 +2807,7 @@ function openScreenshotImport() {
   document.getElementById('import-ev-list').innerHTML = '';
   document.getElementById('btn-import-sel').style.display = 'none';
   document.getElementById('import-del-wrap').style.display = 'none';
+  document.getElementById('btn-del-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 }
 
