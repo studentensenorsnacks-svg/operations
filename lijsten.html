@@ -389,7 +389,9 @@ async function makeDag2(esKey, btn){
   const sub = ES_DATA.find(s => s.key === esKey);
   if(!sub){ alert('Eindstock niet gevonden.'); return; }
 
-  // Bouw nieuwe categorieën met verbruik per item
+  // Bouw nieuwe categorieën — alleen items met aantal > 0 worden meegenomen
+  // MATERIALEN: leeg = 0 extra (volledig). Ingevuld getal = exact dat aantal extra mee.
+  // Andere categorieën: aantal = max(0, geladen − eindstock). Leeg = 0 (= alles verbruikt).
   const newCats = {};
   let itemCount = 0;
   let skippedNoStock = 0;
@@ -399,21 +401,29 @@ async function makeDag2(esKey, btn){
     const out = [];
     items.forEach(it => {
       const geladen = Number(it.geladen) || 0;
-      const eindstock = (it.eindstock === null || it.eindstock === undefined || it.eindstock === '')
-        ? null
-        : Number(it.eindstock);
-      // Niet-ingevulde eindstock → behandelen als 0 (assumeer alles verbruikt)
-      const stockNum = eindstock === null ? 0 : eindstock;
-      if(eindstock === null) skippedNoStock++;
-      const consumed = Math.max(0, geladen - stockNum);
-      out.push({ naam: it.naam || '', aantal: consumed });
-      itemCount++;
+      const eindstockRaw = it.eindstock;
+      const filled = eindstockRaw !== null && eindstockRaw !== undefined && eindstockRaw !== '';
+      const eindstockNum = filled ? (Number(eindstockRaw) || 0) : null;
+
+      let aantal;
+      if(cat === 'MATERIALEN'){
+        aantal = filled ? Math.max(0, eindstockNum) : 0;
+      } else {
+        const stockNum = eindstockNum === null ? 0 : eindstockNum;
+        if(eindstockNum === null) skippedNoStock++;
+        aantal = Math.max(0, geladen - stockNum);
+      }
+
+      if(aantal > 0){
+        out.push({ naam: it.naam || '', aantal });
+        itemCount++;
+      }
     });
     if(out.length) newCats[cat] = out;
   }
 
   if(itemCount === 0){
-    alert('Geen items om over te zetten.');
+    alert('Geen items om over te zetten — alles staat op 0.');
     return;
   }
 
@@ -425,8 +435,8 @@ async function makeDag2(esKey, btn){
     + 'Event: ' + (sub.eventNaam || '—') + '\n'
     + 'Truck: ' + (sub.wagen || '—') + '\n'
     + 'Datum: ' + (dag2Datum || '—') + '\n'
-    + 'Items: ' + itemCount + ' (op basis van verbruik)\n'
-    + (skippedNoStock ? '\n⚠️ ' + skippedNoStock + ' item(s) hadden geen eindstock ingevuld — die worden behandeld als 0 (= volledig verbruikt).' : '')
+    + 'Items: ' + itemCount + ' (verbruik dag 1 + materialen extra)\n'
+    + (skippedNoStock ? '\n⚠️ ' + skippedNoStock + ' item(s) buiten materialen hadden geen eindstock ingevuld — die worden behandeld als 0 (= volledig verbruikt).' : '')
     + '\n\nNa OK open je meteen de nieuwe lijst om aan te passen.';
 
   if(!confirm(confirmMsg)) return;
