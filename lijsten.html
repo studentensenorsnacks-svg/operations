@@ -63,6 +63,65 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .tile.soon{opacity:.6;cursor:default;pointer-events:none;}
 .tile .soon-pill{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);background:var(--surface2);padding:3px 9px;border-radius:12px;}
 .tile .arrow{margin-top:6px;font-size:13px;font-weight:700;color:var(--blue);}
+.tile.action{cursor:pointer;}
+.tile .badge.new{background:#f97316;}
+
+/* INBOX MODAL */
+.es-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:24px 12px;overflow-y:auto;}
+.es-overlay.show{display:flex;}
+.es-modal{background:#fff;border-radius:14px;width:100%;max-width:780px;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;display:flex;flex-direction:column;}
+.es-modal-h{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:#fff;border-radius:14px 14px 0 0;z-index:5;}
+.es-modal-h .t{font-family:var(--font-cond);font-size:20px;font-weight:800;display:flex;align-items:center;gap:9px;}
+.es-modal-h .cnt{font-family:var(--mono);font-size:12.5px;color:var(--text2);background:var(--surface2);padding:3px 9px;border-radius:99px;font-weight:600;}
+.es-modal-x{width:34px;height:34px;border:none;background:var(--surface2);border-radius:8px;cursor:pointer;font-size:16px;color:var(--text2);}
+.es-modal-x:hover{background:var(--surface3);color:var(--text);}
+.es-modal-toolbar{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#fafafa;}
+.es-modal-toolbar input{flex:1;min-width:170px;padding:8px 11px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13.5px;background:#fff;color:var(--text);outline:none;}
+.es-modal-toolbar input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.es-modal-body{padding:14px 20px 22px;flex:1;min-height:0;}
+.es-list{display:flex;flex-direction:column;gap:10px;}
+.es-row{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;}
+.es-row.new{border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.10);}
+.es-row-hdr{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;background:#fff;}
+.es-row-hdr:hover{background:var(--surface2);}
+.es-row-main{flex:1;min-width:0;}
+.es-row-title{font-weight:700;font-size:14.5px;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.es-row-new{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:99px;background:#f97316;color:#fff;text-transform:uppercase;letter-spacing:.04em;}
+.es-row-sub{font-size:12px;color:var(--text2);font-family:var(--mono);margin-top:2px;}
+.es-row-meta{font-size:12.5px;color:var(--text2);text-align:right;white-space:nowrap;flex-shrink:0;}
+.es-row-meta b{display:block;font-family:var(--font);font-weight:700;color:var(--text);font-size:13px;}
+.es-row-chev{color:var(--text3);font-size:13px;transition:transform .15s;flex-shrink:0;}
+.es-row.open .es-row-chev{transform:rotate(90deg);}
+.es-row-body{display:none;padding:6px 14px 16px;border-top:1px solid var(--border);background:#fafafa;}
+.es-row.open .es-row-body{display:block;}
+.es-cat{font-family:var(--font-cond);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);padding:10px 0 5px;border-bottom:1.5px solid var(--blue-bg);margin-bottom:5px;}
+.es-item{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;padding:5px 4px;border-bottom:1px solid var(--border);}
+.es-item:last-child{border-bottom:none;}
+.es-item-naam{flex:1;min-width:0;}
+.es-item-vals{display:flex;gap:14px;font-family:var(--mono);font-size:13px;flex-shrink:0;}
+.es-item-vals .v{text-align:right;min-width:50px;}
+.es-item-vals .v .lbl{font-family:var(--font);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);display:block;}
+.es-diff-pos{color:#15803d;font-weight:700;}
+.es-diff-neg{color:var(--red);font-weight:700;}
+.es-empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:13px;}
+.es-empty .ico{font-size:36px;margin-bottom:10px;opacity:.5;}
+
+@media (max-width:600px){
+  .es-overlay{padding:8px;}
+  .es-modal-h{padding:12px 14px;border-radius:12px 12px 0 0;}
+  .es-modal-h .t{font-size:17px;}
+  .es-modal-toolbar{padding:9px 14px;}
+  .es-modal-body{padding:10px 14px 16px;}
+  .es-row-hdr{padding:10px 12px;gap:9px;}
+  .es-row-title{font-size:13.5px;}
+  .es-row-sub{font-size:11px;}
+  .es-row-meta{font-size:11.5px;}
+  .es-row-meta b{font-size:12.5px;}
+  .es-row-body{padding:4px 12px 14px;}
+  .es-item{flex-wrap:wrap;gap:6px;}
+  .es-item-naam{flex:1 1 100%;font-size:13px;}
+  .es-item-vals{width:100%;justify-content:space-between;gap:8px;}
+}
 
 @media (max-width:600px){
   .topbar{height:52px;padding:0 12px;}
@@ -97,6 +156,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="page-hdr">
     <div class="page-title">Lijsten</div>
     <div class="page-sub">Bestellingen, tellingen en de productcatalogus — opgesplitst in Postel en Standaard.</div>
+  </div>
+
+  <div class="grouptitle">Inbox</div>
+  <div class="grid">
+    <div class="tile action" id="tile-eindstock" onclick="openEindstockInbox()">
+      <span class="badge" id="badge-eindstock">0</span>
+      <span class="ico">📥</span>
+      <span class="t">Eindstocks</span>
+      <span class="d">Door medewerkers ingevulde eindstocks via de QR op hun fiche. Per submission zie je het verschil tussen geladen en eindstock.</span>
+      <span class="arrow">Openen →</span>
+    </div>
   </div>
 
   <div class="grouptitle">Laadlijsten</div>
@@ -144,6 +214,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 
   <div class="grouptitle">Beheer</div>
+
   <div class="grid">
     <a class="tile" href="bestel-catalogus.html">
       <span class="ico">📒</span>
@@ -160,7 +231,148 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
 </div>
 
+<!-- Eindstock inbox modal -->
+<div class="es-overlay" id="es-overlay">
+  <div class="es-modal">
+    <div class="es-modal-h">
+      <span class="t">📥 Eindstocks <span class="cnt" id="es-cnt">0</span></span>
+      <button class="es-modal-x" onclick="closeEindstockInbox()">✕</button>
+    </div>
+    <div class="es-modal-toolbar">
+      <input type="text" id="es-search" placeholder="🔍 Zoek op medewerker, truck of event…" oninput="renderEindstockList()">
+    </div>
+    <div class="es-modal-body" id="es-body">
+      <div class="es-empty"><div class="ico">📭</div>Laden…</div>
+    </div>
+  </div>
+</div>
+
 <script>
+const ES_PATH = 'ft_eindstock_v1';
+const ES_CATS = ['DROOG','SAUZEN','KOELING','DIEPVRIES','MATERIALEN'];
+const ES_SEEN_KEY = 'lijsten_es_lastseen_v1';
+let ES_DATA = [];   // [{key, ...record}]
+
+function esGetLastSeen(){
+  try { return Number(localStorage.getItem(ES_SEEN_KEY) || 0); }
+  catch(e){ return 0; }
+}
+function esSetLastSeen(ts){
+  try { localStorage.setItem(ES_SEEN_KEY, String(ts)); } catch(e){}
+}
+function esEscape(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function esFmtDT(iso){
+  if(!iso) return '—';
+  try{
+    return new Date(iso).toLocaleString('nl-BE', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  } catch(e){ return iso; }
+}
+function esFmtRel(iso){
+  if(!iso) return '';
+  const t = new Date(iso).getTime();
+  if(!t) return '';
+  const m = (Date.now() - t) / 60000;
+  if(m < 1) return 'nu net';
+  if(m < 60) return Math.round(m) + ' min geleden';
+  const h = m / 60;
+  if(h < 24) return Math.round(h) + ' u geleden';
+  const d = h / 24;
+  if(d < 7) return Math.round(d) + ' d geleden';
+  return '';
+}
+
+function esCountNew(){
+  const last = esGetLastSeen();
+  return ES_DATA.filter(s => s.ingediendMs > last).length;
+}
+function esUpdateBadge(){
+  const n = esCountNew();
+  const b = document.getElementById('badge-eindstock');
+  b.textContent = n;
+  b.classList.toggle('show', n > 0);
+  b.classList.toggle('new', n > 0);
+}
+
+function openEindstockInbox(){
+  document.getElementById('es-overlay').classList.add('show');
+  renderEindstockList();
+  // Markeer alles tot nu als gezien
+  const newest = ES_DATA.reduce((m,s) => Math.max(m, s.ingediendMs || 0), 0);
+  if(newest > 0){
+    esSetLastSeen(newest);
+    setTimeout(esUpdateBadge, 250);
+  }
+}
+function closeEindstockInbox(){
+  document.getElementById('es-overlay').classList.remove('show');
+}
+
+function renderEindstockList(){
+  document.getElementById('es-cnt').textContent = ES_DATA.length;
+  const body = document.getElementById('es-body');
+  if(!ES_DATA.length){
+    body.innerHTML = '<div class="es-empty"><div class="ico">📭</div>Nog geen eindstocks ingediend.<br>Genereer een fiche met QR via Laadlijsten → 🏷️.</div>';
+    return;
+  }
+  const term = (document.getElementById('es-search').value || '').trim().toLowerCase();
+  const last = esGetLastSeen();
+  const list = ES_DATA.filter(s => {
+    if(!term) return true;
+    const hay = ((s.medewerker||'') + ' ' + (s.wagen||'') + ' ' + (s.eventNaam||'')).toLowerCase();
+    return hay.indexOf(term) !== -1;
+  });
+  if(!list.length){
+    body.innerHTML = '<div class="es-empty"><div class="ico">🔍</div>Geen eindstocks gevonden met deze zoekterm.</div>';
+    return;
+  }
+  body.innerHTML = '<div class="es-list">' + list.map(s => {
+    const isNew = s.ingediendMs > last;
+    const itemsHtml = ES_CATS.map(cat => {
+      const items = (s.items || {})[cat];
+      if(!Array.isArray(items) || !items.length) return '';
+      const rows = items.map(it => {
+        const diff = (it.eindstock !== null && it.eindstock !== undefined && it.geladen !== null && it.geladen !== undefined)
+          ? (it.geladen - it.eindstock) : null;
+        const diffCls = diff != null ? (diff > 0 ? 'es-diff-neg' : (diff < 0 ? 'es-diff-pos' : '')) : '';
+        const diffStr = diff != null ? (diff > 0 ? '−'+diff : (diff < 0 ? '+'+Math.abs(diff) : '±0')) : '—';
+        return '<div class="es-item">'
+          + '<span class="es-item-naam">' + esEscape(it.naam || '') + '</span>'
+          + '<div class="es-item-vals">'
+          +   '<div class="v"><span class="lbl">Geladen</span>' + (it.geladen ?? '—') + '</div>'
+          +   '<div class="v"><span class="lbl">Eindstock</span>' + (it.eindstock ?? '—') + '</div>'
+          +   '<div class="v ' + diffCls + '"><span class="lbl">Verbruik</span>' + diffStr + '</div>'
+          + '</div></div>';
+      }).join('');
+      return '<div class="es-cat">' + esEscape(cat) + '</div>' + rows;
+    }).join('');
+    const rel = esFmtRel(s.ingediend);
+    return '<div class="es-row' + (isNew ? ' new' : '') + '" id="esrow_' + s.key + '">'
+      + '<div class="es-row-hdr" onclick="esToggleRow(\'' + s.key + '\')">'
+      +   '<div class="es-row-main">'
+      +     '<div class="es-row-title">' + esEscape(s.medewerker || '—')
+      +       (isNew ? ' <span class="es-row-new">Nieuw</span>' : '')
+      +     '</div>'
+      +     '<div class="es-row-sub">' + esEscape(s.wagen || '—') + ' · ' + esEscape(s.eventNaam || '—') + '</div>'
+      +   '</div>'
+      +   '<div class="es-row-meta"><b>' + esFmtDT(s.ingediend) + '</b>' + (rel ? '<span>' + rel + '</span>' : '') + '</div>'
+      +   '<span class="es-row-chev">▶</span>'
+      + '</div>'
+      + '<div class="es-row-body">' + (itemsHtml || '<div class="es-empty" style="padding:20px;">Geen items in deze submission.</div>') + '</div>'
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+function esToggleRow(key){
+  const el = document.getElementById('esrow_' + key);
+  if(el) el.classList.toggle('open');
+}
+
+// Sluit modal bij Escape / klik op overlay
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeEindstockInbox(); });
+document.getElementById('es-overlay').addEventListener('click', e => {
+  if(e.target.id === 'es-overlay') closeEindstockInbox();
+});
+
 (async function init(){
   if(window.fbAuthReady) await window.fbAuthReady;
   fbdb.ref('ft_bestellingen_v1').on('value', snap=>{
@@ -177,6 +389,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     const b = document.getElementById('badge-laadlijsten');
     b.textContent = nieuw;
     b.classList.toggle('show', nieuw>0);
+  }, ()=>{});
+  fbdb.ref(ES_PATH).on('value', snap=>{
+    const v = snap.val() || {};
+    ES_DATA = Object.entries(v).map(([key, s]) => Object.assign({key}, s, {
+      ingediendMs: s && s.ingediend ? new Date(s.ingediend).getTime() : 0
+    }));
+    ES_DATA.sort((a,b) => (b.ingediendMs || 0) - (a.ingediendMs || 0));
+    esUpdateBadge();
+    if(document.getElementById('es-overlay').classList.contains('show')){
+      renderEindstockList();
+    }
   }, ()=>{});
 })();
 </script>
