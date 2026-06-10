@@ -265,6 +265,10 @@ textarea{resize:vertical;min-height:70px;}
 .btn-primary{padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:5px;font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
 .btn-primary:hover{background:var(--red-dark);}
 .btn-cancel{padding:10px 20px;background:var(--white);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:var(--font);font-size:0.9rem;font-weight:600;cursor:pointer;}
+.btn-del{padding:10px 20px;background:var(--white);border:1px solid #fca5a5;border-radius:5px;color:var(--red);font-family:var(--font);font-size:0.9rem;font-weight:700;cursor:pointer;}
+.btn-del:hover{background:#fff5f5;}
+.import-ev-item.del.selected{background:#fff5f5;border-color:#fca5a5;}
+.import-ev-item.del.selected .icheck{background:var(--red);border-color:var(--red);}
 .btn-cancel:hover{border-color:#999;}
 
 /* EVENT DETAIL POPUP */
@@ -594,10 +598,17 @@ textarea{resize:vertical;min-height:70px;}
       <img id="img-preview" alt="Preview">
       <div class="ai-status" id="ai-status"></div>
       <div class="import-events-list" id="import-ev-list"></div>
+      <!-- Events die in Outlook verwijderd zijn — apart blok, los van de import -->
+      <div id="import-del-wrap" style="display:none;margin-top:18px">
+        <div style="font-family:var(--font-cond);font-weight:800;font-size:0.9rem;color:var(--red);margin-bottom:8px">🗑️ Verdwenen uit Outlook</div>
+        <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Deze events stonden in de planning maar staan niet meer in de Outlook-agenda. Vink aan wat je ook uit de planning wil halen — let op: toegekende trucks/notities gaan dan mee weg.</div>
+        <div class="import-events-list" id="import-del-list"></div>
+      </div>
     </div>
     <div class="import-foot">
       <button class="btn-cancel" type="button" onclick="closeImport()">Annuleren</button>
       <button type="button" onclick="openScreenshotImport()" style="background:none;border:none;font-family:var(--font);font-size:0.78rem;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0" id="btn-screenshot-fallback">📷 Importeer via screenshot</button>
+      <button class="btn-del" type="button" id="btn-del-sel" onclick="removeSelectedDeleted()" style="display:none">🗑️ Geselecteerde verwijderen</button>
       <button class="btn-primary" type="button" id="btn-import-sel" onclick="importSelected()" style="display:none">✓ Geselecteerde events importeren</button>
     </div>
   </div>
@@ -631,7 +642,7 @@ const GROUPS_WAGENS=[
   {label:'🍕 Pizza & Pasta',color:'#c2410c',bg:'#ffedd5',trucks:['Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105']},
   {label:'🍦 Sweet & Ijs',color:'#7c3aed',bg:'#ede9fe',trucks:['Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53']},
   {label:'🍺 Tap & Dranken',color:'#1d4ed8',bg:'#dbeafe',trucks:['Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43']},
-  {label:'📦 Support',color:'#374151',bg:'#f3f4f6',trucks:['Brascheria 1','Bureau container 71','Bureau container 72','Fiat 404','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209','Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107','Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208','Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102','Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C204','Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102']}
+  {label:'📦 Support',color:'#374151',bg:'#f3f4f6',trucks:['Brascheria 1','Bureau container 71','Bureau container 72','Fiat 404','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209','Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107','Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208','Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102','Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C111','Food container C112','Food container C204','Food container C211','Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102']}
 ];
 
 // ── TRUCK DATA — CAMIONETTEN ───────────────────────────
@@ -840,7 +851,11 @@ function sanitizeEvents(arr){
     logistiek:(e.logistiek && typeof e.logistiek === 'object' && !Array.isArray(e.logistiek))?e.logistiek:{},
     logistiekDays:(e.logistiekDays && typeof e.logistiekDays === 'object' && !Array.isArray(e.logistiekDays))?e.logistiekDays:{},
     notes:typeof e.notes==='string'?e.notes:'',
-    color:e.color||'#0078D4'
+    color:e.color||'#0078D4',
+    // Stabiele Outlook-sleutel (iCalUId/id) — gezet bij import/sync. Maakt het
+    // mogelijk te detecteren of een uit Outlook afkomstig event daar verwijderd
+    // is. Handmatig aangemaakte events hebben hier een lege string.
+    outlookId:e.outlookId||''
   }));
 }
 
@@ -2086,6 +2101,8 @@ function openImport(){
   document.getElementById('ai-status').style.display='none';
   document.getElementById('import-ev-list').innerHTML='';
   document.getElementById('btn-import-sel').style.display='none';
+  document.getElementById('import-del-wrap').style.display='none';
+  document.getElementById('btn-del-sel').style.display='none';
   document.getElementById('img-input').value='';
   document.getElementById('import-overlay').classList.remove('hidden');
 }
@@ -2119,6 +2136,8 @@ async function analyzeImage(){
   status.textContent='⏳ Claude analyseert de agenda... even geduld.';
   document.getElementById('import-ev-list').innerHTML='';
   document.getElementById('btn-import-sel').style.display='none';
+  document.getElementById('import-del-wrap').style.display='none';
+  document.getElementById('btn-del-sel').style.display='none';
 
   try{
     const resp=await fetch('/api/anthropic',{
@@ -2200,7 +2219,8 @@ function importSelected(){
       endDate:e.endDate||e.startDate,
       trucks:[],
       notes:e.notes||'',
-      color:e.color||rndColor()  // gebruik Outlook kleur als beschikbaar
+      color:e.color||rndColor(),  // gebruik Outlook kleur als beschikbaar
+      outlookId:e.outlookId||''   // stabiele sleutel voor latere verwijder-detectie
     });
   });
   save();closeImport();
@@ -2209,6 +2229,26 @@ function importSelected(){
   if(first.startDate){wkStart=monday(parseD(first.startDate));}
   renderWeek();
   showToast(`✓ ${sel.length} event${sel.length!==1?'s':''} geïmporteerd!`);
+}
+
+// ── Events die in Outlook verwijderd zijn ──────────────
+// Worden bij de sync automatisch uit de planning gehaald; hier tonen we enkel
+// (alleen-lezen) welke dat waren, zodat duidelijk is wat er verdwenen is.
+function showDeletedEvents(evs){
+  const wrap = document.getElementById('import-del-wrap');
+  const list = document.getElementById('import-del-list');
+  if(!evs || !evs.length){ wrap.style.display='none'; list.innerHTML=''; return; }
+  list.innerHTML = evs.map(ev=>{
+    const trk = (ev.trucks&&ev.trucks.length)||0;
+    return `
+    <div class="import-ev-item del">
+      <div class="iev-info">
+        <div class="iev-name">${ev.name}</div>
+        <div class="iev-meta">${fmtS(ev.startDate)}${ev.endDate!==ev.startDate?' → '+fmtS(ev.endDate):''}${ev.location?' · 📍 '+ev.location:''}${trk?' · 🚚 '+trk:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.style.display='';
 }
 
 // ── Hover-vertraging voor multi-dag balken ─────────────
@@ -2579,6 +2619,8 @@ async function sync365() {
   document.getElementById('img-preview').src = '';
   document.getElementById('import-ev-list').innerHTML = '';
   document.getElementById('btn-import-sel').style.display = 'none';
+  document.getElementById('import-del-wrap').style.display = 'none';
+  document.getElementById('btn-del-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 
   const status = document.getElementById('ai-status');
@@ -2617,7 +2659,7 @@ async function sync365() {
     status.textContent = `⏳ Agenda ophalen van ${acct}...`;
     let url = `https://graph.microsoft.com/v1.0/me/calendarView`
       + `?startDateTime=${start}&endDateTime=${end}`
-      + `&$top=500&$select=subject,start,end,location,isAllDay,categories,bodyPreview`
+      + `&$top=500&$select=subject,start,end,location,isAllDay,categories,bodyPreview,iCalUId`
       + `&$orderby=start/dateTime`;
     while (url) {
       const r = await fetch(url, {
@@ -2647,7 +2689,10 @@ async function sync365() {
           location: (e.location?.displayName || '').trim(),
           // Regeleinden behouden — zo blijft een "Label: waarde"-sjabloon leesbaar
           notes: (e.bodyPreview || '').replace(/\r/g,'').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim(),
-          color
+          color,
+          // Stabiele Outlook-sleutel: iCalUId blijft gelijk ook al wijzigt de
+          // titel; id als fallback. Hierop draait de verwijder-detectie.
+          outlookId: e.iCalUId || e.id || ''
         };
       });
 
@@ -2656,12 +2701,31 @@ async function sync365() {
     // zodat de notities ook bij al ingeplande events terechtkomen.
     const convByKey = {};
     converted.forEach(c => { convByKey[c.name + '|' + c.startDate] = c; });
-    let verrijkt = 0;
+    let verrijkt = 0, gekoppeld = 0;
     events.forEach(ev => {
       const c = convByKey[ev.name + '|' + ev.startDate];
-      if (c && c.notes && ev.notes !== c.notes) { ev.notes = c.notes; verrijkt++; }
+      if (!c) return;
+      if (c.notes && ev.notes !== c.notes) { ev.notes = c.notes; verrijkt++; }
+      // Backfill: reeds geïmporteerde events kregen vroeger geen outlookId.
+      // Koppel ze nu aan hun Outlook-sleutel zodat verwijder-detectie werkt.
+      if (c.outlookId && !ev.outlookId) { ev.outlookId = c.outlookId; gekoppeld++; }
     });
-    if (verrijkt > 0) save();
+    if (verrijkt > 0 || gekoppeld > 0) save();
+
+    // ── Verwijder-detectie ───────────────────────────────────
+    // Events die uit Outlook kwamen (hebben een outlookId) én binnen het
+    // opgehaalde venster vallen, maar niet meer in de agenda staan → daar
+    // verwijderd. Handmatig aangemaakte events (geen outlookId) en events
+    // buiten het venster blijven met rust. We wissen niets automatisch: de
+    // gebruiker bevestigt, want aan een event hangen vaak trucks/notities.
+    const winStart = toStr(new Date(start));
+    const winEnd   = toStr(new Date(end));
+    const liveIds  = new Set(converted.map(c => c.outlookId).filter(Boolean));
+    const verwijderd = liveEvents().filter(ev =>
+      ev.outlookId &&
+      !liveIds.has(ev.outlookId) &&
+      ev.startDate >= winStart && ev.startDate <= winEnd
+    );
 
     // Stap 4: Duplicaten eruit (zelfde naam + startdatum staat al in de planning)
     const existingKeys = new Set(events.map(e => e.name + '|' + e.startDate));
@@ -2672,6 +2736,7 @@ async function sync365() {
     status.textContent = `✓ ${converted.length} events gevonden`
       + (dupes > 0 ? ` · ${dupes} staan al in de planning` : '')
       + (verrijkt > 0 ? ` · ${verrijkt} bijgewerkt met notities` : '')
+      + (verwijderd.length > 0 ? ` · ${verwijderd.length} verdwenen uit Outlook` : '')
       + `. Selecteer wat je wil importeren.`;
 
     document.getElementById('import-modal-sub').textContent =
@@ -2679,9 +2744,21 @@ async function sync365() {
       + `Importeer ze en koppel daarna trucks via drag & drop. Alles wordt opgeslagen in Firebase.`;
     document.getElementById('btn-screenshot-fallback').style.display = '';
 
+    // Events die in Outlook verwijderd zijn → automatisch uit de planning
+    // halen. Niet recupereerbaar via de UI, wél via de automatische backups
+    // (ft_planning_backup, bewaard bij elke save). Toon achteraf wat weg is.
+    if (verwijderd.length) {
+      const delIds = new Set(verwijderd.map(e => e.id));
+      events = events.filter(e => !delIds.has(e.id));
+      save();
+      renderWeek();
+    }
+    showDeletedEvents(verwijderd);
+
     if (nieuws.length === 0) {
-      document.getElementById('import-ev-list').innerHTML =
-        '<div style="padding:24px;text-align:center;color:#888;font-size:0.9rem">✅ Alles staat al in de planning!</div>';
+      document.getElementById('import-ev-list').innerHTML = verwijderd.length === 0
+        ? '<div style="padding:24px;text-align:center;color:#888;font-size:0.9rem">✅ Alles staat al in de planning!</div>'
+        : '';
       return;
     }
     showImportedEvents(nieuws);
@@ -2701,6 +2778,8 @@ function openScreenshotImport() {
   document.getElementById('ai-status').style.display = 'none';
   document.getElementById('import-ev-list').innerHTML = '';
   document.getElementById('btn-import-sel').style.display = 'none';
+  document.getElementById('import-del-wrap').style.display = 'none';
+  document.getElementById('btn-del-sel').style.display = 'none';
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 }
 
