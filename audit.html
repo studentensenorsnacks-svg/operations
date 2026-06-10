@@ -260,6 +260,33 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   .ar-action { order: 4; }
   .ar-detail { order: 5; }
 }
+@media (max-width: 600px) {
+  .topbar { height: 52px; padding: 0 10px; gap: 8px; }
+  .logo-img { height: 26px; }
+  .topbar-divider, .topbar-section { display: none; }
+  .topbar-right { overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; gap: 6px; }
+  .topbar-right::-webkit-scrollbar { height: 0; }
+  .nav-link { padding: 6px 10px; font-size: 0.72rem; white-space: nowrap; flex-shrink: 0; }
+  .whoami { display: none; }
+  .wrap { padding: 16px 12px 50px; }
+  .page-title { font-size: 1.6rem; }
+  .page-subtitle { font-size: 0.74rem; }
+  .stats-grid { gap: 8px; margin-bottom: 14px; }
+  .stat-card { padding: 12px 14px; }
+  .stat-num { font-size: 1.6rem; }
+  .stat-lbl { font-size: 0.6rem; }
+  .search-bar input { font-size: 13.5px !important; }
+  .cat-filters { gap: 5px; }
+  .cat-pill { font-size: 0.72rem; padding: 5px 9px; }
+  .btn { padding: 7px 11px; font-size: 0.78rem; }
+  .audit-head { top: 52px; }
+  .audit-row { padding: 11px 12px; font-size: 0.82rem; }
+  .ar-detail { font-size: 0.74rem; }
+}
+@media (max-width: 420px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .stat-num { font-size: 1.4rem; }
+}
 </style>
 </head>
 <body>

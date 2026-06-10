@@ -122,7 +122,35 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .ov-title{font-family:var(--font-cond);font-size:24px;font-weight:800;margin-bottom:6px;}
 .ov-sub{font-size:14px;color:var(--text2);margin-bottom:20px;}
 .ov-actions{display:flex;flex-direction:column;gap:9px;}
-</style>
+
+@media(max-width:680px){
+  .topbar{height:52px;padding:0 10px;gap:8px;}
+  .logo-img{height:26px;}
+  .topbar-divider,.topbar-section{display:none;}
+  .main{padding:14px 12px 110px;}
+  .page-title{font-size:22px;}
+  .page-sub{font-size:12px;}
+  .card{padding:13px;border-radius:10px;margin-bottom:12px;}
+  .card-h{font-size:13.5px;margin-bottom:10px;}
+  .meta-grid{grid-template-columns:1fr;gap:10px;}
+  .toolbar{gap:8px;margin-bottom:10px;}
+  .search{flex:1 1 100%;min-width:0;}
+  .count-pill{font-size:12.5px;padding:6px 10px;}
+  .prow{flex-wrap:wrap;padding:9px 4px;gap:8px;}
+  .pname{flex:1 1 calc(100% - 40px);font-size:14px;}
+  .rm{flex-shrink:0;}
+  .stepper{flex:1 1 100%;justify-content:center;}
+  .cat-h{font-size:12.5px;padding:12px 4px 5px;}
+  .addrow{flex-direction:column;align-items:stretch;gap:8px;}
+  .addrow .field,.addrow input,.addrow select,.addrow .btn{width:100%;}
+  .addrow .btn{justify-content:center;}
+  .actionbar{padding:10px 12px;flex-wrap:wrap;gap:8px;}
+  .actionbar .summary{flex:1 1 100%;font-size:12px;}
+  .actionbar-right{flex:1 1 100%;justify-content:stretch;gap:8px;}
+  .actionbar-right .btn{flex:1;justify-content:center;}
+  .ov-card{padding:24px 20px;}
+  .ov-title{font-size:21px;}
+}</style>
 </head>
 <body>
 

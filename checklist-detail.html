@@ -108,6 +108,36 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .lz-item .lz-take{font-size:12px;font-weight:700;color:var(--blue);flex-shrink:0;}
 .lz-empty{padding:30px;text-align:center;color:var(--text3);font-size:13px;}
 .lz-loading{padding:30px;text-align:center;color:var(--text3);font-size:13px;font-style:italic;}
+
+@media(max-width:620px){
+  .topbar{height:52px;padding:0 10px;gap:8px;}
+  .logo-img{height:26px;}
+  .topbar-divider,.topbar-section{display:none;}
+  .topbar-right{overflow-x:auto;min-width:0;-webkit-overflow-scrolling:touch;gap:6px;}
+  .topbar-right::-webkit-scrollbar{height:0;}
+  .back-link{padding:6px 10px;font-size:0.74rem;white-space:nowrap;flex-shrink:0;}
+  .save-state{flex-shrink:0;}
+  .main{padding:14px 12px 96px;}
+  .page-title{font-size:22px;}
+  .page-sub{font-size:12px;margin-bottom:12px;}
+  .card{padding:13px;border-radius:10px;margin-bottom:12px;}
+  .card-h{font-size:13.5px;margin-bottom:10px;flex-wrap:wrap;}
+  .irow{grid-template-columns:1fr 64px 32px;gap:6px;}
+  .irow input,.irow select{font-size:13.5px;}
+  .xbtn{width:32px;height:32px;font-size:14px;}
+  .addrow .smallbtn{flex:1;text-align:center;padding:9px 10px;font-size:12.5px;}
+  .actionbar{padding:10px 12px;gap:7px;flex-wrap:wrap;}
+  .actionbar .btn{flex:1;justify-content:center;padding:11px 12px;font-size:13px;}
+  .overlay{padding:8px;}
+  .modal{max-height:92vh;}
+  .modal-h{padding:13px 14px;}
+  .modal-h .t{font-size:17px;}
+  .modal-b{padding:12px 14px;}
+  .pick{padding:10px;}
+  .pick .pn{font-size:13px;}
+  .lz-item{padding:11px 12px;gap:10px;}
+  .lz-item .lz-naam{font-size:13.5px;}
+}
 </style>
 </head>
 <body>
