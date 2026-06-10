@@ -215,8 +215,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 // Truck categorieën gebaseerd op nummer/naam
 const CATEGORIES = [
   { label:'🚛 Wagen Groot', match: t => /\b(50[1-9]|5[1-9]\d|[6-8]\d\d|901)\b/.test(t) || /[58]0\d/.test(t) },
-  { label:'📦 Container Groot', match: t => /C20\d/i.test(t) },
-  { label:'📦 Container Klein', match: t => /C10\d|C110/i.test(t) },
+  { label:'📦 Container Groot', match: t => /C2\d\d/i.test(t) },
+  { label:'📦 Container Klein', match: t => /C1\d\d/i.test(t) },
   { label:'🍟 Frituurwagens (overig)', match: t => /Friet|Bicky|Snackmuur|Jumper 302/i.test(t) && !/^(Friet Wagen [589])/.test(t) },
   { label:'🍔 Hamburgerwagens', match: t => /Hamburger|Kiosk/i.test(t) },
   { label:'🍕 Pizza & Pasta', match: t => /Pasta|Pizza/i.test(t) },
@@ -309,7 +309,7 @@ const ALL_TRUCKS = [
   'Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107',
   'Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208',
   'Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102',
-  'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C204',
+  'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C111','Food container C112','Food container C204','Food container C211',
   'Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102'
 ];
 

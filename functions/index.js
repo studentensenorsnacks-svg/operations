@@ -238,7 +238,7 @@ const POETS_TRUCKS = [
   'Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107',
   'Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208',
   'Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102',
-  'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C204',
+  'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C111','Food container C112','Food container C204','Food container C211',
   'Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102',
 ];
 const POETS_TRUCK_SET = new Set(POETS_TRUCKS);
