@@ -223,6 +223,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .pg-side{position:static;max-height:none;}
   .totals-bar{grid-template-columns:repeat(2,1fr);}
 }
+@media (max-width: 680px){
+  .topbar{height:52px;padding:0 10px;gap:8px;}
+  .topbar-divider,.topbar-section{display:none;}
+  .logo-img{height:26px!important;}
+  .topbar-right{overflow-x:auto;min-width:0;-webkit-overflow-scrolling:touch;gap:6px;}
+  .topbar-right::-webkit-scrollbar{height:0;}
+  .back-link{padding:6px 10px;font-size:0.74rem;white-space:nowrap;flex-shrink:0;}
+  .main{padding:14px 12px 40px;}
+  .page-title{font-size:22px;}
+  .page-sub{font-size:12px;}
+  .tabs{width:100%;}
+  .tab-btn{flex:1;padding:8px 10px;font-size:12.5px;text-align:center;}
+  .proj-bar{flex-wrap:wrap;gap:8px;}
+  .proj-bar .form-input,.proj-bar .form-select{flex:1 1 100%;min-width:0;}
+  .card{padding:14px;border-radius:10px;margin-bottom:12px;}
+  .form-row{flex-direction:column;gap:8px;}
+  .form-group{min-width:0;width:100%;flex:0 0 auto;}
+  .modal{padding:18px;border-radius:10px;max-height:92vh;overflow-y:auto;}
+  .modal-title{font-size:18px;}
+  .modal-actions{flex-wrap:wrap;}
+  .modal-actions .btn{flex:1;justify-content:center;}
+  .totals-bar{grid-template-columns:1fr 1fr;}
+  .summary-table{font-size:12px;}
+  .summary-table th,.summary-table td{padding:6px 8px;}
+  .archive-row{flex-wrap:wrap;gap:8px;}
+  .archive-info{flex:1 1 100%;}
+  .archive-actions{flex:1 1 100%;justify-content:flex-end;}
+}
 </style>
 </head>
 <body>
