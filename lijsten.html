@@ -63,6 +63,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .tile.soon{opacity:.6;cursor:default;pointer-events:none;}
 .tile .soon-pill{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);background:var(--surface2);padding:3px 9px;border-radius:12px;}
 .tile .arrow{margin-top:6px;font-size:13px;font-weight:700;color:var(--blue);}
+
+@media (max-width:600px){
+  .topbar{height:52px;padding:0 12px;}
+  .logo-img{height:26px;}
+  .topbar-divider,.topbar-section{display:none;}
+  .back-link{padding:6px 10px;font-size:0.74rem;}
+  .main{padding:16px 12px 50px;}
+  .page-title{font-size:24px;}
+  .page-sub{font-size:12px;}
+  .grouptitle{font-size:12.5px;margin:18px 2px 10px;}
+  .grid{grid-template-columns:1fr;gap:10px;}
+  .tile{padding:14px;border-radius:12px;}
+  .tile .ico{font-size:22px;}
+  .tile .t{font-size:17px;}
+  .tile .d{font-size:12px;}
+  .tile .badge,.tile .soon-pill{top:12px;right:12px;}
+}
 </style>
 </head>
 <body>
