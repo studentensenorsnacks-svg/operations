@@ -137,6 +137,24 @@
       }
     },
 
+    "_deletions": {
+      ".read": "auth != null && auth.token.role == 'admin'",
+      "$id": {
+        ".write": "auth != null && !auth.token.firebase.sign_in_provider.matches(/^anonymous$/i) && (!data.exists() || auth.token.role == 'admin')",
+        ".validate": "newData.hasChildren()",
+        "type":   { ".validate": "newData.isString() && newData.val().length < 60" },
+        "label":  { ".validate": "newData.isString() && newData.val().length < 300" },
+        "ref":    { ".validate": "newData.isString() && newData.val().length < 200" },
+        "detail": { ".validate": "newData.isString() && newData.val().length < 4000" },
+        "at":     { ".validate": "newData.isNumber()" },
+        "uid":    { ".validate": "newData.isString() && newData.val().length < 200" },
+        "email":  { ".validate": "newData.isString() && newData.val().length < 200" },
+        "name":   { ".validate": "newData.isString() && newData.val().length < 200" },
+        "page":   { ".validate": "newData.isString() && newData.val().length < 200" },
+        "$other": { ".validate": false }
+      }
+    },
+
     "_aiLogs": {
       ".read": "auth != null && auth.token.role == 'admin'",
       "$uid": {

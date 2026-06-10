@@ -371,6 +371,26 @@
       }
       var hideEl = document.getElementById('__auth_hide');
       if (hideEl) hideEl.remove();
+      // Centrale verwijder-logger: schrijft wie/wat/wanneer (+ verwijderde
+      // inhoud) naar _deletions, zodat de audit-log toont wat er weg is en het
+      // recupereerbaar blijft. Faalt stil — mag een verwijdering NOOIT blokkeren.
+      window.logDeletion = window.logDeletion || function (type, label, detail) {
+        try {
+          if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') return;
+          var a = window.__auth || {};
+          firebase.database().ref('_deletions').push({
+            type:   String(type == null ? 'onbekend' : type).slice(0, 60),
+            label:  String(label == null ? '' : label).slice(0, 300),
+            ref:    (detail && detail.ref != null) ? String(detail.ref).slice(0, 200) : '',
+            detail: detail ? JSON.stringify(detail).slice(0, 3900) : '',
+            at:     firebase.database.ServerValue.TIMESTAMP,
+            uid:    String(a.uid || '').slice(0, 200),
+            email:  String(a.email || '').slice(0, 200),
+            name:   String(a.displayName || a.email || '').slice(0, 200),
+            page:   String(location.pathname || '').slice(0, 200)
+          }).catch(function () { /* niet kritiek */ });
+        } catch (e) { /* nooit blokkeren */ }
+      };
       // Activity-heartbeat: rapporteer aanwezigheid voor admin-dashboard.
       // Stilletjes falen als RTDB niet beschikbaar is op deze pagina.
       try {

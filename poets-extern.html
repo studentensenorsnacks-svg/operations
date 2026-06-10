@@ -227,24 +227,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     { label: '❓ Andere', match: function () { return true; } }
   ];
 
-  var ALL_TRUCKS = [
-    'Bicky Burger Wagen 201','Food Wagen (Snackmuur) 305','Food container (Friet) C201','Food container (Friet-2_Vallen) C203',
-    'Friet Container (Postel) 501','Friet Wagen (HR-ketel) 502','Friet Wagen 304','Friet Wagen 402','Friet Wagen 403',
-    'Friet Wagen 503','Friet Wagen 504','Friet Wagen 801','Friet Wagen 802','Friet Wagen 803','Friet Wagen 804',
-    'Friet Wagen 805','Friet Wagen 806','Friet Wagen 901',
-    'Food container (Hamburger) C202','Hamburger Container 12','Hamburger Container 13','Hamburger Wagen (Kiosk) 14',
-    'Hamburger Wagen 202','Hamburger Wagen 306',
-    'Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105',
-    'Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53',
-    'Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43',
-    'Brascheria 1','Fiat 404','Jumper 302',
-    'Bureau container 71','Bureau container 72','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209',
-    'Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107',
-    'Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208',
-    'Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102',
-    'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C111','Food container C112','Food container C204','Food container C211',
-    'Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102'
-  ];
+  // Volledige truck-lijst komt mee in de /api/poets state-respons (veld
+  // 'allTrucks'), afgeleid van de centrale bron. Zo blijft deze pagina
+  // sandboxed: geen eigen kopie, geen externe scripts.
+  var ALL_TRUCKS = [];
 
   var trucksState = {};   // truck -> { status, date, time, employee, timestamp }
   var priority = {};      // truck -> true
@@ -322,6 +308,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       trucksState = r.data && r.data.trucks ? r.data.trucks : {};
       priority = r.data && r.data.priority ? r.data.priority : {};
       history = r.data && Array.isArray(r.data.history) ? r.data.history : [];
+      if (r.data && Array.isArray(r.data.allTrucks) && r.data.allTrucks.length) ALL_TRUCKS = r.data.allTrucks;
       setRefreshState('ok', 'Live • ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
       render();
     }).catch(function () {

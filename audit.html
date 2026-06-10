@@ -325,6 +325,17 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
     <div class="stat-card"><div class="stat-num" id="st-last">—</div><div class="stat-lbl">Laatste actie</div></div>
   </div>
 
+  <style>
+  .tabs-nav{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+  .tab-btn{padding:9px 16px;border:1px solid var(--border,#e5e0d8);background:var(--surface,#fff);color:var(--text2,#555);border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer}
+  .tab-btn.active{background:#b91c1c;color:#fff;border-color:#b91c1c}
+  </style>
+  <div class="tabs-nav">
+    <button class="tab-btn active" data-tab="deletions" onclick="switchTab('deletions')">🗑 Verwijderingen</button>
+    <button class="tab-btn" data-tab="activity" onclick="switchTab('activity')">📋 Activiteit</button>
+    <button class="tab-btn" data-tab="login" onclick="switchTab('login')">👤 Login &amp; aanwezigheid</button>
+  </div>
+
   <div class="controls">
     <div class="search-bar">
       <span>🔍</span>
@@ -379,12 +390,27 @@ const CATS = {
   'ai-vraag':       { label: 'AI-vraag',        color: '#e8662b' },
   'ai-antwoord':    { label: 'AI-antwoord',     color: '#d97706' },
   'ai-actie':       { label: 'AI-actie',        color: '#9333ea' },
+  // Verwijderingen — eigen tabblad. cat = 'del-' + type uit logDeletion().
+  'del-event':       { label: '🗑 Event',           color: '#b91c1c' },
+  'del-event-truck': { label: '🗑 Truck-koppeling',  color: '#dc2626' },
+  'del-laadlijst':   { label: '🗑 Laadlijst',       color: '#c2410c' },
+  'del-fiche':       { label: '🗑 Fiche',           color: '#ea580c' },
+  'del-notitie':     { label: '🗑 Notitie',         color: '#9f1239' },
+  'del-checkin':     { label: '🗑 Check-in',        color: '#a16207' },
+  'del-bestelling':  { label: '🗑 Bestelling',      color: '#0e7490' },
+  'del-catalogus':   { label: '🗑 Catalogus-item',  color: '#7c2d12' },
+  'del-qrcode':      { label: '🗑 QR-code',         color: '#4d7c0f' },
+  'del-keuring':     { label: '🗑 Keuring/truck',   color: '#991b1b' },
+  'del-horeca':      { label: '🗑 Horeca',          color: '#9a3412' },
+  'del-stroom':      { label: '🗑 Stroomaanvraag',  color: '#b45309' },
+  'del-verhuur':     { label: '🗑 Verhuur',         color: '#92400e' },
+  'del-overig':      { label: '🗑 Overig',          color: '#6b7280' },
 };
 const CAT_KEYS = Object.keys(CATS);
 let activeCats = new Set(CAT_KEYS);
 
 // Ruwe bron-data
-let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{}, ai:{} };
+let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{}, ai:{}, deletions:{} };
 let events = [];      // genormaliseerde audit-events
 const loaded = {};    // welke bronnen al binnen zijn
 
@@ -613,6 +639,23 @@ function rebuild(){
     }
   });
 
+  // 7b) Verwijderingen (_deletions): wie verwijderde wat, mét de inhoud
+  Object.values(src.deletions || {}).forEach(d => {
+    if (!d) return;
+    const cat = CATS['del-' + d.type] ? 'del-' + d.type : 'del-overig';
+    let detail = '';
+    try {
+      const o = d.detail ? JSON.parse(d.detail) : {};
+      if (o.trucks && o.trucks.length) detail = 'Trucks: ' + o.trucks.join(', ');
+      else if (o.truck) detail = 'Truck: ' + o.truck;
+      else if (o.startDate) detail = o.startDate + (o.endDate && o.endDate !== o.startDate ? ' → ' + o.endDate : '');
+    } catch (e) {}
+    ev.push({
+      ts: tsFrom(d.at), cat: cat, person: d.name || d.email || 'Onbekend',
+      action: d.label || 'Verwijderd', target: '', detail: detail
+    });
+  });
+
   // 8) Laadlijsten (ft_laadlijsten_v1): aanmaak + laatste wijziging/status
   const LL_LABEL = { nieuw:'Nieuw', laden:'Laden', retour:'Retour', te_factureren:'Te factureren', gefactureerd:'Gefactureerd', archief:'Archief' };
   Object.values(src.laadlijsten || {}).forEach(l => {
@@ -691,6 +734,7 @@ function getFiltered(){
   const start = periodStart();
   const q = (document.getElementById('search').value || '').trim().toLowerCase();
   return events.filter(e => {
+    if (tabOfCat(e.cat) !== currentTab) return false;
     if (e.ts < start) return false;
     if (!activeCats.has(e.cat)) return false;
     if (q){
@@ -737,9 +781,23 @@ function render(){
 // ─────────────────────────────────────────────────────────────
 // CATEGORIE-FILTERS UI
 // ─────────────────────────────────────────────────────────────
+// ── TABBLADEN: verwijderingen (standaard) / activiteit / login ──
+let currentTab = 'deletions';
+function tabOfCat(cat){
+  if (cat.indexOf('del-') === 0) return 'deletions';
+  if (cat === 'login' || cat === 'logout' || cat === 'actief') return 'login';
+  return 'activity';
+}
+function catsForTab(tab){ return CAT_KEYS.filter(k => tabOfCat(k) === tab); }
+function switchTab(t){
+  currentTab = t;
+  activeCats = new Set(catsForTab(t));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === t));
+  buildCatFilters(); render();
+}
 function buildCatFilters(){
   const wrap = document.getElementById('cat-filters');
-  wrap.innerHTML = CAT_KEYS.map(k => {
+  wrap.innerHTML = catsForTab(currentTab).map(k => {
     const c = CATS[k];
     return `<button class="cat-pill active" data-cat="${k}" style="--c:${c.color}" onclick="toggleCat('${k}')">
       <span class="cdot" style="background:${c.color}"></span>${esc(c.label)}</button>`;
@@ -751,8 +809,9 @@ function toggleCat(k){
   syncCatUI(); render();
 }
 function toggleAllCats(){
-  if (activeCats.size === CAT_KEYS.length) activeCats = new Set();
-  else activeCats = new Set(CAT_KEYS);
+  const tc = catsForTab(currentTab);
+  if (tc.every(k => activeCats.has(k))) tc.forEach(k => activeCats.delete(k));
+  else tc.forEach(k => activeCats.add(k));
   syncCatUI(); render();
 }
 function syncCatUI(){
@@ -807,13 +866,14 @@ function startListeners(){
   fbdb.ref('ft_laadlijsten_v1').on('value',s => { src.laadlijsten = s.val() || {}; markLoaded('laadlijsten'); });
   fbdb.ref('_userActivity').on('value',    s => { src.activity  = s.val() || {}; markLoaded('activity'); }, () => {});
   fbdb.ref('_aiLogs').on('value',          s => { src.ai        = s.val() || {}; markLoaded('ai'); }, () => {});
+  fbdb.ref('_deletions').on('value',       s => { src.deletions = s.val() || {}; markLoaded('deletions'); }, () => {});
   setInterval(render, 60000); // klok/relatieve weergave fris houden
 }
 
 function boot(roleNote){
   document.getElementById('gate').classList.add('hidden');
   document.getElementById('wrap').style.display = 'block';
-  buildCatFilters();
+  switchTab('deletions');
   startListeners();
   if (roleNote) document.getElementById('whoami').textContent = roleNote;
 }

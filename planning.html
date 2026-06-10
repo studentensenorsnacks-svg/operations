@@ -635,16 +635,11 @@ textarea{resize:vertical;min-height:70px;}
 
 <div class="c-toast" id="c-toast"></div>
 
+<script src="/truck-data.js"></script>
 <script>
-// ── TRUCK DATA — WAGENS ────────────────────────────────
-const GROUPS_WAGENS=[
-  {label:'🍟 Frituurwagens',color:'#b45309',bg:'#fef3c7',trucks:['Bicky Burger Wagen 201','Food Wagen (Snackmuur) 305','Food container (Friet) C201','Food container (Friet-2_Vallen) C203','Friet Container (Postel) 501','Friet Wagen (HR-ketel) 502','Friet Wagen 304','Friet Wagen 402','Friet Wagen 403','Friet Wagen 503','Friet Wagen 504','Friet Wagen 801','Friet Wagen 802','Friet Wagen 803','Friet Wagen 804','Friet Wagen 805','Friet Wagen 806','Friet Wagen 901','Jumper 302']},
-  {label:'🍔 Hamburger',color:'#e8001d',bg:'#fde8e8',trucks:['Food container (Hamburger) C202','Hamburger Container 12','Hamburger Container 13','Hamburger Wagen (Kiosk) 14','Hamburger Wagen 202','Hamburger Wagen 306']},
-  {label:'🍕 Pizza & Pasta',color:'#c2410c',bg:'#ffedd5',trucks:['Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105']},
-  {label:'🍦 Sweet & Ijs',color:'#7c3aed',bg:'#ede9fe',trucks:['Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53']},
-  {label:'🍺 Tap & Dranken',color:'#1d4ed8',bg:'#dbeafe',trucks:['Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43']},
-  {label:'📦 Support',color:'#374151',bg:'#f3f4f6',trucks:['Brascheria 1','Bureau container 71','Bureau container 72','Fiat 404','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209','Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107','Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208','Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102','Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C111','Food container C112','Food container C204','Food container C211','Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102']}
-];
+// ── TRUCK DATA — WAGENS — uit de centrale bron /truck-data.js ──────────
+// Eén plek om een foodtruck toe te voegen; de planning-groepering volgt.
+const GROUPS_WAGENS=TruckData.planningGroups();
 
 // ── TRUCK DATA — CAMIONETTEN ───────────────────────────
 const GROUPS_CAMIONS=[
@@ -825,18 +820,10 @@ function save(){
   // Archief-events nooit mee terugschrijven naar de live planning.
   const live = liveEvents();
   localStorage.setItem(fbPath(), JSON.stringify(live));
-  fbdb.ref(fbPath()).set(live).then(() => {
-    // Automatische backup bij elke wijziging
-    const ts = new Date().toISOString().replace(/[:.]/g,'-').substring(0,19);
-    fbdb.ref('ft_planning_backup/' + ts).set(live).catch(()=>{});
-    // Bewaar max 10 backups
-    fbdb.ref('ft_planning_backup').once('value').then(snap => {
-      const keys = Object.keys(snap.val() || {}).sort();
-      if (keys.length > 10) {
-        keys.slice(0, keys.length - 10).forEach(k => fbdb.ref('ft_planning_backup/' + k).remove());
-      }
-    });
-  }).catch(err=>console.warn('Firebase save mislukt:',err));
+  // Back-ups gebeuren nu 2×/dag (12u & 17u) server-side via de geplande functie
+  // planningBackup (≈30 snapshots bewaard). Niet meer per save, zodat het
+  // back-up-venster niet binnen één dag volloopt zoals voorheen.
+  fbdb.ref(fbPath()).set(live).catch(err=>console.warn('Firebase save mislukt:',err));
 }
 
 // Sanitize events
@@ -1265,6 +1252,7 @@ function rmTruck(evId,truck,date){
   } else {
     ev[itemsF]=(ev[itemsF]||[]).filter(t=>t!==truck);
   }
+  if(window.logDeletion)logDeletion('event-truck',truck+' losgekoppeld van "'+(ev.name||evId)+'"'+(date?(' ('+date+')'):''),{ref:evId,event:ev.name,truck:truck,date:date||null});
   save();renderWeek();
 }
 function showToast(msg){const t=document.getElementById('c-toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),6000);}
@@ -1497,6 +1485,8 @@ function saveEvent(){
 function delEv(id){
   const ev=events.find(e=>e.id===id);if(!ev)return;
   if(!confirm(`Event "${ev.name}" verwijderen?`))return;
+  const _trucks=(ev.trucks||[]).slice();
+  if(window.logDeletion)logDeletion('event','Event "'+(ev.name||id)+'" verwijderd'+(_trucks.length?(' ('+_trucks.length+' trucks)'):''),{ref:id,event:ev.name,startDate:ev.startDate,endDate:ev.endDate,trucks:_trucks});
   events=events.filter(e=>e.id!==id);save();renderWeek();
 }
 
@@ -2269,6 +2259,7 @@ function removeSelectedDeleted(){
   if(!sel.length){alert('Vink minstens één event aan om te verwijderen.');return;}
   if(!confirm(`${sel.length} event${sel.length!==1?'s':''} uit de planning verwijderen? Toegekende trucks en notities gaan mee weg. (Recupereerbaar via de backups.)`)) return;
   const ids=new Set(sel.map(e=>e.id));
+  if(window.logDeletion)sel.forEach(function(e){logDeletion('event','Event "'+(e.name||e.id)+'" verwijderd (Outlook-sync)',{ref:e.id,event:e.name,startDate:e.startDate,endDate:e.endDate,trucks:(e.trucks||[]).slice()});});
   events=events.filter(e=>!ids.has(e.id));
   save();
   document.getElementById('import-del-wrap').style.display='none';
@@ -2760,6 +2751,25 @@ async function sync365() {
       !liveIds.has(ev.outlookId) &&
       !liveKeys.has(ev.name + '|' + ev.startDate)
     );
+
+    // ── TIJDELIJKE DIAGNOSE (verwijderen na debugging) ───────
+    const _liveAll = liveEvents();
+    const _inWin = _liveAll.filter(e => e.startDate >= winStart && e.startDate <= winEnd);
+    const _dbg = {
+      venster: winStart + ' t/m ' + winEnd,
+      outlookEventsOpgehaald: converted.length,
+      liveEventsTotaal: _liveAll.length,
+      liveInVenster: _inWin.length,
+      handmatigInVenster: _inWin.filter(e=>e.source==='manual').length,
+      gematchtOpNaamDatum: _inWin.filter(e=>liveKeys.has(e.name+'|'+e.startDate)).length,
+      gematchtOpOutlookId: _inWin.filter(e=>e.outlookId && liveIds.has(e.outlookId)).length,
+      kandidatenOmTeVerwijderen: verwijderd.length
+    };
+    console.log('🔍 SYNC DIAGNOSE', _dbg);
+    console.log('🔍 Kandidaten (niet gematcht):', verwijderd.map(e=>e.name+' | '+e.startDate));
+    console.log('🔍 Live-in-venster:', _inWin.map(e=>e.name+' | '+e.startDate+' | src='+(e.source||'?')+' | oid='+(e.outlookId?'ja':'nee')));
+    console.log('🔍 Outlook-keys (eerste 15):', [...liveKeys].slice(0,15));
+    alert('SYNC DIAGNOSE\n\n'+Object.entries(_dbg).map(([k,v])=>k+': '+v).join('\n')+'\n\n(Details staan in de console — F12)');
 
     // Stap 4: Duplicaten eruit (zelfde naam + startdatum staat al in de planning)
     const existingKeys = new Set(events.map(e => e.name + '|' + e.startDate));

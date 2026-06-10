@@ -16,6 +16,7 @@
  */
 const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
 
@@ -34,6 +35,27 @@ const ALLOWED_ORIGINS = [
 
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 const MISTRAL_API_KEY = defineSecret('MISTRAL_API_KEY');
+
+// ── Geplande back-up van de planning ────────────────────────────
+// 2×/dag (12u & 17u, Brussel) een volledige momentopname van ft_planning_v1
+// naar ft_planning_backup/{tijdstip}. Bewaart de laatste 30 (≈ 2 weken), zodat
+// het back-up-venster niet binnen één dag volloopt zoals bij back-up-per-save.
+const PLANNING_BACKUP_KEEP = 30;
+exports.planningBackup = onSchedule(
+  { schedule: '0 12,17 * * *', timeZone: 'Europe/Brussels', region: REGION },
+  async () => {
+    const snap = await admin.database().ref('ft_planning_v1').once('value');
+    const data = snap.val();
+    if (data == null) return;
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    await admin.database().ref('ft_planning_backup/' + ts).set(data);
+    const allSnap = await admin.database().ref('ft_planning_backup').once('value');
+    const keys = Object.keys(allSnap.val() || {}).sort();
+    for (let i = 0; i < keys.length - PLANNING_BACKUP_KEEP; i++) {
+      await admin.database().ref('ft_planning_backup/' + keys[i]).remove();
+    }
+  }
+);
 
 // ── Rate limiter ────────────────────────────────────────────────
 // Fixed-window counter per (endpoint, ip), persisted in RTDB so it
@@ -221,26 +243,10 @@ exports.mistralProxy = onRequest(
 // NO API key in its source: every read/write goes through this proxy,
 // which exposes only the minimum needed for poetscrew.
 //
-// Allowlist is the source-of-truth for which trucks can be marked.
-// Keep in sync with ALL_TRUCKS in poets.html / checkin.html.
-const POETS_TRUCKS = [
-  'Bicky Burger Wagen 201','Food Wagen (Snackmuur) 305','Food container (Friet) C201','Food container (Friet-2_Vallen) C203',
-  'Friet Container (Postel) 501','Friet Wagen (HR-ketel) 502','Friet Wagen 304','Friet Wagen 402','Friet Wagen 403',
-  'Friet Wagen 503','Friet Wagen 504','Friet Wagen 801','Friet Wagen 802','Friet Wagen 803','Friet Wagen 804',
-  'Friet Wagen 805','Friet Wagen 806','Friet Wagen 901',
-  'Food container (Hamburger) C202','Hamburger Container 12','Hamburger Container 13','Hamburger Wagen (Kiosk) 14',
-  'Hamburger Wagen 202','Hamburger Wagen 306',
-  'Pasta Wagen 11','Pizza en Broodjes Wagen 21','Pizza en Broodjes Wagen 22','Pizza en Pasta Container 23','Food container (Pasta) C105',
-  'Ijs Wagen (Humbaur Ola) 51','Ijs Wagen (Kermis Ola) 52','Sweet corner Container 55','Sweet corner Wagen (Humbaur) 54','Sweetcorner Wagen (Kiosk) 53',
-  'Tap Wagen (Dubble-as) 42','Tap Wagen (Klein) 44','Tap Wagen 43',
-  'Brascheria 1','Fiat 404','Jumper 302',
-  'Bureau container 71','Bureau container 72','Food container (4 Pot) C206','Food container (Berging en Dampkap) C209',
-  'Food container (Dampkap) C205','Food container (Met koeling) C103','Food container (Met koeling) C107',
-  'Food container (Met koeling) C108','Food container (Met koeling en Dampkap) C207','Food container (Met koeling en Dampkap) C208',
-  'Food container (Snackmuur) C110','Food container (Zonder koeling) C101','Food container (Zonder koeling) C102',
-  'Food container (Zonder koeling) C104','Food container C106','Food container C109','Food container C111','Food container C112','Food container C204','Food container C211',
-  'Kassa units','Koelaanhangwagen 61','Koelcontainer 63','Stockage container S101','Stockage container S102',
-];
+// Allowlist = welke trucks gemarkeerd mogen worden. Afgeleid uit de centrale
+// truck-vloot (truck-data.js, gesynct vanuit /truck-data.js via
+// `node tools/sync-truck-data.js`) — geen handmatige sync meer met de pagina's.
+const POETS_TRUCKS = require('./truck-data').poetsTrucks();
 const POETS_TRUCK_SET = new Set(POETS_TRUCKS);
 const HISTORY_LIMIT = 500;
 
@@ -302,7 +308,8 @@ async function getPoetsState() {
     .sort((a, b) => b.cleanedAt - a.cleanedAt)
     .slice(0, HISTORY_LIMIT);
 
-  return { trucks, priority, history };
+  // allTrucks: volledige vloot zodat de sandbox-pagina geen eigen kopie nodig heeft.
+  return { trucks, priority, history, allTrucks: POETS_TRUCKS };
 }
 
 async function markTruckClean(truck) {
