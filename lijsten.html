@@ -90,6 +90,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .es-row-sub{font-size:12px;color:var(--text2);font-family:var(--mono);margin-top:2px;}
 .es-row-meta{font-size:12.5px;color:var(--text2);text-align:right;white-space:nowrap;flex-shrink:0;}
 .es-row-meta b{display:block;font-family:var(--font);font-weight:700;color:var(--text);font-size:13px;}
+.es-row-meta .rel{font-size:11px;color:var(--text3);}
+.es-row-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.es-mk-dag2{padding:7px 11px;border-radius:8px;border:1px solid rgba(31,118,232,.4);background:var(--blue-bg);color:var(--blue);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:.12s;}
+.es-mk-dag2:hover{background:var(--blue);color:#fff;border-color:var(--blue);}
+.es-mk-dag2:disabled{opacity:.55;cursor:wait;}
 .es-row-chev{color:var(--text3);font-size:13px;transition:transform .15s;flex-shrink:0;}
 .es-row.open .es-row-chev{transform:rotate(90deg);}
 .es-row-body{display:none;padding:6px 14px 16px;border-top:1px solid var(--border);background:#fafafa;}
@@ -112,11 +117,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .es-modal-h .t{font-size:17px;}
   .es-modal-toolbar{padding:9px 14px;}
   .es-modal-body{padding:10px 14px 16px;}
-  .es-row-hdr{padding:10px 12px;gap:9px;}
+  .es-row-hdr{padding:10px 12px;gap:9px;flex-wrap:wrap;}
   .es-row-title{font-size:13.5px;}
   .es-row-sub{font-size:11px;}
-  .es-row-meta{font-size:11.5px;}
-  .es-row-meta b{font-size:12.5px;}
+  .es-row-meta{font-size:11.5px;flex:1 1 auto;text-align:left;}
+  .es-row-meta b{font-size:12.5px;display:inline;margin-right:6px;}
+  .es-row-meta .rel{font-size:11px;}
+  .es-row-actions{flex:1 1 100%;justify-content:flex-end;order:9;}
+  .es-mk-dag2{font-size:12px;padding:7px 10px;}
   .es-row-body{padding:4px 12px 14px;}
   .es-item{flex-wrap:wrap;gap:6px;}
   .es-item-naam{flex:1 1 100%;font-size:13px;}
@@ -354,12 +362,103 @@ function renderEindstockList(){
       +     '</div>'
       +     '<div class="es-row-sub">' + esEscape(s.wagen || '—') + ' · ' + esEscape(s.eventNaam || '—') + '</div>'
       +   '</div>'
-      +   '<div class="es-row-meta"><b>' + esFmtDT(s.ingediend) + '</b>' + (rel ? '<span>' + rel + '</span>' : '') + '</div>'
+      +   '<div class="es-row-meta"><b>' + esFmtDT(s.ingediend) + '</b>' + (rel ? '<span class="rel">' + rel + '</span>' : '') + '</div>'
+      +   '<div class="es-row-actions">'
+      +     '<button class="es-mk-dag2" onclick="event.stopPropagation(); makeDag2(\'' + s.key + '\', this)">📦 Dag 2</button>'
+      +   '</div>'
       +   '<span class="es-row-chev">▶</span>'
       + '</div>'
       + '<div class="es-row-body">' + (itemsHtml || '<div class="es-empty" style="padding:20px;">Geen items in deze submission.</div>') + '</div>'
       + '</div>';
   }).join('') + '</div>';
+}
+
+function esAddOneDay(yyyyMmDd){
+  if(!yyyyMmDd) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(yyyyMmDd));
+  if(!m) return '';
+  const d = new Date(parseInt(m[1],10), parseInt(m[2],10)-1, parseInt(m[3],10), 12, 0, 0);
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return y + '-' + mm + '-' + dd;
+}
+
+async function makeDag2(esKey, btn){
+  const sub = ES_DATA.find(s => s.key === esKey);
+  if(!sub){ alert('Eindstock niet gevonden.'); return; }
+
+  // Bouw nieuwe categorieën met verbruik per item
+  const newCats = {};
+  let itemCount = 0;
+  let skippedNoStock = 0;
+  for(const cat of ES_CATS){
+    const items = (sub.items || {})[cat];
+    if(!Array.isArray(items) || !items.length) continue;
+    const out = [];
+    items.forEach(it => {
+      const geladen = Number(it.geladen) || 0;
+      const eindstock = (it.eindstock === null || it.eindstock === undefined || it.eindstock === '')
+        ? null
+        : Number(it.eindstock);
+      // Niet-ingevulde eindstock → behandelen als 0 (assumeer alles verbruikt)
+      const stockNum = eindstock === null ? 0 : eindstock;
+      if(eindstock === null) skippedNoStock++;
+      const consumed = Math.max(0, geladen - stockNum);
+      out.push({ naam: it.naam || '', aantal: consumed });
+      itemCount++;
+    });
+    if(out.length) newCats[cat] = out;
+  }
+
+  if(itemCount === 0){
+    alert('Geen items om over te zetten.');
+    return;
+  }
+
+  const dag2Datum = esAddOneDay(sub.datum) || sub.datum || '';
+  const naam = 'Dag 2 — ' + (sub.eventNaam || 'Laadlijst');
+
+  const confirmMsg =
+    'Nieuwe laadlijst aanmaken voor dag 2?\n\n'
+    + 'Event: ' + (sub.eventNaam || '—') + '\n'
+    + 'Truck: ' + (sub.wagen || '—') + '\n'
+    + 'Datum: ' + (dag2Datum || '—') + '\n'
+    + 'Items: ' + itemCount + ' (op basis van verbruik)\n'
+    + (skippedNoStock ? '\n⚠️ ' + skippedNoStock + ' item(s) hadden geen eindstock ingevuld — die worden behandeld als 0 (= volledig verbruikt).' : '')
+    + '\n\nNa OK open je meteen de nieuwe lijst om aan te passen.';
+
+  if(!confirm(confirmMsg)) return;
+
+  btn.disabled = true;
+  const oldText = btn.textContent;
+  btn.textContent = '⏳ Bezig…';
+
+  const payload = {
+    naam,
+    eventId: sub.eventId || '',
+    eventNaam: sub.eventNaam || '',
+    wagen: sub.wagen || '',
+    datum: dag2Datum,
+    klant: '',
+    geladenDoor: '',
+    opmerking: 'Automatisch gegenereerd uit eindstock van ' + (sub.medewerker || '—') + ' (' + esFmtDT(sub.ingediend) + ').',
+    status: 'nieuw',
+    aangemaakt: new Date().toISOString(),
+    bronEindstockId: esKey,
+    categorieën: newCats
+  };
+
+  try{
+    const ref = await fbdb.ref('ft_laadlijsten_v1').push(payload);
+    // Direct naar de nieuwe lijst om te reviewen / aan te passen
+    location.href = 'checklist-detail.html?id=' + encodeURIComponent(ref.key);
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = oldText;
+    alert('Aanmaken mislukt: ' + (e.message || e.code || 'onbekende fout'));
+  }
 }
 
 function esToggleRow(key){
