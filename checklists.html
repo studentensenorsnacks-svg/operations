@@ -553,6 +553,7 @@ function delItem(key){
   const it = ITEMS.find(i=>i.key===key); if(!it) return;
   const naam = it.eventNaam || it.naam || 'deze lijst';
   if(!confirm('"'+naam+'" definitief verwijderen?')) return;
+  if(window.logDeletion)logDeletion('laadlijst','Laadlijst "'+naam+'" verwijderd',{ref:key,naam:naam});
   fbdb.ref(LL_PATH+'/'+key).remove().then(flashSaved)
     .catch(e=>alert('Verwijderen mislukt: '+(e.code||e.message)));
 }
@@ -640,6 +641,7 @@ function printFiche(ficheId){
 }
 async function delFiche(id){
   if(!confirm('Fiche verwijderen?')) return;
+  if(window.logDeletion)logDeletion('fiche','Fiche verwijderd',{ref:id});
   try{ await fbdb.ref('ft_fiches_v1/'+id).remove(); renderFiche(); flashSaved(); }
   catch(e){ alert('Verwijderen mislukt: '+(e.code||e.message)); }
 }

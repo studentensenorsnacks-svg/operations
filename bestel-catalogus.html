@@ -754,6 +754,7 @@ function addProduct(){
 function delProduct(key){
   const p = PRODS.find(x=>x.key===key);
   if(!confirm('"'+(p?p.name:'')+'" verwijderen uit de catalogus?')) return;
+  if(window.logDeletion)logDeletion('catalogus','Catalogus-item "'+(p?p.name:key)+'" verwijderd',{ref:key,name:p?p.name:''});
   fbdb.ref(CAT_PATH+'/'+key).remove().then(flashSaved).catch(e=>{ console.error(e); alert('Verwijderen mislukt.'); });
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }

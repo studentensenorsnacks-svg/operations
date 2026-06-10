@@ -1895,6 +1895,7 @@ function setFilter(f, btn) {
 
 function clearAll() {
   if (confirm('Wil je ALLE check-ins permanent wissen? Dit kan niet ongedaan gemaakt worden.')) {
+    if(window.logDeletion)logDeletion('checkin','ALLE check-ins gewist (ft_ops_v2)',{count:(typeof checkins!=='undefined'&&checkins.length)||undefined});
     fbdb.ref('ft_ops_v2').remove();
     checkins = [];
     save();
@@ -1940,6 +1941,7 @@ function setLaad(truckName, field, value) {
 function deleteCheckin(id, truck) {
   if (!confirm('Check-in van ' + truck + ' verwijderen?')) return;
   const editor = prompt('Jouw naam (voor het logboek):'); if (!editor) return;
+  if(window.logDeletion){var _c=(typeof checkins!=='undefined'&&checkins.find)?checkins.find(function(x){return x.id===id;}):null;logDeletion('checkin','Check-in van '+truck+' verwijderd'+(editor?(' (door '+editor+')'):''),{ref:id,truck:truck,editor:editor,checkin:_c||undefined});}
   deleteOne(id);
   // Lokale state ook updaten zodat UI direct reageert (Firebase listener doet de rest)
   checkins = checkins.filter(c => c.id !== id);

@@ -550,6 +550,7 @@ function deleteEntry(id){
   if(e.kind==='pdf' && e.pdfPath){
     try{ firebase.storage().ref(e.pdfPath).delete().catch(()=>{}); }catch(err){}
   }
+  if(window.logDeletion)logDeletion('qrcode','QR-code "'+(e.title||id)+'" verwijderd',{ref:id,title:e.title||'',kind:e.kind||''});
   fbdb.ref(FB+'/'+id).remove()
     .then(()=>toast('🗑 Verwijderd'))
     .catch(err=>alert('Verwijderen mislukt: '+(err&&err.message||'fout')));

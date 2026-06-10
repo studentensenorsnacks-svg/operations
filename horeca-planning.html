@@ -702,6 +702,7 @@ function saveProject(){
 function deleteProject(){
   if(!editingProject) return;
   if(!confirm('Project + alle locaties verwijderen?')) return;
+  if(window.logDeletion)logDeletion('horeca','Horeca-project verwijderd',{ref:editingProject});
   fbdb.ref(`${ROOT}/projecten/${editingProject}`).remove().then(()=>{
     closeModal('modal-project');
     backToList();
@@ -840,6 +841,7 @@ function saveLocation(){
 function deleteLocation(){
   if(!editingLocation) return;
   if(!confirm('Locatie + alle items verwijderen?')) return;
+  if(window.logDeletion)logDeletion('horeca','Horeca-locatie verwijderd',{ref:editingLocation,project:currentProject});
   fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${editingLocation}`).remove().then(()=>{
     closeModal('modal-locatie');
     toast('Locatie verwijderd');
@@ -885,6 +887,7 @@ function setQty(lid, iid, val){
   fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${lid}/items/${iid}/aantal`).set(nq);
 }
 function deleteItem(lid, iid){
+  if(window.logDeletion)logDeletion('horeca','Horeca-item verwijderd',{ref:iid,locatie:lid,project:currentProject});
   fbdb.ref(`${ROOT}/projecten/${currentProject}/locaties/${lid}/items/${iid}`).remove();
 }
 
@@ -945,6 +948,7 @@ function saveCatalogEdit(){
 function deleteCatalogItem(){
   if(!editingCatId) return;
   if(!confirm('Verwijder dit catalogusitem? (locaties/templates die het al gebruiken blijven werken.)')) return;
+  if(window.logDeletion)logDeletion('horeca','Horeca-catalogusitem verwijderd',{ref:editingCatId});
   fbdb.ref(`${ROOT}/catalogus/${editingCatId}`).remove().then(()=>{
     closeModal('modal-catedit');
     toast('Verwijderd');
@@ -1083,6 +1087,7 @@ function saveTemplate(){
 function deleteTemplate(){
   if(!editingTemplate) return;
   if(!confirm('Template verwijderen?')) return;
+  if(window.logDeletion)logDeletion('horeca','Horeca-template verwijderd',{ref:editingTemplate});
   fbdb.ref(`${ROOT}/templates/${editingTemplate}`).remove().then(()=>{
     closeModal('modal-template');
     toast('Template verwijderd');

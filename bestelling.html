@@ -588,6 +588,7 @@ async function addCustom(){
 }
 async function removeCustom(key){
   if(!confirm('Dit eigen product definitief verwijderen uit de lijst?')) return;
+  if(window.logDeletion)logDeletion('catalogus','Eigen product verwijderd',{ref:key});
   try{ if(window.fbAuthReady) await window.fbAuthReady; await fbdb.ref(CAT_PATH+'/'+key).remove(); }
   catch(e){ console.error(e); alert('Verwijderen mislukt.'); }
 }

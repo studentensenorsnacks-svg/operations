@@ -265,6 +265,7 @@ function setStatus(key,status){ fbdb.ref(DB_PATH+'/'+key+'/status').set(status);
 function del(key){
   const o = ORDERS.find(x=>x.key===key);
   if(!confirm('Bestelling van '+(o?(o.kraam+' · '+o.voornaam):'?')+' verwijderen?')) return;
+  if(window.logDeletion)logDeletion('bestelling','Bestelling verwijderd'+(o?(' — '+o.kraam+' · '+o.voornaam):''),{ref:key,kraam:o?o.kraam:'',voornaam:o?o.voornaam:''});
   fbdb.ref(DB_PATH+'/'+key).remove();
 }
 function dlPDF(key){ const o = ORDERS.find(x=>x.key===key); if(o) buildPDF(o); }

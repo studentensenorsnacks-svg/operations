@@ -374,6 +374,7 @@ function delItem(key){
   const i = ITEMS.find(x=>x.key===key);
   if(!i) return;
   if(!confirm('"'+i.name+'" definitief verwijderen uit het archief?')) return;
+  if(window.logDeletion)logDeletion('overig','Archief-item "'+i.name+'" verwijderd',{ref:key,name:i.name,path:i.path||''});
   const done = ()=>{ fbdb.ref(ARCH_PATH+'/'+key).remove().then(flashSaved).catch(e=>{ console.error(e); alert('Verwijderen mislukt.'); }); };
   if(i.path){
     firebase.storage().ref(i.path).delete().then(done).catch(()=>done()); // bestand kan al weg zijn → toch metadata opruimen

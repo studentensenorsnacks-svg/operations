@@ -820,6 +820,7 @@ function renderLaadlijsten() {
 
 async function deleteLaadlijst(id) {
   if (!confirm('Laadlijst verwijderen?')) return;
+  if(window.logDeletion)logDeletion('laadlijst','Laadlijst verwijderd',{ref:id});
   await db.ref('ft_laadlijsten_v1/' + id).remove();
 }
 
@@ -904,7 +905,7 @@ function renderFiches() {
   }).join('');
 }
 
-async function deleteFiche(id) { if (!confirm('Fiche verwijderen?')) return; await db.ref('ft_fiches_v1/' + id).remove(); }
+async function deleteFiche(id) { if (!confirm('Fiche verwijderen?')) return; if(window.logDeletion)logDeletion('fiche','Fiche verwijderd',{ref:id}); await db.ref('ft_fiches_v1/' + id).remove(); }
 
 // ── Fiche Modal & QR ──────────────────────────────────────────
 function showFicheModal(fiche) {
@@ -1474,6 +1475,7 @@ async function verwijderDubbels() {
   });
   if (!teVerwijderen.length) { alert('Geen dubbele laadlijsten gevonden.'); return; }
   if (!confirm(teVerwijderen.length + ' dubbele laadlijst(en) verwijderen?\n\nEr blijft telkens één exemplaar per bestand over (de gekoppelde versie krijgt voorrang).')) return;
+  if(window.logDeletion)logDeletion('laadlijst',teVerwijderen.length+' dubbele laadlijst(en) opgeruimd',{count:teVerwijderen.length,keys:teVerwijderen.slice(0,50)});
   let weg = 0;
   for (const k of teVerwijderen) {
     try { await db.ref('ft_laadlijsten_v1/' + k).remove(); weg++; }

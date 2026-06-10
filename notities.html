@@ -498,6 +498,7 @@ function saveNote(){
 // ── NOTITIE VERWIJDEREN ────────────────────────
 function deleteNote(id){
   if(!confirm('Deze notitie verwijderen?')) return;
+  if(window.logDeletion){var _n=(typeof notes!=='undefined'&&notes.find)?notes.find(function(x){return x.id===id;}):null;logDeletion('notitie','Notitie verwijderd',{ref:id,note:_n||undefined});}
   fbdb.ref(FB_PATH+'/'+id).remove().catch(()=>{
     notes = notes.filter(n=>n.id!==id);
     localStorage.setItem(FB_PATH, JSON.stringify(notes));

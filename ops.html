@@ -1033,6 +1033,8 @@ async function saveEvent(){
 
 async function delEvent(id){
   if(!confirm('Dit event ook uit de Planning verwijderen?\n\nHet verdwijnt dan overal — ook bij de truck-planning.'))return;
+  const _ev=planningEvents.find(e=>String(e.id)===String(id));
+  if(window.logDeletion)logDeletion('event','Event verwijderd (ops)'+(_ev&&_ev.name?(' — '+_ev.name):''),{ref:id,event:_ev?_ev.name:'',trucks:_ev&&_ev.trucks?_ev.trucks.slice():undefined});
   planningEvents=planningEvents.filter(e=>String(e.id)!==String(id));
   try{
     await fbdb.ref(PLAN_PATH).set(planningEvents);
