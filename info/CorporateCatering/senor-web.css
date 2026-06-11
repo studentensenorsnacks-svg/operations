@@ -393,7 +393,7 @@ section { position: relative; }
 .card . kicon { font-size: 26px; }
 
 /* ---------- "Waar wij mee werken" pills ---------- */
-.work-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.work-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
 .work-item {
   text-align: center;
   padding: 26px 14px;
