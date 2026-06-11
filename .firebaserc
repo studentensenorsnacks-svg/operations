@@ -1,7 +1,8 @@
 {
   "projects": {
     "default": "operationssenorsnacks",
-    "saas": "senorkeuringqr"
+    "saas": "senorkeuringqr",
+    "info": "senorsnacks-info"
   },
   "targets": {
     "operationssenorsnacks": {
@@ -27,6 +28,13 @@
       "hosting": {
         "saas": [
           "eventsheet-app"
+        ]
+      }
+    },
+    "senorsnacks-info": {
+      "hosting": {
+        "info": [
+          "senorsnacks-info"
         ]
       }
     }
