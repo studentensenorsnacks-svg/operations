@@ -452,6 +452,8 @@ async function makeDag2(esKey, btn){
     wagen: sub.wagen || '',
     datum: dag2Datum,
     klant: '',
+    customerId: null,
+    customerName: null,
     geladenDoor: '',
     opmerking: 'Automatisch gegenereerd uit eindstock van ' + (sub.medewerker || '—') + ' (' + esFmtDT(sub.ingediend) + ').',
     status: 'nieuw',

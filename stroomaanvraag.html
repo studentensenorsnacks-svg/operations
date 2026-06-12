@@ -285,6 +285,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     <input id="meta-datum" type="date" oninput="setMeta('datum',this.value)">
     <label>Plaats</label>
     <input id="meta-plaats" placeholder="bv. Vosselaar" oninput="setMeta('plaats',this.value)">
+    <label>Klant</label>
+    <input id="meta-customer" placeholder="Klantnaam" oninput="setMeta('customerName',this.value)">
   </div>
 
   <!-- TABS -->
@@ -543,7 +545,7 @@ function loadAll(){
 }
 
 function blankProject(name){
-  return { name, event:'', datum:'', plaats:'', fieldW:40, fieldH:25, items:{}, kastenConfig:{} };
+  return { name, event:'', datum:'', plaats:'', fieldW:40, fieldH:25, items:{}, kastenConfig:{}, customerId: null, customerName: null };
 }
 
 function currentProj(){ return state.projects[state.currentId]; }
@@ -566,6 +568,7 @@ function renderProjectBar(){
   document.getElementById('meta-event').value = p.event || '';
   document.getElementById('meta-datum').value = p.datum || '';
   document.getElementById('meta-plaats').value = p.plaats || '';
+  document.getElementById('meta-customer').value = p.customerName || '';
   document.getElementById('field-w').value = p.fieldW || 40;
   document.getElementById('field-h').value = p.fieldH || 25;
   // archive-count
@@ -1267,6 +1270,7 @@ function renderSamenvatting(){
       <div><div class="summary-meta-label">Event</div><div class="summary-meta-val">${escapeHTML(p.event||'—')}</div></div>
       <div><div class="summary-meta-label">Datum</div><div class="summary-meta-val">${escapeHTML(p.datum||'—')}</div></div>
       <div><div class="summary-meta-label">Plaats</div><div class="summary-meta-val">${escapeHTML(p.plaats||'—')}</div></div>
+      ${p.customerName ? `<div><div class="summary-meta-label">Klant</div><div class="summary-meta-val">${escapeHTML(p.customerName)}</div></div>` : ''}
       <div><div class="summary-meta-label">Veld</div><div class="summary-meta-val">${p.fieldW}m × ${p.fieldH}m</div></div>
     </div>
 

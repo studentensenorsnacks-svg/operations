@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Klanten Fiches</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0 }
+:root {
+  --bg: #fff; --bg2: #f7f7f5; --bg3: #f0efeb;
+  --text: #1a1a18; --text2: #6b6b67; --text3: #9e9d99;
+  --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.2);
+  --info-bg: #e6f1fb; --info-text: #0c447c; --info-border: #b5d4f4;
+  --warn-bg: #faeeda; --warn-text: #633806; --warn-border: #fac775;
+  --ok-bg: #eaf3de; --ok-text: #27500a; --ok-border: #c0dd97;
+  --err-bg: #fcebeb; --err-text: #791f1f; --err-border: #f7c1c1;
+  --gold: #f6a821; --blue: #4d8fff; --purple: #9d74f7;
+  --r: 8px; --rl: 12px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a18; --bg2: #242422; --bg3: #2c2c2a;
+    --text: #f0efeb; --text2: #a0a09c; --text3: #6b6b67;
+    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+    --info-bg: #042c53; --info-text: #b5d4f4; --info-border: #0c447c;
+    --warn-bg: #412402; --warn-text: #fac775; --warn-border: #633806;
+    --ok-bg: #173404; --ok-text: #c0dd97; --ok-border: #27500a;
+    --err-bg: #501313; --err-text: #f7c1c1; --err-border: #791f1f;
+  }
+}
+body { 
+  font-family: var(--font); 
+  background: var(--bg); 
+  color: var(--text); 
+  font-size: 14px; 
+  height: 100vh; 
+  overflow: hidden;
+}
+#root { display: flex; height: 100vh; overflow: hidden }
+input, select, textarea {
+  width: 100%; 
+  padding: 8px 10px; 
+  font-size: 13px; 
+  border: 1px solid var(--border2); 
+  border-radius: var(--r); 
+  background: var(--bg); 
+  color: var(--text); 
+  font-family: var(--font); 
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { 
+  border-color: var(--text3); 
+  box-shadow: 0 0 0 2px rgba(128,128,128,0.15);
+}
+textarea { resize: vertical; line-height: 1.5 }
+button {
+  padding: 8px 14px; 
+  font-size: 13px; 
+  border: 1px solid var(--border2); 
+  border-radius: var(--r); 
+  background: transparent; 
+  color: var(--text); 
+  cursor: pointer; 
+  font-family: var(--font); 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+}
+button:hover { background: var(--bg2) }
+button:disabled { opacity: 0.4; cursor: not-allowed }
+button.primary { background: var(--blue); color: white; border-color: var(--blue) }
+button.primary:hover { background: var(--blue); opacity: 0.9 }
+button.gold { background: var(--gold); color: white; border-color: var(--gold) }
+button.gold:hover { background: var(--gold); opacity: 0.9 }
+::-webkit-scrollbar { width: 6px; height: 6px }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px }
+
+/* Layout */
+.sidebar {
+  width: 220px; 
+  min-width: 220px; 
+  background: var(--bg2); 
+  border-right: 1px solid var(--border); 
+  display: flex; 
+  flex-direction: column; 
+  flex-shrink: 0; 
+  overflow-y: auto;
+}
+.sidebar-header {
+  padding: 16px; 
+  border-bottom: 1px solid var(--border); 
+  font-size: 15px; 
+  font-weight: 600; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+}
+.sidebar-section {
+  padding: 8px; 
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section-title {
+  font-size: 10px; 
+  font-weight: 600; 
+  color: var(--text3); 
+  text-transform: uppercase; 
+  letter-spacing: .1em; 
+  padding: 6px 16px 4px;
+}
+.nav-item {
+  padding: 7px 10px; 
+  cursor: pointer; 
+  font-size: 13px; 
+  color: var(--text2); 
+  background: transparent; 
+  font-weight: 400; 
+  display: flex; 
+  align-items: center; 
+  gap: 9; 
+  border-radius: var(--r); 
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--bg); color: var(--text) }
+.nav-item.active { background: var(--bg); color: var(--text); font-weight: 600; border-left: 2px solid var(--text) }
+.nav-item .badge {
+  margin-left: auto; 
+  font-size: 11px; 
+  background: var(--info-bg); 
+  color: var(--info-text); 
+  padding: 1px 7px; 
+  border-radius: 100; 
+  font-weight: 600;
+}
+
+.main { 
+  flex: 1; 
+  min-width: 0; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+}
+.topbar {
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg); 
+  flex-shrink: 0; 
+  display: flex; 
+  align-items: center; 
+  padding: 10px 20px; 
+  gap: 10px;
+}
+.topbar h1 { margin: 0; font-size: 16px; font-weight: 600 }
+.topbar-actions { margin-left: auto; display: flex; gap: 8px }
+
+.content {
+  flex: 1; 
+  padding: 1.25rem; 
+  overflow-y: auto;
+}
+
+/* Cards */
+.card {
+  background: var(--bg); 
+  border: 1px solid var(--border); 
+  border-radius: var(--r); 
+  margin-bottom: 16px;
+}
+.card-header {
+  padding: 12px 14px; 
+  border-bottom: 1px solid var(--border); 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-weight: 600;
+}
+.card-body { padding: 14px }
+
+/* Tables */
+.table-container { overflow-x: auto }
+table { width: 100%; border-collapse: collapse }
+th, td { 
+  padding: 8px 12px; 
+  text-align: left; 
+  border-bottom: 1px solid var(--border);
+}
+th { 
+  font-size: 11px; 
+  font-weight: 600; 
+  color: var(--text2); 
+  text-transform: uppercase; 
+  letter-spacing: .05em;
+  background: var(--bg2);
+}
+tr:hover { background: var(--bg2) }
+.row-link { cursor: pointer }
+.row-link:hover { background: var(--bg3) !important }
+
+/* Status badges */
+.badge {
+  display: inline-block; 
+  padding: 2px 8px; 
+  font-size: 11px; 
+  font-weight: 600; 
+  border-radius: 100px; 
+}
+.badge-open { background: var(--warn-bg); color: var(--warn-text) }
+.badge-active { background: var(--ok-bg); color: var(--ok-text) }
+.badge-done { background: var(--bg2); color: var(--text2) }
+.badge-pending { background: var(--info-bg); color: var(--info-text) }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; 
+  top: 0; left: 0; right: 0; bottom: 0; 
+  background: rgba(0,0,0,0.5); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  z-index: 1000;
+}
+.modal {
+  background: var(--bg2); 
+  border: 1px solid var(--border); 
+  border-radius: var(--rl); 
+  width: 90%; 
+  max-width: 600px; 
+  max-height: 90vh; 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column;
+}
+.modal-header {
+  padding: 14px 16px; 
+  border-bottom: 1px solid var(--border); 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+}
+.modal-title { font-weight: 600; font-size: 15px }
+.modal-close {
+  background: none; 
+  border: none; 
+  font-size: 20px; 
+  cursor: pointer; 
+  padding: 4px 8px;
+  line-height: 1;
+}
+.modal-body { padding: 16px; overflow-y: auto }
+.modal-footer {
+  padding: 12px 16px; 
+  border-top: 1px solid var(--border); 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 8px;
+}
+
+/* Form */
+.form-group { margin-bottom: 12px }
+.form-group label { 
+  display: block; 
+  margin-bottom: 4px; 
+  font-size: 12px; 
+  font-weight: 500; 
+  color: var(--text2);
+}
+.form-row { display: flex; gap: 12px }
+.form-row .form-group { flex: 1 }
+
+/* KPI Cards */
+.kpi-row { display: flex; gap: 12px; margin-bottom: 16px }
+.kpi-card {
+  flex: 1; 
+  background: var(--bg); 
+  border: 1px solid var(--border); 
+  border-radius: var(--r); 
+  padding: 14px;
+}
+.kpi-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px }
+.kpi-value { font-size: 24px; font-weight: 700; line-height: 1 }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px }
+
+/* Toast */
+.toast {
+  position: fixed; 
+  bottom: 16px; 
+  right: 16px; 
+  padding: 10px 16px; 
+  border-radius: var(--r); 
+  font-size: 13px; 
+  font-weight: 500; 
+  z-index: 9999; 
+  animation: slideIn 0.2s ease-out;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+
+/* Customer detail layout */
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr } }
+
+.info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px }
+.info-box {
+  background: var(--bg3); 
+  border-radius: var(--r); 
+  padding: 10px 12px;
+}
+.info-box .info-label { font-size: 11px; color: var(--text3); margin-bottom: 2px }
+.info-box .info-value { font-weight: 500 }
+
+/* Event list */
+.event-list { display: flex; flex-direction: column; gap: 8px }
+.event-item {
+  padding: 12px; 
+  background: var(--bg); 
+  border: 1px solid var(--border); 
+  border-radius: var(--r); 
+  cursor: pointer; 
+  transition: all 0.15s ease;
+}
+.event-item:hover {
+  background: var(--bg2); 
+  border-color: var(--border2);
+}
+.event-item-title { font-weight: 600; margin-bottom: 4px }
+.event-item-meta { font-size: 12px; color: var(--text2) }
+.event-item-date { font-size: 11px; color: var(--text3); margin-top: 4px }
+
+/* Search */
+.search-box {
+  position: relative; 
+  margin-bottom: 12px;
+}
+.search-box input {
+  padding-left: 32px;
+}
+.search-box i {
+  position: absolute; 
+  left: 10px; 
+  top: 50%; 
+  transform: translateY(-50%); 
+  color: var(--text3);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center; 
+  padding: 40px 20px; 
+  color: var(--text3);
+}
+.empty-state i { font-size: 32px; margin-bottom: 8px; display: block }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+// Firebase config - using same as event-sheet
+const firebaseConfig = {
+  apiKey: "AIzaSyA6o5YzXf7Ikzx-4aVIKHvvsGrJUjlI2Ys",
+  authDomain: "event-production-sheet.firebaseapp.com",
+  projectId: "event-production-sheet",
+  storageBucket: "event-production-sheet.firebasestorage.app",
+  messagingSenderId: "305911542157",
+  appId: "1:305911542157:web:3adc500140b379a4da0dc4",
+  measurementId: "G-9858R9LMXW"
+};
+const FIRESTORE_DATABASE_ID = "event";
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+let db;
+const configValid = !firebaseConfig.apiKey.includes('VERVANG');
+
+if (configValid) {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app, FIRESTORE_DATABASE_ID);
+}
+
+window.__firebase = { db, configValid, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, where, getDocs };
+if (window.__mountApp) window.__mountApp();
+</script>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useRef } = React;
+const h = React.createElement;
+
+// -- helpers --------------------------------------------------------
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36);
+const fmt = d => d ? new Date(d).toLocaleDateString('nl-BE', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fmtT = d => d ? new Date(d).toLocaleString('nl-BE', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+const fmtEur = v => v !== undefined && v !== null ? '€' + v.toFixed(2).replace('.', ',') : '€0,00';
+const esc = s => s?.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || '';
+
+// Customer types
+const CUSTOMER_TYPES = [
+  { value: 'private', label: 'Particulier' },
+  { value: 'business', label: 'Bedrijf' },
+  { value: 'public', label: 'Overheid/VZW' },
+];
+
+// Event types
+const EVENT_TYPES = [
+  'Verhuur', 'Event', 'Festival', 'Markt', 'Privaatfeest', 'Bedrijfsfeest', 'Anders'
+];
+
+// Status types
+const EVENT_STATUSES = [
+  { value: 'quote', label: 'Offerte', color: 'var(--warn-bg)', textColor: 'var(--warn-text)' },
+  { value: 'confirmed', label: 'Bevestigd', color: 'var(--info-bg)', textColor: 'var(--info-text)' },
+  { value: 'active', label: 'Lopend', color: 'var(--ok-bg)', textColor: 'var(--ok-text)' },
+  { value: 'completed', label: 'Afgerond', color: 'var(--bg2)', textColor: 'var(--text2)' },
+  { value: 'cancelled', label: 'Geannuleerd', color: 'var(--err-bg)', textColor: 'var(--err-text)' },
+];
+
+// -- Firestore wrapper ----------------------------------------------
+const FB = {
+  watch(col, cb, opt) {
+    const { db, collection, onSnapshot, query, orderBy, where } = window.__firebase;
+    let q = collection(db, col);
+    if (opt) {
+      if (opt.orderBy) q = query(q, orderBy(opt.orderBy.field, opt.orderBy.direction || 'desc'));
+      if (opt.where) opt.where.forEach(w => q = query(q, where(w.field, w.operator, w.value)));
+    }
+    return onSnapshot(q, snap => {
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      cb(items);
+    });
+  },
+  async save(col, id, data) {
+    const { db, doc, setDoc, serverTimestamp } = window.__firebase;
+    await setDoc(doc(db, col, id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+  },
+  async del(col, id) {
+    const { db, doc, deleteDoc } = window.__firebase;
+    await deleteDoc(doc(db, col, id));
+  },
+  async get(col, id) {
+    const { db, doc, getDoc } = window.__firebase;
+    const snap = await getDoc(doc(db, col, id));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  },
+  async query(col, whereClauses = []) {
+    const { db, collection, query, where, getDocs } = window.__firebase;
+    let q = collection(db, col);
+    whereClauses.forEach(w => q = query(q, where(w.field, w.operator, w.value)));
+    const snap = await getDocs(q);
+    const items = [];
+    snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+    return items;
+  }
+};
+
+// -- Setup screen ----------------------------------------------------
+function SetupScreen() {
+  return h('div', { style: { maxWidth: 560, margin: '4rem auto', padding: '2rem', border: '1px solid var(--border)', borderRadius: 'var(--rl)', background: 'var(--bg2)' } },
+    h('h1', null, '⚙️ Setup vereist'),
+    h('p', null, 'Open ', h('code', null, 'klanten-fiches.html'), ' en vervang de Firebase configuratie bovenaan met die van jouw project.')
+  );
+}
+
+// -- Customer form modal -------------------------------------------
+function CustomerModal({ customer, onSave, onClose }) {
+  const [name, setName] = useState(customer?.name || '');
+  const [type, setType] = useState(customer?.type || 'business');
+  const [contact, setContact] = useState(customer?.contact || '');
+  const [email, setEmail] = useState(customer?.email || '');
+  const [phone, setPhone] = useState(customer?.phone || '');
+  const [btw, setBtw] = useState(customer?.btw || '');
+  const [street, setStreet] = useState(customer?.street || '');
+  const [zip, setZip] = useState(customer?.zip || '');
+  const [city, setCity] = useState(customer?.city || '');
+  const [country, setCountry] = useState(customer?.country || 'België');
+  const [iban, setIban] = useState(customer?.iban || '');
+  const [payTerm, setPayTerm] = useState(customer?.payTerm || 30);
+  const [discount, setDiscount] = useState(customer?.discount || 0);
+  const [notes, setNotes] = useState(customer?.notes || '');
+  const [code, setCode] = useState(customer?.code || '');
+
+  const save = e => {
+    e.preventDefault();
+    onSave({
+      name, type, contact, email, phone, btw,
+      street, zip, city, country, iban,
+      payTerm: Number(payTerm), discount: Number(discount), notes, code
+    });
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: e => e.target.className === 'modal-overlay' && onClose() },
+    h('div', { className: 'modal', onClick: e => e.stopPropagation() },
+      h('div', { className: 'modal-header' },
+        h('div', { className: 'modal-title' }, customer?.id ? 'Klant bewerken' : 'Nieuwe klant'),
+        h('button', { className: 'modal-close', onClick: onClose }, '✕')
+      ),
+      h('form', { onSubmit: save },
+        h('div', { className: 'modal-body' },
+          h('div', { className: 'form-group' },
+            h('label', null, 'Naam *'),
+            h('input', { type: 'text', value: name, onChange: e => setName(e.target.value), placeholder: 'Bedrijfsnaam of klantnaam' })
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'Type'),
+              h('select', { value: type, onChange: e => setType(e.target.value) },
+                CUSTOMER_TYPES.map(t => h('option', { key: t.value, value: t.value }, t.label))
+              )
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Code'),
+              h('input', { type: 'text', value: code, onChange: e => setCode(e.target.value), placeholder: 'Kort code (bv. SNK)' })
+            )
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'Contactpersoon'),
+              h('input', { type: 'text', value: contact, onChange: e => setContact(e.target.value), placeholder: 'Naam contactpersoon' })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'BTW-nummer'),
+              h('input', { type: 'text', value: btw, onChange: e => setBtw(e.target.value), placeholder: 'BE0123.456.789' })
+            )
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'E-mail'),
+              h('input', { type: 'email', value: email, onChange: e => setEmail(e.target.value), placeholder: 'klant@email.com' })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Telefoon'),
+              h('input', { type: 'tel', value: phone, onChange: e => setPhone(e.target.value), placeholder: '+32 470 12 34 56' })
+            )
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Adres'),
+            h('input', { type: 'text', value: street, onChange: e => setStreet(e.target.value), placeholder: 'Straat en nummer' })
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'Postcode'),
+              h('input', { type: 'text', value: zip, onChange: e => setZip(e.target.value), placeholder: '9000' })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Stad'),
+              h('input', { type: 'text', value: city, onChange: e => setCity(e.target.value), placeholder: 'Gent' })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Land'),
+              h('input', { type: 'text', value: country, onChange: e => setCountry(e.target.value), placeholder: 'België' })
+            )
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'IBAN'),
+              h('input', { type: 'text', value: iban, onChange: e => setIban(e.target.value), placeholder: 'BEXX 0000 0000 0000' })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Betalingstermijn (dagen)'),
+              h('input', { type: 'number', value: payTerm, onChange: e => setPayTerm(e.target.value), min: 0 })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Korting (%)'),
+              h('input', { type: 'number', value: discount, onChange: e => setDiscount(e.target.value), min: 0, max: 100, step: 0.5 })
+            )
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Notities'),
+            h('textarea', { value: notes, onChange: e => setNotes(e.target.value), rows: 3, placeholder: 'Extra informatie over de klant...' })
+          )
+        ),
+        h('div', { className: 'modal-footer' },
+          h('button', { type: 'button', className: 'btn btn-ghost', onClick: onClose }, 'Annuleren'),
+          h('button', { type: 'submit', className: 'btn primary', disabled: !name.trim() }, 'Opslaan')
+        )
+      )
+    )
+  );
+}
+
+// -- Event form modal -----------------------------------------------
+function EventModal({ customer, event, onSave, onClose, existingEvents }) {
+  const [name, setName] = useState(event?.name || '');
+  const [type, setType] = useState(event?.type || 'Event');
+  const [status, setStatus] = useState(event?.status || 'quote');
+  const [startDate, setStartDate] = useState(event?.startDate || '');
+  const [endDate, setEndDate] = useState(event?.endDate || '');
+  const [location, setLocation] = useState(event?.location || '');
+  const [description, setDescription] = useState(event?.description || '');
+  const [price, setPrice] = useState(event?.price || 0);
+  const [eventCode, setEventCode] = useState(event?.code || '');
+  const [linkedEventId, setLinkedEventId] = useState(event?.linkedEventId || '');
+  const [truck, setTruck] = useState(event?.truck || '');
+  const [notes, setNotes] = useState(event?.notes || '');
+
+  // Generate event code if empty
+  useEffect(() => {
+    if (!eventCode && customer?.code) {
+      setEventCode(`${customer.code}-${fmt(new Date()).replace(/[/\s]/g, '-')}-${uid().slice(0, 4).toUpperCase()}`);
+    }
+  }, [customer?.code, eventCode]);
+
+  const save = e => {
+    e.preventDefault();
+    onSave({
+      name, type, status, startDate, endDate, location,
+      description, price: Number(price), code: eventCode,
+      linkedEventId, truck, notes
+    });
+  };
+
+  return h('div', { className: 'modal-overlay', onClick: e => e.target.className === 'modal-overlay' && onClose() },
+    h('div', { className: 'modal', style: { maxWidth: 500 }, onClick: e => e.stopPropagation() },
+      h('div', { className: 'modal-header' },
+        h('div', { className: 'modal-title' }, event?.id ? 'Event bewerken' : 'Nieuw event'),
+        h('button', { className: 'modal-close', onClick: onClose }, '✕')
+      ),
+      h('form', { onSubmit: save },
+        h('div', { className: 'modal-body' },
+          h('div', { className: 'form-group' },
+            h('label', null, 'Eventnaam *'),
+            h('input', { type: 'text', value: name, onChange: e => setName(e.target.value), placeholder: 'Gentse Feesten 2026' })
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'Type'),
+              h('select', { value: type, onChange: e => setType(e.target.value) },
+                EVENT_TYPES.map(t => h('option', { key: t, value: t }, t))
+              )
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Status'),
+              h('select', { value: status, onChange: e => setStatus(e.target.value) },
+                EVENT_STATUSES.map(s => h('option', { key: s.value, value: s.value }, s.label))
+              )
+            )
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Eventcode'),
+            h('input', { type: 'text', value: eventCode, onChange: e => setEventCode(e.target.value), placeholder: 'Automatisch gegenereerd' })
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'Startdatum'),
+              h('input', { type: 'date', value: startDate, onChange: e => setStartDate(e.target.value) })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Einddatum'),
+              h('input', { type: 'date', value: endDate, onChange: e => setEndDate(e.target.value) })
+            )
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Locatie'),
+            h('input', { type: 'text', value: location, onChange: e => setLocation(e.target.value), placeholder: 'Korenmarkt, Gent' })
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Beschrijving'),
+            h('textarea', { value: description, onChange: e => setDescription(e.target.value), rows: 2, placeholder: 'Korte beschrijving van het event...' })
+          ),
+          h('div', { className: 'form-row' },
+            h('div', { className: 'form-group' },
+              h('label', null, 'Wagen'),
+              h('input', { type: 'text', value: truck, onChange: e => setTruck(e.target.value), placeholder: 'Wagennaam of -ID' })
+            ),
+            h('div', { className: 'form-group' },
+              h('label', null, 'Prijs (€)'),
+              h('input', { type: 'number', value: price, onChange: e => setPrice(e.target.value), step: 0.01, min: 0 })
+            )
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Koppelen aan bestaand event (ID)'),
+            h('input', { 
+              type: 'text', 
+              value: linkedEventId, 
+              onChange: e => setLinkedEventId(e.target.value), 
+              placeholder: 'Event ID uit event-sheet.html'
+            })
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Notities'),
+            h('textarea', { value: notes, onChange: e => setNotes(e.target.value), rows: 2, placeholder: 'Interne notities...' })
+          )
+        ),
+        h('div', { className: 'modal-footer' },
+          h('button', { type: 'button', className: 'btn btn-ghost', onClick: onClose }, 'Annuleren'),
+          h('button', { type: 'submit', className: 'btn primary', disabled: !name.trim() }, 'Opslaan')
+        )
+      )
+    )
+  );
+}
+
+// -- Customer detail view -------------------------------------------
+function CustomerDetail({ customer, events, onBack, onEditCustomer, onAddEvent, onEditEvent, onDeleteEvent, onLinkEvent }) {
+  const cEvents = events.filter(e => e.customerId === customer.id);
+  const totalEvents = cEvents.length;
+  const activeEvents = cEvents.filter(e => e.status === 'active' || e.status === 'confirmed').length;
+  const totalRevenue = cEvents.reduce((sum, e) => sum + (e.price || 0), 0);
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      quote: { label: 'Offerte', class: 'badge-open' },
+      confirmed: { label: 'Bevestigd', class: 'badge-pending' },
+      active: { label: 'Lopend', class: 'badge-active' },
+      completed: { label: 'Afgerond', class: 'badge-done' },
+      cancelled: { label: 'Geannuleerd', class: 'badge badge-open' }
+    };
+    return statusMap[status] || statusMap.quote;
+  };
+
+  return h('div', null,
+    h('div', { style: { marginBottom: 16 } },
+      h('button', { className: 'btn btn-ghost', onClick: onBack, style: { marginBottom: 8 } },
+        h('i', { className: 'ti ti-arrow-left' }), 'Terug naar overzicht'
+      ),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 } },
+        h('h1', { style: { margin: 0, fontSize: 20, fontWeight: 600 } }, customer.name),
+        h('span', { 
+          className: 'badge', 
+          style: { 
+            background: customer.type === 'business' ? 'var(--blue)' : (customer.type === 'public' ? 'var(--purple)' : 'var(--gold)'),
+            color: 'white'
+          } 
+        }, CUSTOMER_TYPES.find(t => t.value === customer.type)?.label || customer.type),
+        h('div', { style: { marginLeft: 'auto', display: 'flex', gap: 8 } },
+          h('button', { className: 'btn primary', onClick: () => onEditCustomer(customer) },
+            h('i', { className: 'ti ti-edit' }), 'Bewerken'
+          ),
+          h('button', { className: 'btn gold', onClick: () => onAddEvent(customer) },
+            h('i', { className: 'ti ti-plus' }), 'Nieuw event'
+          )
+        )
+      )
+    ),
+    
+    // KPI Cards
+    h('div', { className: 'kpi-row' },
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Totaal events'),
+        h('div', { className: 'kpi-value' }, totalEvents),
+        h('div', { className: 'kpi-sub' }, `${activeEvents} actief`)
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Totale omzet'),
+        h('div', { className: 'kpi-value' }, fmtEur(totalRevenue)),
+        h('div', { className: 'kpi-sub' }, 'Alle events')
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Betalingstermijn'),
+        h('div', { className: 'kpi-value' }, customer.payTerm || 30),
+        h('div', { className: 'kpi-sub' }, `dagen${customer.discount ? ` · ${customer.discount}% korting` : ''}`)
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Klant sinds'),
+        h('div', { className: 'kpi-value', style: { fontSize: 16 } }, fmt(customer.createdAt)),
+        h('div', { className: 'kpi-sub' }, customer.code || '—')
+      )
+    ),
+
+    // Contact info and event history
+    h('div', { className: 'detail-grid' },
+      h('div', null,
+        h('div', { className: 'card' },
+          h('div', { className: 'card-header' },
+            h('i', { className: 'ti ti-user' }), 'Contactgegevens'
+          ),
+          h('div', { className: 'card-body' },
+            h('div', { className: 'info-grid' },
+              h('div', { className: 'info-box' },
+                h('div', { className: 'info-label' }, 'Contactpersoon'),
+                h('div', { className: 'info-value' }, esc(customer.contact || '—'))
+              ),
+              h('div', { className: 'info-box' },
+                h('div', { className: 'info-label' }, 'E-mail'),
+                h('div', { className: 'info-value' }, customer.email ? h('a', { href: `mailto:${customer.email}`, style: { color: 'var(--blue)' } }, esc(customer.email)) : '—')
+              ),
+              h('div', { className: 'info-box' },
+                h('div', { className: 'info-label' }, 'Telefoon'),
+                h('div', { className: 'info-value' }, esc(customer.phone || '—'))
+              ),
+              h('div', { className: 'info-box' },
+                h('div', { className: 'info-label' }, 'BTW-nummer'),
+                h('div', { className: 'info-value' }, esc(customer.btw || '—'))
+              ),
+              h('div', { className: 'info-box', style: { gridColumn: '1/-1' } },
+                h('div', { className: 'info-label' }, 'Adres'),
+                h('div', { className: 'info-value' }, `${esc(customer.street || '')} ${esc(customer.zip || '')} ${esc(customer.city || '')}${customer.country ? ', ' + esc(customer.country) : ''}` || '—')
+              ),
+              h('div', { className: 'info-box' },
+                h('div', { className: 'info-label' }, 'IBAN'),
+                h('div', { className: 'info-value' }, esc(customer.iban || '—'))
+              )
+            ),
+            customer.notes && h('div', { 
+              style: { 
+                fontSize: 12, 
+                color: 'var(--text2)', 
+                padding: 10, 
+                background: 'var(--bg3)', 
+                borderRadius: 'var(--r)', 
+                marginTop: 12, 
+                lineHeight: 1.5 
+              } 
+            }, customer.notes)
+          )
+        )
+      ),
+      h('div', null,
+        h('div', { className: 'card' },
+          h('div', { className: 'card-header' },
+            h('i', { className: 'ti ti-calendar' }), `Eventhistoriek (${cEvents.length})`
+          ),
+          h('div', { className: 'card-body' },
+            cEvents.length > 0 ?
+              h('div', { className: 'event-list' },
+                cEvents.sort((a, b) => new Date(b.createdAt || b.startDate || 0) - new Date(a.createdAt || a.startDate || 0))
+                  .map(e => h('div', { 
+                    key: e.id, 
+                    className: 'event-item', 
+                    onClick: () => onEditEvent(customer, e)
+                  },
+                    h('div', { className: 'event-item-title' },
+                      esc(e.name),
+                      e.code && h('span', { 
+                        style: { 
+                          fontSize: 11, 
+                          color: 'var(--text3)', 
+                          marginLeft: 8, 
+                          fontWeight: 400 
+                        } 
+                      }, `(${esc(e.code)})`)
+                    ),
+                    h('div', { className: 'event-item-meta' },
+                      h('span', { className: getStatusBadge(e.status).class }, getStatusBadge(e.status).label),
+                      h('span', { style: { marginLeft: 8 } }, esc(e.type)),
+                      e.price && h('span', { style: { marginLeft: 8, fontWeight: 600 } }, fmtEur(e.price))
+                    ),
+                    h('div', { className: 'event-item-date' },
+                      fmt(e.startDate) + (e.endDate ? ` → ${fmt(e.endDate)}` : ''),
+                      e.location && h('span', { style: { marginLeft: 8 } }, `· ${esc(e.location)}`)
+                    )
+                  ))
+              )
+            : h('div', { className: 'empty-state' },
+                h('i', { className: 'ti ti-calendar' }),
+                'Nog geen events voor deze klant'
+              )
+          )
+        ),
+        h('div', { className: 'card' },
+          h('div', { className: 'card-header' },
+            h('i', { className: 'ti ti-link' }), 'Koppel bestaand event'
+          ),
+          h('div', { className: 'card-body' },
+            h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+              h('input', { 
+                type: 'text', 
+                id: 'link-event-input',
+                placeholder: 'Event ID uit event-sheet.html',
+                style: { flex: 1 }
+              }),
+              h('button', { 
+                className: 'btn primary', 
+                onClick: () => {
+                  const eventId = document.getElementById('link-event-input').value.trim();
+                  if (eventId) { onLinkEvent(customer, eventId); document.getElementById('link-event-input').value = ''; }
+                }
+              }, 'Koppelen')
+            ),
+            h('div', { 
+              style: { 
+                fontSize: 11, 
+                color: 'var(--text3)', 
+                marginTop: 8, 
+                lineHeight: 1.4 
+              } 
+            }, 'Voer het event ID in uit het event-sheet.html systeem om het aan deze klant te koppelen.')
+          )
+        )
+      )
+    )
+  );
+}
+
+// -- Customer list view -----------------------------------------------
+function CustomerList({ customers, events, onAddCustomer, onEditCustomer, onViewCustomer, onDeleteCustomer, searchTerm }) {
+  const filteredCustomers = customers.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.contact && c.contact.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (c.code && c.code.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const getEventCount = (customerId) => events.filter(e => e.customerId === customerId).length;
+  const getActiveEventCount = (customerId) => events.filter(e => e.customerId === customerId && (e.status === 'active' || e.status === 'confirmed')).length;
+  const getTotalRevenue = (customerId) => events.filter(e => e.customerId === customerId).reduce((sum, e) => sum + (e.price || 0), 0);
+
+  return h('div', null,
+    h('div', { className: 'card' },
+      h('div', { className: 'card-header' },
+        h('i', { className: 'ti ti-users' }), 'Klanten',
+        h('button', { 
+          className: 'btn primary', 
+          onClick: onAddCustomer,
+          style: { marginLeft: 'auto' }
+        }, h('i', { className: 'ti ti-plus' }), 'Nieuwe klant')
+      ),
+      h('div', { className: 'card-body' },
+        h('div', { className: 'search-box' },
+          h('i', { className: 'ti ti-search' }),
+          h('input', { 
+            type: 'text', 
+            placeholder: 'Zoek klanten...',
+            value: searchTerm,
+            onChange: e => onViewCustomer(null, e.target.value),
+            style: { width: '100%', maxWidth: 300 }
+          })
+        ),
+        h('div', { className: 'table-container' },
+          h('table', null,
+            h('thead', null,
+              h('tr', null,
+                h('th', null, 'Klant'),
+                h('th', null, 'Code'),
+                h('th', null, 'Type'),
+                h('th', null, 'Events'),
+                h('th', null, 'Omzet'),
+                h('th', null, 'Klant sinds'),
+                h('th', null, '')
+              )
+            ),
+            h('tbody', null,
+              filteredCustomers.length > 0 ? filteredCustomers.map(c => {
+                const eventCount = getEventCount(c.id);
+                const activeCount = getActiveEventCount(c.id);
+                const revenue = getTotalRevenue(c.id);
+                return h('tr', { key: c.id, className: 'row-link', onClick: () => onViewCustomer(c) },
+                  h('td', null, esc(c.name)),
+                  h('td', null, h('code', null, esc(c.code || '—'))),
+                  h('td', null, esc(CUSTOMER_TYPES.find(t => t.value === c.type)?.label || c.type)),
+                  h('td', null,
+                    h('span', { style: { fontWeight: 600 } }, eventCount),
+                    activeCount > 0 && h('span', { style: { color: 'var(--text3)', fontSize: 11, marginLeft: 4 } }, `(${activeCount} actief)`)
+                  ),
+                  h('td', { style: { textAlign: 'right' } }, fmtEur(revenue)),
+                  h('td', null, fmt(c.createdAt)),
+                  h('td', { style: { textAlign: 'right' } },
+                    h('button', { 
+                      className: 'btn btn-ghost btn-xs', 
+                      onClick: e => { e.stopPropagation(); onEditCustomer(c); },
+                      style: { fontSize: 11 }
+                    }, '✏'),
+                    h('button', { 
+                      className: 'btn btn-ghost btn-xs', 
+                      onClick: e => { e.stopPropagation(); if (confirm(`Klant "${c.name}" verwijderen?`)) onDeleteCustomer(c); },
+                      style: { fontSize: 11, color: 'var(--err-text)' }
+                    }, '🗑')
+                  )
+                );
+              }) : h('tr', null,
+                h('td', { colSpan: 7, className: 'empty-state' },
+                  h('i', { className: 'ti ti-users' }),
+                  'Geen klanten gevonden'
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+// -- Dashboard view ---------------------------------------------------
+function Dashboard({ customers, events, onViewCustomer, onAddCustomer }) {
+  const totalCustomers = customers.length;
+  const totalEvents = events.length;
+  const activeCustomers = customers.filter(c => 
+    events.some(e => e.customerId === c.id && (e.status === 'active' || e.status === 'confirmed'))
+  ).length;
+  const totalRevenue = events.reduce((sum, e) => sum + (e.price || 0), 0);
+  
+  // Recent customers (last 30 days)
+  const recentCustomers = customers
+    .filter(c => c.createdAt && new Date(c.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 5);
+
+  // Upcoming events
+  const upcomingEvents = events
+    .filter(e => e.startDate && new Date(e.startDate) > new Date())
+    .sort((a, b) => new Date(a.startDate || 0) - new Date(b.startDate || 0))
+    .slice(0, 5);
+
+  return h('div', null,
+    h('div', { style: { marginBottom: 16 } },
+      h('h1', { style: { margin: 0, fontSize: 18, fontWeight: 600 } }, 'Dashboard'),
+      h('button', { 
+        className: 'btn primary', 
+        onClick: onAddCustomer,
+        style: { marginLeft: 'auto', float: 'right' }
+      }, h('i', { className: 'ti ti-plus' }), 'Nieuwe klant')
+    ),
+
+    // KPI Cards
+    h('div', { className: 'kpi-row' },
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Totaal klanten'),
+        h('div', { className: 'kpi-value' }, totalCustomers),
+        h('div', { className: 'kpi-sub' }, `${activeCustomers} actief`)
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Totaal events'),
+        h('div', { className: 'kpi-value' }, totalEvents),
+        h('div', { className: 'kpi-sub' }, 'Alle klanten')
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Totale omzet'),
+        h('div', { className: 'kpi-value' }, fmtEur(totalRevenue)),
+        h('div', { className: 'kpi-sub' }, 'Alle events')
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Nieuwe klanten'),
+        h('div', { className: 'kpi-value' }, recentCustomers.length),
+        h('div', { className: 'kpi-sub' }, 'Laatste 30 dagen')
+      )
+    ),
+
+    // Recent customers and upcoming events
+    h('div', { className: 'detail-grid' },
+      h('div', null,
+        h('div', { className: 'card' },
+          h('div', { className: 'card-header' },
+            h('i', { className: 'ti ti-clock' }), 'Nieuwe klanten'
+          ),
+          h('div', { className: 'card-body' },
+            recentCustomers.length > 0 ?
+              recentCustomers.map(c => h('div', { 
+                key: c.id, 
+                style: { 
+                  padding: '8px 0', 
+                  borderBottom: '1px solid var(--border)', 
+                  cursor: 'pointer',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 8
+                },
+                onClick: () => onViewCustomer(c)
+              },
+                h('div', { style: { flex: 1 } },
+                  h('div', { style: { fontWeight: 500 } }, esc(c.name)),
+                  h('div', { style: { fontSize: 11, color: 'var(--text2)' } }, esc(c.contact || c.email || '—'))
+                ),
+                h('div', { style: { fontSize: 11, color: 'var(--text3)' } }, fmt(c.createdAt))
+              ))
+            : h('div', { className: 'empty-state', style: { padding: '20px 0' } },
+                h('i', { className: 'ti ti-users' }),
+                'Geen nieuwe klanten'
+              )
+          )
+        )
+      ),
+      h('div', null,
+        h('div', { className: 'card' },
+          h('div', { className: 'card-header' },
+            h('i', { className: 'ti ti-calendar' }), 'Aankomende events'
+          ),
+          h('div', { className: 'card-body' },
+            upcomingEvents.length > 0 ?
+              upcomingEvents.map(e => {
+                const customer = customers.find(c => c.id === e.customerId);
+                return h('div', { 
+                  key: e.id, 
+                  style: { 
+                    padding: '8px 0', 
+                    borderBottom: '1px solid var(--border)', 
+                    cursor: 'pointer',
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 8
+                  },
+                  onClick: () => onViewCustomer(customer)
+                },
+                  h('div', { style: { flex: 1 } },
+                    h('div', { style: { fontWeight: 500 } }, esc(e.name)),
+                    h('div', { style: { fontSize: 11, color: 'var(--text2)' } }, customer ? esc(customer.name) : '—')
+                  ),
+                  h('div', { style: { fontSize: 11, color: 'var(--text3)' } }, fmt(e.startDate))
+                );
+              })
+            : h('div', { className: 'empty-state', style: { padding: '20px 0' } },
+                h('i', { className: 'ti ti-calendar' }),
+                'Geen aankomende events'
+              )
+          )
+        )
+      )
+    )
+  );
+}
+
+// -- Sidebar ----------------------------------------------------------
+function Sidebar({ customers, events, page, onNav, searchTerm, onSearch }) {
+  const allEvents = events.length;
+  const pendingEvents = events.filter(e => e.status === 'quote').length;
+  const activeCustomers = customers.filter(c => 
+    events.some(e => e.customerId === c.id && (e.status === 'active' || e.status === 'confirmed'))
+  ).length;
+
+  return h('div', { className: 'sidebar' },
+    h('div', { className: 'sidebar-header' },
+      h('i', { className: 'ti ti-user-circle', style: { fontSize: 19 } }), 'Klanten Fiches'
+    ),
+    h('div', null,
+      h('div', { className: 'sidebar-section' },
+        h('div', { 
+          className: `nav-item ${page === 'dashboard' ? 'active' : ''}`, 
+          onClick: () => onNav('dashboard')
+        },
+          h('i', { className: 'ti ti-layout-dashboard' }), 'Dashboard'
+        ),
+        h('div', { 
+          className: `nav-item ${page === 'customers' ? 'active' : ''}`, 
+          onClick: () => onNav('customers')
+        },
+          h('i', { className: 'ti ti-users' }), 'Klanten',
+          customers.length > 0 && h('span', { className: 'badge' }, customers.length)
+        )
+      ),
+      h('div', { className: 'sidebar-section' },
+        h('div', { className: 'sidebar-section-title' }, 'Events'),
+        h('div', { 
+          className: `nav-item`, 
+          onClick: () => onNav('events')
+        },
+          h('i', { className: 'ti ti-calendar' }), 'Alle events',
+          allEvents > 0 && h('span', { className: 'badge' }, allEvents)
+        ),
+        h('div', { 
+          className: `nav-item`, 
+          onClick: () => onNav('pending')
+        },
+          h('i', { className: 'ti ti-file' }), 'Offerte',
+          pendingEvents > 0 && h('span', { className: 'badge' }, pendingEvents)
+        ),
+        h('div', { 
+          className: `nav-item`, 
+          onClick: () => onNav('active')
+        },
+          h('i', { className: 'ti ti-player-play' }), 'Actief',
+          activeCustomers > 0 && h('span', { className: 'badge' }, activeCustomers)
+        )
+      )
+    ),
+    h('div', { style: { padding: 8, borderTop: '1px solid var(--border)' } },
+      h('button', { 
+        className: 'btn primary', 
+        onClick: () => onNav('new-customer'),
+        style: { width: '100%', justifyContent: 'center', fontSize: 13, padding: 7 }
+      },
+        h('i', { className: 'ti ti-plus', style: { fontSize: 14 } }), 'Nieuwe klant'
+      )
+    )
+  );
+}
+
+// -- Top bar -----------------------------------------------------------
+function TopBar({ page, customer, onBack, searchTerm, onSearch }) {
+  return h('div', { className: 'topbar' },
+    h('div', { style: { flex: 1 } },
+      page === 'customer-detail' && customer &&
+        h('button', { className: 'btn btn-ghost', onClick: onBack, style: { fontSize: 12 } },
+          h('i', { className: 'ti ti-arrow-left' }), 'Terug'
+        ),
+      h('h1', null, 
+        page === 'dashboard' ? 'Dashboard' :
+        page === 'customers' ? 'Klanten' :
+        page === 'customer-detail' && customer ? customer.name : 'Klanten Fiches'
+      )
+    ),
+    page === 'customers' && h('div', null,
+      h('input', { 
+        type: 'text', 
+        placeholder: 'Zoek klanten...',
+        value: searchTerm,
+        onChange: e => onSearch(e.target.value),
+        style: { width: 200 }
+      })
+    )
+  );
+}
+
+// -- Main App ----------------------------------------------------------
+function App() {
+  const fb = window.__firebase;
+  if (!fb || !fb.configValid) return h(SetupScreen);
+
+  const [customers, setCustomers] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [page, setPage] = useState('dashboard');
+  const [customerId, setCustomerId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modal, setModal] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [currentCustomer, setCurrentCustomer] = useState(null);
+
+  // Load data
+  useEffect(() => {
+    let loadedCount = 0;
+    const done = () => { if (++loadedCount >= 2) setLoaded(true); };
+    
+    const unsubCustomers = FB.watch('customers', data => { 
+      setCustomers(data); 
+      done(); 
+    }, { orderBy: { field: 'createdAt', direction: 'desc' } });
+    
+    const unsubEvents = FB.watch('customer_events', data => { 
+      setEvents(data); 
+      done(); 
+    }, { orderBy: { field: 'createdAt', direction: 'desc' } });
+
+    return () => { unsubCustomers(); unsubEvents(); };
+  }, []);
+
+  // Toast notification
+  const showToast = (msg, type = 'ok') => {
+    setToastMsg({ msg, type });
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // Navigation
+  const nav = (p, customer = null) => {
+    setPage(p);
+    setCustomerId(customer?.id || null);
+    setCurrentCustomer(customer || null);
+    setModal(null);
+    setSearchTerm('');
+  };
+
+  // Customer CRUD
+  const addCustomer = async data => {
+    const id = uid();
+    const customerData = {
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    await FB.save('customers', id, customerData);
+    showToast('Klant toegevoegd');
+    setModal(null);
+    nav('customers');
+  };
+
+  const updateCustomer = async (id, data) => {
+    await FB.save('customers', id, {
+      ...data,
+      updatedAt: new Date().toISOString()
+    });
+    showToast('Klant bijgewerkt');
+    setModal(null);
+  };
+
+  const deleteCustomer = async customer => {
+    // First, unlink all events from this customer
+    const customerEvents = events.filter(e => e.customerId === customer.id);
+    for (const event of customerEvents) {
+      await FB.del('customer_events', event.id);
+    }
+    await FB.del('customers', customer.id);
+    showToast('Klant verwijderd');
+    nav('customers');
+  };
+
+  // Event CRUD
+  const addEvent = async (customer, data) => {
+    const id = uid();
+    const eventData = {
+      ...data,
+      customerId: customer.id,
+      customerName: customer.name,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    await FB.save('customer_events', id, eventData);
+    showToast('Event toegevoegd aan klant');
+    setModal(null);
+  };
+
+  const updateEvent = async (customer, event, data) => {
+    await FB.save('customer_events', event.id, {
+      ...event,
+      ...data,
+      customerName: customer.name,
+      updatedAt: new Date().toISOString()
+    });
+    showToast('Event bijgewerkt');
+    setModal(null);
+  };
+
+  const deleteEvent = async event => {
+    if (confirm(`Event "${event.name}" verwijderen?`)) {
+      await FB.del('customer_events', event.id);
+      showToast('Event verwijderd');
+    }
+  };
+
+  const linkExistingEvent = async (customer, eventId) => {
+    // Try to fetch the event from the events collection (event-sheet.html)
+    try {
+      const existingEvent = await FB.get('events', eventId);
+      if (existingEvent) {
+        // Create a reference in customer_events
+        const id = uid();
+        await FB.save('customer_events', id, {
+          name: existingEvent.name || `Event ${eventId}`,
+          type: 'Verhuur',
+          status: 'confirmed',
+          startDate: existingEvent.startDate || '',
+          endDate: existingEvent.endDate || '',
+          location: existingEvent.location || '',
+          customerId: customer.id,
+          customerName: customer.name,
+          linkedEventId: eventId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          code: `LINK-${eventId}`
+        });
+        showToast(`Event ${eventId} gekoppeld`);
+      } else {
+        showToast('Event niet gevonden in event-sheet database', 'err');
+      }
+    } catch (err) {
+      showToast('Fout bij koppelen: ' + err.message, 'err');
+    }
+  };
+
+  // View handlers
+  const viewCustomer = (customer, search = '') => {
+    setCurrentCustomer(customer);
+    setPage(customer ? 'customer-detail' : 'customers');
+    setCustomerId(customer?.id || null);
+    if (search !== undefined) setSearchTerm(search);
+  };
+
+  const editCustomer = customer => {
+    setCurrentCustomer(customer);
+    setModal({ type: 'customer', customer });
+  };
+
+  const addCustomerModal = () => {
+    setCurrentCustomer(null);
+    setModal({ type: 'customer', customer: null });
+  };
+
+  const addEventModal = customer => {
+    setCurrentCustomer(customer);
+    setModal({ type: 'event', customer, event: null });
+  };
+
+  const editEventModal = (customer, event) => {
+    setCurrentCustomer(customer);
+    setModal({ type: 'event', customer, event });
+  };
+
+  const getCurrentCustomer = () => {
+    if (customerId && customers.length > 0) {
+      return customers.find(c => c.id === customerId) || null;
+    }
+    return currentCustomer;
+  };
+
+  if (!loaded) return h('div', { style: { padding: 60, textAlign: 'center', color: 'var(--text2)' } }, 'Verbinden met Firebase...');
+
+  const customer = getCurrentCustomer();
+
+  return h('div', { style: { display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' } },
+    h(Sidebar, { customers, events, page, onNav: nav, searchTerm, onSearch: setSearchTerm }),
+    h('div', { className: 'main' },
+      h(TopBar, { page, customer, onBack: () => nav('customers'), searchTerm, onSearch: setSearchTerm }),
+      h('div', { className: 'content' },
+        page === 'dashboard' && h(Dashboard, { 
+          customers, 
+          events, 
+          onViewCustomer: viewCustomer, 
+          onAddCustomer: addCustomerModal 
+        }),
+        page === 'customers' && h(CustomerList, {
+          customers,
+          events,
+          onAddCustomer: addCustomerModal,
+          onEditCustomer: editCustomer,
+          onViewCustomer: viewCustomer,
+          onDeleteCustomer: deleteCustomer,
+          searchTerm
+        }),
+        page === 'customer-detail' && customer && h(CustomerDetail, {
+          customer,
+          events,
+          onBack: () => nav('customers'),
+          onEditCustomer: editCustomer,
+          onAddEvent: addEventModal,
+          onEditEvent: editEventModal,
+          onDeleteEvent: deleteEvent,
+          onLinkEvent: linkExistingEvent
+        })
+      )
+    ),
+
+    // Modals
+    modal?.type === 'customer' && h(CustomerModal, {
+      customer: modal.customer,
+      onSave: data => modal.customer?.id ? updateCustomer(modal.customer.id, data) : addCustomer(data),
+      onClose: () => setModal(null)
+    }),
+    
+    modal?.type === 'event' && modal.customer && h(EventModal, {
+      customer: modal.customer,
+      event: modal.event,
+      onSave: data => modal.event?.id ? updateEvent(modal.customer, modal.event, data) : addEvent(modal.customer, data),
+      onClose: () => setModal(null),
+      existingEvents
+    }),
+
+    // Toast
+    toastMsg && h('div', { 
+      className: 'toast',
+      style: { 
+        background: toastMsg.type === 'err' ? 'var(--err-bg)' : 'var(--ok-bg)',
+        color: toastMsg.type === 'err' ? 'var(--err-text)' : 'var(--ok-text)',
+        border: `1px solid ${toastMsg.type === 'err' ? 'var(--err-border)' : 'var(--ok-border)'}`
+      }
+    }, toastMsg.msg)
+  );
+}
+
+// -- Mount the app ----------------------------------------------------
+window.__mountApp = () => {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(h(App));
+};
+
+if (window.__firebase?.configValid && window.__mountApp) {
+  window.__mountApp();
+}
+</script>
+</body>
+</html>

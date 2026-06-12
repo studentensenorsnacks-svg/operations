@@ -9,6 +9,7 @@ const links: { href: string; label: string }[] = [
   { href: '/wallets', label: 'Wallets' },
   { href: '/transacties', label: 'Transacties' },
   { href: '/verkoop', label: 'Verkoop' },
+  { href: '/prognose', label: 'Prognose' },
   { href: '/operatoren', label: 'Operatoren' },
   { href: '/apparaten', label: 'Apparaten' },
   { href: '/koppeling', label: 'Event-koppeling' },
