@@ -470,7 +470,13 @@ function saveRec(tid){
 
   FB_REF.child(tid).set(rec).then(() => {
     const msg = document.getElementById('saved_' + tid);
-    if (msg){ msg.style.display = 'flex'; setTimeout(() => { msg.style.display = 'none'; }, 2500); }
+    if (msg) msg.style.display = 'flex';
+    // Kaart kort de bevestiging tonen en dan inklappen, zodat de volgende
+    // truck meteen ingevuld kan worden (en de status-badge ververst).
+    setTimeout(() => {
+      const body = document.getElementById('body_' + tid);
+      if (body && body.classList.contains('open')) toggleCard(tid);
+    }, 900);
   }).catch(err => {
     alert('Opslaan mislukt: ' + err.message);
   });
