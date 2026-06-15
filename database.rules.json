@@ -56,8 +56,8 @@
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|krisdc|')))"
     },
     "ft_fiches_v1": {
-      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))",
-      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|laadlijsten|')))"
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|fiches|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|fiches|')))"
     },
     "ft_notities_v1": {
       ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|notities|')))",

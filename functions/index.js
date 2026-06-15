@@ -455,6 +455,7 @@ const VALID_PAGES = [
   'notities', 'checkin', 'planning', 'laadlijsten', 'ops',
   'qrcodes', 'poets', 'keuringen', 'vet', 'bestellingen',
   'stroomaanvraag', 'archief', 'eindstock', 'trucks', 'horeca', 'krisdc',
+  'fiches',
 ];
 
 function buildPagesClaim(pages) {

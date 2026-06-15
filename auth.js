@@ -220,6 +220,7 @@
         eindstock:      ['/eindstock.html'],
         horeca:         ['/horeca-planning.html'],
         krisdc:         ['/kris-dc.html', '/kris-dc-monitor.html'],
+        fiches:         ['/technische-fiches.html'],
         trucks:         []
       };
       var ALWAYS_OK = ['/login.html', '/qr.html'];

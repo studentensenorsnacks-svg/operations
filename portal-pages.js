@@ -24,4 +24,5 @@ window.PORTAL_PAGES = [
   { key: 'eindstock',      label: 'Eindstock',       icon: '📊', url: 'eindstock.html',              desc: 'Eindstock' },
   { key: 'horeca',         label: 'Horeca Planning', icon: '🍔', url: 'horeca-planning.html',        desc: 'Horeca-planning' },
   { key: 'krisdc',         label: 'Kris DC',         icon: '🍟', url: 'kris-dc.html',                desc: 'Wekelijkse stock (elke dinsdag)' },
+  { key: 'fiches',         label: "Technische fiche's", icon: '🔧', url: 'technische-fiches.html',   desc: 'Technische fiches van wagens & containers' },
 ];
