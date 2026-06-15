@@ -10,6 +10,7 @@
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
@@ -22,6 +23,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
+const fbstorage = firebase.storage();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="firebase-anon-auth.js"></script>
@@ -144,6 +146,72 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
 ::-webkit-scrollbar-thumb:hover{background:#b0b0b8;}
+
+/* ---- Foto-upload ---- */
+.foto-row{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;grid-column:1/-1;}
+.foto-slot{display:flex;flex-direction:column;gap:6px;}
+.foto-drop{position:relative;border:2px dashed var(--border2);border-radius:10px;background:var(--surface2);
+  min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  cursor:pointer;overflow:hidden;transition:border-color 0.15s,background 0.15s;color:var(--text2);text-align:center;padding:10px;}
+.foto-drop:hover{border-color:var(--red);background:#fff;}
+.foto-drop.has-img{border-style:solid;border-color:var(--border2);background:#000;padding:0;cursor:default;}
+.foto-drop .foto-icon{font-size:1.8rem;}
+.foto-drop .foto-hint{font-size:0.78rem;}
+.foto-drop img{width:100%;height:100%;min-height:150px;object-fit:cover;display:block;}
+.foto-drop input[type=file]{display:none;}
+.foto-actions{position:absolute;top:8px;right:8px;display:flex;gap:6px;}
+.foto-actions button{background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:6px;padding:5px 9px;
+  font-size:0.78rem;font-weight:700;cursor:pointer;font-family:var(--font);}
+.foto-actions button:hover{background:rgba(0,0,0,0.85);}
+.foto-prog{height:5px;border-radius:3px;background:var(--border2);overflow:hidden;display:none;}
+.foto-prog.show{display:block;}
+.foto-prog i{display:block;height:100%;width:0;background:var(--red);transition:width 0.2s;}
+.btn-pdf{background:#111;color:#fff;}
+.btn-pdf:hover{background:#000;}
+
+/* ---- Print / PDF-layout (alleen zichtbaar bij afdrukken) ---- */
+#fiche-print{display:none;}
+@media print{
+  body{background:#fff;}
+  body > *{display:none !important;}
+  #fiche-print{display:block !important;}
+  @page{size:A4;margin:0;}
+}
+#fiche-print{font-family:var(--font);color:#1a1a1a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.pp{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;display:flex;flex-direction:column;}
+.pp-head{background:#0d0d0d;color:#fff;padding:16px 22px 14px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid var(--red);}
+.pp-head .pp-logo{height:34px;width:auto;display:block;}
+.pp-head .pp-htxt{text-align:right;}
+.pp-head .pp-htxt .l1{color:var(--red);font-family:var(--font-cond);font-weight:800;letter-spacing:0.12em;font-size:0.72rem;}
+.pp-head .pp-htxt .l2{color:#cfcfcf;font-family:var(--font-cond);font-weight:700;letter-spacing:0.1em;font-size:0.92rem;margin-top:2px;}
+.pp-body{padding:20px 22px;flex:1;}
+.pp-titlerow{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.pp-kicker{display:flex;align-items:center;gap:8px;font-family:var(--font-cond);font-weight:700;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--text2);font-size:0.78rem;margin-bottom:6px;}
+.pp-kicker::before{content:"";width:26px;height:3px;background:var(--red);border-radius:2px;display:inline-block;}
+.pp-title{font-family:var(--font-cond);font-weight:900;font-size:2rem;line-height:1.02;letter-spacing:-0.01em;text-transform:uppercase;}
+.pp-code{background:var(--red);color:#fff;border-radius:10px;padding:10px 16px;text-align:center;min-width:88px;flex:none;}
+.pp-code .c1{font-family:var(--font-cond);font-weight:700;letter-spacing:0.14em;font-size:0.6rem;opacity:0.85;}
+.pp-code .c2{font-family:var(--font-cond);font-weight:900;font-size:1.7rem;line-height:1;}
+.pp-hero{width:100%;height:230px;object-fit:cover;border-radius:10px;display:block;margin:6px 0 14px;background:#eee;}
+.pp-intro{font-size:0.9rem;line-height:1.5;color:#333;margin-bottom:18px;white-space:pre-wrap;}
+.pp-sec{margin-bottom:16px;break-inside:avoid;}
+.pp-sec-h{display:flex;align-items:center;gap:10px;font-family:var(--font-cond);font-weight:800;font-size:1.05rem;
+  text-transform:uppercase;letter-spacing:0.02em;border-bottom:2.5px solid #111;padding-bottom:5px;margin-bottom:2px;}
+.pp-sec-h .n{background:#111;color:#fff;width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;
+  justify-content:center;font-size:0.72rem;font-weight:800;flex:none;}
+.pp-trow{display:flex;justify-content:space-between;gap:18px;padding:8px 2px;border-bottom:1px solid #ececec;font-size:0.86rem;}
+.pp-trow .k{color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.03em;font-size:0.72rem;flex:none;width:42%;}
+.pp-trow .v{font-weight:600;text-align:left;flex:1;white-space:pre-wrap;}
+.pp-trow .v.muted{color:#9a9aa0;font-weight:500;font-style:italic;}
+.pp-fotos{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px;}
+.pp-fotos figure{margin:0;}
+.pp-fotos img{width:100%;height:200px;object-fit:cover;border-radius:8px;display:block;background:#eee;}
+.pp-fotos figcaption{font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-top:5px;}
+.pp-foot{background:#0d0d0d;color:#cfcfcf;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;
+  font-size:0.74rem;margin-top:auto;}
+.pp-foot b{color:#fff;font-family:var(--font-cond);letter-spacing:0.08em;}
+.pp-foot .url{color:var(--red);font-weight:700;}
 </style>
 </head>
 <body>
@@ -213,12 +281,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </div>
         <div class="field"><label>Keuring elektriciteit</label><input class="readonly" id="f-keuring-elek" readonly></div>
         <div class="field"><label>Keuring gas</label><input class="readonly" id="f-keuring-gas" readonly></div>
+
+        <div class="field full"><label>Foto's</label>
+          <div class="foto-row">
+            <div class="foto-slot">
+              <div class="foto-drop" id="drop-buiten" onclick="if(!fotos.buiten.url)document.getElementById('file-buiten').click()">
+                <input type="file" id="file-buiten" accept="image/*" onchange="onFotoPick('buiten', this.files[0])">
+                <span class="foto-icon">🖼️</span>
+                <span class="foto-hint">Foto buitenkant<br>(klik om te kiezen)</span>
+              </div>
+              <div class="foto-prog" id="prog-buiten"><i></i></div>
+            </div>
+            <div class="foto-slot">
+              <div class="foto-drop" id="drop-binnen" onclick="if(!fotos.binnen.url)document.getElementById('file-binnen').click()">
+                <input type="file" id="file-binnen" accept="image/*" onchange="onFotoPick('binnen', this.files[0])">
+                <span class="foto-icon">🖼️</span>
+                <span class="foto-hint">Foto binnenkant<br>(klik om te kiezen)</span>
+              </div>
+              <div class="foto-prog" id="prog-binnen"><i></i></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
       <span class="save-meta" id="m-saved">Nog niet ingevuld</span>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-ghost" onclick="closeFiche()">Sluiten</button>
+        <button class="btn btn-pdf" onclick="exportFichePDF()">📄 Exporteer naar PDF</button>
         <button class="btn btn-save" id="m-save-btn" onclick="saveFiche()">💾 Bewaren</button>
       </div>
     </div>
@@ -226,6 +316,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Verborgen print-layout — wordt gevuld bij 'Exporteer naar PDF' en is enkel zichtbaar in het afdruk-/PDF-venster -->
+<div id="fiche-print"></div>
 
 <script src="/truck-data.js"></script>
 <script>
@@ -238,14 +331,17 @@ const CAT_ORDER = TruckData.CATEGORIES.map(function (c) {
 
 let fiches = {};          // { ft001: {beschrijving,...,updatedAt}, ... }
 let activeId = null;      // id van de truck waarvan de fiche openstaat
+// Foto-state van de open fiche: per slot een download-URL + opslagpad in Storage.
+let fotos = { buiten: { url: '', path: '' }, binnen: { url: '', path: '' } };
 
 const FIELD_KEYS = ['beschrijving','lengte','breedte','hoogte','gewicht','stroom','vermogen','gas','water','toebehoren','opmerkingen'];
 
-// Een fiche telt als "ingevuld" zodra één veld inhoud heeft.
+// Een fiche telt als "ingevuld" zodra één tekstveld inhoud heeft of er een foto bij zit.
 function isFilled(id) {
   const f = fiches[id];
   if (!f) return false;
-  return FIELD_KEYS.some(function (k) { return (f[k] || '').toString().trim() !== ''; });
+  if (FIELD_KEYS.some(function (k) { return (f[k] || '').toString().trim() !== ''; })) return true;
+  return !!(f.fotoBuitenUrl || f.fotoBinnenUrl);
 }
 
 function clearSearch() {
@@ -334,6 +430,10 @@ function openFiche(id) {
   document.getElementById('m-saved').textContent = f.updatedAt
     ? 'Laatst bewaard: ' + new Date(f.updatedAt).toLocaleString('nl-NL', {day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})
     : 'Nog niet ingevuld';
+  fotos.buiten = { url: f.fotoBuitenUrl || '', path: f.fotoBuitenPath || '' };
+  fotos.binnen = { url: f.fotoBinnenUrl || '', path: f.fotoBinnenPath || '' };
+  renderFotoSlot('buiten');
+  renderFotoSlot('binnen');
   document.getElementById('modal-backdrop').classList.add('show');
 }
 
@@ -358,6 +458,10 @@ async function saveFiche() {
     water:        document.getElementById('f-water').value.trim(),
     toebehoren:   document.getElementById('f-toebehoren').value.trim(),
     opmerkingen:  document.getElementById('f-opmerkingen').value.trim(),
+    fotoBuitenUrl:  fotos.buiten.url  || '',
+    fotoBuitenPath: fotos.buiten.path || '',
+    fotoBinnenUrl:  fotos.binnen.url  || '',
+    fotoBinnenPath: fotos.binnen.path || '',
     updatedAt:    Date.now()
   };
   try {
@@ -370,6 +474,191 @@ async function saveFiche() {
   } finally {
     btn.disabled = false;
   }
+}
+
+/* ---------- Foto's ---------- */
+
+// Toont per slot ofwel de gekozen foto (met Vervangen/Verwijderen) ofwel de lege drop-zone.
+function renderFotoSlot(slot) {
+  const drop = document.getElementById('drop-' + slot);
+  const st = fotos[slot] || { url: '' };
+  const label = slot === 'buiten' ? 'buitenkant' : 'binnenkant';
+  const fileInput = '<input type="file" id="file-' + slot + '" accept="image/*" onchange="onFotoPick(\'' + slot + '\', this.files[0])">';
+  if (st.url) {
+    drop.classList.add('has-img');
+    drop.innerHTML = '<img src="' + st.url + '" alt="Foto ' + label + '">'
+      + '<div class="foto-actions">'
+      + '<button type="button" onclick="event.stopPropagation();replaceFoto(\'' + slot + '\')">Vervangen</button>'
+      + '<button type="button" onclick="event.stopPropagation();removeFoto(\'' + slot + '\')">Verwijderen</button>'
+      + '</div>' + fileInput;
+  } else {
+    drop.classList.remove('has-img');
+    drop.innerHTML = fileInput
+      + '<span class="foto-icon">🖼️</span>'
+      + '<span class="foto-hint">Foto ' + label + '<br>(klik om te kiezen)</span>';
+  }
+}
+
+function replaceFoto(slot) { document.getElementById('file-' + slot).click(); }
+
+// Schaalt een afbeelding client-side terug naar een redelijke maat → kleinere upload + snelle PDF.
+function resizeImage(file, maxDim, quality) {
+  return new Promise(function (resolve, reject) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (Math.max(w, h) > maxDim) {
+        if (w >= h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      c.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error('canvas leeg')); }, 'image/jpeg', quality);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('laden mislukt')); };
+    img.src = url;
+  });
+}
+
+async function onFotoPick(slot, file) {
+  if (!file || !activeId) return;
+  if (!/^image\//.test(file.type)) { showToast('⚠️ Kies een afbeelding'); return; }
+  const id = activeId;
+  if (window.fbAuthReady) { try { await window.fbAuthReady; } catch (e) {} }
+  const prog = document.getElementById('prog-' + slot);
+  const fill = prog.querySelector('i');
+  prog.classList.add('show'); fill.style.width = '5%';
+  let blob;
+  try {
+    blob = await resizeImage(file, 1400, 0.82);
+  } catch (e) {
+    prog.classList.remove('show'); showToast('⚠️ Foto verwerken mislukt'); return;
+  }
+  const ts = Date.now().toString(36);
+  const path = 'archief/fiche-fotos/' + id + '/' + slot + '-' + ts + '.jpg';
+  const oldPath = fotos[slot].path;
+  let task;
+  try {
+    task = fbstorage.ref(path).put(blob, { contentType: 'image/jpeg' });
+  } catch (e) {
+    prog.classList.remove('show'); showToast('⚠️ Upload kon niet starten'); return;
+  }
+  task.on('state_changed',
+    function (s) { fill.style.width = Math.max(5, Math.round(s.bytesTransferred / s.totalBytes * 100)) + '%'; },
+    function () { prog.classList.remove('show'); showToast('⚠️ Upload mislukt — geen rechten?'); },
+    function () {
+      task.snapshot.ref.getDownloadURL().then(function (url) {
+        prog.classList.remove('show');
+        // Fiche intussen gesloten/gewisseld? Ruim de upload op i.p.v. de verkeerde fiche te wijzigen.
+        if (activeId !== id) { fbstorage.ref(path).delete().catch(function () {}); return; }
+        fotos[slot] = { url: url, path: path };
+        renderFotoSlot(slot);
+        if (oldPath && oldPath !== path) { fbstorage.ref(oldPath).delete().catch(function () {}); }
+        showToast('📷 Foto geüpload — vergeet niet te bewaren');
+      }).catch(function () { prog.classList.remove('show'); showToast('⚠️ Kon link niet ophalen'); });
+    });
+}
+
+function removeFoto(slot) {
+  const old = fotos[slot].path;
+  fotos[slot] = { url: '', path: '' };
+  renderFotoSlot(slot);
+  if (old) { fbstorage.ref(old).delete().catch(function () {}); }
+  showToast('Foto verwijderd — vergeet niet te bewaren');
+}
+
+/* ---------- PDF-export (gebrande fiche → afdrukken/opslaan als PDF) ---------- */
+
+// Kort 'code/nummer' uit de naam halen (bv. 502, C103), anders het kenteken.
+function ficheCode(t) {
+  const m = (t.name || '').match(/([A-Z]{0,2}\d{2,4})\s*$/);
+  if (m) return m[1];
+  return t.plate || '—';
+}
+
+function exportFichePDF() {
+  if (!activeId) return;
+  const t = FLEET.find(function (x) { return x.id === activeId; });
+  if (!t) return;
+  const v = function (id) { return document.getElementById(id).value.trim(); };
+  const catLabel = (CAT_ORDER.find(function (c) { return c.key === t.category; }) || {}).label || '';
+  const code = ficheCode(t);
+  const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  function row(k, val) {
+    const has = (val || '').toString().trim() !== '';
+    return '<div class="pp-trow"><span class="k">' + escapeHtml(k) + '</span>'
+      + '<span class="v' + (has ? '' : ' muted') + '">' + (has ? escapeHtml(val) : '—') + '</span></div>';
+  }
+  function block(val) { return '<div class="pp-trow"><span class="v">' + escapeHtml(val) + '</span></div>'; }
+  function section(num, title, rowsHtml) {
+    return '<div class="pp-sec"><div class="pp-sec-h"><span class="n">' + num + '</span>' + escapeHtml(title) + '</div>' + rowsHtml + '</div>';
+  }
+
+  const beschrijving = v('f-beschrijving');
+  const fotoBuiten = fotos.buiten.url, fotoBinnen = fotos.binnen.url;
+
+  let html = '<div class="pp">';
+  html += '<div class="pp-head">'
+    + '<img class="pp-logo" src="senorsnacks-logo-white.png" alt="Señor Snacks">'
+    + '<div class="pp-htxt"><div class="l1">TECHNISCHE FICHE</div><div class="l2">VERHUUR</div></div>'
+    + '</div>';
+  html += '<div class="pp-body">';
+  html += '<div class="pp-titlerow"><div>'
+    + '<div class="pp-kicker">' + escapeHtml(t.type) + '</div>'
+    + '<div class="pp-title">' + escapeHtml(t.name) + '</div></div>'
+    + '<div class="pp-code"><div class="c1">CODE</div><div class="c2">' + escapeHtml(code) + '</div></div>'
+    + '</div>';
+  if (fotoBuiten) html += '<img class="pp-hero" src="' + fotoBuiten + '" alt="">';
+  if (beschrijving) html += '<div class="pp-intro">' + escapeHtml(beschrijving) + '</div>';
+  html += section(1, 'Algemeen',
+    row('Naam', t.name) + row('Code / nummer', code) + row('Type', t.type)
+    + row('Categorie', catLabel) + row('Kenteken', t.plate) + row('Datum fiche', today));
+  html += section(2, 'Afmetingen',
+    row('Lengte', v('f-lengte')) + row('Breedte', v('f-breedte'))
+    + row('Hoogte', v('f-hoogte')) + row('Gewicht', v('f-gewicht')));
+  html += section(3, 'Installaties & uitrusting',
+    row('Stroom-aansluiting', v('f-stroom')) + row('Totaal vermogen', v('f-vermogen'))
+    + row('Gas', v('f-gas')) + row('Water', v('f-water')));
+  const toeb = v('f-toebehoren');
+  if (toeb) html += section(4, 'Toebehoren / inhoud', block(toeb));
+  html += section(5, 'Keuringen & documenten',
+    row('Keuring elektriciteit', t.keuringElek ? 'Voorzien — keuringsplichtig' : 'Niet van toepassing')
+    + row('Keuring gas', t.keuringGas ? 'Voorzien — keuringsplichtig' : 'Niet van toepassing'));
+  const opm = v('f-opmerkingen');
+  if (opm) html += section(6, 'Opmerkingen', block(opm));
+  if (fotoBuiten || fotoBinnen) {
+    let f = '<div class="pp-fotos">';
+    if (fotoBuiten) f += '<figure><img src="' + fotoBuiten + '" alt=""><figcaption>Buitenkant</figcaption></figure>';
+    if (fotoBinnen) f += '<figure><img src="' + fotoBinnen + '" alt=""><figcaption>Binnenkant</figcaption></figure>';
+    f += '</div>';
+    html += section(7, "Foto's", f);
+  }
+  html += '</div>'; // pp-body
+  html += '<div class="pp-foot"><b>SEÑOR SNACKS</b>'
+    + '<span><span class="url">www.senorsnacks.be</span> · Winkelom 87C, 2440 Geel</span>'
+    + '<span>Fiche ' + escapeHtml(code) + ' · ' + today + '</span></div>';
+  html += '</div>'; // pp
+
+  const wrap = document.getElementById('fiche-print');
+  wrap.innerHTML = html;
+
+  // Zet de documenttitel → wordt de standaard PDF-bestandsnaam in het afdrukvenster.
+  const oldTitle = document.title;
+  document.title = 'Technische fiche - ' + t.name;
+
+  // Wacht tot alle afbeeldingen geladen zijn, anders ontbreken foto's in de PDF.
+  const imgs = Array.prototype.slice.call(wrap.querySelectorAll('img'));
+  Promise.all(imgs.map(function (im) {
+    if (im.complete && im.naturalWidth) return Promise.resolve();
+    return new Promise(function (res) { im.onload = im.onerror = res; });
+  })).then(function () {
+    window.print();
+    setTimeout(function () { document.title = oldTitle; }, 500);
+  });
 }
 
 function escapeHtml(s) {
