@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Technische fiche's</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --bg:#f4f4f5;--surface:#ffffff;--surface2:#eeeef0;--border:#e2e2e5;--border2:#d0d0d4;
+  --text:#1a1a1a;--text2:#5f5f66;--red:#e8001d;--red-dark:#b8001a;--green:#22c55e;--green-light:#4ade80;
+  --orange:#f97316;--blue:#3b82f6;--purple:#a855f7;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.logo-area{display:flex;align-items:center;gap:14px;cursor:pointer;text-decoration:none;color:inherit;transition:opacity 0.15s;}
+.logo-area:hover{opacity:0.75;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-section{font-size:0.92rem;font-weight:600;color:var(--text2);padding-left:14px;border-left:1px solid var(--border2);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+
+.container{max-width:1400px;margin:0 auto;padding:32px 24px;}
+.page-header{margin-bottom:28px;}
+.page-title{font-family:var(--font-cond);font-size:2.2rem;font-weight:900;letter-spacing:-0.01em;margin-bottom:6px;}
+.page-subtitle{color:var(--text2);font-size:0.92rem;}
+
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;padding:10px 16px;margin-bottom:20px;transition:border-color 0.15s;}
+.search-bar:focus-within{border-color:var(--red);}
+.search-icon{color:var(--text2);font-size:1rem;}
+.search-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:0.95rem;}
+.search-bar input::placeholder{color:var(--text2);}
+.search-clear{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;font-size:1rem;border-radius:4px;}
+.search-clear:hover{background:var(--border2);color:var(--text);}
+
+.stats-row{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:140px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.stat-num{font-family:var(--font-cond);font-size:2rem;font-weight:900;line-height:1;}
+.stat-lbl{color:var(--text2);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-top:4px;}
+.stat-pill.green .stat-num{color:#16a34a;}
+.stat-pill.gray .stat-num{color:var(--text2);}
+
+.section{margin-bottom:32px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-family:var(--font-cond);font-size:1.4rem;font-weight:800;}
+.section-count{background:var(--surface2);color:var(--text2);font-size:0.78rem;font-family:var(--font);font-weight:700;padding:3px 10px;border-radius:20px;}
+
+.truck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.truck-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;
+  display:flex;flex-direction:column;gap:10px;transition:all 0.2s;cursor:pointer;text-align:left;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid var(--border2);}
+.truck-card:hover{border-color:var(--border2);box-shadow:0 4px 18px rgba(0,0,0,0.10);transform:translateY(-1px);}
+.truck-card.filled{border-left:3px solid var(--green);}
+.truck-card .truck-name{font-weight:700;font-size:0.96rem;line-height:1.3;}
+.truck-card .truck-meta{color:var(--text2);font-size:0.78rem;}
+.card-badges{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:0.7rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:0.03em;}
+.tag.plate{background:var(--surface2);color:var(--text2);font-variant-numeric:tabular-nums;letter-spacing:0.04em;}
+.tag.elek{background:rgba(59,130,246,0.12);color:#2563eb;}
+.tag.gas{background:rgba(249,115,22,0.14);color:#ea580c;}
+.tag.fiche-ok{background:rgba(34,197,94,0.14);color:#16a34a;}
+.tag.fiche-empty{background:var(--surface2);color:var(--text2);}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text2);}
+.empty-icon{font-size:3rem;margin-bottom:10px;}
+
+/* ---- Fiche modal ---- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;
+  align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:760px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  overflow:hidden;animation:cardIn 0.2s ease both;}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.modal-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:18px 22px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
+.modal-head h2{font-family:var(--font-cond);font-size:1.6rem;font-weight:900;line-height:1.1;}
+.modal-head .sub{color:var(--text2);font-size:0.85rem;margin-top:4px;}
+.modal-close{background:transparent;border:none;font-size:1.4rem;color:var(--text2);cursor:pointer;
+  padding:2px 8px;border-radius:6px;line-height:1;}
+.modal-close:hover{background:var(--border2);color:var(--text);}
+.modal-body{padding:22px;display:flex;flex-direction:column;gap:18px;max-height:65vh;overflow-y:auto;}
+.fiche-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field.full{grid-column:1/-1;}
+.field label{font-size:0.74rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text2);}
+.field input,.field textarea{font-family:var(--font);font-size:0.92rem;color:var(--text);background:var(--surface);
+  border:1px solid var(--border2);border-radius:8px;padding:9px 12px;outline:none;transition:border-color 0.15s;width:100%;}
+.field input:focus,.field textarea:focus{border-color:var(--red);}
+.field textarea{resize:vertical;min-height:90px;line-height:1.45;}
+.field .readonly{background:var(--surface2);color:var(--text2);border-style:dashed;}
+.modal-foot{border-top:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;background:var(--surface);}
+.save-meta{color:var(--text2);font-size:0.8rem;}
+.btn{font-family:var(--font);font-weight:700;font-size:0.9rem;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;transition:background 0.15s,opacity 0.15s;}
+.btn-save{background:var(--red);color:#fff;}
+.btn-save:hover{background:var(--red-dark);}
+.btn-save:disabled{opacity:0.5;cursor:default;}
+.btn-ghost{background:var(--surface2);color:var(--text2);}
+.btn-ghost:hover{background:var(--border2);color:var(--text);}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;
+  padding:12px 22px;border-radius:8px;font-weight:700;font-size:0.9rem;opacity:0;transition:opacity 0.3s;z-index:1000;pointer-events:none;}
+.toast.show{opacity:1;}
+
+@media(max-width:768px){
+  .topbar{padding:0 12px;height:54px;}
+  .topbar-section{display:none;}
+  .container{padding:18px 12px;}
+  .page-title{font-size:1.6rem;}
+  .stats-row{gap:8px;}
+  .stat-pill{padding:11px 13px;min-width:0;flex:1 1 calc(33% - 6px);}
+  .stat-num{font-size:1.5rem;}
+  .truck-grid{grid-template-columns:1fr;gap:10px;}
+  .fiche-grid{grid-template-columns:1fr;}
+  .modal-body{max-height:none;}
+}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:#b0b0b8;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html" title="Terug naar dashboard">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-section">Technische fiche's</div>
+  </a>
+  <div class="topbar-right">
+    <div id="clock" style="color:var(--text2);font-size:0.85rem;font-weight:500;font-variant-numeric:tabular-nums;"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div class="page-title">🔧 Technische fiche's</div>
+    <div class="page-subtitle" id="page-subtitle">Laden...</div>
+  </div>
+
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search-input" placeholder="Zoek wagen of container (bv. C103, 502, hamburger, friet...)" oninput="render()">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-pill"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Wagens & containers</div></div>
+    <div class="stat-pill green"><div class="stat-num" id="st-filled">0</div><div class="stat-lbl">Fiche ingevuld</div></div>
+    <div class="stat-pill gray"><div class="stat-num" id="st-empty">0</div><div class="stat-lbl">Nog leeg</div></div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<!-- Fiche-detail modal -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="if(event.target===this)closeFiche()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <div>
+        <h2 id="m-title">—</h2>
+        <div class="sub" id="m-sub">—</div>
+      </div>
+      <button class="modal-close" onclick="closeFiche()" title="Sluiten">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fiche-grid">
+        <div class="field full">
+          <label>Beschrijving / uitleg</label>
+          <textarea id="f-beschrijving" placeholder="Waarvoor dient deze wagen/container, opbouw, bijzonderheden..."></textarea>
+        </div>
+        <div class="field"><label>Lengte</label><input id="f-lengte" placeholder="bv. 6,00 m"></div>
+        <div class="field"><label>Breedte</label><input id="f-breedte" placeholder="bv. 2,30 m"></div>
+        <div class="field"><label>Hoogte</label><input id="f-hoogte" placeholder="bv. 2,60 m"></div>
+        <div class="field"><label>Gewicht</label><input id="f-gewicht" placeholder="bv. 1.800 kg"></div>
+        <div class="field"><label>Stroom-aansluiting</label><input id="f-stroom" placeholder="bv. 1× 32A / 2× 16A"></div>
+        <div class="field"><label>Totaal vermogen</label><input id="f-vermogen" placeholder="bv. 22 kW"></div>
+        <div class="field"><label>Gas</label><input id="f-gas" placeholder="bv. 2× propaan 35 kg"></div>
+        <div class="field"><label>Water</label><input id="f-water" placeholder="bv. boiler 50 L + vuilwater"></div>
+        <div class="field full">
+          <label>Toebehoren / inhoud</label>
+          <textarea id="f-toebehoren" placeholder="Vaste toestellen, inventaris, wat hoort er standaard bij..."></textarea>
+        </div>
+        <div class="field full">
+          <label>Opmerkingen</label>
+          <textarea id="f-opmerkingen" placeholder="Aandachtspunten, gebreken, historiek..."></textarea>
+        </div>
+        <div class="field"><label>Keuring elektriciteit</label><input class="readonly" id="f-keuring-elek" readonly></div>
+        <div class="field"><label>Keuring gas</label><input class="readonly" id="f-keuring-gas" readonly></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="save-meta" id="m-saved">Nog niet ingevuld</span>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="closeFiche()">Sluiten</button>
+        <button class="btn btn-save" id="m-save-btn" onclick="saveFiche()">💾 Bewaren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/truck-data.js"></script>
+<script>
+// Volledige vloot (wagens + containers) uit de centrale bron /truck-data.js.
+const FLEET = TruckData.fleet();
+// Categorie-volgorde + labels overgenomen uit truck-data.js (checkin-labels = vollere namen).
+const CAT_ORDER = TruckData.CATEGORIES.map(function (c) {
+  return { key: c.key, label: c.checkinLabel };
+});
+
+let fiches = {};          // { ft001: {beschrijving,...,updatedAt}, ... }
+let activeId = null;      // id van de truck waarvan de fiche openstaat
+
+const FIELD_KEYS = ['beschrijving','lengte','breedte','hoogte','gewicht','stroom','vermogen','gas','water','toebehoren','opmerkingen'];
+
+// Een fiche telt als "ingevuld" zodra één veld inhoud heeft.
+function isFilled(id) {
+  const f = fiches[id];
+  if (!f) return false;
+  return FIELD_KEYS.some(function (k) { return (f[k] || '').toString().trim() !== ''; });
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  render();
+}
+
+function render() {
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  document.getElementById('search-clear').style.display = search ? 'inline-block' : 'none';
+
+  const total = FLEET.length;
+  const filledCount = FLEET.filter(function (t) { return isFilled(t.id); }).length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-filled').textContent = filledCount;
+  document.getElementById('st-empty').textContent = total - filledCount;
+  document.getElementById('page-subtitle').textContent =
+    total + ' wagens & containers · ' + filledCount + ' fiche' + (filledCount !== 1 ? 's' : '') + ' ingevuld';
+
+  let visible = FLEET;
+  if (search) {
+    visible = FLEET.filter(function (t) {
+      return (t.name + ' ' + t.type + ' ' + (t.plate || '')).toLowerCase().includes(search);
+    });
+  }
+
+  const byCat = {};
+  CAT_ORDER.forEach(function (c) { byCat[c.key] = []; });
+  visible.forEach(function (t) {
+    if (!byCat[t.category]) byCat[t.category] = [];
+    byCat[t.category].push(t);
+  });
+
+  let html = '';
+  CAT_ORDER.forEach(function (c) {
+    const items = (byCat[c.key] || []).slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'nl'); });
+    if (!items.length) return;
+    html += '<div class="section">'
+      + '<div class="section-header">' + c.label + ' <span class="section-count">' + items.length + '</span></div>'
+      + '<div class="truck-grid">' + items.map(renderCard).join('') + '</div>'
+      + '</div>';
+  });
+
+  if (!html) {
+    html = '<div class="empty"><div class="empty-icon">🔍</div><div>Geen wagen of container gevonden voor "' + escapeHtml(search) + '".</div></div>';
+  }
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderCard(t) {
+  const filled = isFilled(t.id);
+  const tags = [];
+  if (t.plate) tags.push('<span class="tag plate">' + escapeHtml(t.plate) + '</span>');
+  if (t.keuringElek) tags.push('<span class="tag elek">⚡ Elek</span>');
+  if (t.keuringGas) tags.push('<span class="tag gas">🔥 Gas</span>');
+  tags.push(filled
+    ? '<span class="tag fiche-ok">✓ Fiche</span>'
+    : '<span class="tag fiche-empty">Leeg</span>');
+  return '<button class="truck-card ' + (filled ? 'filled' : '') + '" onclick="openFiche(\'' + t.id + '\')">'
+    + '<div><div class="truck-name">' + escapeHtml(t.name) + '</div>'
+    + '<div class="truck-meta">' + escapeHtml(t.type) + '</div></div>'
+    + '<div class="card-badges">' + tags.join('') + '</div>'
+    + '</button>';
+}
+
+function openFiche(id) {
+  const t = FLEET.find(function (x) { return x.id === id; });
+  if (!t) return;
+  activeId = id;
+  const f = fiches[id] || {};
+  document.getElementById('m-title').textContent = t.name;
+  document.getElementById('m-sub').textContent = t.type + (t.plate ? ' · ' + t.plate : '');
+  document.getElementById('f-beschrijving').value = f.beschrijving || '';
+  document.getElementById('f-lengte').value      = f.lengte || '';
+  document.getElementById('f-breedte').value     = f.breedte || '';
+  document.getElementById('f-hoogte').value      = f.hoogte || '';
+  document.getElementById('f-gewicht').value     = f.gewicht || '';
+  document.getElementById('f-stroom').value      = f.stroom || '';
+  document.getElementById('f-vermogen').value    = f.vermogen || '';
+  document.getElementById('f-gas').value         = f.gas || '';
+  document.getElementById('f-water').value       = f.water || '';
+  document.getElementById('f-toebehoren').value  = f.toebehoren || '';
+  document.getElementById('f-opmerkingen').value = f.opmerkingen || '';
+  document.getElementById('f-keuring-elek').value = t.keuringElek ? 'Ja — keuringsplichtig' : 'Niet van toepassing';
+  document.getElementById('f-keuring-gas').value  = t.keuringGas ? 'Ja — keuringsplichtig' : 'Niet van toepassing';
+  document.getElementById('m-saved').textContent = f.updatedAt
+    ? 'Laatst bewaard: ' + new Date(f.updatedAt).toLocaleString('nl-NL', {day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})
+    : 'Nog niet ingevuld';
+  document.getElementById('modal-backdrop').classList.add('show');
+}
+
+function closeFiche() {
+  activeId = null;
+  document.getElementById('modal-backdrop').classList.remove('show');
+}
+
+async function saveFiche() {
+  if (!activeId) return;
+  const btn = document.getElementById('m-save-btn');
+  btn.disabled = true;
+  const data = {
+    beschrijving: document.getElementById('f-beschrijving').value.trim(),
+    lengte:       document.getElementById('f-lengte').value.trim(),
+    breedte:      document.getElementById('f-breedte').value.trim(),
+    hoogte:       document.getElementById('f-hoogte').value.trim(),
+    gewicht:      document.getElementById('f-gewicht').value.trim(),
+    stroom:       document.getElementById('f-stroom').value.trim(),
+    vermogen:     document.getElementById('f-vermogen').value.trim(),
+    gas:          document.getElementById('f-gas').value.trim(),
+    water:        document.getElementById('f-water').value.trim(),
+    toebehoren:   document.getElementById('f-toebehoren').value.trim(),
+    opmerkingen:  document.getElementById('f-opmerkingen').value.trim(),
+    updatedAt:    Date.now()
+  };
+  try {
+    await fbdb.ref('ft_fiches_v1/' + activeId).set(data);
+    showToast('✓ Fiche bewaard');
+    closeFiche();
+  } catch (e) {
+    showToast('⚠️ Bewaren mislukt — geen rechten?');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return (s || '').toString().replace(/[&<>"']/g, function (c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function () { t.classList.remove('show'); }, 3000);
+}
+
+// Esc sluit de modal
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeFiche(); });
+
+// Live luisteren naar de fiche-data
+fbdb.ref('ft_fiches_v1').on('value', function (snap) {
+  fiches = snap.val() || {};
+  render();
+});
+
+// Klokje
+function updateClock(){
+  const el = document.getElementById('clock');
+  if (el) { const now = new Date(); el.textContent = now.toLocaleDateString('nl-NL') + '  ' + now.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}); }
+}
+updateClock(); setInterval(updateClock, 30000);
+
+render();
+</script>
+</body>
+</html>
