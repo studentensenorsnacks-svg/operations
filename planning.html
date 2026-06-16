@@ -73,9 +73,6 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .truck-chip.dragging{opacity:0.25;}
 .truck-chip.planned{opacity:0.18;cursor:not-allowed;pointer-events:none;}
 .chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.truck-note-btn{background:none;border:none;cursor:pointer;font-size:0.8rem;opacity:0.5;transition:opacity 0.15s;padding:0 2px;}
-.truck-note-btn:hover{opacity:1;}
-.truck-note-btn.has-note{opacity:0.8;color:var(--red);}
 .tp-foot-row{padding:2px 12px 5px;display:flex;align-items:center;justify-content:space-between;}
 .tp-pl-lbl{font-size:0.65rem;color:#888;}
 .tp-show-btn{font-size:0.65rem;color:#777;background:none;border:none;cursor:pointer;font-family:var(--font);text-decoration:underline;padding:0;}
@@ -413,11 +410,6 @@ textarea{resize:vertical;min-height:70px;}
   .week-label{font-size:0.92rem;}
   .plan-tab{padding:8px 12px;font-size:0.8rem;}
   .import-modal{width:96%;max-height:94vh;}
-  .modal-small{max-width:500px;width:96%;}
-  .modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-  .modal-head h3{font-family:var(--font-cond);font-size:1.1rem;font-weight:800;}
-  .modal-body{padding:20px;}
-  .modal-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
 }
 
 @media print{
@@ -589,27 +581,6 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
-<!-- NOTITIE MODAL -->
-<div class="overlay hidden" id="note-overlay">
-  <div class="modal-small" style="max-width:500px">
-    <div class="modal-head">
-      <h3 id="note-modal-title">📝 Notitie bewerken</h3>
-      <button class="btn-cancel" type="button" onclick="closeNoteModal()" style="padding:5px 12px">✕</button>
-    </div>
-    <div class="modal-body" style="padding:20px">
-      <div style="margin-bottom:12px">
-        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:6px">Truck:</label>
-        <span id="note-truck-name" style="font-family:var(--font-cond);font-weight:700;color:var(--red)"></span>
-      </div>
-      <textarea id="note-text" style="width:100%;min-height:100px;padding:10px;border:1px solid var(--border);border-radius:5px;font-family:var(--font);font-size:0.85rem;resize:vertical;box-sizing:border-box;" placeholder="Voeg een opmerking toe voor deze truck (bv: 'wordt gebruikt als inwisselpunt')..."></textarea>
-    </div>
-    <div class="modal-foot" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
-      <button class="btn-cancel" type="button" onclick="closeNoteModal()">Annuleren</button>
-      <button class="btn-primary" type="button" onclick="saveNote()">Opslaan</button>
-    </div>
-  </div>
-</div>
-
 <!-- IMPORT MODAL -->
 <div class="overlay hidden" id="import-overlay">
   <div class="import-modal">
@@ -729,7 +700,6 @@ const showPl = {};
 let dragging = null;
 let importedEvents = [];
 let fbListener = null; // actieve Firebase listener
-let truckNotes = {}; // Opmerkingen per truck (key: truckId of truckName)
 
 // ── FIREBASE LISTENER (herbruikbaar per mode) ──────────
 function attachFbListener(path) {
@@ -755,50 +725,6 @@ function attachFbListener(path) {
 // Beide tabs gebruiken hetzelfde Firebase pad — events zijn gedeeld
 function fbPath() {
   return 'ft_planning_v1';
-}
-
-// ── TRUCK NOTES ───────────────────────────────────────
-function loadTruckNotes() {
-  fbdb.ref('truck_notes').on('value', snap => {
-    truckNotes = snap.val() || {};
-  });
-}
-
-function getTruckNote(truckId) {
-  return truckNotes[truckId] || '';
-}
-
-function saveTruckNote(truckId, note) {
-  fbdb.ref('truck_notes/' + truckId).set(note.trim() || null);
-}
-
-function getTruckIdByName(name) {
-  const truck = TruckData.TRUCKS.find(t => t.name === name);
-  return truck ? truck.id : name;
-}
-
-// Notitie modal
-let currentNoteTruckId = null;
-
-function openNoteModal(truckId, truckName) {
-  currentNoteTruckId = truckId;
-  document.getElementById('note-truck-name').textContent = truckName;
-  document.getElementById('note-text').value = getTruckNote(truckId) || '';
-  document.getElementById('note-overlay').classList.remove('hidden');
-}
-
-function closeNoteModal() {
-  document.getElementById('note-overlay').classList.add('hidden');
-  currentNoteTruckId = null;
-}
-
-function saveNote() {
-  if (!currentNoteTruckId) return;
-  const note = document.getElementById('note-text').value;
-  saveTruckNote(currentNoteTruckId, note);
-  closeNoteModal();
-  buildPanel(); // Refresh truck panel to update note indicators
-  showToast(note ? 'Notitie opgeslagen' : 'Notitie verwijderd');
 }
 
 // ── ARCHIEF: historische Outlook-events ────────────────
@@ -1195,12 +1121,9 @@ function buildPanel(){
         ${chips.map(t=>{
           const ip=pl.has(t);
           const te=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          const truckId = getTruckIdByName(t);
-          const note = getTruckNote(truckId);
-          const hasNote = note && note.trim();
           return `<div class="truck-chip${ip?' planned':''}" draggable="${!ip}" style="border-left-color:${g.color}"
             ${!ip?`ondragstart="onDS(event,'${te}',this)" ondragend="onDE(this)"`:''}
-          ><div class="chip-dot" style="background:${g.color}"></div>${t}<button class="truck-note-btn${hasNote?' has-note':''}" title="${hasNote?'Bewerk notitie: '+note:'Voeg notitie toe'}" onclick="event.stopPropagation();openNoteModal('${truckId}','${te}')">📝</button></div>`;
+          ><div class="chip-dot" style="background:${g.color}"></div>${t}</div>`;
         }).join('')}
         ${chips.length===0?`<div class="tp-empty-grp">Alle ingepland</div>`:''}
         ${hid>0?`<div class="tp-foot-row"><span class="tp-pl-lbl">${hid} ingepland</span><button type="button" class="tp-show-btn" onclick="togShow(${gi})">${show?'verberg':'toon'}</button></div>`:''}
@@ -2120,10 +2043,7 @@ function openVehiclePDF(mode){
       const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
       const chips=ev.trucksOnEv.map(t=>{
         const c=TC[t]||{color:'#555',bg:'#eee'};
-        const truckId = getTruckIdByName(t);
-        const note = getTruckNote(truckId);
-        const noteHtml = note ? `<span class="pdf-truck-note" style="font-size:0.7rem;color:var(--muted);font-style:italic;"> — ${note}</span>` : '';
-        return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}${noteHtml}</div>`;
+        return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}</div>`;
       }).join('');
       return `<div class="pdf-camion-row">
         <div class="pdf-camion-chips">${chips}</div>
@@ -2159,13 +2079,7 @@ function printEv(id){
   const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
   const dL=nD===1?fmtL(ev.startDate):`${fmtS(ev.startDate)} t/m ${fmtS(ev.endDate)} (${nD} dagen)`;
   const chips=ev.trucks.length
-    ?ev.trucks.map(t=>{
-      const c=TC[t]||{color:'#555',bg:'#eee'};
-      const truckId = getTruckIdByName(t);
-      const note = getTruckNote(truckId);
-      const noteHtml = note ? `<span class="pdf-truck-note" style="font-size:0.7rem;color:var(--muted);font-style:italic;"> — ${note}</span>` : '';
-      return `<div class="pdf-chip" style="background:${c.bg};color:${c.color};margin-bottom:4px"><div class="pdf-chip-dot" style="background:${c.color}"></div>${t}${noteHtml}</div>`;
-    }).join('')
+    ?ev.trucks.map(t=>{const c=TC[t]||{color:'#555',bg:'#eee'};return `<div class="pdf-chip" style="background:${c.bg};color:${c.color};margin-bottom:4px"><div class="pdf-chip-dot" style="background:${c.color}"></div>${t}</div>`;}).join('')
     :'<p style="color:#aaa;font-style:italic">Geen trucks</p>';
   document.getElementById('pdf-body').innerHTML=`<div class="pdf-week-title">${ev.name}</div><div class="pdf-week-sub">📍 ${ev.location||'—'} · 📅 ${dL}</div><div style="font-family:var(--font-cond);font-size:1rem;font-weight:700;margin-bottom:10px">🚚 ${ev.trucks.length} truck${ev.trucks.length!==1?'s':''}</div><div class="pdf-chips" style="flex-direction:column;align-items:flex-start">${chips}</div>`;
   document.getElementById('pdf-overlay').classList.remove('hidden');
@@ -2378,11 +2292,11 @@ document.addEventListener('mouseout', e=>{
 });
 
 // Close overlays on outside click + ESC
-['event-overlay','picker-overlay','pdf-overlay','import-overlay','note-overlay','ll-overlay'].forEach(id=>{
+['event-overlay','picker-overlay','pdf-overlay','import-overlay'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.add('hidden');});
 });
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')['event-overlay','picker-overlay','pdf-overlay','import-overlay','note-overlay','ll-overlay'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  if(e.key==='Escape')['event-overlay','picker-overlay','pdf-overlay','import-overlay','ll-overlay'].forEach(id=>document.getElementById(id).classList.add('hidden'));
 });
 
 // ── PRE-SEED: events uit Outlook agenda (mei-juli 2026) ────
@@ -2907,9 +2821,8 @@ function openScreenshotImport() {
   document.getElementById('btn-screenshot-fallback').style.display = 'none';
 }
 
-// Init MSAL + Truck Notes bij laden
+// Init MSAL bij laden
 initMsal().catch(console.error);
-loadTruckNotes();
 
 </script>
 </body>
