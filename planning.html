@@ -364,6 +364,10 @@ textarea{resize:vertical;min-height:70px;}
 .pdf-camion-event{flex:1;min-width:0;}
 .pdf-camion-evname{font-family:var(--font-cond);font-size:1.05rem;font-weight:800;line-height:1.25;margin-bottom:3px;}
 .pdf-camion-evmeta{font-size:0.74rem;color:var(--muted);line-height:1.5;}
+.pdf-extra-input{width:100%;border:none;border-bottom:1px dotted #bbb;background:transparent;font-family:inherit;font-size:0.8rem;color:#333;padding:2px 0;margin-top:4px;outline:none;}
+.pdf-extra-input::placeholder{color:#c8c8c8;font-style:italic;}
+.pdf-extra-input:focus{border-bottom-color:var(--red);}
+.pdf-extra-input.truck{font-size:0.78rem;}
 /* ── TOUCH DEVICES: always show action buttons ─────────────── */
 @media (hover:none),(pointer:coarse){
   .ev-btns{opacity:1!important;}
@@ -422,6 +426,9 @@ textarea{resize:vertical;min-height:70px;}
   .overlay{position:static!important;background:#fff!important;backdrop-filter:none!important;display:block!important;}
   #pdf-overlay{display:block!important;}
   .pdf-day-block{page-break-inside:avoid;}
+  /* Lege extra-info velden niet printen; ingevulde wél, zonder lijntje */
+  .pdf-extra-input{border-bottom:none!important;color:#000!important;}
+  .pdf-extra-input:placeholder-shown{display:none!important;}
   /* Voorkom dat browser de eigen header/footer dingen blokkeert */
   @page{margin:1cm;}
 }
@@ -2046,12 +2053,15 @@ function openVehiclePDF(mode){
         return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}</div>`;
       }).join('');
       return `<div class="pdf-camion-row">
-        <div class="pdf-camion-chips">${chips}</div>
+        <div class="pdf-camion-chips">${chips}
+          <input class="pdf-extra-input truck" type="text" placeholder="+ extra info wagen">
+        </div>
         <div class="pdf-camion-arrow">→</div>
         <div class="pdf-camion-event">
           <div class="pdf-camion-evname">${ev.name}</div>
           ${ev.location?`<div class="pdf-camion-evmeta">📍 ${ev.location}</div>`:''}
           ${nD>1?`<div class="pdf-camion-evmeta">⏱ ${nD} dagen (t/m ${fmtS(ev.endDate)})</div>`:''}
+          <input class="pdf-extra-input" type="text" placeholder="+ extra info event">
         </div>
       </div>`;
     }).join('');
