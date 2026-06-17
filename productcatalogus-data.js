@@ -401,5 +401,22 @@
       omsAC: fix((f[5] || '').trim()),
     });
   }
+  // ── Curatie: sunbrero is de standaard voor mexicano ──────────────────
+  // De sunbrero wordt voortaan getoond als "mexicano/sunbrero/belcanto".
+  // De overige mexicano-/belcanto-varianten blijven in de data staan zodat
+  // ze niet uit een lopende bestelling verdwijnen, maar worden verborgen uit
+  // de zoek-/keuzelijst (hidden:true → niet zichtbaar tenzij al besteld).
+  var STANDAARD_MEXICANO = 'belcanto/sunbrero';
+  var VERBERG_NAMEN = {
+    'Amigo ( Mexicano ) OVI': 1,
+    'Belcanto': 1,
+    'Mexicano Halal': 1,
+    'Sunbrero ( Mexicano ) Halal': 1
+  };
+  out.forEach(function (p) {
+    if (p.naam === STANDAARD_MEXICANO) { p.naam = 'mexicano/sunbrero/belcanto'; }
+    else if (VERBERG_NAMEN[p.naam]) { p.hidden = true; }
+  });
+
   window.PRODUCT_CATALOGUS = out;
 })();

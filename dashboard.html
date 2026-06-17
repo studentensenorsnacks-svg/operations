@@ -987,7 +987,8 @@ textarea { resize: vertical; min-height: 72px; }
 .prod-qty { display:flex; align-items:center; gap:4px; flex-shrink:0; }
 .prod-qty button { width:30px; height:30px; border:1px solid var(--border2); background:var(--surface2);
   border-radius:7px; font-size:1.1rem; font-weight:800; cursor:pointer; color:var(--text);
-  display:flex; align-items:center; justify-content:center; line-height:1; }
+  display:flex; align-items:center; justify-content:center; line-height:1;
+  touch-action:none; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
 .prod-qty button:hover { background:var(--border2); }
 .prod-qty input { width:52px; text-align:center; padding:7px 4px; border:1px solid var(--border2);
   border-radius:7px; font-family:var(--mono); font-size:0.95rem; font-weight:700; background:#fff;
@@ -1837,6 +1838,7 @@ try {
 } catch (e) { prodQty = {}; prodCustom = {}; }
 
 var bestelDraftRef = (typeof fbdb !== 'undefined') ? fbdb.ref('ft_bestel_draft_v1') : null;
+var prodBusy = false;  // true tijdens ingedrukt-houden / snel klikken — blokkeert hertekenen
 
 function cacheProdDraft() {
   try { localStorage.setItem('ft_dashboard_prod_qty', JSON.stringify({ qty: prodQty, custom: prodCustom })); } catch (e) {}
@@ -1874,7 +1876,7 @@ if (bestelDraftRef) {
       // Niet hertekenen terwijl iemand in een veld typt (focus zou verloren gaan).
       var ae = document.activeElement;
       var typing = ae && ae.tagName === 'INPUT' && ov.contains(ae);
-      if (!typing) renderProductenList();
+      if (!typing && !prodBusy) renderProductenList();
     }
   });
 }
@@ -1939,10 +1941,10 @@ function prodRowHtml(p) {
       '<div class="prod-row-art">' + prodArtLine(p) + '</div>' +
     '</div>' +
     '<div class="prod-qty">' +
-      '<button type="button" onclick="incProdQty(\'' + p.id + '\',-1)" aria-label="minder">−</button>' +
+      '<button type="button" class="qbtn" data-dir="-1" aria-label="minder">−</button>' +
       '<input type="number" min="0" inputmode="numeric" value="' + (qty > 0 ? qty : '') + '" placeholder="0" ' +
         'oninput="setProdQty(\'' + p.id + '\',this.value)">' +
-      '<button type="button" onclick="incProdQty(\'' + p.id + '\',1)" aria-label="meer">+</button>' +
+      '<button type="button" class="qbtn" data-dir="1" aria-label="meer">+</button>' +
     '</div>' +
   '</div>';
 }
@@ -1955,10 +1957,10 @@ function customRowHtml(c) {
       '<div class="prod-row-art" style="opacity:.6">buiten catalogus</div>' +
     '</div>' +
     '<div class="prod-qty">' +
-      '<button type="button" onclick="incCustomQty(\'' + c.id + '\',-1)" aria-label="minder">−</button>' +
+      '<button type="button" class="qbtn" data-dir="-1" aria-label="minder">−</button>' +
       '<input type="number" min="0" inputmode="numeric" value="' + (qty > 0 ? qty : '') + '" placeholder="0" ' +
         'oninput="setCustomQty(\'' + c.id + '\',this.value)">' +
-      '<button type="button" onclick="incCustomQty(\'' + c.id + '\',1)" aria-label="meer">+</button>' +
+      '<button type="button" class="qbtn" data-dir="1" aria-label="meer">+</button>' +
     '</div>' +
     '<button type="button" class="prod-row-del" onclick="removeCustomProduct(\'' + c.id + '\')" aria-label="verwijder" title="Verwijder dit extra product">✕</button>' +
   '</div>';
@@ -1977,6 +1979,7 @@ function renderProductenList() {
   if (q.length >= 3) {
     // Zoekmodus: catalogus-treffers + matchende extra producten.
     var matches = cat.filter(function (p) {
+      if (p.hidden) return false;   // verborgen catalogus-items niet tonen bij zoeken
       return (p.naam + ' ' + p.artVZ + ' ' + p.artAC + ' ' + p.omsVZ + ' ' + p.omsAC).toLowerCase().indexOf(q) !== -1;
     });
     var customMatches = customRows().filter(function (c) { return c.naam.toLowerCase().indexOf(q) !== -1; });
@@ -2084,6 +2087,82 @@ function removeCustomProduct(id) {
   renderProductenList();
   updateProductenFooter();
 }
+
+// Eén stap omhoog/omlaag op de juiste rij (catalogus óf extra product).
+// incProdQty/incCustomQty klemmen zelf al af op 0, dus nooit negatief.
+function stepProdRow(row, delta) {
+  if (!row) return;
+  var pid = row.getAttribute('data-pid');
+  var cid = row.getAttribute('data-cid');
+  if (pid) incProdQty(pid, delta);
+  else if (cid) incCustomQty(cid, delta);
+}
+
+// + / − knoppen: ingedrukt houden laat het aantal door­lopen, en 5+ snelle
+// klikken na elkaar springt met 5 i.p.v. 1 (alleen zolang het écht snel gaat).
+(function setupProdHold() {
+  var host = document.getElementById('prod-list');
+  if (!host) return;
+
+  var holdTimer = null, repeatTimer = null, holdRow = null, holdDir = 0, repeatCount = 0;
+  var lastTapTime = 0, lastTapDir = 0, tapStreak = 0;
+  var TAP_GAP = 350;          // max ms tussen kliks om "snel" te zijn
+  var STREAK_FOR_5 = 5;       // vanaf zoveel snelle kliks → stap 5
+  var HOLD_DELAY = 450;       // ms vasthouden voor auto-herhaal start
+  var REPEAT_MS = 90;         // herhaalinterval tijdens vasthouden
+
+  function clearHold() {
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
+    holdRow = null; holdDir = 0; repeatCount = 0;
+  }
+  function endInteraction() {
+    clearHold();
+    // Even nadraaien zodat trailing Firebase-echo's de lijst niet midden in
+    // een klikreeks hertekenen; daarna één keer netjes syncen.
+    setTimeout(function () {
+      prodBusy = false;
+      var ov = document.getElementById('producten-modal-overlay');
+      if (ov && !ov.classList.contains('hidden')) renderProductenList();
+    }, TAP_GAP + 50);
+  }
+
+  host.addEventListener('pointerdown', function (e) {
+    var btn = e.target.closest && e.target.closest('button.qbtn[data-dir]');
+    if (!btn) return;
+    e.preventDefault();
+    var row = btn.closest('.prod-row');
+    if (!row) return;
+    var dir = parseInt(btn.getAttribute('data-dir'), 10) || 0;
+    if (!dir) return;
+
+    prodBusy = true;
+
+    // Snelle-klik-versnelling (discrete taps).
+    var now = Date.now();
+    if (dir === lastTapDir && (now - lastTapTime) < TAP_GAP) { tapStreak++; }
+    else { tapStreak = 1; }
+    lastTapDir = dir; lastTapTime = now;
+    var step = tapStreak >= STREAK_FOR_5 ? 5 : 1;
+
+    stepProdRow(row, dir * step);   // eerste stap meteen
+
+    // Ingedrukt houden → doorlopen (versnelt na een tijdje naar 5).
+    holdRow = row; holdDir = dir;
+    try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+    holdTimer = setTimeout(function () {
+      repeatCount = 0;
+      repeatTimer = setInterval(function () {
+        repeatCount++;
+        stepProdRow(holdRow, holdDir * (repeatCount >= 12 ? 5 : 1));
+      }, REPEAT_MS);
+    }, HOLD_DELAY);
+  });
+
+  host.addEventListener('pointerup', endInteraction);
+  host.addEventListener('pointercancel', endInteraction);
+  window.addEventListener('pointerup', endInteraction);   // vangnet
+})();
 
 function clearProductenSelectie() {
   prodQty = {};
