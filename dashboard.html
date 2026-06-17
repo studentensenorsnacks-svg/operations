@@ -25,6 +25,11 @@ const fbdb = firebase.database();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="firebase-anon-auth.js"></script>
+<!-- PDF-generatie voor de bestelbon (tab Producten bestellen) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- Productcatalogus (art.nrs + benamingen) -->
+<script src="productcatalogus-data.js"></script>
 <style>
 :root {
   --red: #e8001d;
@@ -939,6 +944,66 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .nav-bestel.has-items .bestel-count { background:#0891b2; color:#fff; }
 
+/* ── PRODUCTEN BESTELLEN (catalogus → PDF) ── */
+.nav-producten {
+  display:inline-flex; align-items:center; gap:12px;
+  background:transparent; border:2px solid var(--border2);
+  font-family:var(--font); font-size:1.2rem; font-weight:800;
+  color:var(--text); padding:13px 26px; border-radius:11px; cursor:pointer;
+  transition:all 0.15s; letter-spacing:0.01em;
+}
+.nav-producten:hover { background:var(--surface2); }
+.nav-producten.has-items {
+  background:rgba(22,163,74,0.10); color:#15803d; border-color:rgba(22,163,74,0.65);
+  box-shadow:0 0 0 4px rgba(22,163,74,0.12);
+}
+.nav-producten.has-items:hover { background:rgba(22,163,74,0.18); }
+.producten-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:28px; height:28px; padding:0 9px; border-radius:14px;
+  background:var(--border2); color:var(--text2);
+  font-family:var(--mono); font-size:0.95rem; font-weight:800;
+}
+.nav-producten.has-items .producten-count { background:#16a34a; color:#fff; }
+
+/* ── PRODUCTEN-MODAL: zoekbalk, lijst, aantallen ── */
+.prod-searchbar { position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px;
+  background:var(--surface); padding:2px 0 12px; }
+.prod-searchbar input { flex:1; padding:11px 13px; border:1px solid var(--border2); border-radius:9px;
+  font-family:var(--font); font-size:0.95rem; background:#fff; color:var(--text); outline:none; }
+.prod-searchbar input:focus { border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.12); }
+.prod-selected-bar { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#f0fdf4; border:1px solid rgba(22,163,74,.35); border-radius:10px;
+  padding:9px 13px; margin-bottom:12px; font-size:0.88rem; color:#15803d; font-weight:700; }
+.prod-list { display:flex; flex-direction:column; gap:6px; }
+.prod-row { display:flex; align-items:center; gap:12px; border:1px solid var(--border);
+  border-radius:9px; padding:9px 12px; background:#fff; }
+.prod-row.has-qty { border-color:rgba(22,163,74,.55); background:#f6fef9; }
+.prod-row-info { flex:1; min-width:0; }
+.prod-row-name { font-weight:700; font-size:0.92rem; color:var(--text); }
+.prod-row-art { font-size:0.75rem; color:var(--text2); font-variant-numeric:tabular-nums; margin-top:2px; }
+.prod-row-art .art-vz { color:#c2410c; font-weight:700; }
+.prod-row-art .art-ac { color:#0e7490; font-weight:700; }
+.prod-qty { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.prod-qty button { width:30px; height:30px; border:1px solid var(--border2); background:var(--surface2);
+  border-radius:7px; font-size:1.1rem; font-weight:800; cursor:pointer; color:var(--text);
+  display:flex; align-items:center; justify-content:center; line-height:1; }
+.prod-qty button:hover { background:var(--border2); }
+.prod-qty input { width:52px; text-align:center; padding:7px 4px; border:1px solid var(--border2);
+  border-radius:7px; font-family:var(--mono); font-size:0.95rem; font-weight:700; background:#fff;
+  color:var(--text); outline:none; -moz-appearance:textfield; }
+.prod-qty input::-webkit-outer-spin-button, .prod-qty input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.prod-qty input:focus { border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,.12); }
+.prod-foot { position:sticky; bottom:0; background:var(--surface); padding-top:12px;
+  margin-top:6px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+.prod-btn-pdf { padding:11px 20px; background:#16a34a; color:#fff; border:none; border-radius:9px;
+  font-family:var(--font); font-size:0.95rem; font-weight:800; cursor:pointer; }
+.prod-btn-pdf:hover { background:#15803d; }
+.prod-btn-pdf:disabled { opacity:.5; cursor:not-allowed; }
+.prod-btn-clear { padding:11px 16px; background:var(--surface2); color:var(--text2); border:1px solid var(--border2);
+  border-radius:9px; font-family:var(--font); font-size:0.9rem; font-weight:700; cursor:pointer; }
+.prod-btn-clear:hover { background:var(--border2); color:var(--text); }
+
 /* ── MENU-knop + uitvouw dropdown ── */
 .menu-btn {
   display:inline-flex; align-items:center; gap:8px;
@@ -1007,6 +1072,9 @@ textarea { resize: vertical; min-height: 72px; }
   .nav-bestel { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
   .nav-bestel .lbl-bestel-full { display:none; }
   .bestel-count { min-width:24px; height:24px; font-size:0.85rem; }
+  .nav-producten { font-size:1.05rem; padding:10px 16px; gap:10px; border-width:2px; }
+  .nav-producten .lbl-prod-full { display:none; }
+  .producten-count { min-width:24px; height:24px; font-size:0.85rem; }
   .menu-btn { padding:10px 12px; font-size:0.84rem; }
   .es-modal-overlay { padding:10px; }
   .es-modal { border-radius:12px; }
@@ -1019,6 +1087,7 @@ textarea { resize: vertical; min-height: 72px; }
 @media (max-width:420px) {
   .nav-stukken { padding:9px 12px; font-size:0.95rem; }
   .nav-bestel { padding:9px 12px; font-size:0.95rem; }
+  .nav-producten { padding:9px 12px; font-size:0.95rem; }
   .menu-btn { padding:9px 11px; font-size:0.8rem; }
   .menu-dropdown { grid-template-columns:1fr; padding:8px; }
   .stat-num { font-size:1.7rem; }
@@ -1097,6 +1166,7 @@ textarea { resize: vertical; min-height: 72px; }
   <div class="topbar-right">
     <button type="button" class="nav-stukken" id="btn-stukken" onclick="openStukkenModal()" title="Open de lijst van gemelde stukken">🔧 <span class="lbl-stuk-full">Stukken</span> <span class="stukken-count" id="stukken-count">0</span></button>
     <button type="button" class="nav-bestel" id="btn-bestel" onclick="openBestelModal()" title="Open de lijst van te bestellen items">📦 <span class="lbl-bestel-full">Bestellen</span> <span class="bestel-count" id="bestel-count">0</span></button>
+    <button type="button" class="nav-producten" id="btn-producten" onclick="openProductenModal()" title="Producten bestellen uit de catalogus">🛒 <span class="lbl-prod-full">Producten</span> <span class="producten-count" id="producten-count">0</span></button>
     <button type="button" class="menu-btn" id="menu-btn" onclick="toggleMainMenu()" aria-haspopup="true" aria-expanded="false">≡ Menu <span class="menu-caret">▾</span></button>
     <button type="button" class="logout-btn" id="logout-btn" onclick="opsLogout()" title="Uitloggen">⎋ <span class="logout-lbl">Uitloggen</span></button>
     <div class="clock" id="clock">--:--</div>
@@ -1298,6 +1368,30 @@ textarea { resize: vertical; min-height: 72px; }
   </div>
 </div>
 
+<!-- PRODUCTEN BESTELLEN MODAL -->
+<div class="stuk-modal-overlay hidden" id="producten-modal-overlay" onclick="closeProductenModalIfBackdrop(event)">
+  <div class="stuk-modal">
+    <div class="stuk-modal-hdr">
+      <div class="stuk-modal-title">🛒 Producten bestellen</div>
+      <button type="button" class="stuk-modal-close" onclick="closeProductenModal()" aria-label="Sluiten">✕</button>
+    </div>
+    <div class="stuk-modal-body" id="producten-modal-body">
+      <div class="prod-searchbar">
+        <span>🔍</span>
+        <input type="text" id="prod-search" placeholder="Zoek een product (bv. frikandel, mayo, cola...)" oninput="renderProductenList()" autocomplete="off">
+      </div>
+      <div class="prod-selected-bar" id="prod-selected-bar" style="display:none;">
+        <span id="prod-selected-text">0 producten geselecteerd</span>
+        <button type="button" class="prod-btn-clear" onclick="clearProductenSelectie()">Selectie wissen</button>
+      </div>
+      <div class="prod-list" id="prod-list"><div class="stuk-empty"><div class="stuk-empty-icon">…</div><div>Catalogus laden…</div></div></div>
+      <div class="prod-foot">
+        <button type="button" class="prod-btn-pdf" id="prod-pdf-btn" onclick="generateBestelPDF()" disabled>📄 Bestellen — PDF maken</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <datalist id="known-trucks"></datalist>
 
 <div class="toast" id="toast">✓ Opgeslagen!</div>
@@ -1416,6 +1510,9 @@ fbdb.ref('ft_notities_v1').on('value', snap => {
     renderBestelModal();
   }
 });
+
+// Toon de bewaarde productselectie meteen in de badge bij het laden.
+try { updateProductenFooter(); } catch (e) {}
 
 function recomputeStukNotes() {
   // Bron 1: notities die als "kapot / te maken" gemarkeerd zijn
@@ -1678,6 +1775,212 @@ function closeBestelModal() {
 }
 function closeBestelModalIfBackdrop(ev) {
   if (ev.target.id === 'bestel-modal-overlay') closeBestelModal();
+}
+
+// ── PRODUCTEN BESTELLEN: catalogus → aantallen → PDF ───────────
+// Geselecteerde aantallen per product-id, bewaard in localStorage zodat een
+// halve bestelling niet verloren gaat als de modal sluit.
+var prodQty = {};
+try { prodQty = JSON.parse(localStorage.getItem('ft_dashboard_prod_qty') || '{}') || {}; } catch (e) { prodQty = {}; }
+
+function saveProdQty() {
+  try { localStorage.setItem('ft_dashboard_prod_qty', JSON.stringify(prodQty)); } catch (e) {}
+}
+
+function prodCatalog() { return Array.isArray(window.PRODUCT_CATALOGUS) ? window.PRODUCT_CATALOGUS : []; }
+
+function openProductenModal() {
+  document.getElementById('producten-modal-overlay').classList.remove('hidden');
+  renderProductenList();
+  updateProductenFooter();
+  setTimeout(function () { try { document.getElementById('prod-search').focus(); } catch (e) {} }, 60);
+}
+function closeProductenModal() {
+  document.getElementById('producten-modal-overlay').classList.add('hidden');
+}
+function closeProductenModalIfBackdrop(ev) {
+  if (ev.target.id === 'producten-modal-overlay') closeProductenModal();
+}
+
+function prodArtLine(p) {
+  var parts = [];
+  if (p.artVZ) parts.push('<span class="art-vz">VZ ' + escapeHtml(p.artVZ) + '</span>');
+  if (p.artAC) parts.push('<span class="art-ac">AC ' + escapeHtml(p.artAC) + '</span>');
+  if (!parts.length) return '<span style="opacity:.6">geen art.nr</span>';
+  return parts.join(' &middot; ');
+}
+
+function renderProductenList() {
+  var host = document.getElementById('prod-list');
+  if (!host) return;
+  var q = (document.getElementById('prod-search').value || '').trim().toLowerCase();
+  var cat = prodCatalog();
+  var matches = !q ? cat : cat.filter(function (p) {
+    return (p.naam + ' ' + p.artVZ + ' ' + p.artAC + ' ' + p.omsVZ + ' ' + p.omsAC).toLowerCase().indexOf(q) !== -1;
+  });
+  if (!cat.length) {
+    host.innerHTML = '<div class="stuk-empty"><div class="stuk-empty-icon">⚠️</div><div>Catalogus niet geladen.</div></div>';
+    return;
+  }
+  if (!matches.length) {
+    host.innerHTML = '<div class="stuk-empty"><div class="stuk-empty-icon">🔍</div><div>Geen product gevonden voor "<strong>' + escapeHtml(q) + '</strong>".</div></div>';
+    return;
+  }
+  host.innerHTML = matches.map(function (p) {
+    var qty = prodQty[p.id] || 0;
+    return '<div class="prod-row' + (qty > 0 ? ' has-qty' : '') + '" data-pid="' + escapeHtml(p.id) + '">' +
+      '<div class="prod-row-info">' +
+        '<div class="prod-row-name">' + escapeHtml(p.naam) + '</div>' +
+        '<div class="prod-row-art">' + prodArtLine(p) + '</div>' +
+      '</div>' +
+      '<div class="prod-qty">' +
+        '<button type="button" onclick="incProdQty(\'' + p.id + '\',-1)" aria-label="minder">−</button>' +
+        '<input type="number" min="0" inputmode="numeric" value="' + (qty > 0 ? qty : '') + '" placeholder="0" ' +
+          'oninput="setProdQty(\'' + p.id + '\',this.value)">' +
+        '<button type="button" onclick="incProdQty(\'' + p.id + '\',1)" aria-label="meer">+</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Werk de rij-highlight + footer bij zonder de hele lijst te hertekenen
+// (anders verliest het invulveld focus tijdens het typen).
+function refreshProdRow(id) {
+  var row = document.querySelector('.prod-row[data-pid="' + id + '"]');
+  if (row) row.classList.toggle('has-qty', (prodQty[id] || 0) > 0);
+}
+
+function setProdQty(id, raw) {
+  var n = parseInt(raw, 10);
+  if (isNaN(n) || n <= 0) { delete prodQty[id]; } else { prodQty[id] = Math.min(n, 99999); }
+  saveProdQty();
+  refreshProdRow(id);
+  updateProductenFooter();
+}
+
+function incProdQty(id, delta) {
+  var n = (prodQty[id] || 0) + delta;
+  if (n <= 0) { delete prodQty[id]; n = 0; } else { prodQty[id] = n; }
+  saveProdQty();
+  var row = document.querySelector('.prod-row[data-pid="' + id + '"]');
+  if (row) {
+    var inp = row.querySelector('input');
+    if (inp) inp.value = n > 0 ? n : '';
+  }
+  refreshProdRow(id);
+  updateProductenFooter();
+}
+
+function clearProductenSelectie() {
+  prodQty = {};
+  saveProdQty();
+  renderProductenList();
+  updateProductenFooter();
+}
+
+function selectedProducten() {
+  var cat = prodCatalog();
+  var byId = {};
+  cat.forEach(function (p) { byId[p.id] = p; });
+  var out = [];
+  Object.keys(prodQty).forEach(function (id) {
+    var p = byId[id];
+    var qty = prodQty[id] || 0;
+    if (p && qty > 0) out.push({ p: p, qty: qty });
+  });
+  out.sort(function (a, b) { return a.p.naam.localeCompare(b.p.naam, 'nl'); });
+  return out;
+}
+
+function updateProductenFooter() {
+  var sel = selectedProducten();
+  var distinct = sel.length;
+  var totalUnits = sel.reduce(function (s, x) { return s + x.qty; }, 0);
+
+  var bar = document.getElementById('prod-selected-bar');
+  var txt = document.getElementById('prod-selected-text');
+  if (bar && txt) {
+    if (distinct > 0) {
+      bar.style.display = 'flex';
+      txt.textContent = distinct + ' product' + (distinct === 1 ? '' : 'en') +
+        ' geselecteerd · ' + totalUnits + ' stuk' + (totalUnits === 1 ? '' : 's');
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+  var pdfBtn = document.getElementById('prod-pdf-btn');
+  if (pdfBtn) pdfBtn.disabled = distinct === 0;
+
+  var navBtn = document.getElementById('btn-producten');
+  var cnt = document.getElementById('producten-count');
+  if (navBtn && cnt) {
+    cnt.textContent = distinct;
+    navBtn.classList.toggle('has-items', distinct > 0);
+    navBtn.title = distinct > 0
+      ? distinct + ' product' + (distinct === 1 ? '' : 'en') + ' klaar om te bestellen'
+      : 'Producten bestellen uit de catalogus';
+  }
+}
+
+function generateBestelPDF() {
+  var sel = selectedProducten();
+  if (!sel.length) { showToast('Selecteer eerst producten', true); return; }
+  if (!window.jspdf || !window.jspdf.jsPDF) { showToast('PDF-bibliotheek niet geladen', true); return; }
+
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  var pageW = doc.internal.pageSize.getWidth();
+  var margin = 12;
+  var green = [22, 163, 74];
+
+  var now = new Date();
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var dateStr = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear();
+  var dateFile = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  var totalUnits = sel.reduce(function (s, x) { return s + x.qty; }, 0);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(22, 163, 74);
+  doc.text('BESTELLIJST', pageW / 2, 18, { align: 'center' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(90, 90, 100);
+  doc.text('Señor Snacks', pageW / 2, 25, { align: 'center' });
+  doc.setFontSize(9); doc.setTextColor(70, 70, 75);
+  doc.text('Datum: ' + dateStr, margin, 34);
+  doc.text(sel.length + ' producten · ' + totalUnits + ' stuks', pageW - margin, 34, { align: 'right' });
+
+  var body = sel.map(function (x) {
+    return [
+      { content: String(x.qty), styles: { halign: 'center', fontStyle: 'bold' } },
+      x.p.naam,
+      { content: x.p.artVZ || '—', styles: { halign: 'center' } },
+      { content: x.p.artAC || '—', styles: { halign: 'center' } },
+    ];
+  });
+
+  doc.autoTable({
+    startY: 40,
+    margin: { left: margin, right: margin },
+    head: [[
+      { content: 'AANTAL', styles: { halign: 'center' } },
+      { content: 'PRODUCT', styles: { halign: 'left' } },
+      { content: 'ART.NR VZ', styles: { halign: 'center' } },
+      { content: 'ART.NR AC-VH', styles: { halign: 'center' } },
+    ]],
+    body: body,
+    theme: 'grid',
+    headStyles: { fillColor: green, textColor: 255, fontStyle: 'bold', fontSize: 10, lineColor: [200, 224, 208], lineWidth: 0.2 },
+    bodyStyles: { fontSize: 10, textColor: [35, 35, 40], lineColor: [224, 228, 233], lineWidth: 0.2 },
+    styles: { cellPadding: 2.4, valign: 'middle' },
+    columnStyles: {
+      0: { cellWidth: 22, halign: 'center' },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 30, halign: 'center' },
+      3: { cellWidth: 34, halign: 'center' },
+    },
+    alternateRowStyles: { fillColor: [246, 254, 249] },
+  });
+
+  doc.save('Bestellijst_' + dateFile + '.pdf');
+  showToast('PDF aangemaakt');
 }
 
 // ── + Nieuw stuk / bestelling: inline forms ────────────────────
