@@ -212,7 +212,7 @@
         ops:            ['/ops.html'],
         qrcodes:        ['/qr-codes.html'],
         poets:          ['/poets.html'],
-        keuringen:      ['/ocb.html'],
+        keuringen:      ['/keuringen.html', '/ocb.html'],
         vet:            ['/vet.html', '/vet-tonnen.html'],
         bestellingen:   ['/bestelling.html', '/bestellingen-dashboard.html', '/bestel-catalogus.html'],
         stroomaanvraag: ['/stroomaanvraag.html'],
@@ -366,6 +366,7 @@
           'a[href*="eindstock.html"]',
           'a[href*="senorsnacks-eventpay"]',
           'a[href*="senorkeuringqr"]',
+          'a[href*="keuringen.html"]',
           '[data-bakker-hide]'
         ].join(',') + '{display:none!important}';
         document.head.appendChild(sb);
