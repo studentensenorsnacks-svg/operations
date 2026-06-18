@@ -106,6 +106,10 @@
       ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))"
     },
+    "ft_keuringen_beheer_v1": {
+      ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))"
+    },
     "vet_tonnen": {
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|vet|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|vet|')))"
