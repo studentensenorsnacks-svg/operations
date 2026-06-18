@@ -447,6 +447,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
     <div class="form-group" style="margin-top:10px;">
+      <label class="form-label">Klant (optioneel)</label>
+      <input id="mp-customer" class="form-input" placeholder="Klantnaam of ID">
+    </div>
+    <div class="form-group" style="margin-top:10px;">
       <label class="form-label">Notitie</label>
       <textarea id="mp-note" class="form-textarea" placeholder="optioneel"></textarea>
     </div>
@@ -661,6 +665,7 @@ function openNewProject(){
   document.getElementById('mp-name').value = '';
   document.getElementById('mp-date').value = '';
   document.getElementById('mp-place').value = '';
+  document.getElementById('mp-customer').value = '';
   document.getElementById('mp-note').value = '';
   document.getElementById('mp-delete').style.display = 'none';
   openModal('modal-project');
@@ -675,6 +680,7 @@ function editProject(){
   document.getElementById('mp-name').value = p.naam||'';
   document.getElementById('mp-date').value = p.datum||'';
   document.getElementById('mp-place').value = p.plaats||'';
+  document.getElementById('mp-customer').value = p.customerName||'';
   document.getElementById('mp-note').value = p.notitie||'';
   document.getElementById('mp-delete').style.display = 'inline-flex';
   openModal('modal-project');
@@ -683,11 +689,14 @@ function editProject(){
 function saveProject(){
   const naam = document.getElementById('mp-name').value.trim();
   if(!naam){ toast('Geef een naam in'); return; }
+  const customerName = document.getElementById('mp-customer').value.trim();
   const data = {
     naam,
     datum: document.getElementById('mp-date').value || '',
     plaats: document.getElementById('mp-place').value.trim(),
     notitie: document.getElementById('mp-note').value.trim(),
+    customerName: customerName || null,
+    customerId: null
   };
   const id = editingProject || uid();
   const ref = fbdb.ref(`${ROOT}/projecten/${id}`);
@@ -735,6 +744,7 @@ function renderProjectDetail(){
   if(p.plaats) subParts.push(p.plaats);
   if(p.datum) subParts.push(fmtDate(p.datum));
   if(p.notitie) subParts.push(p.notitie);
+  if(p.customerName) subParts.push('Klant: ' + esc(p.customerName));
   document.getElementById('detail-sub').textContent = subParts.join(' · ');
 
   const list = document.getElementById('loc-list');

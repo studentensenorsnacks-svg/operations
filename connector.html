@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Centrale Connector</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.x/dist/tabler-icons.min.css"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0 }
+:root {
+  --bg: #fff; --bg2: #f7f7f5; --bg3: #f0efeb;
+  --text: #1a1a18; --text2: #6b6b67; --text3: #9e9d99;
+  --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.2);
+  --info-bg: #e6f1fb; --info-text: #0c447c; --info-border: #b5d4f4;
+  --warn-bg: #faeeda; --warn-text: #633806; --warn-border: #fac775;
+  --ok-bg: #eaf3de; --ok-text: #27500a; --ok-border: #c0dd97;
+  --err-bg: #fcebeb; --err-text: #791f1f; --err-border: #f7c1c1;
+  --red: #e8001d; --blue: #1d4ed8; --gold: #f6a821; --purple: #9d74f7;
+  --r: 8px; --rl: 12px;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a18; --bg2: #242422; --bg3: #2c2c2a;
+    --text: #f0efeb; --text2: #a0a09c; --text3: #6b6b67;
+    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+    --info-bg: #042c53; --info-text: #b5d4f4; --info-border: #0c447c;
+    --warn-bg: #412402; --warn-text: #fac775; --warn-border: #633806;
+    --ok-bg: #173404; --ok-text: #c0dd97; --ok-border: #27500a;
+    --err-bg: #501313; --err-text: #f7c1c1; --err-border: #791f1f;
+  }
+}
+body { 
+  font-family: var(--font); 
+  background: var(--bg); 
+  color: var(--text); 
+  font-size: 14px; 
+  height: 100vh; 
+  overflow: hidden;
+}
+#root { display: flex; height: 100vh; overflow: hidden }
+input, select, textarea {
+  width: 100%; 
+  padding: 8px 10px; 
+  font-size: 13px; 
+  border: 1px solid var(--border2); 
+  border-radius: var(--r); 
+  background: var(--bg); 
+  color: var(--text); 
+  font-family: var(--font); 
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { 
+  border-color: var(--text3); 
+  box-shadow: 0 0 0 2px rgba(128,128,128,0.15);
+}
+textarea { resize: vertical; line-height: 1.5 }
+button {
+  padding: 8px 14px; 
+  font-size: 13px; 
+  border: 1px solid var(--border2); 
+  border-radius: var(--r); 
+  background: transparent; 
+  color: var(--text); 
+  cursor: pointer; 
+  font-family: var(--font); 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+}
+button:hover { background: var(--bg2) }
+button:disabled { opacity: 0.4; cursor: not-allowed }
+button.primary { background: var(--blue); color: white; border-color: var(--blue) }
+button.primary:hover { background: var(--blue); opacity: 0.9 }
+button.gold { background: var(--gold); color: white; border-color: var(--gold) }
+button.gold:hover { background: var(--gold); opacity: 0.9 }
+button.red { background: var(--red); color: white; border-color: var(--red) }
+button.red:hover { background: var(--red); opacity: 0.9 }
+::-webkit-scrollbar { width: 6px; height: 6px }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px }
+
+/* Layout */
+.sidebar {
+  width: 240px; 
+  min-width: 240px; 
+  background: var(--bg2); 
+  border-right: 1px solid var(--border); 
+  display: flex; 
+  flex-direction: column; 
+  flex-shrink: 0; 
+  overflow-y: auto;
+}
+.sidebar-header {
+  padding: 16px; 
+  border-bottom: 1px solid var(--border); 
+  font-size: 15px; 
+  font-weight: 600; 
+  display: flex; 
+  align-items: center; 
+  gap: 8px;
+}
+.sidebar-section {
+  padding: 8px; 
+}
+.sidebar-section-title {
+  font-size: 10px; 
+  font-weight: 600; 
+  color: var(--text3); 
+  text-transform: uppercase; 
+  letter-spacing: .1em; 
+  padding: 6px 16px 4px;
+}
+.nav-item {
+  padding: 7px 10px; 
+  cursor: pointer; 
+  font-size: 13px; 
+  color: var(--text2); 
+  background: transparent; 
+  font-weight: 400; 
+  display: flex; 
+  align-items: center; 
+  gap: 9; 
+  border-radius: var(--r); 
+  margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--bg); color: var(--text) }
+.nav-item.active { background: var(--bg); color: var(--text); font-weight: 600; border-left: 2px solid var(--text) }
+.nav-item .badge {
+  margin-left: auto; 
+  font-size: 11px; 
+  background: var(--info-bg); 
+  color: var(--info-text); 
+  padding: 1px 7px; 
+  border-radius: 100; 
+  font-weight: 600;
+}
+
+.main { 
+  flex: 1; 
+  min-width: 0; 
+  display: flex; 
+  flex-direction: column; 
+  overflow: hidden; 
+}
+.topbar {
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg); 
+  flex-shrink: 0; 
+  display: flex; 
+  align-items: center; 
+  padding: 10px 20px; 
+  gap: 10px;
+}
+.topbar h1 { margin: 0; font-size: 16px; font-weight: 600 }
+
+.content {
+  flex: 1; 
+  padding: 1.25rem; 
+  overflow-y: auto;
+}
+
+/* Cards */
+.card {
+  background: var(--bg); 
+  border: 1px solid var(--border); 
+  border-radius: var(--r); 
+  margin-bottom: 16px;
+}
+.card-header {
+  padding: 12px 14px; 
+  border-bottom: 1px solid var(--border); 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-weight: 600;
+}
+.card-body { padding: 14px }
+
+/* Tables */
+.table-container { overflow-x: auto }
+table { width: 100%; border-collapse: collapse }
+th, td { 
+  padding: 8px 12px; 
+  text-align: left; 
+  border-bottom: 1px solid var(--border);
+}
+th { 
+  font-size: 11px; 
+  font-weight: 600; 
+  color: var(--text2); 
+  text-transform: uppercase; 
+  letter-spacing: .05em;
+  background: var(--bg2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+tr:hover { background: var(--bg2) }
+.row-link { cursor: pointer }
+.row-link:hover { background: var(--bg3) !important }
+
+/* Status badges */
+.badge {
+  display: inline-block; 
+  padding: 2px 8px; 
+  font-size: 11px; 
+  font-weight: 600; 
+  border-radius: 100px;
+}
+.badge-horeca { background: var(--red); color: white }
+.badge-stroom { background: var(--blue); color: white }
+.badge-lijsten { background: var(--purple); color: white }
+.badge-klanten { background: var(--gold); color: white }
+.badge-linked { background: var(--ok-bg); color: var(--ok-text) }
+.badge-unlinked { background: var(--warn-bg); color: var(--warn-text) }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; 
+  top: 0; left: 0; right: 0; bottom: 0; 
+  background: rgba(0,0,0,0.5); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  z-index: 1000;
+}
+.modal {
+  background: var(--bg2); 
+  border: 1px solid var(--border); 
+  border-radius: var(--rl); 
+  width: 90%; 
+  max-width: 800px; 
+  max-height: 90vh; 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column;
+}
+.modal-header {
+  padding: 14px 16px; 
+  border-bottom: 1px solid var(--border); 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+}
+.modal-title { font-weight: 600; font-size: 15px }
+.modal-close {
+  background: none; 
+  border: none; 
+  font-size: 20px; 
+  cursor: pointer; 
+  padding: 4px 8px;
+  line-height: 1;
+}
+.modal-body { padding: 16px; overflow-y: auto }
+.modal-footer {
+  padding: 12px 16px; 
+  border-top: 1px solid var(--border); 
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 8px;
+}
+
+/* Form */
+.form-group { margin-bottom: 12px }
+.form-group label { 
+  display: block; 
+  margin-bottom: 4px; 
+  font-size: 12px; 
+  font-weight: 500; 
+  color: var(--text2);
+}
+.form-row { display: flex; gap: 12px }
+.form-row .form-group { flex: 1 }
+
+/* KPI Cards */
+.kpi-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap }
+.kpi-card {
+  flex: 1; 
+  min-width: 150px;
+  background: var(--bg); 
+  border: 1px solid var(--border); 
+  border-radius: var(--r); 
+  padding: 14px;
+}
+.kpi-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px }
+.kpi-value { font-size: 24px; font-weight: 700; line-height: 1 }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 2px }
+
+/* Toast */
+.toast {
+  position: fixed; 
+  bottom: 16px; 
+  right: 16px; 
+  padding: 10px 16px; 
+  border-radius: var(--r); 
+  font-size: 13px; 
+  font-weight: 500; 
+  z-index: 9999; 
+  animation: slideIn 0.2s ease-out;
+}
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+
+/* System tags */
+.system-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.tag-horeca { background: rgba(232,0,29,0.15); color: var(--red) }
+.tag-stroom { background: rgba(29,78,216,0.15); color: var(--blue) }
+.tag-lijsten { background: rgba(157,116,247,0.15); color: var(--purple) }
+.tag-checklist { background: rgba(52,210,123,0.15); color: var(--green) }
+
+/* Search */
+.search-box {
+  position: relative; 
+  margin-bottom: 12px;
+}
+.search-box input {
+  padding-left: 32px;
+}
+.search-box i {
+  position: absolute; 
+  left: 10px; 
+  top: 50%; 
+  transform: translateY(-50%); 
+  color: var(--text3);
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center; 
+  padding: 40px 20px; 
+  color: var(--text3);
+}
+.empty-state i { font-size: 32px; margin-bottom: 8px; display: block }
+
+/* Project card */
+.project-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.project-card:hover {
+  background: var(--bg2);
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+.project-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.project-name { font-weight: 600; font-size: 15px; flex: 1 }
+.project-meta { font-size: 12px; color: var(--text2) }
+.project-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 8px;
+}
+
+/* Customer info in project */
+.customer-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--bg3);
+  border-radius: var(--r);
+  font-size: 12px;
+}
+.customer-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* Link button */
+.link-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+}
+.link-btn:hover {
+  background: var(--info-border);
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase RTDB for operationssenorsnacks -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
+<!-- Firebase Firestore for event-production-sheet -->
+<script type="module">
+const firebaseConfigRTDB = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756"
+};
+
+const firebaseConfigFS = {
+  apiKey: "AIzaSyA6o5YzXf7Ikzx-4aVIKHvvsGrJUjlI2Ys",
+  authDomain: "event-production-sheet.firebaseapp.com",
+  projectId: "event-production-sheet",
+  storageBucket: "event-production-sheet.firebasestorage.app",
+  messagingSenderId: "305911542157",
+  appId: "1:305911542157:web:3adc500140b379a4da0dc4",
+  measurementId: "G-9858R9LMXW"
+};
+
+const FIRESTORE_DATABASE_ID = "event";
+
+// Initialize RTDB
+const appRTDB = firebase.initializeApp(firebaseConfigRTDB, 'rtdb');
+const fbdb = firebase.database(appRTDB);
+
+// Initialize Firestore
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, where, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+const appFS = initializeApp(firebaseConfigFS, 'firestore');
+const dbFS = getFirestore(appFS, FIRESTORE_DATABASE_ID);
+
+window.__firebase = {
+  fbdb,
+  dbFS,
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  where,
+  getDocs,
+  getDoc
+};
+</script>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useMemo } = React;
+const h = React.createElement;
+
+// -- helpers --------------------------------------------------------
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36);
+const fmt = d => d ? new Date(d).toLocaleDateString('nl-BE', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fmtT = d => d ? new Date(d).toLocaleString('nl-BE', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+const fmtEur = v => v !== undefined && v !== null ? '€' + v.toFixed(2).replace('.', ',') : '€0,00';
+const esc = s => s?.toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || '';
+const truncate = (s, len = 30) => s && s.length > len ? s.substring(0, len) + '…' : (s || '—');
+
+// System definitions
+const SYSTEMS = {
+  horeca: {
+    name: 'Horeca Planning',
+    root: 'ft_horeca_laadlijst_v1',
+    color: '#e8001d',
+    bgColor: 'rgba(232,0,29,0.15)',
+    icon: 'ti-cup'
+  },
+  stroom: {
+    name: 'Stroomfiche',
+    root: 'ft_stroomaanvraag_v1',
+    color: '#1d4ed8',
+    bgColor: 'rgba(29,78,216,0.15)',
+    icon: 'ti-bolt'
+  },
+  lijsten: {
+    name: 'Lijsten',
+    root: 'ft_laadlijsten_v1',
+    color: '#9d74f7',
+    bgColor: 'rgba(157,116,247,0.15)',
+    icon: 'ti-list'
+  },
+  bestellingen: {
+    name: 'Bestellingen',
+    root: 'ft_bestellingen_v1',
+    color: '#15803d',
+    bgColor: 'rgba(21,128,61,0.15)',
+    icon: 'ti-shopping-cart'
+  }
+};
+
+// -- RTDB wrapper -----------------------------------------------------
+const RTDB = {
+  async get(path) {
+    const snap = await window.__firebase.fbdb.ref(path).once('value');
+    return snap.val();
+  },
+  watch(path, cb) {
+    return window.__firebase.fbdb.ref(path).on('value', snap => cb(snap.val() || {}));
+  }
+};
+
+// -- Firestore wrapper -----------------------------------------------
+const FS = {
+  watch(col, cb, opt) {
+    const { dbFS, collection, onSnapshot, query, orderBy, where } = window.__firebase;
+    let q = collection(dbFS, col);
+    if (opt) {
+      if (opt.orderBy) q = query(q, orderBy(opt.orderBy.field, opt.orderBy.direction || 'desc'));
+      if (opt.where) opt.where.forEach(w => q = query(q, where(w.field, w.operator, w.value)));
+    }
+    return onSnapshot(q, snap => {
+      const items = [];
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+      cb(items);
+    });
+  },
+  async save(col, id, data) {
+    const { dbFS, doc, setDoc, serverTimestamp } = window.__firebase;
+    await setDoc(doc(dbFS, col, id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+  },
+  async del(col, id) {
+    const { dbFS, doc, deleteDoc } = window.__firebase;
+    await deleteDoc(doc(dbFS, col, id));
+  },
+  async get(col, id) {
+    const { dbFS, doc, getDoc } = window.__firebase;
+    const snap = await getDoc(doc(dbFS, col, id));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  }
+};
+
+// -- Data loaders -----------------------------------------------------
+function useCustomers() {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsub = FS.watch('customers', data => {
+      setCustomers(data);
+      setLoading(false);
+    }, { orderBy: { field: 'name' } });
+    
+    return () => unsub();
+  }, []);
+  
+  return { customers, loading };
+}
+
+function useCustomerEvents() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsub = FS.watch('customer_events', data => {
+      setEvents(data);
+      setLoading(false);
+    }, { orderBy: { field: 'createdAt', direction: 'desc' } });
+    
+    return () => unsub();
+  }, []);
+  
+  return { events, loading };
+}
+
+function useHorecaProjects() {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsub = RTDB.watch(`${SYSTEMS.horeca.root}/projecten`, data => {
+      const projList = Object.entries(data || {}).map(([id, p]) => ({
+        id,
+        system: 'horeca',
+        name: p.naam || 'Onbekend project',
+        date: p.datum,
+        location: p.plaats,
+        notes: p.notitie,
+        customerId: p.customerId || null,
+        customerName: p.customerName || null,
+        createdAt: p.createdAt,
+        locaties: p.locaties ? Object.keys(p.locaties).length : 0
+      }));
+      setProjects(projList);
+      setLoading(false);
+    });
+    
+    return () => window.__firebase.fbdb.ref(`${SYSTEMS.horeca.root}/projecten`).off('value', unsub);
+  }, []);
+  
+  return { projects, loading };
+}
+
+function useStroomProjects() {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsub = RTDB.watch(SYSTEMS.stroom.root, data => {
+      const projData = data || {};
+      const projList = Object.entries(projData.projects || {}).map(([id, p]) => ({
+        id,
+        system: 'stroom',
+        name: p.name || 'Onbekend project',
+        customerId: p.customerId || null,
+        customerName: p.customerName || null,
+        createdAt: p.createdAt || projData.createdAt
+      }));
+      setProjects(projList);
+      setLoading(false);
+    });
+    
+    return () => window.__firebase.fbdb.ref(SYSTEMS.stroom.root).off('value', unsub);
+  }, []);
+  
+  return { projects, loading };
+}
+
+function useLijsten() {
+  const [lists, setLists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsub = RTDB.watch(SYSTEMS.lijsten.root, data => {
+      const listArray = Object.entries(data || {}).map(([id, l]) => ({
+        id,
+        system: 'lijsten',
+        name: l.naam || l.title || 'Onbekende lijst',
+        event: l.event,
+        customerId: l.customerId || null,
+        customerName: l.customerName || l.klant || null,
+        status: l.status,
+        date: l.date || l.datum || l.createdAt || l.aangemaakt,
+        items: l.categorieën ? Object.keys(l.categorieën).length : (l.items ? Object.keys(l.items).length : 0)
+      }));
+      setLists(listArray);
+      setLoading(false);
+    });
+    
+    return () => window.__firebase.fbdb.ref(SYSTEMS.lijsten.root).off('value', unsub);
+  }, []);
+  
+  return { lists, loading };
+}
+
+function useBestellingen() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const unsub = RTDB.watch(SYSTEMS.bestellingen.root, data => {
+      const orderList = Object.entries(data || {}).map(([id, o]) => ({
+        id,
+        system: 'bestellingen',
+        name: o.naam || o.client || 'Onbekende bestelling',
+        customerId: o.customerId || o.clientId || null,
+        customerName: o.customerName || o.client || null,
+        status: o.status,
+        date: o.date || o.createdAt,
+        total: o.total || o.totaal
+      }));
+      setOrders(orderList);
+      setLoading(false);
+    });
+    
+    return () => window.__firebase.fbdb.ref(SYSTEMS.bestellingen.root).off('value', unsub);
+  }, []);
+  
+  return { orders, loading };
+}
+
+// -- Link modal -------------------------------------------------------
+function LinkModal({ item, customers, onSave, onClose }) {
+  const [selectedCustomer, setSelectedCustomer] = useState(
+    customers.find(c => c.id === item.customerId) || ''
+  );
+  
+  const save = e => {
+    e.preventDefault();
+    onSave(item, selectedCustomer?.id || null, selectedCustomer?.name || null);
+  };
+  
+  return h('div', { className: 'modal-overlay', onClick: e => e.target.className === 'modal-overlay' && onClose() },
+    h('div', { className: 'modal', onClick: e => e.stopPropagation() },
+      h('div', { className: 'modal-header' },
+        h('div', { className: 'modal-title' }, `Koppel klant aan ${item.name}`),
+        h('button', { className: 'modal-close', onClick: onClose }, '✕')
+      ),
+      h('form', { onSubmit: save },
+        h('div', { className: 'modal-body' },
+          h('div', { className: 'form-group' },
+            h('label', null, 'Selecteer klant'),
+            h('select', {
+              value: selectedCustomer?.id || '',
+              onChange: e => setSelectedCustomer(customers.find(c => c.id === e.target.value) || '')
+            },
+              h('option', { value: '' }, '— Geen klant —'),
+              customers.sort((a, b) => a.name.localeCompare(b.name)).map(c =>
+                h('option', { key: c.id, value: c.id }, `${esc(c.name)}${c.code ? ` (${esc(c.code)})` : ''}`)
+              )
+            )
+          ),
+          h('div', { className: 'form-group' },
+            h('label', null, 'Ofzoeken op naam'),
+            h('input', {
+              type: 'text',
+              placeholder: 'Typ om te zoeken...',
+              onChange: e => {
+                const search = e.target.value.toLowerCase();
+                if (search.trim()) {
+                  const found = customers.find(c => c.name.toLowerCase().includes(search));
+                  if (found) setSelectedCustomer(found);
+                }
+              }
+            })
+          ),
+          selectedCustomer && h('div', { 
+            style: { 
+              padding: 12, 
+              background: 'var(--bg3)', 
+              borderRadius: 'var(--r)',
+              marginTop: 12,
+              fontSize: 13
+            } 
+          },
+            h('strong', null, 'Geselecteerde klant:'),
+            h('div', null, esc(selectedCustomer.name)),
+            selectedCustomer.code && h('div', { style: { color: 'var(--text2)', fontSize: 12 } }, `Code: ${esc(selectedCustomer.code)}`),
+            selectedCustomer.contact && h('div', { style: { color: 'var(--text2)', fontSize: 12 } }, `Contact: ${esc(selectedCustomer.contact)}`)
+          )
+        ),
+        h('div', { className: 'modal-footer' },
+          h('button', { type: 'button', className: 'btn btn-ghost', onClick: onClose }, 'Annuleren'),
+          h('button', { type: 'submit', className: 'btn primary' }, 'Koppelen')
+        )
+      )
+    )
+  );
+}
+
+// -- Link multiple modal ----------------------------------------------
+function LinkMultipleModal({ items, customers, onSave, onClose }) {
+  const [links, setLinks] = useState({});
+  
+  useEffect(() => {
+    const initialLinks = {};
+    items.forEach(item => {
+      initialLinks[item.id] = customers.find(c => c.id === item.customerId)?.id || '';
+    });
+    setLinks(initialLinks);
+  }, [items, customers]);
+  
+  const handleLinkChange = (itemId, customerId) => {
+    setLinks(prev => ({ ...prev, [itemId]: customerId }));
+  };
+  
+  const saveAll = e => {
+    e.preventDefault();
+    const updates = [];
+    items.forEach(item => {
+      const customerId = links[item.id];
+      const customer = customers.find(c => c.id === customerId);
+      if (customerId !== item.customerId) {
+        updates.push({ item, customerId, customerName: customer?.name || null });
+      }
+    });
+    onSave(updates);
+  };
+  
+  return h('div', { className: 'modal-overlay', onClick: e => e.target.className === 'modal-overlay' && onClose() },
+    h('div', { className: 'modal', style: { maxWidth: 900 }, onClick: e => e.stopPropagation() },
+      h('div', { className: 'modal-header' },
+        h('div', { className: 'modal-title' }, `Koppel ${items.length} items aan klanten`),
+        h('button', { className: 'modal-close', onClick: onClose }, '✕')
+      ),
+      h('form', { onSubmit: saveAll },
+        h('div', { className: 'modal-body' },
+          h('div', { style: { marginBottom: 12, fontSize: 12, color: 'var(--text2)' } },
+            'Selecteer voor elk item de bijbehorende klant:'
+          ),
+          h('table', { style: { width: '100%' } },
+            h('thead', null,
+              h('tr', null,
+                h('th', { style: { textAlign: 'left', padding: 8 } }, 'Item'),
+                h('th', { style: { textAlign: 'left', padding: 8 } }, 'Systeem'),
+                h('th', { style: { textAlign: 'left', padding: 8 } }, 'Klant')
+              )
+            ),
+            h('tbody', null,
+              items.map(item => {
+                const currentCustomerId = links[item.id];
+                const currentCustomer = customers.find(c => c.id === currentCustomerId);
+                return h('tr', { key: item.id },
+                  h('td', { style: { padding: 8 } }, truncate(item.name, 25)),
+                  h('td', { style: { padding: 8 } },
+                    h('span', { 
+                      className: 'system-tag',
+                      style: { background: SYSTEMS[item.system]?.bgColor, color: SYSTEMS[item.system]?.color }
+                    }, SYSTEMS[item.system]?.name || item.system)
+                  ),
+                  h('td', { style: { padding: 8 } },
+                    h('select', {
+                      value: currentCustomerId || '',
+                      onChange: e => handleLinkChange(item.id, e.target.value),
+                      style: { fontSize: 12 }
+                    },
+                      h('option', { value: '' }, '— Geen —'),
+                      customers.sort((a, b) => a.name.localeCompare(b.name)).map(c =>
+                        h('option', { key: c.id, value: c.id }, `${esc(c.name)}${c.code ? ` (${esc(c.code)})` : ''}`)
+                      )
+                    })
+                  )
+                );
+              })
+            )
+          )
+        ),
+        h('div', { className: 'modal-footer' },
+          h('button', { type: 'button', className: 'btn btn-ghost', onClick: onClose }, 'Annuleren'),
+          h('button', { type: 'submit', className: 'btn primary' }, `Koppel ${items.filter(i => links[i.id]).length} items`)
+        )
+      )
+    )
+  );
+}
+
+// -- Main views -------------------------------------------------------
+function Dashboard({ allItems, customers, onLinkItem, onLinkMultiple }) {
+  const totalItems = allItems.length;
+  const linkedItems = allItems.filter(i => i.customerId && customers.some(c => c.id === i.customerId)).length;
+  const unlinkedItems = totalItems - linkedItems;
+  const totalCustomers = customers.length;
+  
+  const itemsBySystem = {};
+  Object.values(SYSTEMS).forEach(sys => {
+    itemsBySystem[sys.name] = allItems.filter(i => i.system === sys.name).length;
+  });
+
+  const recentItems = [...allItems]
+    .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0))
+    .slice(0, 10);
+
+  return h('div', null,
+    h('div', { style: { marginBottom: 16 } },
+      h('h1', { style: { margin: 0, fontSize: 18, fontWeight: 600 } }, 'Centrale Connector'),
+      h('div', { style: { fontSize: 13, color: 'var(--text2)' } },
+        'Overzicht van alle systemen met klantkoppeling'
+      )
+    ),
+
+    // KPI Cards
+    h('div', { className: 'kpi-row' },
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Totaal items'),
+        h('div', { className: 'kpi-value' }, totalItems),
+        h('div', { className: 'kpi-sub' }, `${Object.keys(itemsBySystem).length} systemen`)
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Gekoppeld'),
+        h('div', { className: 'kpi-value', style: { color: 'var(--ok-text)' } }, linkedItems),
+        h('div', { className: 'kpi-sub' }, `${Math.round((linkedItems/totalItems)*100)}%`)
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Niet gekoppeld'),
+        h('div', { className: 'kpi-value', style: { color: 'var(--warn-text)' } }, unlinkedItems),
+        h('div', { className: 'kpi-sub' }, 'Wacht op koppeling')
+      ),
+      h('div', { className: 'kpi-card' },
+        h('div', { className: 'kpi-label' }, 'Klanten'),
+        h('div', { className: 'kpi-value' }, totalCustomers),
+        h('div', { className: 'kpi-sub' }, 'In klanten fiches')
+      )
+    ),
+
+    // System breakdown
+    h('div', { className: 'card' },
+      h('div', { className: 'card-header' },
+        h('i', { className: 'ti ti-chart-pie' }), 'Items per systeem'
+      ),
+      h('div', { className: 'card-body' },
+        h('div', { style: { display: 'flex', gap: 16, flexWrap: 'wrap' } },
+          Object.entries(itemsBySystem).map(([system, count]) => {
+            const sys = Object.values(SYSTEMS).find(s => s.name === system);
+            return h('div', { key: system, style: { flex: 1, minWidth: 150 } },
+              h('div', { style: { fontWeight: 600, marginBottom: 4 } }, system),
+              h('div', { style: { fontSize: 20, fontWeight: 700, color: sys?.color } }, count),
+              h('div', { 
+                style: { 
+                  width: '100%', 
+                  height: 4, 
+                  background: 'var(--bg3)', 
+                  borderRadius: 2, 
+                  marginTop: 4,
+                  position: 'relative',
+                  overflow: 'hidden'
+                } 
+              },
+                h('div', { 
+                  style: { 
+                    width: totalItems > 0 ? `${(count/totalItems)*100}%` : '0%',
+                    height: '100%',
+                    background: sys?.bgColor,
+                    borderRadius: 2
+                  } 
+                })
+              )
+            );
+          })
+        )
+      )
+    ),
+
+    // Recent items
+    h('div', { className: 'card' },
+      h('div', { className: 'card-header' },
+        h('i', { className: 'ti ti-clock' }), 'Recente items'
+      ),
+      h('div', { className: 'card-body' },
+        recentItems.length > 0 ?
+          recentItems.map(item => {
+            const sys = SYSTEMS[item.system];
+            const customer = customers.find(c => c.id === item.customerId);
+            return h('div', { 
+              key: `${item.system}-${item.id}`, 
+              className: 'project-card',
+              onClick: () => onLinkItem(item)
+            },
+              h('div', { className: 'project-header' },
+                h('i', { 
+                  className: `ti ${sys?.icon || 'ti-file'}`,
+                  style: { color: sys?.color, fontSize: 16 }
+                }),
+                h('div', { className: 'project-name' }, truncate(item.name, 40)),
+                customer && h('span', { 
+                  className: 'badge badge-linked',
+                  style: { fontSize: 10 }
+                }, '✓ Gekoppeld')
+              ),
+              h('div', { className: 'project-meta' },
+                h('span', { className: 'system-tag', style: { background: sys?.bgColor, color: sys?.color } },
+                  sys?.name || item.system
+                ),
+                h('span', null, fmt(item.date || item.createdAt)),
+                customer && h('span', { style: { marginLeft: 'auto' } },
+                  h('span', { style: { color: 'var(--text2)' } }, 'Klant: '),
+                  esc(customer.name)
+                )
+              )
+            );
+          })
+        : h('div', { className: 'empty-state' },
+            h('i', { className: 'ti ti-inbox' }),
+            'Geen recente items'
+          )
+      )
+    )
+  );
+}
+
+function AllItemsView({ allItems, customers, searchTerm, onLinkItem, onLinkMultiple }) {
+  const [selectedItems, setSelectedItems] = useState([]);
+  
+  const filteredItems = allItems.filter(item => {
+    const matchesSearch = !searchTerm || 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.customerName && item.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  const toggleSelect = itemId => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.length === filteredItems.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(filteredItems.map(i => i.id));
+    }
+  };
+
+  const getCustomerName = item => {
+    if (item.customerName) return item.customerName;
+    const customer = customers.find(c => c.id === item.customerId);
+    return customer?.name || '—';
+  };
+
+  return h('div', null,
+    h('div', { style: { marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' } },
+      h('div', { className: 'search-box', style: { flex: 1, maxWidth: 300 } },
+        h('i', { className: 'ti ti-search' }),
+        h('input', { 
+          type: 'text', 
+          placeholder: 'Zoek op naam, klant of ID...',
+          value: searchTerm,
+          onChange: e => onLinkMultiple(null, e.target.value)
+        })
+      ),
+      selectedItems.length > 0 && h('button', {
+        className: 'btn primary',
+        onClick: () => onLinkMultiple(filteredItems.filter(i => selectedItems.includes(i.id)))
+      },
+        h('i', { className: 'ti ti-link' }),
+        `Koppel ${selectedItems.length} geselecteerd`
+      )
+    ),
+    
+    h('div', { className: 'card' },
+      h('div', { className: 'card-header' },
+        h('i', { className: 'ti ti-list' }), `Alle items (${filteredItems.length})`,
+        h('button', { 
+          className: 'btn btn-ghost', 
+          onClick: toggleSelectAll,
+          style: { fontSize: 12, marginLeft: 'auto' }
+        },
+          selectedItems.length > 0 ? `Deselecteer alle (${selectedItems.length})` : 'Selecteer alle'
+        )
+      ),
+      h('div', { className: 'card-body' },
+        h('div', { className: 'table-container' },
+          h('table', null,
+            h('thead', null,
+              h('tr', null,
+                h('th', { style: { width: 24 } },
+                  h('input', { 
+                    type: 'checkbox',
+                    checked: selectedItems.length > 0 && selectedItems.length === filteredItems.length,
+                    onChange: toggleSelectAll,
+                    onClick: e => e.stopPropagation()
+                  })
+                ),
+                h('th', null, 'Naam'),
+                h('th', null, 'Systeem'),
+                h('th', null, 'Klant'),
+                h('th', null, 'Datum'),
+                h('th', null, '')
+              )
+            ),
+            h('tbody', null,
+              filteredItems.length > 0 ? filteredItems.map(item => {
+                const sys = SYSTEMS[item.system];
+                const customer = customers.find(c => c.id === item.customerId);
+                const isSelected = selectedItems.includes(item.id);
+                return h('tr', { 
+                  key: `${item.system}-${item.id}`,
+                  className: 'row-link',
+                  onClick: () => onLinkItem(item)
+                },
+                  h('td', { onClick: e => e.stopPropagation() },
+                    h('input', { 
+                      type: 'checkbox',
+                      checked: isSelected,
+                      onChange: () => toggleSelect(item.id),
+                      onClick: e => e.stopPropagation()
+                    })
+                  ),
+                  h('td', null, truncate(item.name, 35)),
+                  h('td', null,
+                    h('span', { 
+                      className: 'system-tag',
+                      style: { background: sys?.bgColor, color: sys?.color }
+                    }, sys?.name || item.system)
+                  ),
+                  h('td', null,
+                    customer ? h('span', { 
+                      className: 'badge badge-linked',
+                      style: { fontSize: 11 }
+                    }, esc(customer.name)) : h('span', { 
+                      className: 'badge badge-unlinked',
+                      style: { fontSize: 11 }
+                    }, 'Niet gekoppeld')
+                  ),
+                  h('td', null, fmt(item.date || item.createdAt)),
+                  h('td', { style: { textAlign: 'right' } },
+                    h('button', { 
+                      className: 'btn btn-ghost btn-sm',
+                      onClick: e => { e.stopPropagation(); onLinkItem(item); },
+                      style: { fontSize: 11 }
+                    }, customer ? '✏' : '+')
+                  )
+                );
+              }) : h('tr', null,
+                h('td', { colSpan: 6, className: 'empty-state' },
+                  h('i', { className: 'ti ti-inbox' }),
+                  'Geen items gevonden'
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+function CustomerView({ customers, allItems, onLinkItem, searchTerm }) {
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  
+  const filteredCustomers = customers.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.code && c.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (c.contact && c.contact.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const getItemsForCustomer = customerId => {
+    return allItems.filter(item => item.customerId === customerId);
+  };
+
+  const groupedBySystem = customerId => {
+    const items = getItemsForCustomer(customerId);
+    const bySystem = {};
+    items.forEach(item => {
+      if (!bySystem[item.system]) bySystem[item.system] = [];
+      bySystem[item.system].push(item);
+    });
+    return bySystem;
+  };
+
+  if (selectedCustomer) {
+    const items = getItemsForCustomer(selectedCustomer.id);
+    const bySystem = groupedBySystem(selectedCustomer.id);
+    
+    return h('div', null,
+      h('div', { style: { marginBottom: 16 } },
+        h('button', { 
+          className: 'btn btn-ghost', 
+          onClick: () => setSelectedCustomer(null),
+          style: { marginBottom: 8 }
+        },
+          h('i', { className: 'ti ti-arrow-left' }), 'Terug naar klanten'
+        ),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+          h('h1', { style: { margin: 0, fontSize: 18, fontWeight: 600 } }, selectedCustomer.name),
+          selectedCustomer.code && h('span', { 
+            className: 'badge',
+            style: { background: 'var(--gold)', color: 'white' }
+          }, esc(selectedCustomer.code)),
+          h('button', { 
+            className: 'btn primary', 
+            onClick: () => window.open(`klanten-fiches.html#customer/${selectedCustomer.id}`, '_blank'),
+            style: { marginLeft: 'auto' }
+          },
+            h('i', { className: 'ti ti-external-link' }), 'Open in Klanten Fiches'
+          )
+        )
+      ),
+      
+      // Customer info
+      h('div', { className: 'card', style: { marginBottom: 16 } },
+        h('div', { className: 'card-header' },
+          h('i', { className: 'ti ti-user' }), 'Klantinformatie'
+        ),
+        h('div', { className: 'card-body' },
+          h('div', { style: { display: 'flex', gap: 16, flexWrap: 'wrap' } },
+            h('div', null,
+              h('div', { style: { fontSize: 11, color: 'var(--text2)', marginBottom: 2 } }, 'Type'),
+              h('div', { style: { fontWeight: 500 } }, 
+                selectedCustomer.type === 'business' ? 'Bedrijf' : 
+                selectedCustomer.type === 'public' ? 'Overheid/VZW' : 'Particulier'
+              )
+            ),
+            h('div', null,
+              h('div', { style: { fontSize: 11, color: 'var(--text2)', marginBottom: 2 } }, 'Contact'),
+              h('div', { style: { fontWeight: 500 } }, esc(selectedCustomer.contact || '—'))
+            ),
+            h('div', null,
+              h('div', { style: { fontSize: 11, color: 'var(--text2)', marginBottom: 2 } }, 'Email'),
+              h('div', { style: { fontWeight: 500 } }, 
+                selectedCustomer.email ? h('a', { href: `mailto:${selectedCustomer.email}`, style: { color: 'var(--blue)' } }, esc(selectedCustomer.email)) : '—'
+              )
+            ),
+            h('div', null,
+              h('div', { style: { fontSize: 11, color: 'var(--text2)', marginBottom: 2 } }, 'Telefoon'),
+              h('div', { style: { fontWeight: 500 } }, esc(selectedCustomer.phone || '—'))
+            ),
+            h('div', null,
+              h('div', { style: { fontSize: 11, color: 'var(--text2)', marginBottom: 2 } }, 'BTW'),
+              h('div', { style: { fontWeight: 500 } }, esc(selectedCustomer.btw || '—'))
+            )
+          )
+        )
+      ),
+      
+      // Items per system
+      h('div', { className: 'card' },
+        h('div', { className: 'card-header' },
+          h('i', { className: 'ti ti-link' }), `Gekoppelde items (${items.length})`
+        ),
+        h('div', { className: 'card-body' },
+          Object.entries(bySystem).length > 0 ?
+            Object.entries(bySystem).map(([system, systemItems]) => {
+              const sys = Object.values(SYSTEMS).find(s => s.name === system);
+              return h('div', { key: system, style: { marginBottom: 16 } },
+                h('div', { 
+                  style: { 
+                    fontWeight: 600, 
+                    marginBottom: 8, 
+                    color: sys?.color,
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 6
+                  } 
+                },
+                  h('i', { className: `ti ${sys?.icon || 'ti-file'}` }),
+                  sys?.name || system,
+                  h('span', { 
+                    className: 'badge', 
+                    style: { 
+                      marginLeft: 'auto',
+                      background: sys?.bgColor,
+                      color: sys?.color
+                    } 
+                  }, `${systemItems.length} item(s)`)
+                ),
+                systemItems.map(item => h('div', { 
+                  key: item.id,
+                  className: 'project-card',
+                  style: { marginBottom: 8 }
+                },
+                  h('div', { className: 'project-header' },
+                    h('i', { 
+                      className: `ti ${sys?.icon || 'ti-file'}`,
+                      style: { color: sys?.color, fontSize: 14 }
+                    }),
+                    h('div', { className: 'project-name' }, truncate(item.name, 40))
+                  ),
+                  h('div', { className: 'project-meta' },
+                    h('span', { style: { color: 'var(--text3)' } }, item.id),
+                    h('span', { style: { marginLeft: 12 } }, fmt(item.date || item.createdAt))
+                  ),
+                  h('div', { className: 'project-footer' },
+                    h('button', { 
+                      className: 'btn btn-ghost btn-sm',
+                      onClick: () => onLinkItem(item),
+                      style: { fontSize: 11 }
+                    }, '🔗 Koppeling bewerken')
+                  )
+                ))
+              );
+            })
+          : h('div', { className: 'empty-state' },
+              h('i', { className: 'ti ti-inbox' }),
+              'Geen gekoppelde items voor deze klant'
+            )
+        )
+      )
+    );
+  }
+
+  return h('div', null,
+    h('div', { style: { marginBottom: 16 } },
+      h('h1', { style: { margin: 0, fontSize: 18, fontWeight: 600 } }, 'Klanten'),
+      h('div', { style: { fontSize: 13, color: 'var(--text2)' } },
+        `${customers.length} klanten in klanten fiches`
+      )
+    ),
+    
+    h('div', { className: 'card' },
+      h('div', { className: 'card-header' },
+        h('i', { className: 'ti ti-users' }), `Klanten (${filteredCustomers.length})`,
+        h('button', { 
+          className: 'btn primary', 
+          onClick: () => window.open('klanten-fiches.html', '_blank'),
+          style: { marginLeft: 'auto' }
+        },
+          h('i', { className: 'ti ti-plus' }), 'Nieuwe klant'
+        )
+      ),
+      h('div', { className: 'card-body' },
+        h('div', { className: 'search-box', style: { marginBottom: 12 } },
+          h('i', { className: 'ti ti-search' }),
+          h('input', { 
+            type: 'text', 
+            placeholder: 'Zoek klanten...',
+            value: searchTerm,
+            onChange: e => onLinkItem(null, e.target.value)
+          })
+        ),
+        h('div', { className: 'table-container' },
+          h('table', null,
+            h('thead', null,
+              h('tr', null,
+                h('th', null, 'Klant'),
+                h('th', null, 'Code'),
+                h('th', null, 'Type'),
+                h('th', null, 'Items'),
+                h('th', null, 'Klant sinds'),
+                h('th', null, '')
+              )
+            ),
+            h('tbody', null,
+              filteredCustomers.length > 0 ? filteredCustomers.map(c => {
+                const items = getItemsForCustomer(c.id);
+                return h('tr', { 
+                  key: c.id,
+                  className: 'row-link',
+                  onClick: () => setSelectedCustomer(c)
+                },
+                  h('td', null, esc(c.name)),
+                  h('td', null, h('code', null, esc(c.code || '—'))),
+                  h('td', null, 
+                    c.type === 'business' ? 'Bedrijf' : 
+                    c.type === 'public' ? 'Overheid/VZW' : 'Particulier'
+                  ),
+                  h('td', { style: { textAlign: 'center' } }, items.length),
+                  h('td', null, fmt(c.createdAt)),
+                  h('td', { style: { textAlign: 'right' } },
+                    h('button', { 
+                      className: 'btn btn-ghost btn-sm',
+                      onClick: e => { e.stopPropagation(); setSelectedCustomer(c); },
+                      style: { fontSize: 11 }
+                    }, '→')
+                  )
+                );
+              }) : h('tr', null,
+                h('td', { colSpan: 6, className: 'empty-state' },
+                  h('i', { className: 'ti ti-users' }),
+                  'Geen klanten gevonden'
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );
+}
+
+// -- Sidebar ----------------------------------------------------------
+function Sidebar({ allItems, customers, page, onNav, searchTerm }) {
+  const totalItems = allItems.length;
+  const linkedItems = allItems.filter(i => i.customerId && customers.some(c => c.id === i.customerId)).length;
+  
+  return h('div', { className: 'sidebar' },
+    h('div', { className: 'sidebar-header' },
+      h('i', { className: 'ti ti-link', style: { fontSize: 19 } }), 'Connector'
+    ),
+    h('div', null,
+      h('div', { className: 'sidebar-section' },
+        h('div', { 
+          className: `nav-item ${page === 'dashboard' ? 'active' : ''}`, 
+          onClick: () => onNav('dashboard')
+        },
+          h('i', { className: 'ti ti-layout-dashboard' }), 'Dashboard'
+        ),
+        h('div', { 
+          className: `nav-item ${page === 'all-items' ? 'active' : ''}`, 
+          onClick: () => onNav('all-items')
+        },
+          h('i', { className: 'ti ti-list' }), 'Alle items',
+          totalItems > 0 && h('span', { className: 'badge' }, totalItems)
+        ),
+        h('div', { 
+          className: `nav-item ${page === 'customers' ? 'active' : ''}`, 
+          onClick: () => onNav('customers')
+        },
+          h('i', { className: 'ti ti-users' }), 'Klanten',
+          customers.length > 0 && h('span', { className: 'badge' }, customers.length)
+        )
+      ),
+      h('div', { className: 'sidebar-section' },
+        h('div', { className: 'sidebar-section-title' }, 'Systemen'),
+        Object.values(SYSTEMS).map(sys => {
+          const count = allItems.filter(i => i.system === sys.name).length;
+          return h('div', { 
+            key: sys.name,
+            className: `nav-item`,
+            onClick: () => onNav('all-items', sys.name)
+          },
+            h('i', { className: `ti ${sys.icon}` }), sys.name,
+            count > 0 && h('span', { className: 'badge' }, count)
+          );
+        })
+      ),
+      h('div', { className: 'sidebar-section' },
+        h('div', { className: 'sidebar-section-title' }, 'Koppeling'),
+        h('div', { 
+          className: `nav-item`,
+          onClick: () => onNav('unlinked')
+        },
+          h('i', { className: 'ti ti-alert-circle' }), 'Niet gekoppeld',
+          allItems.filter(i => !i.customerId || !customers.some(c => c.id === i.customerId)).length > 0 && 
+          h('span', { className: 'badge' }, allItems.filter(i => !i.customerId || !customers.some(c => c.id === i.customerId)).length)
+        )
+      )
+    ),
+    h('div', { style: { padding: 8, borderTop: '1px solid var(--border)' } },
+      h('button', { 
+        className: 'btn primary', 
+        onClick: () => window.open('klanten-fiches.html', '_blank'),
+        style: { width: '100%', justifyContent: 'center', fontSize: 13, padding: 7 }
+      },
+        h('i', { className: 'ti ti-user-plus', style: { fontSize: 14 } }), 'Klanten Fiches'
+      )
+    )
+  );
+}
+
+// -- Top bar -----------------------------------------------------------
+function TopBar({ page, onBack, searchTerm, onSearch }) {
+  return h('div', { className: 'topbar' },
+    h('div', { style: { flex: 1 } },
+      (page === 'customers' || page === 'all-items') && h('button', { 
+        className: 'btn btn-ghost', 
+        onClick: onBack,
+        style: { fontSize: 12 }
+      },
+        h('i', { className: 'ti ti-arrow-left' }), 'Terug'
+      ),
+      h('h1', null, 
+        page === 'dashboard' ? 'Dashboard' :
+        page === 'all-items' ? 'Alle Items' :
+        page === 'customers' ? 'Klanten' : 'Connector'
+      )
+    )
+  );
+}
+
+// -- Main App ----------------------------------------------------------
+function App() {
+  const [page, setPage] = useState('dashboard');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modal, setModal] = useState(null);
+  const [toastMsg, setToastMsg] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  
+  const { customers, loading: customersLoading } = useCustomers();
+  const { events: customerEvents, loading: eventsLoading } = useCustomerEvents();
+  const { projects: horecaProjects, loading: horecaLoading } = useHorecaProjects();
+  const { projects: stroomProjects, loading: stroomLoading } = useStroomProjects();
+  const { lists: lijsten, loading: lijstenLoading } = useLijsten();
+  const { orders: bestellingen, loading: bestellingenLoading } = useBestellingen();
+
+  // Combine all items from all systems
+  const allItems = useMemo(() => {
+    return [
+      ...horecaProjects.map(p => ({ ...p, source: 'horeca' })),
+      ...stroomProjects.map(p => ({ ...p, source: 'stroom' })),
+      ...lijsten.map(l => ({ ...l, source: 'lijsten' })),
+      ...bestellingen.map(o => ({ ...o, source: 'bestellingen' })),
+      ...customerEvents.map(e => ({
+        ...e,
+        system: 'klanten_events',
+        source: 'klanten'
+      }))
+    ];
+  }, [horecaProjects, stroomProjects, lijsten, bestellingen, customerEvents]);
+
+  // Check if all data is loaded
+  useEffect(() => {
+    if (!customersLoading && !eventsLoading && !horecaLoading && !stroomLoading && 
+        !lijstenLoading && !bestellingenLoading) {
+      setLoaded(true);
+    }
+  }, [customersLoading, eventsLoading, horecaLoading, stroomLoading, lijstenLoading, bestellingenLoading]);
+
+  // Toast notification
+  const showToast = (msg, type = 'ok') => {
+    setToastMsg({ msg, type });
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // Navigation
+  const nav = (p, filter = '') => {
+    setPage(p);
+    setSearchTerm(filter || '');
+    setModal(null);
+  };
+
+  // Link item to customer
+  const linkItem = (item, customerId, customerName) => {
+    if (!item) {
+      setSearchTerm(customerId || '');
+      nav('all-items');
+      return;
+    }
+    
+    setModal({ type: 'link', item, customers });
+  };
+
+  // Link multiple items
+  const linkMultiple = (itemsToLink, search = '') => {
+    if (!itemsToLink) {
+      setSearchTerm(search || '');
+      return;
+    }
+    
+    if (itemsToLink.length === 1) {
+      setModal({ type: 'link', item: itemsToLink[0], customers });
+    } else if (itemsToLink.length > 1) {
+      setModal({ type: 'link-multiple', items: itemsToLink, customers });
+    }
+  };
+
+  // Save link for item
+  const saveLink = async (item, customerId, customerName) => {
+    try {
+      // Determine which system and update accordingly
+      switch (item.system) {
+        case 'horeca':
+          await window.__firebase.fbdb.ref(`${SYSTEMS.horeca.root}/projecten/${item.id}`).update({
+            customerId: customerId || null,
+            customerName: customerName || null
+          });
+          break;
+        case 'stroom':
+          await window.__firebase.fbdb.ref(`${SYSTEMS.stroom.root}/projects/${item.id}`).update({
+            customerId: customerId || null,
+            customerName: customerName || null
+          });
+          break;
+        case 'lijsten':
+          await window.__firebase.fbdb.ref(`${SYSTEMS.lijsten.root}/${item.id}`).update({
+            customerId: customerId || null,
+            customerName: customerName || null,
+            klant: customerName || null
+          });
+          break;
+        case 'bestellingen':
+          await window.__firebase.fbdb.ref(`${SYSTEMS.bestellingen.root}/${item.id}`).update({
+            customerId: customerId || null,
+            customerName: customerName || null
+          });
+          break;
+        case 'klanten_events':
+          await FS.save('customer_events', item.id, {
+            customerId: customerId || null,
+            customerName: customerName || null
+          });
+          break;
+        default:
+          console.warn('Unknown system:', item.system);
+      }
+      
+      showToast(`Item gekoppeld aan ${customerName || 'klant'}`);
+      setModal(null);
+    } catch (err) {
+      showToast('Fout bij koppelen: ' + err.message, 'err');
+    }
+  };
+
+  // Save multiple links
+  const saveMultipleLinks = async updates => {
+    try {
+      let count = 0;
+      for (const update of updates) {
+        await saveLink(update.item, update.customerId, update.customerName);
+        count++;
+      }
+      showToast(`${count} items gekoppeld`);
+      setModal(null);
+    } catch (err) {
+      showToast('Fout bij koppelen: ' + err.message, 'err');
+    }
+  };
+
+  // Filter items by system if needed
+  const filteredAllItems = useMemo(() => {
+    if (page === 'unlinked') {
+      return allItems.filter(i => !i.customerId || !customers.some(c => c.id === i.customerId));
+    }
+    return allItems;
+  }, [allItems, customers, page]);
+
+  if (!loaded) return h('div', { 
+    style: { 
+      padding: 60, 
+      textAlign: 'center', 
+      color: 'var(--text2)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100vh'
+    } 
+  }, 'Bezig met laden van data uit alle systemen...');
+
+  return h('div', { style: { display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' } },
+    h(Sidebar, { 
+      allItems: filteredAllItems, 
+      customers, 
+      page, 
+      onNav: nav,
+      searchTerm 
+    }),
+    h('div', { className: 'main' },
+      h(TopBar, { 
+        page, 
+        onBack: () => nav('dashboard'),
+        searchTerm,
+        onSearch: setSearchTerm
+      }),
+      h('div', { className: 'content' },
+        page === 'dashboard' && h(Dashboard, {
+          allItems: filteredAllItems,
+          customers,
+          onLinkItem: linkItem,
+          onLinkMultiple: linkMultiple
+        }),
+        (page === 'all-items' || page === 'unlinked') && h(AllItemsView, {
+          allItems: filteredAllItems,
+          customers,
+          searchTerm,
+          onLinkItem: linkItem,
+          onLinkMultiple: linkMultiple
+        }),
+        page === 'customers' && h(CustomerView, {
+          customers,
+          allItems: filteredAllItems,
+          onLinkItem: linkItem,
+          searchTerm
+        })
+      )
+    ),
+
+    // Modals
+    modal?.type === 'link' && h(LinkModal, {
+      item: modal.item,
+      customers,
+      onSave: saveLink,
+      onClose: () => setModal(null)
+    }),
+    
+    modal?.type === 'link-multiple' && h(LinkMultipleModal, {
+      items: modal.items,
+      customers,
+      onSave: saveMultipleLinks,
+      onClose: () => setModal(null)
+    }),
+
+    // Toast
+    toastMsg && h('div', { 
+      className: 'toast',
+      style: { 
+        background: toastMsg.type === 'err' ? 'var(--err-bg)' : 'var(--ok-bg)',
+        color: toastMsg.type === 'err' ? 'var(--err-text)' : 'var(--ok-text)',
+        border: `1px solid ${toastMsg.type === 'err' ? 'var(--err-border)' : 'var(--ok-border)'}`
+      }
+    }, toastMsg.msg)
+  );
+}
+
+// -- Mount the app ----------------------------------------------------
+window.__mountApp = () => {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(h(App));
+};
+
+// Check if Firebase is ready
+if (window.__firebase && window.__firebase.fbdb && window.__firebase.dbFS) {
+  window.__mountApp();
+}
+</script>
+</body>
+</html>
