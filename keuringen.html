@@ -240,7 +240,10 @@ var trucks=[],view='all',selMode=false,selected={},pending=[],qrInst=null,ocbDat
 // Centrale opslag in Firebase Realtime Database: alle toestellen zien live dezelfde
 // keuringsdata. IDATA is enkel de eenmalige startset (seed) als de database leeg is.
 function keurMap(){var m={};IDATA.forEach(function(t){m[t.id]=t;});return m;}
-fbdb.ref(FB_KEUR).on('value',function(snap){var v=snap.val();if(!v){fbdb.ref(FB_KEUR).set(keurMap());return;}trucks=Object.keys(v).map(function(k){return v[k];});fillTypes();render();},function(err){console.warn('Keuringen laden mislukt:',err&&err.message);});
+function loadKeuringen(){fbdb.ref(FB_KEUR).on('value',function(snap){var v=snap.val();if(!v){fbdb.ref(FB_KEUR).set(keurMap());return;}trucks=Object.keys(v).map(function(k){return v[k];});fillTypes();render();},function(err){console.warn('Keuringen laden mislukt:',err&&err.message);});}
+// Wacht tot auth.js de login heeft hersteld (auth-ready) vóór we de RTDB lezen,
+// anders wordt de eerste leesactie geweigerd (nog niet ingelogd) en blijft de lijst leeg.
+if(window.__auth){loadKeuringen();}else{window.addEventListener('auth-ready',loadKeuringen,{once:true});}
 
 // Load OCB data from IndexedDB
 try{var oreq=indexedDB.open('ss_ocb',1);oreq.onupgradeneeded=function(e){e.target.result.createObjectStore('keuringen',{keyPath:'tid'});};oreq.onsuccess=function(e){var db=e.target.result;var tx=db.transaction('keuringen','readonly');var all=tx.objectStore('keuringen').getAll();all.onsuccess=function(e){e.target.result.forEach(function(r){ocbData[r.tid]=r;});render();};all.onerror=function(){render();};};}catch(e){}
