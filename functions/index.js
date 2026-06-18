@@ -238,6 +238,99 @@ exports.mistralProxy = onRequest(
   },
 );
 
+// ── HTTP: keuring-attesten proxy ────────────────────────────────
+// Achter /api/keuring. De keuringsattesten (gas/elektrisch) wonen als
+// publieke statische PDF's op de aparte QR-app (senorkeuringqr.web.app),
+// die GEEN CORS-headers stuurt. Daardoor kan de planning (ander domein)
+// ze niet rechtstreeks inlezen om te bundelen. Deze proxy haalt ze
+// server-side op en stuurt ze met de juiste CORS-headers terug.
+//
+// Twee modi:
+//   ?list=ft036                  → JSON {id, files:[{type:'gas'|'elek', name}]}
+//                                  (parset trucks/ft036.html voor de PDF-lijst)
+//   ?path=pdfs/ft036_gas_1.pdf   → streamt die ene PDF (application/pdf)
+const KEURING_BASE = 'https://senorkeuringqr.web.app';
+
+exports.keuringPdfProxy = onRequest(
+  {
+    region: REGION,
+    cors: ALLOWED_ORIGINS,
+    timeoutSeconds: 30,
+    memory: '256MiB',
+  },
+  async (req, res) => {
+    if (req.method !== 'GET') {
+      res.status(405).json({ error: 'Gebruik GET.' });
+      return;
+    }
+    const rl = await rateLimit(req, 'keuring', { limit: 300, windowSec: 60 });
+    if (rl) {
+      res.set('Retry-After', String(rl.retryAfter));
+      res.status(429).json({ error: `Even rustig — probeer over ${rl.retryAfter}s opnieuw.` });
+      return;
+    }
+
+    try {
+      // ── Modus 1: lijst van attesten voor één voertuig ──────────
+      const listId = req.query.list;
+      if (listId != null) {
+        const id = String(listId);
+        if (!/^ft[0-9a-z]+$/i.test(id)) {
+          res.status(400).json({ error: 'Ongeldig id.' });
+          return;
+        }
+        const page = await fetch(`${KEURING_BASE}/trucks/${id}.html`);
+        if (!page.ok) {
+          // Geen pagina → geen attesten bekend. Geen fout: lege lijst.
+          res.set('Cache-Control', 'public, max-age=300');
+          res.status(200).json({ id, files: [] });
+          return;
+        }
+        const html = await page.text();
+        // Vind alle verwijzingen naar pdfs/<id>_(gas|elek)_<n>.pdf
+        const re = new RegExp(`(${id}_(gas|elek)_\\d+\\.pdf)`, 'gi');
+        const seen = new Set();
+        const files = [];
+        let m;
+        while ((m = re.exec(html)) !== null) {
+          const name = m[1];
+          if (seen.has(name.toLowerCase())) continue;
+          seen.add(name.toLowerCase());
+          files.push({ type: m[2].toLowerCase() === 'gas' ? 'gas' : 'elek', name });
+        }
+        res.set('Cache-Control', 'public, max-age=300');
+        res.status(200).json({ id, files });
+        return;
+      }
+
+      // ── Modus 2: één PDF doorsturen ────────────────────────────
+      const rawPath = req.query.path;
+      if (rawPath == null) {
+        res.status(400).json({ error: 'Geef ?list=<id> of ?path=pdfs/<bestand>.pdf' });
+        return;
+      }
+      const path = String(rawPath);
+      // Strikt: enkel pdfs/<naam>.pdf, geen submappen, geen ".."
+      if (!/^pdfs\/[A-Za-z0-9_.-]+\.pdf$/.test(path) || path.includes('..')) {
+        res.status(400).json({ error: 'Ongeldig pad.' });
+        return;
+      }
+      const upstream = await fetch(`${KEURING_BASE}/${path}`);
+      if (!upstream.ok) {
+        res.status(upstream.status === 404 ? 404 : 502).json({ error: 'Attest niet gevonden.' });
+        return;
+      }
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      res.set('Content-Type', 'application/pdf');
+      res.set('Cache-Control', 'public, max-age=300');
+      res.status(200).send(buf);
+    } catch (e) {
+      logger.error('keuringPdfProxy mislukt', e);
+      res.status(500).json({ error: String(e?.message || e) });
+    }
+  },
+);
+
 // ── HTTP: sandboxed Poets API ───────────────────────────────────
 // Powers poets-extern.html. The sandbox page has NO Firebase SDK and
 // NO API key in its source: every read/write goes through this proxy,

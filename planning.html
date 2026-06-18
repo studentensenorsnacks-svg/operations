@@ -294,6 +294,9 @@ textarea{resize:vertical;min-height:70px;}
 .evd-logi{display:flex;align-items:center;justify-content:space-between;font-size:0.88rem;font-weight:600;padding:7px 11px;background:#f7f7f7;border-radius:5px;margin-bottom:4px;}
 .evd-logi-val{font-family:var(--font-cond);font-weight:800;font-size:0.95rem;}
 .evd-foot{display:flex;gap:10px;padding:14px 22px;border-top:1px solid var(--border);flex-shrink:0;justify-content:flex-end;}
+.evd-keur-btn{margin-left:auto;font-family:var(--font);font-size:0.72rem;font-weight:700;padding:4px 11px;border-radius:5px;border:none;background:var(--red);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.15s;line-height:1.3;}
+.evd-keur-btn:hover{background:var(--red-dark);}
+.evd-keur-btn:disabled{opacity:0.6;cursor:wait;}
 
 /* AGENDA TAB — weekoverzicht */
 .ag-mgrid{display:grid;grid-template-columns:repeat(7,minmax(145px,1fr));gap:3px;min-width:1015px;}
@@ -1601,7 +1604,7 @@ function openEvDetail(id){
     </div>
     <div class="evd-body">
       <div class="evd-section">
-        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${cat.wagens.count}</span></div>
+        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${cat.wagens.count}</span>${cat.wagens.count?`<button type="button" class="evd-keur-btn" id="evd-keur-btn" onclick="downloadKeuringen(${ev.id})">📋 Keuringen</button>`:''}</div>
         ${cat.wagens.html}
       </div>
       <div class="evd-section">
@@ -1622,6 +1625,86 @@ function openEvDetail(id){
       <button type="button" class="btn-primary" onclick="closeEvDetail();editEv(${ev.id})">✏️ Bewerken</button>
     </div>`;
   document.getElementById('evd-overlay').classList.remove('hidden');
+}
+
+// ── KEURINGEN DOWNLOADEN ───────────────────────────────
+// Bundelt alle keuringsattesten (gas/elektrisch) van de wagens van één event
+// in één ZIP. De attesten zijn publieke PDF's op de QR-app (senorkeuringqr);
+// omdat dat een ander domein is, halen we ze op via de /api/keuring-proxy
+// (lost CORS op). Structuur: "<event> keuringen / <wagen> / gas|elektrisch / *.pdf".
+let _jszipLoading = null;
+function ensureJSZip(){
+  if(window.JSZip) return Promise.resolve();
+  if(_jszipLoading) return _jszipLoading;
+  _jszipLoading = new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload=res; s.onerror=()=>rej(new Error('JSZip laden mislukt'));
+    document.head.appendChild(s);
+  });
+  return _jszipLoading;
+}
+
+async function downloadKeuringen(evId){
+  const ev = events.find(e=>e.id===evId);
+  if(!ev) return;
+  const btn = document.getElementById('evd-keur-btn');
+  // Wagens van dit event — zelfde splitsing als in de popup (camionetten eruit).
+  const wagens = (Array.isArray(ev.trucks)?ev.trucks:[]).filter(n=>{
+    const info = TRUCK_INFO[n];
+    return !(info && info.kind==='camions');
+  });
+  if(!wagens.length){ showToast('Geen wagens in dit event.'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Bezig…'; }
+  try{
+    await ensureJSZip();
+    const zip = new JSZip();
+    const safe = s => String(s||'').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim();
+    const rootName = (safe(ev.name)||'event')+' keuringen';
+    const root = zip.folder(rootName);
+    const fleet = (window.TruckData && TruckData.TRUCKS) || [];
+    let pdfCount = 0;
+    const missing = [];  // wagen heeft geen (downloadbaar) attest
+    for(const naam of wagens){
+      const t = fleet.find(x=>x.name===naam);
+      if(!t){ missing.push(naam); continue; }
+      let files = [];
+      try{
+        const r = await fetch('/api/keuring?list='+encodeURIComponent(t.id));
+        if(r.ok){ const j = await r.json(); files = Array.isArray(j.files)?j.files:[]; }
+      }catch(_){}
+      if(!files.length){ missing.push(naam); continue; }
+      const wf = root.folder(safe(naam));
+      let got = 0;
+      for(const f of files){
+        try{
+          const pr = await fetch('/api/keuring?path='+encodeURIComponent('pdfs/'+f.name));
+          if(!pr.ok) continue;
+          const blob = await pr.blob();
+          wf.folder(f.type==='gas'?'gas':'elektrisch').file(f.name, blob);
+          got++; pdfCount++;
+        }catch(_){}
+      }
+      if(!got) missing.push(naam);
+    }
+    if(!pdfCount){
+      showToast('Geen keuringsattesten gevonden voor de wagens van dit event.');
+      return;
+    }
+    const out = await zip.generateAsync({type:'blob'});
+    const url = URL.createObjectURL(out);
+    const a = document.createElement('a');
+    a.href = url; a.download = rootName+'.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    let msg = `✓ ${pdfCount} attest(en) gedownload — ${wagens.length-missing.length}/${wagens.length} wagens.`;
+    if(missing.length) msg += ' Geen attest: '+missing.join(', ')+'.';
+    showToast(msg);
+  }catch(e){
+    showToast('Download mislukt: '+((e&&e.message)||e));
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='📋 Keuringen'; }
+  }
 }
 
 // ── LAADLIJST UPLOAD (PDF → AI → Firebase) ─────────────

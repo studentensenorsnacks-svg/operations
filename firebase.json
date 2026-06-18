@@ -50,6 +50,13 @@
           }
         },
         {
+          "source": "/api/keuring",
+          "function": {
+            "functionId": "keuringPdfProxy",
+            "region": "europe-west1"
+          }
+        },
+        {
           "source": "/api/vet-tonnen",
           "function": {
             "functionId": "vetTonnenApi",
@@ -138,6 +145,13 @@
           "source": "/api/poets",
           "function": {
             "functionId": "poetsApi",
+            "region": "europe-west1"
+          }
+        },
+        {
+          "source": "/api/keuring",
+          "function": {
+            "functionId": "keuringPdfProxy",
             "region": "europe-west1"
           }
         },
