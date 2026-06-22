@@ -1604,7 +1604,7 @@ function openEvDetail(id){
     </div>
     <div class="evd-body">
       <div class="evd-section">
-        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${cat.wagens.count}</span>${cat.wagens.count?`<button type="button" class="evd-keur-btn" id="evd-keur-btn" onclick="downloadKeuringen(${ev.id})">📋 Keuringen</button>`:''}</div>
+        <div class="evd-sec-title">🚛 Wagens <span class="evd-sec-count">${cat.wagens.count}</span>${cat.wagens.count?`<button type="button" class="evd-keur-btn" id="evd-keur-btn" onclick="mailKeuringen(${ev.id})">📋 Keuringen</button>`:''}</div>
         ${cat.wagens.html}
       </div>
       <div class="evd-section">
@@ -1627,84 +1627,41 @@ function openEvDetail(id){
   document.getElementById('evd-overlay').classList.remove('hidden');
 }
 
-// ── KEURINGEN DOWNLOADEN ───────────────────────────────
-// Bundelt alle keuringsattesten (gas/elektrisch) van de wagens van één event
-// in één ZIP. De attesten zijn publieke PDF's op de QR-app (senorkeuringqr);
-// omdat dat een ander domein is, halen we ze op via de /api/keuring-proxy
-// (lost CORS op). Structuur: "<event> keuringen / <wagen> / gas|elektrisch / *.pdf".
-let _jszipLoading = null;
-function ensureJSZip(){
-  if(window.JSZip) return Promise.resolve();
-  if(_jszipLoading) return _jszipLoading;
-  _jszipLoading = new Promise((res,rej)=>{
-    const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-    s.onload=res; s.onerror=()=>rej(new Error('JSZip laden mislukt'));
-    document.head.appendChild(s);
-  });
-  return _jszipLoading;
-}
-
-async function downloadKeuringen(evId){
+// ── KEURINGEN MAILEN ───────────────────────────────────
+// Zet een e-mailconcept klaar met de QR-keuringslinks van de wagens van één
+// event — net zoals de mail-functie in keuringen.html. Elke link wijst naar de
+// publieke QR-keuringspagina (/trucks/<id>.html), waar gas- + elektrische
+// attesten te bekijken zijn. mailto: opent het mailprogramma; de gebruiker
+// vult de ontvanger aan en verstuurt zelf (geen automatische verzending).
+function mailKeuringen(evId){
   const ev = events.find(e=>e.id===evId);
   if(!ev) return;
-  const btn = document.getElementById('evd-keur-btn');
   // Wagens van dit event — zelfde splitsing als in de popup (camionetten eruit).
   const wagens = (Array.isArray(ev.trucks)?ev.trucks:[]).filter(n=>{
     const info = TRUCK_INFO[n];
     return !(info && info.kind==='camions');
   });
   if(!wagens.length){ showToast('Geen wagens in dit event.'); return; }
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Bezig…'; }
-  try{
-    await ensureJSZip();
-    const zip = new JSZip();
-    const safe = s => String(s||'').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim();
-    const rootName = (safe(ev.name)||'event')+' keuringen';
-    const root = zip.folder(rootName);
-    const fleet = (window.TruckData && TruckData.TRUCKS) || [];
-    let pdfCount = 0;
-    const missing = [];  // wagen heeft geen (downloadbaar) attest
-    for(const naam of wagens){
-      const t = fleet.find(x=>x.name===naam);
-      if(!t){ missing.push(naam); continue; }
-      let files = [];
-      try{
-        const r = await fetch('/api/keuring?list='+encodeURIComponent(t.id));
-        if(r.ok){ const j = await r.json(); files = Array.isArray(j.files)?j.files:[]; }
-      }catch(_){}
-      if(!files.length){ missing.push(naam); continue; }
-      const wf = root.folder(safe(naam));
-      let got = 0;
-      for(const f of files){
-        try{
-          const pr = await fetch('/api/keuring?path='+encodeURIComponent('pdfs/'+f.name));
-          if(!pr.ok) continue;
-          const blob = await pr.blob();
-          wf.folder(f.type==='gas'?'gas':'elektrisch').file(f.name, blob);
-          got++; pdfCount++;
-        }catch(_){}
-      }
-      if(!got) missing.push(naam);
-    }
-    if(!pdfCount){
-      showToast('Geen keuringsattesten gevonden voor de wagens van dit event.');
-      return;
-    }
-    const out = await zip.generateAsync({type:'blob'});
-    const url = URL.createObjectURL(out);
-    const a = document.createElement('a');
-    a.href = url; a.download = rootName+'.zip';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 4000);
-    let msg = `✓ ${pdfCount} attest(en) gedownload — ${wagens.length-missing.length}/${wagens.length} wagens.`;
-    if(missing.length) msg += ' Geen attest: '+missing.join(', ')+'.';
-    showToast(msg);
-  }catch(e){
-    showToast('Download mislukt: '+((e&&e.message)||e));
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent='📋 Keuringen'; }
+  const fleet = (window.TruckData && TruckData.TRUCKS) || [];
+  const base = location.origin;  // QR-keuringspagina's draaien op dezelfde host
+  const links = [];
+  const missing = [];  // wagen niet teruggevonden in de vloot → geen QR-link
+  for(const naam of wagens){
+    const t = fleet.find(x=>x.name===naam);
+    if(!t){ missing.push(naam); continue; }
+    links.push('- '+naam+': '+base+'/trucks/'+t.id+'.html');
   }
+  if(!links.length){ showToast('Geen QR-keuringslinks gevonden voor de wagens van dit event.'); return; }
+  const subject = 'Keuringsattesten — '+(ev.name||'event');
+  const body = 'Geachte,\n\n'
+    + 'Hierbij de keuringsattesten van onze foodtrucks'+(ev.name?(' voor '+ev.name):'')+':\n\n'
+    + links.join('\n')+'\n\n'
+    + 'Met vriendelijke groeten,\nSeñor Snacks\n\n'
+    + '---\nAutomatisch gegenereerde mail. Gelieve niet te antwoorden.';
+  location.href = 'mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  let msg = `📧 E-mail met ${links.length} keuringslink(s) klaargezet — controleer en verstuur.`;
+  if(missing.length) msg += ' Geen link voor: '+missing.join(', ')+'.';
+  showToast(msg);
 }
 
 // ── LAADLIJST UPLOAD (PDF → AI → Firebase) ─────────────
