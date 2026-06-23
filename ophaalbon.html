@@ -203,6 +203,32 @@ table.sel .rm{border:none;background:none;color:var(--red);cursor:pointer;font-s
   </div>
 
   <div class="card">
+    <div class="sec-title">🍽️ Horeca materiaal <span class="cnt" id="horeca-cnt">0</span></div>
+    <div class="sub" style="margin-bottom:12px">Kies uit de horeca-materiaalcatalogus of voeg een eigen item toe.</div>
+    <div class="prod-search-wrap">
+      <input type="text" id="horeca-search" placeholder="Zoek horeca-materiaal…" oninput="renderHorecaResults()" onfocus="renderHorecaResults()">
+    </div>
+    <div class="prod-results" id="horeca-results"></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input type="text" id="horeca-free" placeholder="Eigen item zelf typen…" onkeydown="if(event.key==='Enter')addHorecaFree()">
+      <button type="button" class="btn btn-out" style="white-space:nowrap;padding:10px 14px" onclick="addHorecaFree()">+ Eigen item</button>
+    </div>
+
+    <table class="sel" id="horeca-table" style="display:none">
+      <thead><tr><th>Materiaal</th><th style="text-align:center">Aantal</th><th></th></tr></thead>
+      <tbody id="horeca-tbody"></tbody>
+    </table>
+    <div class="empty-hint" id="horeca-empty">Nog geen horeca-materiaal toegevoegd.</div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">📝 Vrij in te vullen</div>
+    <div class="sub" style="margin-bottom:12px">Vrije tekst die op de bon komt. Onder de tekst blijven er lege regels open om met de hand bij te schrijven.</div>
+    <textarea id="b-vrij" placeholder="bijv. extra afspraken, los materiaal, aantallen die ter plaatse bepaald worden…"></textarea>
+  </div>
+
+  <div class="card">
     <div class="foot">
       <button class="btn btn-primary" id="btn-save" onclick="saveAndDownload()">💾 Opslaan & download (2-voud)</button>
       <span class="hint">De bon krijgt automatisch een bonnummer en wordt centraal bewaard.</span>
@@ -247,6 +273,9 @@ function toast(msg,color){const t=document.getElementById('toast');t.textContent
 // ── STATE ──────────────────────────────────────────────
 const selectedTrucks = {};   // id -> name
 const selectedProds  = {};   // id -> {id,naam,artVZ,artAC,qty}
+const selectedHoreca = {};   // id -> {id,naam,qty}
+let horecaCatalog = [];      // [{id,naam,categorie}] uit de horeca-materiaalcatalogus
+let freeSeq = 0;
 
 // ── KLANT ──────────────────────────────────────────────
 function fillPresetSelect(){
@@ -358,6 +387,64 @@ function renderProdTable(){
   ).join('');
 }
 
+// ── HORECA MATERIAAL ───────────────────────────────────
+function loadHorecaCatalog(){
+  fbdb.ref('ft_horeca_laadlijst_v1/catalogus').on('value', snap=>{
+    const v = snap.val() || {};
+    horecaCatalog = Object.keys(v).map(k=>({ id:'h'+k, naam:(v[k]&&v[k].naam)||'', categorie:(v[k]&&v[k].categorie)||'' }))
+      .filter(x=>x.naam).sort((a,b)=>a.naam.localeCompare(b.naam,'nl'));
+  }, err=>{ console.warn('Horeca-catalogus laden mislukt:', err&&err.message); });
+}
+function renderHorecaResults(){
+  const q = (document.getElementById('horeca-search').value||'').toLowerCase().trim();
+  const box = document.getElementById('horeca-results');
+  if(!q){ box.classList.remove('show'); box.innerHTML=''; return; }
+  const list = horecaCatalog.filter(p=> p.naam.toLowerCase().includes(q) || (p.categorie||'').toLowerCase().includes(q)).slice(0,40);
+  if(!list.length){
+    box.innerHTML='<div class="prod-empty">Niets in de catalogus voor “'+esc(q)+'”. Gebruik “+ Eigen item” om het toch toe te voegen.</div>';
+    box.classList.add('show'); return;
+  }
+  box.innerHTML = list.map(p=>{
+    const cat = p.categorie ? '<span class="art">'+esc(p.categorie)+'</span>' : '';
+    return '<div class="prod-row"><span class="pn">'+esc(p.naam)+'</span>'+cat
+      + '<button type="button" class="add" onclick="addHoreca(\''+p.id+'\')">+ toevoegen</button></div>';
+  }).join('');
+  box.classList.add('show');
+}
+function addHoreca(id){
+  const p = horecaCatalog.find(x=>x.id===id);
+  if(!p) return;
+  if(selectedHoreca[id]) selectedHoreca[id].qty += 1;
+  else selectedHoreca[id] = { id:p.id, naam:p.naam, qty:1 };
+  renderHorecaTable();
+  toast('“'+p.naam+'” toegevoegd');
+}
+function addHorecaFree(){
+  const inp = document.getElementById('horeca-free');
+  const naam = (inp.value||'').trim();
+  if(!naam) return;
+  const id = 'free'+(++freeSeq);
+  selectedHoreca[id] = { id, naam, qty:1 };
+  inp.value=''; inp.focus();
+  renderHorecaTable();
+  toast('“'+naam+'” toegevoegd');
+}
+function setHorecaQty(id,v){ if(selectedHoreca[id]){ const n=parseInt(v,10); selectedHoreca[id].qty = (isNaN(n)||n<1)?1:n; } }
+function rmHoreca(id){ delete selectedHoreca[id]; renderHorecaTable(); }
+function renderHorecaTable(){
+  const rows = Object.values(selectedHoreca);
+  const tbl = document.getElementById('horeca-table');
+  const empty = document.getElementById('horeca-empty');
+  document.getElementById('horeca-cnt').textContent = rows.length;
+  if(!rows.length){ tbl.style.display='none'; empty.style.display='block'; return; }
+  tbl.style.display=''; empty.style.display='none';
+  document.getElementById('horeca-tbody').innerHTML = rows.map(r=>
+    '<tr><td>'+esc(r.naam)+'</td>'
+    + '<td class="qty"><input type="number" min="1" value="'+r.qty+'" onchange="setHorecaQty(\''+r.id+'\',this.value)"></td>'
+    + '<td style="text-align:right"><button type="button" class="rm" title="Verwijderen" onclick="rmHoreca(\''+r.id+'\')">✕</button></td></tr>'
+  ).join('');
+}
+
 // ── BONNUMMER (sequentieel via transactie) ─────────────
 async function nextBonNr(){
   try{
@@ -374,8 +461,10 @@ async function saveAndDownload(){
   const klant = getKlant();
   const trucks = Object.keys(selectedTrucks).map(id=>({id, name:selectedTrucks[id]}));
   const producten = Object.values(selectedProds);
+  const horeca = Object.values(selectedHoreca).map(h=>({naam:h.naam, qty:h.qty}));
+  const vrij = val('b-vrij');
   if(!klant.bedrijf){ toast('Vul minstens een klant/bedrijf in.','var(--red)'); document.getElementById('k-bedrijf').focus(); return; }
-  if(!trucks.length && !producten.length){ toast('Selecteer minstens één foodtruck of product.','var(--red)'); return; }
+  if(!trucks.length && !producten.length && !horeca.length){ toast('Selecteer minstens één foodtruck, product of horeca-materiaal.','var(--red)'); return; }
 
   const btn = document.getElementById('btn-save');
   btn.disabled = true; btn.textContent = '⏳ Bezig…';
@@ -387,8 +476,9 @@ async function saveAndDownload(){
       datum: todayStr(),
       ophaaldatum: val('b-ophaal'),
       terugdatum: val('b-terug'),
-      klant, trucks, producten,
+      klant, trucks, producten, horeca,
       opmerking: val('b-opm'),
+      vrij,
       ts: Date.now(),
       door: (window.__auth && (window.__auth.displayName || window.__auth.email)) || '',
     };
@@ -489,6 +579,22 @@ function drawCopy(doc, rec, exemplaar){
     y = doc.lastAutoTable.finalY + 5;
   }
 
+  // Horeca materiaal
+  if(rec.horeca && rec.horeca.length){
+    doc.autoTable({
+      startY: y,
+      margin: { left:margin, right:margin },
+      head: [[ { content:'#', styles:{ halign:'center' } }, 'HORECA MATERIAAL', { content:'AANTAL', styles:{ halign:'center' } }, { content:'OK', styles:{ halign:'center' } } ]],
+      body: rec.horeca.map((h,i)=>[ { content:String(i+1), styles:{ halign:'center' } }, h.naam, { content:String(h.qty), styles:{ halign:'center' } }, '' ]),
+      theme:'grid',
+      headStyles:{ fillColor:red, textColor:255, fontStyle:'bold', fontSize:9 },
+      bodyStyles:{ fontSize:9, textColor:[35,35,40], lineColor:[224,224,228], lineWidth:0.2 },
+      styles:{ cellPadding:2.2, valign:'middle' },
+      columnStyles:{ 0:{ cellWidth:12, halign:'center' }, 2:{ cellWidth:20, halign:'center' }, 3:{ cellWidth:16, halign:'center' } },
+    });
+    y = doc.lastAutoTable.finalY + 5;
+  }
+
   if(rec.opmerking){
     doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(40,40,45);
     doc.text('Opmerking:', margin, y + 1);
@@ -496,6 +602,27 @@ function drawCopy(doc, rec, exemplaar){
     const lines = doc.splitTextToSize(rec.opmerking, pageW - 2*margin);
     doc.text(lines, margin, y + 6);
     y += 6 + lines.length * 4.5;
+  }
+
+  // Wit invulvlak — vrije tekst + lege regels om met de hand bij te schrijven
+  const pageHb = doc.internal.pageSize.getHeight();
+  if(y < pageHb - 70){
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(40,40,45);
+    doc.text('Vrij in te vullen:', margin, y + 2);
+    let by = y + 5;
+    if(rec.vrij){
+      doc.setFont('helvetica','normal'); doc.setTextColor(60,60,65);
+      const vlines = doc.splitTextToSize(rec.vrij, pageW - 2*margin - 4);
+      doc.text(vlines, margin + 2, by + 3);
+      by += vlines.length * 4.5 + 1;
+    }
+    const boxBottom = Math.min(by + 22, pageHb - 46);
+    doc.setDrawColor(210,210,214); doc.setLineWidth(0.2);
+    doc.rect(margin, y + 4, pageW - 2*margin, boxBottom - (y + 4));
+    // faint ruled lines
+    doc.setDrawColor(232,232,236);
+    for(let ly = by + 6; ly < boxBottom - 2; ly += 7){ doc.line(margin + 3, ly, pageW - margin - 3, ly); }
+    y = boxBottom + 4;
   }
 
   // Handtekeningen
@@ -524,7 +651,7 @@ function renderRecent(){
     const box = document.getElementById('recent-list');
     if(!list.length){ box.innerHTML='<div class="empty-hint">Nog geen bonnen opgeslagen.</div>'; return; }
     box.innerHTML = list.map((r,i)=>{
-      const cnt = (r.trucks?r.trucks.length:0)+' truck(s) · '+(r.producten?r.producten.length:0)+' product(en)';
+      const cnt = (r.trucks?r.trucks.length:0)+' truck(s) · '+(r.producten?r.producten.length:0)+' product(en) · '+(r.horeca?r.horeca.length:0)+' horeca';
       window['_bon_'+i] = r;
       return '<div class="bon-row"><span class="nr">'+esc(r.nr||'?')+'</span>'
         + '<span class="meta">'+esc((r.klant&&r.klant.bedrijf)||'')+' — '+fmtDate(r.datum)+' · '+cnt+'</span>'
@@ -539,11 +666,14 @@ onPreset();                       // Melis Events standaard ingevuld
 document.getElementById('b-ophaal').value = todayStr();
 renderTrucks();
 renderProdTable();
-if(window.__auth){ renderRecent(); } else { window.addEventListener('auth-ready', renderRecent, { once:true }); }
-// Sluit de productresultaten als je buiten klikt.
+renderHorecaTable();
+if(window.__auth){ renderRecent(); loadHorecaCatalog(); }
+else { window.addEventListener('auth-ready', ()=>{ renderRecent(); loadHorecaCatalog(); }, { once:true }); }
+// Sluit de zoekresultaten als je buiten klikt.
 document.addEventListener('click', e=>{
-  if(!e.target.closest('.prod-search-wrap') && !e.target.closest('#prod-results')){
+  if(!e.target.closest('.prod-search-wrap') && !e.target.closest('#prod-results') && !e.target.closest('#horeca-results')){
     document.getElementById('prod-results').classList.remove('show');
+    document.getElementById('horeca-results').classList.remove('show');
   }
 });
 </script>
