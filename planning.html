@@ -1643,7 +1643,8 @@ function mailKeuringen(evId){
   });
   if(!wagens.length){ showToast('Geen wagens in dit event.'); return; }
   const fleet = (window.TruckData && TruckData.TRUCKS) || [];
-  const base = location.origin;  // QR-keuringspagina's draaien op dezelfde host
+  // QR-keuringspagina's draaien op de aparte QR-app (niet op operations-hosting).
+  const base = 'https://senorkeuringqr.web.app';
   const links = [];
   const missing = [];  // wagen niet teruggevonden in de vloot → geen QR-link
   for(const naam of wagens){
