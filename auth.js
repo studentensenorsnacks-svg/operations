@@ -214,7 +214,7 @@
         poets:          ['/poets.html'],
         keuringen:      ['/keuringen.html', '/ocb.html'],
         vet:            ['/vet.html', '/vet-tonnen.html'],
-        bestellingen:   ['/bestelling.html', '/bestellingen-dashboard.html', '/bestel-catalogus.html'],
+        bestellingen:   ['/bestelling.html', '/bestellingen-dashboard.html', '/bestel-catalogus.html', '/ophaalbon.html'],
         stroomaanvraag: ['/stroomaanvraag.html'],
         archief:        ['/archief.html'],
         eindstock:      ['/eindstock.html'],

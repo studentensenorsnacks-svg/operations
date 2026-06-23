@@ -86,6 +86,22 @@
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))"
     },
+    "ft_bestel_draft_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker'",
+      ".write": "auth != null && auth.token.role != 'bakker'"
+    },
+    "ft_bestel_historiek_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker'",
+      ".write": "auth != null && auth.token.role != 'bakker'"
+    },
+    "ophaalbonnen_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))"
+    },
+    "ophaalbon_teller": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|bestellingen|')))"
+    },
     "ft_archief_v1": {
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|archief|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|archief|')))"
@@ -150,6 +166,22 @@
         "label":  { ".validate": "newData.isString() && newData.val().length < 300" },
         "ref":    { ".validate": "newData.isString() && newData.val().length < 200" },
         "detail": { ".validate": "newData.isString() && newData.val().length < 4000" },
+        "at":     { ".validate": "newData.isNumber()" },
+        "uid":    { ".validate": "newData.isString() && newData.val().length < 200" },
+        "email":  { ".validate": "newData.isString() && newData.val().length < 200" },
+        "name":   { ".validate": "newData.isString() && newData.val().length < 200" },
+        "page":   { ".validate": "newData.isString() && newData.val().length < 200" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "_bestelLog": {
+      ".read": "auth != null && auth.token.role == 'admin'",
+      "$id": {
+        ".write": "auth != null && !auth.token.firebase.sign_in_provider.matches(/^anonymous$/i) && (!data.exists() || auth.token.role == 'admin')",
+        ".validate": "newData.hasChildren()",
+        "action": { ".validate": "newData.isString() && newData.val().length < 80" },
+        "detail": { ".validate": "newData.isString() && newData.val().length < 600" },
         "at":     { ".validate": "newData.isNumber()" },
         "uid":    { ".validate": "newData.isString() && newData.val().length < 200" },
         "email":  { ".validate": "newData.isString() && newData.val().length < 200" },

@@ -1227,6 +1227,7 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="kris-dc.html">🍟 Kris DC</a>
   <a href="technische-fiches.html">🔧 Technische fiche's</a>
   <a href="lijsten.html">📋 Lijsten</a>
+  <a href="ophaalbon.html">🧾 Ophaalbon</a>
   <a href="stroomaanvraag.html">⚡ Stroomaanvraag</a>
   <a href="checklists.html">📦 Laadlijsten</a>
   <a href="qr-codes.html">🔳 QR codes</a>
@@ -1853,6 +1854,50 @@ function saveProdQty() {
   }
 }
 
+// ── Audit: wie past de bestellijst aan / wie bestelt ──────────────
+// Schrijft naar _bestelLog (zichtbaar in audit.html → Activiteit). Faalt stil.
+function logBestelEvent(action, detail) {
+  try {
+    if (typeof fbdb === 'undefined' || typeof firebase === 'undefined') return;
+    var a = window.__auth || {};
+    fbdb.ref('_bestelLog').push({
+      action: String(action == null ? '' : action).slice(0, 80),
+      detail: detail ? String(detail).slice(0, 600) : '',
+      at:     firebase.database.ServerValue.TIMESTAMP,
+      uid:    String(a.uid || '').slice(0, 200),
+      email:  String(a.email || '').slice(0, 200),
+      name:   String(a.displayName || a.email || 'Onbekend').slice(0, 200),
+      page:   String(location.pathname || '').slice(0, 200)
+    }).catch(function () { /* niet kritiek */ });
+  } catch (e) { /* nooit blokkeren */ }
+}
+
+// Aanpassingen aan de lijst worden gebundeld: één log-entry per "burst" van
+// wijzigingen (anders zou elke +/- klik een regel opleveren).
+var _bestelChangeBuf = {}, _bestelChangeTimer = null;
+function noteBestelChange(label, qty) {
+  if (!label) return;
+  _bestelChangeBuf[label] = qty;
+  if (_bestelChangeTimer) clearTimeout(_bestelChangeTimer);
+  _bestelChangeTimer = setTimeout(flushBestelChanges, 4000);
+}
+function flushBestelChanges() {
+  if (_bestelChangeTimer) { clearTimeout(_bestelChangeTimer); _bestelChangeTimer = null; }
+  var keys = Object.keys(_bestelChangeBuf);
+  if (!keys.length) return;
+  var parts = keys.map(function (k) {
+    var q = _bestelChangeBuf[k];
+    return q > 0 ? (k + ' → ' + q) : (k + ' (0)');
+  });
+  _bestelChangeBuf = {};
+  logBestelEvent('Bestellijst aangepast', parts.join(', '));
+}
+function prodNaamById(id) {
+  var cat = prodCatalog();
+  for (var i = 0; i < cat.length; i++) { if (cat[i].id === id) return cat[i].naam; }
+  return id;
+}
+
 // Live listener: het concept (aantallen + extra producten) wordt gedeeld over
 // alle toestellen. Firebase is de bron; lokale cache dient enkel als fallback.
 var _draftSeeded = false;
@@ -1911,6 +1956,7 @@ function openProductenModal() {
 }
 function closeProductenModal() {
   document.getElementById('producten-modal-overlay').classList.add('hidden');
+  flushBestelChanges();   // laatste aanpassingen meteen wegschrijven naar de audit-log
 }
 function closeProductenModalIfBackdrop(ev) {
   if (ev.target.id === 'producten-modal-overlay') closeProductenModal();
@@ -2013,6 +2059,7 @@ function setProdQty(id, raw) {
   var n = parseInt(raw, 10);
   if (isNaN(n) || n <= 0) { delete prodQty[id]; } else { prodQty[id] = Math.min(n, 99999); }
   saveProdQty();
+  noteBestelChange(prodNaamById(id), prodQty[id] || 0);
   refreshProdRow(id);
   updateProductenFooter();
 }
@@ -2021,6 +2068,7 @@ function incProdQty(id, delta) {
   var n = (prodQty[id] || 0) + delta;
   if (n <= 0) { delete prodQty[id]; n = 0; } else { prodQty[id] = n; }
   saveProdQty();
+  noteBestelChange(prodNaamById(id), n);
   var row = document.querySelector('.prod-row[data-pid="' + id + '"]');
   if (row) {
     var inp = row.querySelector('input');
@@ -2049,6 +2097,9 @@ function addCustomProduct() {
     prodCustom[id] = { naam: naam, qty: qty };
   }
   saveProdQty();
+  var addedNaam = existing ? prodCustom[existing].naam : naam;
+  var addedQty  = existing ? prodCustom[existing].qty : qty;
+  noteBestelChange(addedNaam, addedQty);
   nameEl.value = ''; qtyEl.value = '';
   document.getElementById('prod-search').value = '';
   renderProductenList();
@@ -2062,6 +2113,7 @@ function setCustomQty(id, raw) {
   var n = parseInt(raw, 10);
   prodCustom[id].qty = (isNaN(n) || n <= 0) ? 0 : Math.min(n, 99999);
   saveProdQty();
+  noteBestelChange(prodCustom[id].naam, prodCustom[id].qty);
   var row = document.querySelector('.prod-row[data-cid="' + id + '"]');
   if (row) row.classList.toggle('has-qty', (prodCustom[id].qty || 0) > 0);
   updateProductenFooter();
@@ -2072,6 +2124,7 @@ function incCustomQty(id, delta) {
   var n = (prodCustom[id].qty || 0) + delta;
   prodCustom[id].qty = n <= 0 ? 0 : n;
   saveProdQty();
+  noteBestelChange(prodCustom[id].naam, prodCustom[id].qty);
   var row = document.querySelector('.prod-row[data-cid="' + id + '"]');
   if (row) {
     var inp = row.querySelector('input');
@@ -2082,8 +2135,10 @@ function incCustomQty(id, delta) {
 }
 
 function removeCustomProduct(id) {
+  var naam = prodCustom[id] ? prodCustom[id].naam : '';
   delete prodCustom[id];
   saveProdQty();
+  noteBestelChange(naam, 0);
   renderProductenList();
   updateProductenFooter();
 }
@@ -2162,12 +2217,27 @@ function stepProdRow(row, delta) {
   host.addEventListener('pointerup', endInteraction);
   host.addEventListener('pointercancel', endInteraction);
   window.addEventListener('pointerup', endInteraction);   // vangnet
+
+  // Toetsenbord: Enter/Spatie op een +/− knop = één stap (ingedrukt houden
+  // herhaalt vanzelf via toets-herhaling). Het aantal-veld zelf is een gewoon
+  // number-veld: typen en pijltjes omhoog/omlaag werken native.
+  host.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    var btn = e.target.closest && e.target.closest('button.qbtn[data-dir]');
+    if (!btn) return;
+    e.preventDefault();
+    var row = btn.closest('.prod-row');
+    var dir = parseInt(btn.getAttribute('data-dir'), 10) || 0;
+    if (row && dir) stepProdRow(row, dir);
+  });
 })();
 
 function clearProductenSelectie() {
   prodQty = {};
   prodCustom = {};
   saveProdQty();
+  _bestelChangeBuf = {};   // hangende wijzigingen vervallen
+  logBestelEvent('Selectie gewist', '');
   renderProductenList();
   updateProductenFooter();
 }
@@ -2329,6 +2399,10 @@ function generateBestelPDF() {
 
   doc.save('Bestellijst_' + dateFile + '.pdf');
   saveBestelHistoriek(sel, now);
+  flushBestelChanges();   // eerst nog hangende aanpassingen loggen
+  logBestelEvent('Bestelling geplaatst (PDF)',
+    sel.length + ' producten · ' + totalUnits + ' stuks: ' +
+    sel.map(function (x) { return x.qty + '× ' + x.p.naam; }).join(', '));
   showToast('PDF aangemaakt · bewaard in historiek');
 }
 

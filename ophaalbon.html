@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Señor Snacks — Ophaalbon</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="firebase-anon-auth.js"></script>
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- Data -->
+<script src="truck-data.js"></script>
+<script src="productcatalogus-data.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;--green:#15803d;--orange:#c2410c;--blue:#1d4ed8;
+  --bg:#efefef;--white:#fff;--text:#111;--muted:#666;--border:#d4d4d4;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--font-mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+.topbar{flex-shrink:0;height:54px;background:var(--white);border-bottom:3px solid var(--red);padding:0 18px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-sep{font-size:0.82rem;font-weight:700;color:var(--muted);padding-left:12px;border-left:1px solid var(--border);}
+.topbar a.back{margin-left:auto;font-size:0.82rem;font-weight:700;color:var(--muted);text-decoration:none;}
+.topbar a.back:hover{color:var(--red);}
+
+.wrap{flex:1;max-width:820px;width:100%;margin:0 auto;padding:24px 18px 80px;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,0.05);margin-bottom:18px;}
+.card h2{font-family:var(--font-cond);font-size:1.45rem;font-weight:800;margin-bottom:3px;}
+.card .sub{font-size:0.84rem;color:var(--muted);margin-bottom:18px;}
+.sec-title{font-family:var(--font-cond);font-size:1.15rem;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.sec-title .cnt{font-size:0.72rem;font-weight:700;color:#fff;background:var(--red);border-radius:20px;padding:2px 9px;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{margin-bottom:14px;}
+.flbl{display:block;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:5px;}
+input[type=text],input[type=date],input[type=number],textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:0.93rem;color:var(--text);background:var(--white);}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--red);}
+textarea{resize:vertical;min-height:64px;line-height:1.5;}
+select{cursor:pointer;}
+
+/* TRUCK-SELECTIE */
+.search{margin-bottom:12px;}
+.tgroup{margin-bottom:14px;}
+.tgroup-head{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.tgroup-head .gl{font-weight:700;font-size:0.9rem;}
+.tgroup-head .ga{margin-left:auto;font-size:0.72rem;font-weight:700;color:var(--blue);background:none;border:none;cursor:pointer;padding:2px 6px;}
+.tgroup-head .ga:hover{text-decoration:underline;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border:1px solid var(--border);border-radius:20px;background:var(--white);cursor:pointer;font-size:0.82rem;user-select:none;transition:all 0.12s;}
+.chip:hover{border-color:var(--red);}
+.chip.on{background:#fde8e8;border-color:var(--red);color:var(--red-dark);font-weight:700;}
+.chip .ck{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#fff;}
+.chip.on .ck{background:var(--red);border-color:var(--red);}
+
+/* PRODUCTEN */
+.prod-search-wrap{position:relative;margin-bottom:10px;}
+.prod-results{border:1px solid var(--border);border-radius:8px;max-height:230px;overflow:auto;margin-bottom:12px;display:none;}
+.prod-results.show{display:block;}
+.prod-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eee;font-size:0.86rem;}
+.prod-row:last-child{border-bottom:none;}
+.prod-row:hover{background:#fafafa;}
+.prod-row .pn{flex:1;font-weight:600;}
+.prod-row .art{font-family:var(--font-mono);font-size:0.74rem;color:var(--muted);white-space:nowrap;}
+.prod-row .art b{color:var(--text);}
+.prod-row .add{border:none;background:var(--green);color:#fff;border-radius:6px;padding:6px 11px;font-weight:700;font-size:0.78rem;cursor:pointer;}
+.prod-empty{padding:14px;text-align:center;color:var(--muted);font-size:0.84rem;}
+
+table.sel{width:100%;border-collapse:collapse;font-size:0.84rem;}
+table.sel th{text-align:left;font-size:0.66rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);padding:6px 8px;border-bottom:2px solid var(--border);}
+table.sel td{padding:7px 8px;border-bottom:1px solid #eee;vertical-align:middle;}
+table.sel td.art{font-family:var(--font-mono);font-size:0.76rem;color:var(--muted);white-space:nowrap;}
+table.sel td.qty{width:96px;}
+table.sel td.qty input{width:100%;text-align:center;padding:6px;}
+table.sel .rm{border:none;background:none;color:var(--red);cursor:pointer;font-size:1rem;font-weight:700;}
+.empty-hint{color:var(--muted);font-size:0.85rem;font-style:italic;padding:8px 0;}
+
+/* FOOT / KNOPPEN */
+.foot{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.btn{font-family:var(--font);font-weight:700;font-size:0.92rem;padding:12px 20px;border-radius:7px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
+.btn-primary{background:var(--red);color:#fff;}
+.btn-primary:hover{background:var(--red-dark);}
+.btn-primary:disabled{opacity:0.55;cursor:wait;}
+.btn-out{background:var(--white);border:1px solid var(--border);color:var(--text);}
+.btn-out:hover{border-color:var(--red);color:var(--red);}
+.hint{font-size:0.8rem;color:var(--muted);}
+
+/* RECENTE BONNEN */
+.bon-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;font-size:0.86rem;}
+.bon-row .nr{font-family:var(--font-mono);font-weight:600;}
+.bon-row .meta{color:var(--muted);font-size:0.8rem;}
+.bon-row .dl{margin-left:auto;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--green);color:#fff;padding:13px 22px;border-radius:8px;font-weight:600;font-size:0.9rem;box-shadow:0 6px 24px rgba(0,0,0,0.2);transition:transform 0.3s;z-index:999;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+@media (max-width:640px){
+  .grid2{grid-template-columns:1fr;}
+  .wrap{padding:16px 12px 70px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+  <div class="topbar-sep">Ophaalbon</div>
+  <a href="dashboard.html" class="back">← Dashboard</a>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <h2>Nieuwe ophaalbon</h2>
+    <div class="sub">Selecteer de klant, foodtrucks en producten. De bon wordt opgeslagen en als PDF in tweevoud (klant + Señor Snacks) gedownload.</div>
+
+    <div class="grid2">
+      <div class="fg">
+        <label class="flbl" for="k-preset">Klant</label>
+        <select id="k-preset" onchange="onPreset()"></select>
+      </div>
+      <div class="fg">
+        <label class="flbl" for="k-bedrijf">Bedrijf / naam</label>
+        <input type="text" id="k-bedrijf" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="k-contact">Contactpersoon</label>
+        <input type="text" id="k-contact" autocomplete="off" placeholder="optioneel">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="k-adres">Adres</label>
+        <input type="text" id="k-adres" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="k-btw">BTW-nummer</label>
+        <input type="text" id="k-btw" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="k-tel">Telefoon</label>
+        <input type="text" id="k-tel" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="k-email">E-mail</label>
+        <input type="text" id="k-email" autocomplete="off">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="b-ophaal">Ophaaldatum</label>
+        <input type="date" id="b-ophaal">
+      </div>
+      <div class="fg">
+        <label class="flbl" for="b-terug">Verwachte terugbrengdatum</label>
+        <input type="date" id="b-terug">
+      </div>
+    </div>
+    <div class="fg">
+      <label class="flbl" for="b-opm">Opmerking</label>
+      <textarea id="b-opm" placeholder="bijv. waarborg, afspraken, staat van materiaal…"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🚛 Foodtrucks & materiaal <span class="cnt" id="truck-cnt">0</span></div>
+    <input type="text" class="search" id="truck-search" placeholder="Zoek een foodtruck of container…" oninput="renderTrucks()">
+    <div id="truck-groups"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🛒 Producten <span class="cnt" id="prod-cnt">0</span></div>
+    <div class="sub" style="margin-bottom:12px">Artikelnummers worden getoond onder <b>VZ</b> (Van Zon) en <b>VH</b> (Agora Culinair / Van Hout).</div>
+    <div class="prod-search-wrap">
+      <input type="text" id="prod-search" placeholder="Zoek een product om toe te voegen…" oninput="renderProdResults()" onfocus="renderProdResults()">
+    </div>
+    <div class="prod-results" id="prod-results"></div>
+
+    <table class="sel" id="prod-table" style="display:none">
+      <thead><tr><th>Product</th><th>Art.nr VZ</th><th>Art.nr VH</th><th style="text-align:center">Aantal</th><th></th></tr></thead>
+      <tbody id="prod-tbody"></tbody>
+    </table>
+    <div class="empty-hint" id="prod-empty">Nog geen producten toegevoegd.</div>
+  </div>
+
+  <div class="card">
+    <div class="foot">
+      <button class="btn btn-primary" id="btn-save" onclick="saveAndDownload()">💾 Opslaan & download (2-voud)</button>
+      <span class="hint">De bon krijgt automatisch een bonnummer en wordt centraal bewaard.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🧾 Recente bonnen</div>
+    <div id="recent-list"><div class="empty-hint">Laden…</div></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── KLANT-PRESETS ──────────────────────────────────────
+// Melis Events staat standaard vooraan (gegevens opgezocht via melis-events.be
+// en de KBO: BTW BE0453.966.829, Zandbergen 102, 2480 Dessel).
+const KLANTEN = {
+  melis: {
+    label: 'Melis Events (Dessel)',
+    bedrijf: 'Melis Events BV',
+    contact: '',
+    adres: 'Zandbergen 102, 2480 Dessel',
+    btw: 'BE 0453.966.829',
+    tel: '+32 (0)14 37 16 19',
+    email: 'info@melis-events.be',
+  },
+};
+const DB_PATH = 'ophaalbonnen_v1';
+const TELLER  = 'ophaalbon_teller';
+
+// ── HELPERS ────────────────────────────────────────────
+const pad = n => String(n).padStart(2,'0');
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function fmtDate(iso){if(!iso)return '';const p=iso.split('-');return parseInt(p[2],10)+'/'+parseInt(p[1],10)+'/'+p[0];}
+function val(id){return (document.getElementById(id).value||'').trim();}
+function toast(msg,color){const t=document.getElementById('toast');t.textContent=msg;t.style.background=color||'var(--green)';t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
+
+// ── STATE ──────────────────────────────────────────────
+const selectedTrucks = {};   // id -> name
+const selectedProds  = {};   // id -> {id,naam,artVZ,artAC,qty}
+
+// ── KLANT ──────────────────────────────────────────────
+function fillPresetSelect(){
+  const sel = document.getElementById('k-preset');
+  let html = '';
+  Object.keys(KLANTEN).forEach(k=>{ html += '<option value="'+k+'">'+esc(KLANTEN[k].label)+'</option>'; });
+  html += '<option value="__new">— Andere / nieuwe klant —</option>';
+  sel.innerHTML = html;
+}
+function onPreset(){
+  const k = document.getElementById('k-preset').value;
+  const c = KLANTEN[k];
+  const set = (id,v)=>{ document.getElementById(id).value = v||''; };
+  if(c){
+    set('k-bedrijf',c.bedrijf); set('k-contact',c.contact); set('k-adres',c.adres);
+    set('k-btw',c.btw); set('k-tel',c.tel); set('k-email',c.email);
+  }else{
+    set('k-bedrijf',''); set('k-contact',''); set('k-adres','');
+    set('k-btw',''); set('k-tel',''); set('k-email','');
+    document.getElementById('k-bedrijf').focus();
+  }
+}
+function getKlant(){
+  return {
+    bedrijf: val('k-bedrijf'), contact: val('k-contact'), adres: val('k-adres'),
+    btw: val('k-btw'), tel: val('k-tel'), email: val('k-email'),
+  };
+}
+
+// ── FOODTRUCKS ─────────────────────────────────────────
+function renderTrucks(){
+  const q = (document.getElementById('truck-search').value||'').toLowerCase();
+  const cats = (window.TruckData && TruckData.CATEGORIES) || [];
+  const trucks = (window.TruckData && TruckData.TRUCKS) || [];
+  let html = '';
+  cats.forEach(cat=>{
+    let list = trucks.filter(t=>t.category===cat.key);
+    if(q) list = list.filter(t=> t.name.toLowerCase().includes(q) || (t.plate||'').toLowerCase().includes(q));
+    if(!list.length) return;
+    html += '<div class="tgroup"><div class="tgroup-head">'
+      + '<span class="gl">'+esc(cat.planningLabel)+'</span>'
+      + '<button type="button" class="ga" onclick="toggleGroup(\''+cat.key+'\')">alle / geen</button>'
+      + '</div><div class="chips">';
+    list.forEach(t=>{
+      const on = !!selectedTrucks[t.id];
+      const plate = t.plate ? ' · '+esc(t.plate) : '';
+      html += '<div class="chip'+(on?' on':'')+'" data-tid="'+t.id+'" onclick="toggleTruck(\''+t.id+'\')">'
+        + '<span class="ck">'+(on?'✓':'')+'</span>'+esc(t.name)+plate+'</div>';
+    });
+    html += '</div></div>';
+  });
+  document.getElementById('truck-groups').innerHTML = html || '<div class="empty-hint">Geen foodtrucks gevonden.</div>';
+  document.getElementById('truck-cnt').textContent = Object.keys(selectedTrucks).length;
+}
+function truckName(id){const t=(window.TruckData.TRUCKS||[]).find(x=>x.id===id);return t?t.name:id;}
+function toggleTruck(id){
+  if(selectedTrucks[id]) delete selectedTrucks[id];
+  else selectedTrucks[id] = truckName(id);
+  renderTrucks();
+}
+function toggleGroup(key){
+  const trucks = (window.TruckData.TRUCKS||[]).filter(t=>t.category===key);
+  const allOn = trucks.every(t=>selectedTrucks[t.id]);
+  trucks.forEach(t=>{ if(allOn) delete selectedTrucks[t.id]; else selectedTrucks[t.id]=t.name; });
+  renderTrucks();
+}
+
+// ── PRODUCTEN ──────────────────────────────────────────
+function catalog(){ return (window.PRODUCT_CATALOGUS||[]).filter(p=>!p.hidden); }
+function renderProdResults(){
+  const q = (document.getElementById('prod-search').value||'').toLowerCase().trim();
+  const box = document.getElementById('prod-results');
+  if(!q){ box.classList.remove('show'); box.innerHTML=''; return; }
+  const list = catalog().filter(p=> p.naam.toLowerCase().includes(q)
+      || (p.artVZ||'').toLowerCase().includes(q) || (p.artAC||'').toLowerCase().includes(q)).slice(0,40);
+  if(!list.length){ box.innerHTML='<div class="prod-empty">Geen product gevonden voor “'+esc(q)+'”.</div>'; box.classList.add('show'); return; }
+  box.innerHTML = list.map(p=>{
+    const vz = p.artVZ ? '<b>'+esc(p.artVZ)+'</b>' : '–';
+    const vh = p.artAC ? '<b>'+esc(p.artAC)+'</b>' : '–';
+    return '<div class="prod-row"><span class="pn">'+esc(p.naam)+'</span>'
+      + '<span class="art">VZ '+vz+' · VH '+vh+'</span>'
+      + '<button type="button" class="add" onclick="addProd(\''+p.id+'\')">+ toevoegen</button></div>';
+  }).join('');
+  box.classList.add('show');
+}
+function addProd(id){
+  const p = catalog().find(x=>x.id===id);
+  if(!p) return;
+  if(selectedProds[id]) selectedProds[id].qty += 1;
+  else selectedProds[id] = { id:p.id, naam:p.naam, artVZ:p.artVZ||'', artAC:p.artAC||'', qty:1 };
+  renderProdTable();
+  toast('“'+p.naam+'” toegevoegd');
+}
+function setQty(id,v){ if(selectedProds[id]){ const n=parseInt(v,10); selectedProds[id].qty = (isNaN(n)||n<1)?1:n; } }
+function rmProd(id){ delete selectedProds[id]; renderProdTable(); }
+function renderProdTable(){
+  const rows = Object.values(selectedProds);
+  const tbl = document.getElementById('prod-table');
+  const empty = document.getElementById('prod-empty');
+  document.getElementById('prod-cnt').textContent = rows.length;
+  if(!rows.length){ tbl.style.display='none'; empty.style.display='block'; return; }
+  tbl.style.display=''; empty.style.display='none';
+  document.getElementById('prod-tbody').innerHTML = rows.map(r=>
+    '<tr><td>'+esc(r.naam)+'</td>'
+    + '<td class="art">'+(r.artVZ?esc(r.artVZ):'–')+'</td>'
+    + '<td class="art">'+(r.artAC?esc(r.artAC):'–')+'</td>'
+    + '<td class="qty"><input type="number" min="1" value="'+r.qty+'" onchange="setQty(\''+r.id+'\',this.value)"></td>'
+    + '<td style="text-align:right"><button type="button" class="rm" title="Verwijderen" onclick="rmProd(\''+r.id+'\')">✕</button></td></tr>'
+  ).join('');
+}
+
+// ── BONNUMMER (sequentieel via transactie) ─────────────
+async function nextBonNr(){
+  try{
+    const res = await fbdb.ref(TELLER).transaction(c => (c||0) + 1);
+    const n = (res && res.snapshot && res.snapshot.val()) || 1;
+    return 'OB-' + String(n).padStart(5,'0');
+  }catch(e){
+    return 'OB-' + todayStr().replace(/-/g,'') + '-' + pad(new Date().getHours()) + pad(new Date().getMinutes());
+  }
+}
+
+// ── OPSLAAN + DOWNLOAD ─────────────────────────────────
+async function saveAndDownload(){
+  const klant = getKlant();
+  const trucks = Object.keys(selectedTrucks).map(id=>({id, name:selectedTrucks[id]}));
+  const producten = Object.values(selectedProds);
+  if(!klant.bedrijf){ toast('Vul minstens een klant/bedrijf in.','var(--red)'); document.getElementById('k-bedrijf').focus(); return; }
+  if(!trucks.length && !producten.length){ toast('Selecteer minstens één foodtruck of product.','var(--red)'); return; }
+
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = '⏳ Bezig…';
+  try{
+    if(window.fbAuthReady) await window.fbAuthReady;
+    const nr = await nextBonNr();
+    const rec = {
+      nr,
+      datum: todayStr(),
+      ophaaldatum: val('b-ophaal'),
+      terugdatum: val('b-terug'),
+      klant, trucks, producten,
+      opmerking: val('b-opm'),
+      ts: Date.now(),
+      door: (window.__auth && (window.__auth.displayName || window.__auth.email)) || '',
+    };
+    await fbdb.ref(DB_PATH).push().set(rec);
+    buildPDF(rec);
+    toast('✓ Bon '+nr+' opgeslagen en gedownload (2-voud).');
+  }catch(e){
+    console.error(e);
+    toast('Opslaan mislukt: '+((e&&e.message)||e),'var(--red)');
+  }finally{
+    btn.disabled = false; btn.textContent = '💾 Opslaan & download (2-voud)';
+  }
+}
+
+// ── PDF — bon in tweevoud (1 PDF, 2 pagina's) ──────────
+function buildPDF(rec){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  drawCopy(doc, rec, 'EXEMPLAAR KLANT');
+  doc.addPage();
+  drawCopy(doc, rec, 'EXEMPLAAR SEÑOR SNACKS');
+  const naamDeel = (rec.klant.bedrijf||'klant').replace(/[^a-z0-9]+/gi,'_');
+  doc.save('Ophaalbon_'+rec.nr+'_'+naamDeel+'.pdf');
+}
+
+function drawCopy(doc, rec, exemplaar){
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  const red = [232,0,29];
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.setTextColor(232,0,29);
+  doc.text('OPHAALBON', margin, 20);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,110,115);
+  doc.text('Señor Snacks', pageW - margin, 15, { align:'right' });
+  doc.setFontSize(8);
+  doc.text(exemplaar, pageW - margin, 20, { align:'right' });
+
+  doc.setDrawColor(232,0,29); doc.setLineWidth(0.6);
+  doc.line(margin, 24, pageW - margin, 24);
+
+  // Bon-meta
+  doc.setFontSize(9); doc.setTextColor(40,40,45);
+  doc.setFont('helvetica','bold'); doc.text('Bonnr: ', margin, 31);
+  doc.setFont('helvetica','normal'); doc.text(rec.nr, margin + 16, 31);
+  doc.setFont('helvetica','bold'); doc.text('Datum: ', pageW/2, 31);
+  doc.setFont('helvetica','normal'); doc.text(fmtDate(rec.datum), pageW/2 + 16, 31);
+  let y = 36;
+  if(rec.ophaaldatum){ doc.setFont('helvetica','bold'); doc.text('Ophaaldatum: ', margin, y); doc.setFont('helvetica','normal'); doc.text(fmtDate(rec.ophaaldatum), margin + 26, y); }
+  if(rec.terugdatum){ doc.setFont('helvetica','bold'); doc.text('Terug: ', pageW/2, y); doc.setFont('helvetica','normal'); doc.text(fmtDate(rec.terugdatum), pageW/2 + 16, y); }
+  if(rec.ophaaldatum || rec.terugdatum) y += 5;
+
+  // Klant-blok
+  const k = rec.klant;
+  doc.autoTable({
+    startY: y + 1,
+    margin: { left:margin, right:margin },
+    head: [[{ content:'KLANT', styles:{ halign:'left' } }]],
+    body: [
+      [ (k.bedrijf||'') + (k.contact?('\nt.a.v. '+k.contact):'') + (k.adres?('\n'+k.adres):'')
+        + (k.btw?('\nBTW: '+k.btw):'') + ((k.tel||k.email)?('\n'+[k.tel,k.email].filter(Boolean).join('  ·  ')):'') ],
+    ],
+    theme:'grid',
+    headStyles:{ fillColor:red, textColor:255, fontStyle:'bold', fontSize:9 },
+    bodyStyles:{ fontSize:9, textColor:[35,35,40], lineColor:[220,220,224], lineWidth:0.2 },
+    styles:{ cellPadding:2.6 },
+  });
+  y = doc.lastAutoTable.finalY + 5;
+
+  // Foodtrucks
+  if(rec.trucks && rec.trucks.length){
+    doc.autoTable({
+      startY: y,
+      margin: { left:margin, right:margin },
+      head: [[ { content:'#', styles:{ halign:'center' } }, 'FOODTRUCK / MATERIAAL', { content:'OK', styles:{ halign:'center' } } ]],
+      body: rec.trucks.map((t,i)=>[ { content:String(i+1), styles:{ halign:'center' } }, t.name, '' ]),
+      theme:'grid',
+      headStyles:{ fillColor:red, textColor:255, fontStyle:'bold', fontSize:9 },
+      bodyStyles:{ fontSize:9, textColor:[35,35,40], lineColor:[224,224,228], lineWidth:0.2 },
+      styles:{ cellPadding:2.2, valign:'middle' },
+      columnStyles:{ 0:{ cellWidth:12, halign:'center' }, 2:{ cellWidth:16, halign:'center' } },
+    });
+    y = doc.lastAutoTable.finalY + 5;
+  }
+
+  // Producten
+  if(rec.producten && rec.producten.length){
+    doc.autoTable({
+      startY: y,
+      margin: { left:margin, right:margin },
+      head: [[ 'PRODUCT', { content:'Art.nr VZ', styles:{ halign:'center' } }, { content:'Art.nr VH', styles:{ halign:'center' } }, { content:'AANTAL', styles:{ halign:'center' } } ]],
+      body: rec.producten.map(p=>[ p.naam, { content:p.artVZ||'–', styles:{ halign:'center' } }, { content:p.artAC||'–', styles:{ halign:'center' } }, { content:String(p.qty), styles:{ halign:'center' } } ]),
+      theme:'grid',
+      headStyles:{ fillColor:red, textColor:255, fontStyle:'bold', fontSize:9 },
+      bodyStyles:{ fontSize:9, textColor:[35,35,40], lineColor:[224,224,228], lineWidth:0.2 },
+      styles:{ cellPadding:2.2, valign:'middle' },
+      columnStyles:{ 1:{ cellWidth:26, halign:'center', font:'courier' }, 2:{ cellWidth:26, halign:'center', font:'courier' }, 3:{ cellWidth:20, halign:'center' } },
+    });
+    y = doc.lastAutoTable.finalY + 5;
+  }
+
+  if(rec.opmerking){
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(40,40,45);
+    doc.text('Opmerking:', margin, y + 1);
+    doc.setFont('helvetica','normal'); doc.setTextColor(60,60,65);
+    const lines = doc.splitTextToSize(rec.opmerking, pageW - 2*margin);
+    doc.text(lines, margin, y + 6);
+    y += 6 + lines.length * 4.5;
+  }
+
+  // Handtekeningen
+  const pageH = doc.internal.pageSize.getHeight();
+  let sy = Math.max(y + 12, pageH - 46);
+  if(sy > pageH - 30) sy = pageH - 30;
+  const colW = (pageW - 2*margin - 12) / 2;
+  doc.setDrawColor(120,120,125); doc.setLineWidth(0.3);
+  doc.line(margin, sy, margin + colW, sy);
+  doc.line(margin + colW + 12, sy, margin + 2*colW + 12, sy);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(90,90,95);
+  doc.text('Handtekening klant'+(rec.klant.bedrijf?(' ('+rec.klant.bedrijf+')'):''), margin, sy + 4);
+  doc.text('+ datum — voor ontvangst', margin, sy + 8);
+  doc.text('Handtekening Señor Snacks', margin + colW + 12, sy + 4);
+  doc.text('+ datum', margin + colW + 12, sy + 8);
+
+  doc.setFontSize(7); doc.setTextColor(150,150,155);
+  doc.text('Señor Snacks — ophaalbon '+rec.nr+(rec.door?(' · opgemaakt door '+rec.door):''), margin, pageH - 8);
+}
+
+// ── RECENTE BONNEN ─────────────────────────────────────
+function renderRecent(){
+  fbdb.ref(DB_PATH).limitToLast(15).on('value', snap=>{
+    const v = snap.val() || {};
+    const list = Object.keys(v).map(k=>Object.assign({_key:k}, v[k])).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const box = document.getElementById('recent-list');
+    if(!list.length){ box.innerHTML='<div class="empty-hint">Nog geen bonnen opgeslagen.</div>'; return; }
+    box.innerHTML = list.map((r,i)=>{
+      const cnt = (r.trucks?r.trucks.length:0)+' truck(s) · '+(r.producten?r.producten.length:0)+' product(en)';
+      window['_bon_'+i] = r;
+      return '<div class="bon-row"><span class="nr">'+esc(r.nr||'?')+'</span>'
+        + '<span class="meta">'+esc((r.klant&&r.klant.bedrijf)||'')+' — '+fmtDate(r.datum)+' · '+cnt+'</span>'
+        + '<button type="button" class="btn btn-out dl" style="padding:7px 13px;font-size:0.8rem" onclick="buildPDF(window[\'_bon_'+i+'\'])">⬇︎ PDF (2-voud)</button></div>';
+    }).join('');
+  });
+}
+
+// ── INIT ───────────────────────────────────────────────
+fillPresetSelect();
+onPreset();                       // Melis Events standaard ingevuld
+document.getElementById('b-ophaal').value = todayStr();
+renderTrucks();
+renderProdTable();
+if(window.__auth){ renderRecent(); } else { window.addEventListener('auth-ready', renderRecent, { once:true }); }
+// Sluit de productresultaten als je buiten klikt.
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.prod-search-wrap') && !e.target.closest('#prod-results')){
+    document.getElementById('prod-results').classList.remove('show');
+  }
+});
+</script>
+</body>
+</html>
