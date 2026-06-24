@@ -24,6 +24,7 @@ firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
 <script src="firebase-anon-auth.js"></script>
+<script src="truck-data.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -251,6 +252,45 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   .archive-info{flex:1 1 100%;}
   .archive-actions{flex:1 1 100%;justify-content:flex-end;}
 }
+
+/* ─── START-SCHERM (Nieuw / Archief) ─── */
+.start-screen{position:fixed;inset:58px 0 0 0;background:var(--bg);z-index:90;overflow-y:auto;display:none;}
+.start-screen.show{display:block;}
+.start-inner{max-width:920px;margin:0 auto;padding:46px 22px 60px;}
+.start-head{text-align:center;margin-bottom:34px;}
+.start-title{font-family:var(--font-cond);font-size:38px;font-weight:800;line-height:1;}
+.start-sub{font-size:15px;color:var(--text2);margin-top:8px;}
+.start-cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.start-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:30px 26px;cursor:pointer;transition:border-color .14s,box-shadow .14s,transform .08s;text-align:center;}
+.start-card:hover{border-color:var(--red);box-shadow:0 8px 28px rgba(0,0,0,0.08);}
+.start-card:active{transform:translateY(1px);}
+.start-card-ico{font-size:46px;line-height:1;margin-bottom:14px;}
+.start-card-title{font-family:var(--font-cond);font-size:24px;font-weight:800;}
+.start-card-desc{font-size:13.5px;color:var(--text2);margin-top:6px;line-height:1.45;}
+.start-card-badge{display:inline-block;margin-top:12px;background:var(--surface2);color:var(--text2);font-size:12px;font-weight:700;padding:3px 12px;border-radius:999px;}
+.start-back{display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text2);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;margin-bottom:16px;padding:6px 4px;}
+.start-back:hover{color:var(--red);}
+.start-active-wrap{margin-top:26px;}
+
+/* event-picker + archief-lijst in start-scherm */
+.ev-search{width:100%;padding:11px 14px;border:1px solid var(--border2);border-radius:9px;font-family:var(--font);font-size:14px;margin-bottom:14px;}
+.ev-search:focus{outline:none;border-color:var(--red);}
+.ev-list{display:flex;flex-direction:column;gap:8px;}
+.ev-row{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;transition:border-color .12s,background .12s;}
+.ev-row:hover{border-color:var(--red);background:rgba(232,0,29,0.03);}
+.ev-info{flex:1;min-width:0;}
+.ev-name{font-weight:700;font-size:15px;line-height:1.2;}
+.ev-meta{font-size:12.5px;color:var(--text2);margin-top:3px;}
+.ev-count{flex-shrink:0;text-align:center;background:var(--surface2);border-radius:9px;padding:7px 12px;min-width:64px;}
+.ev-count-n{font-family:var(--font-cond);font-size:22px;font-weight:800;line-height:1;}
+.ev-count-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+.ev-empty{text-align:center;color:var(--text2);padding:40px 10px;font-size:14px;}
+.ev-sep{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:16px 2px 6px;}
+@media (max-width:680px){
+  .start-inner{padding:28px 14px 50px;}
+  .start-title{font-size:30px;}
+  .start-cards{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
@@ -263,7 +303,61 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </a>
   <div class="topbar-right">
     <span class="save-state" id="save-state">—</span>
+    <a class="back-link" onclick="showStartScreen()" style="cursor:pointer;">🏠 Plannen</a>
     <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </div>
+</div>
+
+<!-- ─── START-SCHERM: Nieuw / Archief ─── -->
+<div class="start-screen" id="start-screen">
+  <div class="start-inner">
+
+    <!-- HOME: keuze Nieuw / Archief -->
+    <div id="sv-home">
+      <div class="start-head">
+        <div class="start-title">Stroomplan</div>
+        <div class="start-sub">Maak een nieuw plan op basis van een event, of open het archief.</div>
+      </div>
+      <div class="start-cards">
+        <div class="start-card" onclick="startView('event')">
+          <div class="start-card-ico">➕</div>
+          <div class="start-card-title">Nieuw plan</div>
+          <div class="start-card-desc">Kies een event uit de planning. De gekoppelde foodtrucks worden automatisch op het veld geplaatst, klaar om in te delen.</div>
+        </div>
+        <div class="start-card" onclick="startView('archive')">
+          <div class="start-card-ico">🗄</div>
+          <div class="start-card-title">Archief</div>
+          <div class="start-card-desc">Eerder gearchiveerde stroomplannen terugvinden en heropenen.</div>
+          <div class="start-card-badge" id="start-arch-badge">0 plannen</div>
+        </div>
+      </div>
+      <div class="start-active-wrap" id="start-active"></div>
+    </div>
+
+    <!-- EVENT-PICKER -->
+    <div id="sv-event" style="display:none;">
+      <button class="start-back" onclick="startView('home')">← Terug</button>
+      <div class="start-head" style="margin-bottom:18px;">
+        <div class="start-title" style="font-size:30px;">Kies een event</div>
+        <div class="start-sub">De foodtrucks van het event komen automatisch op het plan te staan.</div>
+      </div>
+      <input class="ev-search" id="ev-search" placeholder="🔍 Zoek event op naam of plaats…" oninput="renderEventList()">
+      <div class="ev-list" id="ev-list"></div>
+      <div style="text-align:center;margin-top:22px;">
+        <button class="btn" onclick="startBlank()">Of begin met een leeg plan zonder event →</button>
+      </div>
+    </div>
+
+    <!-- ARCHIEF -->
+    <div id="sv-archive" style="display:none;">
+      <button class="start-back" onclick="startView('home')">← Terug</button>
+      <div class="start-head" style="margin-bottom:18px;">
+        <div class="start-title" style="font-size:30px;">Archief</div>
+        <div class="start-sub">Klik <b>Terughalen</b> om een plan opnieuw te openen.</div>
+      </div>
+      <div class="ev-list" id="start-archive-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -596,6 +690,7 @@ function archiveCurrentProject(){
   selectedItemId = null;
   renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
   scheduleSave();
+  showStartScreen();   // terug naar het keuzescherm na archiveren
 }
 
 function openArchiveModal(){
@@ -636,6 +731,7 @@ function restoreProject(id){
   state.currentId = id;
   selectedItemId = null;
   closeArchiveModal();
+  hideStartScreen();   // openen vanuit het start-scherm-archief
   renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
   scheduleSave();
 }
@@ -752,6 +848,240 @@ function growFieldIfNeeded(x, y, w, h){
     canvas.style.height = (p.fieldH * pxScale) + 'px';
   }
   return grew;
+}
+
+// ──────────────────────────────────────────────────────────
+// START-SCHERM (Nieuw / Archief) + EVENT-PICKER
+// ──────────────────────────────────────────────────────────
+let cachedEvents = null;   // events uit de planning (ft_planning_v1), 1× geladen
+
+function showStartScreen(){
+  document.getElementById('start-screen').classList.add('show');
+  startView('home');
+}
+function hideStartScreen(){
+  document.getElementById('start-screen').classList.remove('show');
+}
+
+function startView(name){
+  document.getElementById('sv-home').style.display    = name==='home'    ? 'block' : 'none';
+  document.getElementById('sv-event').style.display   = name==='event'   ? 'block' : 'none';
+  document.getElementById('sv-archive').style.display = name==='archive' ? 'block' : 'none';
+  if(name==='home'){ updateStartBadges(); renderStartActive(); }
+  if(name==='event'){ loadEventsThenRender(); }
+  if(name==='archive'){ renderStartArchive(); }
+}
+
+function updateStartBadges(){
+  const n = Object.values(state.projects).filter(p=>p.archived).length;
+  const el = document.getElementById('start-arch-badge');
+  if(el) el.textContent = n + ' plan' + (n===1?'':'nen');
+}
+
+// Niet-gearchiveerde, reeds bewerkte plannen → snel heropenen
+function renderStartActive(){
+  const el = document.getElementById('start-active'); if(!el) return;
+  const real = Object.entries(state.projects)
+    .filter(([_,p])=>!p.archived && !isBlankProject(p))
+    .sort((a,b)=> String(b[0]).localeCompare(String(a[0])));   // p_<timestamp> → recentste eerst
+  if(!real.length){ el.innerHTML=''; return; }
+  el.innerHTML = '<div class="ev-sep" style="text-align:center;">Verder werken aan</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">' +
+    real.map(([id,p])=>`<button class="btn" onclick="openPlan('${id}')">${escapeHTML(p.name||'(naamloos)')}</button>`).join('') +
+    '</div>';
+}
+
+function openPlan(id){
+  if(!state.projects[id]) return;
+  state.currentId = id;
+  selectedItemId = null;
+  hideStartScreen();
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+}
+
+// Een "leeg" plan = nooit echt gebruikt → mag hergebruikt worden bij Nieuw
+function isBlankProject(p){
+  return p && !p.archived
+    && (!p.items || !Object.keys(p.items).length)
+    && !p.event && !p.plaats;
+}
+
+// ── ARCHIEF in start-scherm ────────────────────────────────
+function renderStartArchive(){
+  const list = document.getElementById('start-archive-list');
+  const archived = Object.entries(state.projects)
+    .filter(([_,p])=>p.archived)
+    .sort((a,b)=>(b[1].archivedAt||0)-(a[1].archivedAt||0));
+  if(!archived.length){
+    list.innerHTML = '<div class="ev-empty">Archief is leeg.</div>';
+    return;
+  }
+  list.innerHTML = archived.map(([id,p])=>{
+    const sub = [p.event, p.datum, p.plaats].filter(x=>x).map(escapeHTML).join(' · ');
+    const arch = p.archivedAt ? new Date(p.archivedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    return `
+      <div class="archive-row">
+        <div class="archive-info">
+          <div class="archive-name">${escapeHTML(p.name||'(naamloos)')}</div>
+          <div class="archive-meta">${sub || '<span style="color:var(--text3);">geen details</span>'}${arch ? ' <span style="color:var(--text3);">· gearchiveerd '+arch+'</span>' : ''}</div>
+        </div>
+        <div class="archive-actions">
+          <button class="btn btn-sm" onclick="restoreProject('${id}')">↩ Terughalen</button>
+          <button class="btn btn-sm btn-ghost" style="color:var(--red);" onclick="startDeleteArchived('${id}')" title="Definitief verwijderen">🗑</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function startDeleteArchived(id){
+  const p = state.projects[id]; if(!p) return;
+  if(!confirm(`"${p.name}" definitief verwijderen?\n\nDit kan NIET ongedaan gemaakt worden.`)) return;
+  delete state.projects[id];
+  scheduleSave();
+  renderStartArchive();
+  updateStartBadges();
+}
+
+// ── EVENTS LADEN uit de planning ───────────────────────────
+function loadEventsThenRender(){
+  const list = document.getElementById('ev-list');
+  if(cachedEvents){ renderEventList(); return; }
+  list.innerHTML = '<div class="ev-empty">Events laden…</div>';
+  fbdb.ref('ft_planning_v1').once('value').then(snap=>{
+    const raw = snap.val();
+    const arr = Array.isArray(raw) ? raw : Object.values(raw||{});
+    cachedEvents = arr.filter(e=>e && e.id && e.name).map(e=>({
+      id: e.id,
+      name: e.name || 'Event',
+      location: e.location || '',
+      startDate: e.startDate || '',
+      endDate: e.endDate || e.startDate || '',
+      trucks: Array.isArray(e.trucks) ? e.trucks : [],
+    }));
+    renderEventList();
+  }).catch(err=>{
+    console.error('Events laden mislukt:', err);
+    list.innerHTML = '<div class="ev-empty">Events laden mislukt. Probeer opnieuw.</div>';
+  });
+}
+
+// De foodtruck-units van een event = trucks die in de centrale vloot bestaan
+function foodUnitsOf(ev){
+  const fleet = (window.TruckData && TruckData.fleet) ? TruckData.fleet() : [];
+  const byName = {}; fleet.forEach(t=>byName[t.name]=t);
+  return (ev.trucks||[]).map(n=>byName[n]).filter(Boolean);
+}
+
+function fmtEvRange(s,e){
+  if(!s) return '';
+  const dm = d => { const [,m,day] = d.split('-'); return day+'/'+m; };
+  const yr = d => (d.split('-')[0]||'');
+  if(!e || e===s) return dm(s)+'/'+yr(s);
+  return dm(s)+' – '+dm(e)+'/'+yr(e);
+}
+
+function renderEventList(){
+  const list = document.getElementById('ev-list');
+  if(!cachedEvents){ return; }
+  const q = (document.getElementById('ev-search').value||'').toLowerCase().trim();
+  const today = new Date().toISOString().slice(0,10);
+  const evs = cachedEvents.filter(e=>!q || (e.name+' '+e.location).toLowerCase().includes(q));
+  const up   = evs.filter(e=>e.endDate>=today).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+  const past = evs.filter(e=>e.endDate <today).sort((a,b)=>b.startDate.localeCompare(a.startDate));
+  if(!up.length && !past.length){
+    list.innerHTML = '<div class="ev-empty">Geen events gevonden.</div>';
+    return;
+  }
+  const row = e => {
+    const n = foodUnitsOf(e).length;
+    const meta = [fmtEvRange(e.startDate,e.endDate), e.location].filter(Boolean).map(escapeHTML).join(' · ');
+    return `<div class="ev-row" onclick="chooseEvent('${String(e.id).replace(/'/g,'')}')">
+        <div class="ev-info"><div class="ev-name">${escapeHTML(e.name)}</div><div class="ev-meta">${meta||'—'}</div></div>
+        <div class="ev-count"><div class="ev-count-n">${n}</div><div class="ev-count-l">truck${n===1?'':'s'}</div></div>
+      </div>`;
+  };
+  let html = '';
+  if(up.length)   html += '<div class="ev-sep">Aankomend</div>'   + up.map(row).join('');
+  if(past.length) html += '<div class="ev-sep">Voorbij</div>'     + past.map(row).join('');
+  list.innerHTML = html;
+}
+
+// ── NIEUW PLAN op basis van een gekozen event ──────────────
+function chooseEvent(id){
+  const ev = (cachedEvents||[]).find(e=>String(e.id)===String(id)); if(!ev) return;
+  const units = foodUnitsOf(ev);
+
+  // hergebruik het huidige plan als het nog leeg is, anders een nieuw plan
+  let pid;
+  const cur = currentProj();
+  if(cur && isBlankProject(cur)){ pid = state.currentId; }
+  else { pid = 'p_'+Date.now(); state.projects[pid] = blankProject(ev.name); }
+
+  const p = state.projects[pid];
+  p.name   = ev.name;
+  p.event  = ev.name;
+  p.datum  = ev.startDate || '';
+  p.plaats = ev.location || '';
+  p.eventId = ev.id;
+  p.items = {};
+  p.kastenConfig = {};
+  state.currentId = pid;
+  selectedItemId = null;
+
+  autoPlaceUnits(p, units);
+
+  hideStartScreen();
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+
+  if(!units.length){
+    setTimeout(()=>alert('Dit event heeft nog geen foodtrucks gekoppeld in de planning.\n\nHet plan is leeg aangemaakt — je kan de structuren zelf uit het palet slepen.'), 60);
+  }
+}
+
+function startBlank(){
+  let pid;
+  const cur = currentProj();
+  if(cur && isBlankProject(cur)){ pid = state.currentId; }
+  else { pid = 'p_'+Date.now(); state.projects[pid] = blankProject('Nieuw plan'); }
+  state.currentId = pid;
+  selectedItemId = null;
+  hideStartScreen();
+  renderProjectBar(); renderCanvas(); renderStroomkasten(); renderSamenvatting();
+  scheduleSave();
+}
+
+// Kies een palet-footprint per truck op basis van zijn type
+function unitCatId(rec){
+  const type = (rec.type||'').toLowerCase();
+  if(type.startsWith('container'))    return 'cont20';   // 6,06 × 2,44 m
+  if(type.startsWith('aanhangwagen')) return 'cont10';   // 2,99 × 2,44 m
+  return 'truck5';                                        // wagens/voertuigen 5 × 2,5 m
+}
+
+// Plaats de gekoppelde trucks netjes in rijen op het veld
+function autoPlaceUnits(p, units){
+  const margin = 1, gap = 1.5, maxRowW = 34;   // meter
+  let x = margin, y = margin, rowH = 0, idx = 0;
+  for(const rec of units){
+    const catId = unitCatId(rec);
+    const cat = catalogById(catId); if(!cat) continue;
+    if(x > margin && x + cat.w > maxRowW){ x = margin; y += rowH + gap; rowH = 0; }
+    const iid = 'i_'+Date.now()+'_'+(idx++)+'_'+Math.floor(Math.random()*999);
+    p.items[iid] = { catId, x:+x.toFixed(2), y:+y.toFixed(2), rot:0, naam: rec.name };
+    x += cat.w + gap;
+    rowH = Math.max(rowH, cat.h);
+  }
+  // veld groot genoeg maken voor alle items
+  let maxX = 0, maxY = 0;
+  for(const it of Object.values(p.items)){
+    const cat = catalogById(it.catId); if(!cat) continue;
+    maxX = Math.max(maxX, it.x + cat.w);
+    maxY = Math.max(maxY, it.y + cat.h);
+  }
+  p.fieldW = Math.max(40, Math.ceil(maxX + margin));
+  p.fieldH = Math.max(25, Math.ceil(maxY + margin));
 }
 
 // ──────────────────────────────────────────────────────────
@@ -1630,6 +1960,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   setSaveState('saved');
   firstLoad = false;
 
+  // Open altijd op het keuzescherm: Nieuw plan of Archief
+  showStartScreen();
+
   // keyboard op canvas-wrap (focus zodat Del/R werken)
   const cs = document.getElementById('canvas-scroll');
   cs.tabIndex = 0;
@@ -1650,6 +1983,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if(e.key !== 'Escape') return;
     if(document.getElementById('modal-custom').classList.contains('show')) closeCustomModal();
     if(document.getElementById('modal-archive').classList.contains('show')) closeArchiveModal();
+    // In het start-scherm: Esc gaat van event/archief terug naar de keuze
+    const ss = document.getElementById('start-screen');
+    if(ss.classList.contains('show') && document.getElementById('sv-home').style.display === 'none'){
+      startView('home');
+    }
   });
 });
 </script>
