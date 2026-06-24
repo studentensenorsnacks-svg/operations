@@ -125,6 +125,7 @@
     if (pathname.endsWith('/vet-tonnen.html')) return;
     if (pathname.endsWith('/vet-tonnen-extern.html')) return;
     if (pathname.endsWith('/poets-extern.html')) return;
+    if (pathname.endsWith('/personeel-aanmelden.html')) return;
     if (hash.indexOf('#portal/') === 0) return;
 
     var hide = document.createElement('style');
@@ -210,6 +211,7 @@
         planning:       ['/planning.html', '/verhuur.html', '/served_verhuur.html'],
         laadlijsten:    ['/lijsten.html', '/checklists.html', '/checklist-detail.html', '/laadlijst-beheer.html', '/laadlijst-koppeling.html'],
         ops:            ['/ops.html'],
+        personeel:      ['/personeel.html'],
         qrcodes:        ['/qr-codes.html'],
         poets:          ['/poets.html'],
         keuringen:      ['/keuringen.html', '/ocb.html'],

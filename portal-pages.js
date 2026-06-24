@@ -14,6 +14,7 @@ window.PORTAL_PAGES = [
   { key: 'planning',       label: 'Planning',        icon: '📅', url: 'planning.html',               desc: 'Event-, truck- & verhuurplanning' },
   { key: 'laadlijsten',    label: 'Laadlijsten',     icon: '📦', url: 'lijsten.html',                desc: 'Laadlijsten & catalogus-lijsten' },
   { key: 'ops',            label: 'Personeelsfiche', icon: '👥', url: 'ops.html',                    desc: 'Personeel' },
+  { key: 'personeel',      label: 'Personeelsregister', icon: '🧑‍🍳', url: 'personeel.html',         desc: 'Personeelsfiches & aanmeldingen' },
   { key: 'qrcodes',        label: 'QR codes',        icon: '🔳', url: 'qr-codes.html',               desc: 'QR-codes' },
   { key: 'poets',          label: 'Poets',           icon: '🧼', url: 'poets.html',                  desc: 'Poetsstatus van de trucks' },
   { key: 'keuringen',      label: 'Keuringen',       icon: '✅', url: 'ocb.html',                    desc: 'Keuringen (OCB)' },

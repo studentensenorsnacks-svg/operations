@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Personeelsregister</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --orange:#c2410c;--orange-bg:#fdeee2;
+  --blue:#1d4ed8;--blue-bg:#e6ecfb;
+  --gray:#52525b;--gray-bg:#ececef;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOPBAR */
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;
+  align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);
+  letter-spacing:.03em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);
+  font-size:.78rem;font-weight:600;text-decoration:none;letter-spacing:.02em;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,.06);}
+
+/* LAYOUT */
+.main{max-width:1040px;margin:0 auto;padding:26px 22px 64px;}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+.page-title{font-family:var(--font-cond);font-size:1.9rem;font-weight:900;letter-spacing:-.01em;}
+.page-sub{font-size:.9rem;color:var(--text2);margin-top:2px;}
+.head-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.btn{border:none;border-radius:9px;padding:10px 18px;font-size:.9rem;font-weight:700;font-family:inherit;
+  cursor:pointer;transition:background .12s,border-color .12s,opacity .12s;display:inline-flex;align-items:center;gap:7px;}
+.btn-primary{background:var(--red);color:#fff;box-shadow:0 2px 5px rgba(232,0,29,.22);}
+.btn-primary:hover{background:var(--red-dark);}
+.btn-ghost{background:var(--surface);border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--red);color:var(--text);}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 18px;}
+.stat-card .lbl{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+.stat-card .val{font-family:var(--font-cond);font-size:2rem;font-weight:900;line-height:1.1;margin-top:4px;}
+.stat-card.alert .val{color:var(--orange);}
+
+/* FILTER */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+.filter-btn{background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:7px 14px;
+  cursor:pointer;font-size:.85rem;color:var(--text2);font-family:inherit;font-weight:600;}
+.filter-btn.active{background:rgba(232,0,29,.08);border-color:var(--red);color:var(--red);}
+.search-box{margin-left:auto;border:1px solid var(--border2);border-radius:7px;padding:8px 13px;font-size:.9rem;
+  background:var(--surface);outline:none;width:240px;font-family:inherit;}
+.search-box:focus{border-color:var(--red);}
+
+/* LIJST */
+.list{display:flex;flex-direction:column;gap:8px;}
+.row{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:13px 16px;
+  display:grid;grid-template-columns:1fr 130px 150px 120px 30px;align-items:center;gap:12px;cursor:pointer;
+  transition:box-shadow .12s,border-color .12s;}
+.row:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.row .nm{font-size:.98rem;font-weight:700;}
+.row .em{font-size:.8rem;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row .ce{font-size:.84rem;color:var(--text2);}
+.badge{display:inline-block;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-blue{background:var(--blue-bg);color:var(--blue);}
+.badge-orange{background:var(--orange-bg);color:var(--orange);}
+.badge-gray{background:var(--gray-bg);color:var(--gray);}
+.arrow{background:var(--surface2);border:none;width:30px;height:30px;border-radius:7px;cursor:pointer;
+  font-size:17px;color:var(--text2);display:flex;align-items:center;justify-content:center;}
+.empty{padding:54px;text-align:center;color:var(--text2);}
+.empty .ic{font-size:2.6rem;margin-bottom:10px;}
+
+/* DETAIL */
+.detail{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.detail-head{background:#1c1917;color:#fff;padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;}
+.detail-head h2{font-family:var(--font-cond);font-size:1.5rem;font-weight:900;}
+.detail-head .meta{font-size:.82rem;color:rgba(255,255,255,.6);margin-top:3px;}
+.detail-body{padding:24px;}
+.sec-h{font-family:var(--font-cond);font-size:1.05rem;font-weight:800;text-transform:uppercase;letter-spacing:.03em;
+  color:var(--red);margin:22px 0 12px;}
+.sec-h:first-child{margin-top:0;}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.f label{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);font-weight:700;
+  display:block;margin-bottom:5px;}
+.f input,.f select,.f textarea{width:100%;border:1px solid var(--border2);border-radius:8px;padding:9px 11px;
+  font-size:.95rem;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color .12s;}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--red);}
+.f textarea{min-height:72px;resize:vertical;}
+.f.full{grid-column:1/-1;}
+.divider{height:1px;background:var(--border);margin:22px 0;}
+.save-bar{background:var(--surface2);border-top:1px solid var(--border);padding:14px 24px;display:flex;
+  align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.save-bar .right{display:flex;gap:10px;align-items:center;}
+.btn-del{background:none;border:1px solid #f2c2c2;color:var(--red);}
+.btn-del:hover{background:#fdecec;}
+
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:10px;font-size:.88rem;font-weight:600;
+  z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.16);transition:opacity .3s;}
+
+@media(max-width:760px){
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .row{grid-template-columns:1fr 90px 26px;}
+  .row .ce,.row .row-statuut{display:none;}
+  .grid{grid-template-columns:1fr;}
+  .search-box{width:100%;margin-left:0;}
+  .toast{left:12px;right:12px;bottom:12px;}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img class="logo-img" src="senorsnacks-logo.png" alt="Señor Snacks">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Personeelsregister</span>
+  </a>
+  <div class="topbar-right">
+    <a class="back-link" href="dashboard.html">← Dashboard</a>
+  </div>
+</div>
+
+<div class="main">
+  <div id="list-view">
+    <div class="page-head">
+      <div>
+        <div class="page-title">Personeelsregister</div>
+        <div class="page-sub">Alle medewerkers & aanmeldingen op één plek.</div>
+      </div>
+      <div class="head-actions">
+        <button class="btn btn-ghost" onclick="copyLink()">🔗 Kopieer aanmeldlink</button>
+        <button class="btn btn-primary" onclick="openNew()">+ Nieuwe medewerker</button>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">Totaal</div><div class="val" id="st-total">0</div></div>
+      <div class="stat-card alert"><div class="lbl">Nieuwe aanmeldingen</div><div class="val" id="st-nieuw">0</div></div>
+      <div class="stat-card"><div class="lbl">In dienst</div><div class="val" id="st-dienst">0</div></div>
+    </div>
+
+    <div class="toolbar">
+      <button class="filter-btn active" data-f="alle" onclick="setFilter('alle')">Alle</button>
+      <button class="filter-btn" data-f="nieuw" onclick="setFilter('nieuw')">Nieuw</button>
+      <button class="filter-btn" data-f="in_dienst" onclick="setFilter('in_dienst')">In dienst</button>
+      <button class="filter-btn" data-f="uit_dienst" onclick="setFilter('uit_dienst')">Uit dienst</button>
+      <button class="filter-btn" data-f="archief" onclick="setFilter('archief')">Archief</button>
+      <input class="search-box" id="search" placeholder="Zoek op naam, e-mail…" oninput="renderList()">
+    </div>
+
+    <div class="list" id="list"></div>
+  </div>
+
+  <div id="detail-view" style="display:none"></div>
+</div>
+
+<script>
+const PATH='ft_personeel_v1';
+let people={};        // id → record
+let editing=null;     // werkkopie van de open fiche
+let curFilter='alle';
+
+const STATUS_META={
+  nieuw:      ['badge-orange','Nieuw'],
+  in_dienst:  ['badge-green','In dienst'],
+  uit_dienst: ['badge-gray','Uit dienst'],
+  archief:    ['badge-gray','Archief'],
+};
+const STATUUT_META={
+  'Flexi':      'badge-blue',
+  'Student':    'badge-blue',
+  'Geen flexi': 'badge-gray',
+};
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function statusBadge(s){const [c,l]=STATUS_META[s]||STATUS_META.nieuw;return `<span class="badge ${c}">${l}</span>`;}
+function fmtDate(ts){if(!ts)return '';const d=new Date(ts);return d.toLocaleDateString('nl-BE',{day:'2-digit',month:'short',year:'numeric'});}
+
+function toast(msg,ok=true){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');
+  t.className='toast';
+  t.style.background=ok?'#eaf6ec':'#fdecec';
+  t.style.color=ok?'#15803d':'#b8001a';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},3000);
+}
+
+// ── FIREBASE ───────────────────────────────────────────────────
+fbdb.ref(PATH).on('value',snap=>{
+  people=snap.val()||{};
+  refreshStats();
+  if(document.getElementById('detail-view').style.display!=='block') renderList();
+},err=>{
+  console.warn('Firebase:',err);
+  document.getElementById('list').innerHTML='<div class="empty"><div class="ic">⚠️</div>Geen verbinding met de database.</div>';
+});
+
+function refreshStats(){
+  const arr=Object.values(people);
+  document.getElementById('st-total').textContent=arr.length;
+  document.getElementById('st-nieuw').textContent=arr.filter(p=>(p.status||'nieuw')==='nieuw').length;
+  document.getElementById('st-dienst').textContent=arr.filter(p=>p.status==='in_dienst').length;
+}
+
+function setFilter(f){
+  curFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.f===f));
+  renderList();
+}
+
+function renderList(){
+  const q=(document.getElementById('search').value||'').toLowerCase().trim();
+  const entries=Object.entries(people)
+    .map(([id,p])=>({id,...p}))
+    .filter(p=>{
+      const st=p.status||'nieuw';
+      if(curFilter!=='alle' && st!==curFilter) return false;
+      if(q){
+        const hay=[p.naamVoornaam,p.email,p.gsm,p.adres,p.nationaliteit].join(' ').toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a,b)=>{
+      // Nieuwe aanmeldingen bovenaan, daarna nieuwste eerst
+      const an=(a.status||'nieuw')==='nieuw'?0:1, bn=(b.status||'nieuw')==='nieuw'?0:1;
+      if(an!==bn) return an-bn;
+      return (b.submittedAt||0)-(a.submittedAt||0);
+    });
+
+  const el=document.getElementById('list');
+  if(!entries.length){
+    el.innerHTML=`<div class="empty"><div class="ic">👥</div>Geen medewerkers gevonden.${curFilter!=='alle'||q?' Pas de filter aan.':' Deel de aanmeldlink of voeg er één toe.'}</div>`;
+    return;
+  }
+  el.innerHTML=entries.map(p=>{
+    const statuutBadge=p.statuut?`<span class="badge ${STATUUT_META[p.statuut]||'badge-gray'}">${esc(p.statuut)}</span>`:'';
+    return `<div class="row" onclick="openDetail('${p.id}')">
+      <div>
+        <div class="nm">${esc(p.naamVoornaam)||'(naamloos)'}</div>
+        <div class="em">${esc(p.email)||'<span style="color:#bbb">geen e-mail</span>'}</div>
+      </div>
+      <div class="row-statuut">${statuutBadge}</div>
+      <div class="ce">${esc(p.gsm)||''}</div>
+      <div>${statusBadge(p.status||'nieuw')}</div>
+      <button class="arrow" tabindex="-1">›</button>
+    </div>`;
+  }).join('');
+}
+
+// ── DETAIL ─────────────────────────────────────────────────────
+function blank(){
+  return {id:'new_'+Date.now(),naamVoornaam:'',email:'',adres:'',gsm:'',statuut:'',gezinssituatie:'',
+    kinderenTenLaste:'',partnerTenLaste:'',rijksregister:'',identiteitskaart:'',iban:'',nationaliteit:'',
+    akkoord:false,status:'nieuw',bron:'manueel',opmerkingen:'',submittedAt:Date.now()};
+}
+function openNew(){ editing=blank(); renderDetail(); }
+function openDetail(id){
+  const src=people[id];
+  if(!src) return;
+  editing=JSON.parse(JSON.stringify(src)); editing.id=id;
+  renderDetail();
+}
+function goBack(){
+  editing=null;
+  document.getElementById('detail-view').style.display='none';
+  document.getElementById('list-view').style.display='block';
+  renderList();
+}
+function upd(k,v){ if(editing) editing[k]=v; }
+
+function selOpts(val,opts){
+  return opts.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)||'—'}</option>`).join('');
+}
+
+function renderDetail(){
+  if(!editing) return;
+  const e=editing;
+  const isNew=String(e.id).startsWith('new_');
+  document.getElementById('list-view').style.display='none';
+  const dv=document.getElementById('detail-view');
+  dv.style.display='block';
+
+  dv.innerHTML=`
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <button class="btn btn-ghost" onclick="goBack()">← Terug</button>
+    <div style="font-size:.85rem;color:var(--text2)">${isNew?'Nieuwe medewerker':esc(e.naamVoornaam)}</div>
+  </div>
+  <div class="detail">
+    <div class="detail-head">
+      <div>
+        <h2>${esc(e.naamVoornaam)||'Nieuwe medewerker'}</h2>
+        <div class="meta">${e.bron==='aanmelding'?'📥 Via aanmeldformulier':'✍️ Handmatig toegevoegd'}${e.submittedAt?' · '+fmtDate(e.submittedAt):''}</div>
+      </div>
+      ${statusBadge(e.status||'nieuw')}
+    </div>
+    <div class="detail-body">
+
+      <div class="sec-h">Persoonsgegevens</div>
+      <div class="grid">
+        <div class="f"><label>Naam + voornaam</label><input value="${esc(e.naamVoornaam)}" oninput="upd('naamVoornaam',this.value)"></div>
+        <div class="f"><label>E-mail</label><input type="email" value="${esc(e.email)}" oninput="upd('email',this.value)"></div>
+        <div class="f full"><label>Adres</label><input value="${esc(e.adres)}" oninput="upd('adres',this.value)"></div>
+        <div class="f"><label>GSM nummer</label><input value="${esc(e.gsm)}" oninput="upd('gsm',this.value)"></div>
+        <div class="f"><label>Nationaliteit</label><input value="${esc(e.nationaliteit)}" oninput="upd('nationaliteit',this.value)"></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="sec-h">Statuut &amp; gezinssituatie</div>
+      <div class="grid">
+        <div class="f"><label>Statuut</label><select onchange="upd('statuut',this.value)">${selOpts(e.statuut,['','Flexi','Student','Geen flexi'])}</select></div>
+        <div class="f"><label>Gezinssituatie</label><select onchange="upd('gezinssituatie',this.value)">${selOpts(e.gezinssituatie,['','Ongehuwd','Gehuwd','Wettelijk samenwonend','Feitelijk gescheiden','Wettelijk gescheiden','Weduwe(naar)'])}</select></div>
+        <div class="f"><label>Aantal kinderen ten laste</label><input value="${esc(e.kinderenTenLaste)}" oninput="upd('kinderenTenLaste',this.value)"></div>
+        <div class="f"><label>Partner ten laste</label><select onchange="upd('partnerTenLaste',this.value)">${selOpts(e.partnerTenLaste,['','Ja','Nee'])}</select></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="sec-h">Identiteit &amp; bankgegevens</div>
+      <div class="grid">
+        <div class="f"><label>Rijksregisternummer</label><input value="${esc(e.rijksregister)}" oninput="upd('rijksregister',this.value)"></div>
+        <div class="f"><label>Identiteitskaartnummer</label><input value="${esc(e.identiteitskaart)}" oninput="upd('identiteitskaart',this.value)"></div>
+        <div class="f"><label>IBAN (bankrekening)</label><input value="${esc(e.iban)}" oninput="upd('iban',this.value)"></div>
+        <div class="f"><label>Akkoordverklaring</label><input value="${e.akkoord?'✅ Akkoord gegaan':'—'}" disabled style="color:var(--text2)"></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="sec-h">Opvolging</div>
+      <div class="grid">
+        <div class="f"><label>Status</label><select onchange="upd('status',this.value)">
+          <option value="nieuw" ${(e.status||'nieuw')==='nieuw'?'selected':''}>Nieuw</option>
+          <option value="in_dienst" ${e.status==='in_dienst'?'selected':''}>In dienst</option>
+          <option value="uit_dienst" ${e.status==='uit_dienst'?'selected':''}>Uit dienst</option>
+          <option value="archief" ${e.status==='archief'?'selected':''}>Archief</option>
+        </select></div>
+        <div class="f full"><label>Opmerkingen</label><textarea oninput="upd('opmerkingen',this.value)" placeholder="Interne notities…">${esc(e.opmerkingen)}</textarea></div>
+      </div>
+
+    </div>
+    <div class="save-bar">
+      <button class="btn btn-ghost" onclick="goBack()">Annuleer</button>
+      <div class="right">
+        ${!isNew?`<button class="btn btn-del" onclick="delPerson()">Verwijder</button>`:''}
+        <button class="btn btn-primary" onclick="savePerson()">💾 Opslaan</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function savePerson(){
+  if(!editing) return;
+  const e=editing;
+  if(!e.naamVoornaam.trim()){ toast('✗ Vul minstens de naam in.',false); return; }
+  const isNew=String(e.id).startsWith('new_');
+  const rec={
+    naamVoornaam:e.naamVoornaam.trim(),email:(e.email||'').trim(),adres:e.adres||'',gsm:e.gsm||'',
+    statuut:e.statuut||'',gezinssituatie:e.gezinssituatie||'',kinderenTenLaste:e.kinderenTenLaste||'',
+    partnerTenLaste:e.partnerTenLaste||'',rijksregister:e.rijksregister||'',identiteitskaart:e.identiteitskaart||'',
+    iban:e.iban||'',nationaliteit:e.nationaliteit||'',akkoord:!!e.akkoord,status:e.status||'nieuw',
+    bron:e.bron||'manueel',opmerkingen:e.opmerkingen||'',
+    submittedAt:e.submittedAt||Date.now()
+  };
+  try{
+    if(isNew){ await fbdb.ref(PATH).push(rec); }
+    else { await fbdb.ref(PATH+'/'+e.id).update(rec); }
+    toast('✓ Opgeslagen.');
+    goBack();
+  }catch(err){ toast('✗ Opslaan mislukt: '+err.message,false); }
+}
+
+async function delPerson(){
+  if(!editing) return;
+  const e=editing;
+  if(!confirm('Deze medewerker definitief verwijderen uit het register?\n\n'+(e.naamVoornaam||'')))
+    return;
+  try{
+    if(window.logDeletion) logDeletion('personeel','Medewerker verwijderd — '+(e.naamVoornaam||''),{ref:e.id,email:e.email||''});
+    await fbdb.ref(PATH+'/'+e.id).remove();
+    toast('Medewerker verwijderd.');
+    goBack();
+  }catch(err){ toast('✗ Verwijderen mislukt: '+err.message,false); }
+}
+
+function copyLink(){
+  const url=location.origin+'/personeel-aanmelden.html';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(
+      ()=>toast('🔗 Aanmeldlink gekopieerd — deel met nieuwe medewerkers.'),
+      ()=>prompt('Kopieer de aanmeldlink:',url)
+    );
+  } else { prompt('Kopieer de aanmeldlink:',url); }
+}
+</script>
+</body>
+</html>

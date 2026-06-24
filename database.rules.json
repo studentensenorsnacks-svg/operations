@@ -131,6 +131,32 @@
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|vet|')))"
     },
 
+    "ft_personeel_v1": {
+      ".read":  "auth != null && !auth.token.firebase.sign_in_provider.matches(/^anonymous$/i) && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|personeel|')))",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.exists() && newData.child('bron').val() == 'aanmelding') || (!auth.token.firebase.sign_in_provider.matches(/^anonymous$/i) && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|personeel|')))))",
+        ".validate": "newData.hasChildren(['naamVoornaam','email'])",
+        "naamVoornaam":     { ".validate": "newData.isString() && newData.val().length < 200" },
+        "email":            { ".validate": "newData.isString() && newData.val().length < 200" },
+        "adres":            { ".validate": "newData.isString() && newData.val().length < 300" },
+        "gsm":              { ".validate": "newData.isString() && newData.val().length < 60" },
+        "statuut":          { ".validate": "newData.isString() && newData.val().length < 40" },
+        "gezinssituatie":   { ".validate": "newData.isString() && newData.val().length < 60" },
+        "kinderenTenLaste": { ".validate": "newData.isString() && newData.val().length < 20" },
+        "partnerTenLaste":  { ".validate": "newData.isString() && newData.val().length < 10" },
+        "rijksregister":    { ".validate": "newData.isString() && newData.val().length < 40" },
+        "identiteitskaart": { ".validate": "newData.isString() && newData.val().length < 60" },
+        "iban":             { ".validate": "newData.isString() && newData.val().length < 60" },
+        "nationaliteit":    { ".validate": "newData.isString() && newData.val().length < 60" },
+        "akkoord":          { ".validate": "newData.isBoolean()" },
+        "status":           { ".validate": "newData.isString() && newData.val().length < 20" },
+        "bron":             { ".validate": "newData.isString() && newData.val().length < 20" },
+        "opmerkingen":      { ".validate": "newData.isString() && newData.val().length < 4000" },
+        "submittedAt":      { ".validate": "newData.isNumber()" },
+        "$other":           { ".validate": false }
+      }
+    },
+
     "_userActivity": {
       ".read": "auth != null && auth.token.role == 'admin'",
       "$uid": {

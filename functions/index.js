@@ -546,6 +546,7 @@ const VALID_ROLES = ['admin', 'manager', 'medewerker', 'viewer', 'bakker', 'cust
 // substring-overlap zodat de RTDB-rule .contains('|x|') uniek is.
 const VALID_PAGES = [
   'notities', 'checkin', 'planning', 'laadlijsten', 'ops',
+  'personeel',
   'qrcodes', 'poets', 'keuringen', 'vet', 'bestellingen',
   'stroomaanvraag', 'archief', 'eindstock', 'trucks', 'horeca', 'krisdc',
   'fiches',
