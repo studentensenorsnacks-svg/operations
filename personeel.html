@@ -24,6 +24,9 @@ firebase.initializeApp(firebaseConfig);
 const fbdb = firebase.database();
 </script>
 <script src="firebase-anon-auth.js"></script>
+<!-- PDF-export (zelfde libs als de bestellijst) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root{
   --red:#e8001d;--red-dark:#b8001a;
@@ -157,6 +160,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="page-sub">Alle medewerkers & aanmeldingen op één plek.</div>
       </div>
       <div class="head-actions">
+        <button class="btn btn-ghost" onclick="exportListPdf()">📄 Exporteer PDF</button>
         <button class="btn btn-ghost" onclick="copyLink()">🔗 Kopieer aanmeldlink</button>
         <button class="btn btn-primary" onclick="openNew()">+ Nieuwe medewerker</button>
       </div>
@@ -239,9 +243,10 @@ function setFilter(f){
   renderList();
 }
 
-function renderList(){
+// Gefilterde + gesorteerde lijst — gedeeld door de weergave en de PDF-export.
+function filteredPeople(){
   const q=(document.getElementById('search').value||'').toLowerCase().trim();
-  const entries=Object.entries(people)
+  return Object.entries(people)
     .map(([id,p])=>({id,...p}))
     .filter(p=>{
       const st=p.status||'nieuw';
@@ -258,6 +263,11 @@ function renderList(){
       if(an!==bn) return an-bn;
       return (b.submittedAt||0)-(a.submittedAt||0);
     });
+}
+
+function renderList(){
+  const q=(document.getElementById('search').value||'').toLowerCase().trim();
+  const entries=filteredPeople();
 
   const el=document.getElementById('list');
   if(!entries.length){
@@ -371,6 +381,7 @@ function renderDetail(){
       <button class="btn btn-ghost" onclick="goBack()">Annuleer</button>
       <div class="right">
         ${!isNew?`<button class="btn btn-del" onclick="delPerson()">Verwijder</button>`:''}
+        <button class="btn btn-ghost" onclick="generateFichePdf()">📄 Fiche als PDF</button>
         <button class="btn btn-primary" onclick="savePerson()">💾 Opslaan</button>
       </div>
     </div>
@@ -409,6 +420,132 @@ async function delPerson(){
     toast('Medewerker verwijderd.');
     goBack();
   }catch(err){ toast('✗ Verwijderen mislukt: '+err.message,false); }
+}
+
+// ── PDF-EXPORT ─────────────────────────────────────────────────
+const STATUS_LABEL={nieuw:'Nieuw',in_dienst:'In dienst',uit_dienst:'Uit dienst',archief:'Archief'};
+function pdfDateStr(){const n=new Date();const p=x=>String(x).padStart(2,'0');return p(n.getDate())+'/'+p(n.getMonth()+1)+'/'+n.getFullYear();}
+function fileDateStr(){const n=new Date();const p=x=>String(x).padStart(2,'0');return n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate());}
+function safeFile(s){return (String(s||'').replace(/[^\wÀ-ÿ\- ]+/g,'').trim().replace(/\s+/g,'_'))||'medewerker';}
+
+// Eén volledige personeelsfiche → PDF
+function generateFichePdf(){
+  if(!editing){ toast('✗ Geen fiche geopend.',false); return; }
+  if(!window.jspdf||!window.jspdf.jsPDF){ toast('✗ PDF-bibliotheek niet geladen.',false); return; }
+  const e=editing;
+  const jsPDF=window.jspdf.jsPDF;
+  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  const pageW=doc.internal.pageSize.getWidth();
+  const margin=14;
+  const red=[232,0,29], dash='—';
+  const v=x=>{const s=(x==null?'':String(x)).trim();return s||dash;};
+
+  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(red[0],red[1],red[2]);
+  doc.text('PERSONEELSFICHE', margin, 20);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(90,90,100);
+  doc.text('Señor Snacks', margin, 26);
+  doc.setFontSize(9);doc.setTextColor(120,120,128);
+  doc.text('Aangemaakt: '+pdfDateStr(), pageW-margin, 20, {align:'right'});
+  doc.text('Status: '+(STATUS_LABEL[e.status||'nieuw']||dash), pageW-margin, 26, {align:'right'});
+  doc.setDrawColor(red[0],red[1],red[2]);doc.setLineWidth(0.6);doc.line(margin,30,pageW-margin,30);
+
+  const sec=t=>[{content:t,colSpan:2,styles:{fillColor:[28,25,23],textColor:255,fontStyle:'bold',fontSize:10}}];
+  const row=(l,val)=>[{content:l,styles:{fontStyle:'bold',textColor:[60,60,66]}},{content:v(val)}];
+  const aangemeld=e.submittedAt?new Date(e.submittedAt).toLocaleDateString('nl-BE',{day:'2-digit',month:'long',year:'numeric'}):dash;
+
+  const body=[
+    sec('Persoonsgegevens'),
+    row('Naam + voornaam', e.naamVoornaam),
+    row('E-mail', e.email),
+    row('Adres', e.adres),
+    row('GSM nummer', e.gsm),
+    row('Nationaliteit', e.nationaliteit),
+    sec('Statuut & gezinssituatie'),
+    row('Statuut', e.statuut),
+    row('Gezinssituatie', e.gezinssituatie),
+    row('Aantal kinderen ten laste', e.kinderenTenLaste),
+    row('Partner ten laste', e.partnerTenLaste),
+    sec('Identiteit & bankgegevens'),
+    row('Rijksregisternummer', e.rijksregister),
+    row('Identiteitskaartnummer', e.identiteitskaart),
+    row('IBAN (bankrekening)', e.iban),
+    row('Akkoordverklaring', e.akkoord?'Akkoord gegaan':dash),
+    sec('Opvolging'),
+    row('Status', STATUS_LABEL[e.status||'nieuw']||dash),
+    row('Bron', e.bron==='aanmelding'?'Via aanmeldformulier':'Handmatig toegevoegd'),
+    row('Aangemeld op', aangemeld),
+    row('Opmerkingen', e.opmerkingen),
+  ];
+
+  doc.autoTable({
+    startY:36,
+    margin:{left:margin,right:margin},
+    body:body,
+    theme:'grid',
+    styles:{fontSize:10,cellPadding:2.6,valign:'middle',lineColor:[224,224,228],lineWidth:0.2,textColor:[35,35,40]},
+    columnStyles:{0:{cellWidth:62},1:{cellWidth:'auto'}},
+  });
+
+  const fy=doc.internal.pageSize.getHeight()-12;
+  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(150,150,156);
+  doc.text('Vertrouwelijk — bevat persoonsgegevens. Enkel voor de personeels- en loonadministratie van Señor Snacks.', margin, fy);
+
+  doc.save('Personeelsfiche_'+safeFile(e.naamVoornaam)+'.pdf');
+  toast('📄 PDF-fiche aangemaakt.');
+}
+
+// Volledige (gefilterde) lijst → PDF-tabel
+function exportListPdf(){
+  if(!window.jspdf||!window.jspdf.jsPDF){ toast('✗ PDF-bibliotheek niet geladen.',false); return; }
+  const rows=filteredPeople();
+  if(!rows.length){ toast('Geen medewerkers om te exporteren.',false); return; }
+  const jsPDF=window.jspdf.jsPDF;
+  const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+  const pageW=doc.internal.pageSize.getWidth();
+  const margin=12;
+  const red=[232,0,29], dash='—';
+  const filterLbl={alle:'Alle',nieuw:'Nieuw',in_dienst:'In dienst',uit_dienst:'Uit dienst',archief:'Archief'}[curFilter]||'Alle';
+
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor(red[0],red[1],red[2]);
+  doc.text('PERSONEELSREGISTER', margin, 16);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(90,90,100);
+  doc.text('Señor Snacks', margin, 22);
+  doc.setFontSize(9);doc.setTextColor(120,120,128);
+  doc.text('Datum: '+pdfDateStr(), pageW-margin, 16, {align:'right'});
+  doc.text('Filter: '+filterLbl+'  ·  '+rows.length+' medewerker'+(rows.length!==1?'s':''), pageW-margin, 22, {align:'right'});
+
+  const body=rows.map(p=>[
+    p.naamVoornaam||dash,
+    p.statuut||dash,
+    p.gsm||dash,
+    p.email||dash,
+    p.nationaliteit||dash,
+    p.kinderenTenLaste||'0',
+    {content:STATUS_LABEL[p.status||'nieuw']||dash, styles:{fontStyle:'bold'}},
+  ]);
+
+  doc.autoTable({
+    startY:28,
+    margin:{left:margin,right:margin},
+    head:[['Naam + voornaam','Statuut','GSM','E-mail','Nationaliteit','Kind. t.l.','Status']],
+    body:body,
+    theme:'grid',
+    headStyles:{fillColor:red,textColor:255,fontStyle:'bold',fontSize:9.5,lineColor:[245,200,205],lineWidth:0.2},
+    bodyStyles:{fontSize:9.5,textColor:[35,35,40],lineColor:[224,224,228],lineWidth:0.2},
+    styles:{cellPadding:2.2,valign:'middle'},
+    columnStyles:{
+      0:{cellWidth:55},1:{cellWidth:26},2:{cellWidth:34},3:{cellWidth:'auto'},
+      4:{cellWidth:30},5:{cellWidth:20,halign:'center'},6:{cellWidth:26},
+    },
+    alternateRowStyles:{fillColor:[250,247,247]},
+  });
+
+  const fy=doc.internal.pageSize.getHeight()-8;
+  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(150,150,156);
+  doc.text('Vertrouwelijk — bevat persoonsgegevens van Señor Snacks-medewerkers.', margin, fy);
+
+  doc.save('Personeelsregister_'+fileDateStr()+'.pdf');
+  toast('📄 Lijst geëxporteerd als PDF ('+rows.length+').');
 }
 
 function copyLink(){
