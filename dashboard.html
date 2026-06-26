@@ -834,6 +834,31 @@ textarea { resize: vertical; min-height: 72px; }
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 
+/* Undo-balk na "Selectie wissen" */
+.toast-undo {
+  position: fixed;
+  bottom: 28px; left: 50%;
+  transform: translate(-50%, 90px);
+  display: flex; align-items: center; gap: 14px;
+  background: #1f2937; color: #fff;
+  padding: 11px 14px 11px 18px;
+  border-radius: 10px;
+  font-weight: 700; font-size: 0.88rem;
+  opacity: 0; pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 1000;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.toast-undo.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.toast-undo button {
+  background: #f59e0b; color: #1f2937; border: none;
+  padding: 8px 14px; border-radius: 8px;
+  font-family: var(--font); font-weight: 800; font-size: 0.85rem; cursor: pointer;
+}
+.toast-undo button:hover { background: #fbbf24; }
+.prod-prul-tools { margin-bottom: 12px; }
+.prod-prul-tools .prod-btn-clear { width: 100%; }
+
 @media (max-width: 900px) {
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .layout { flex-direction: column; }
@@ -1222,6 +1247,7 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="planning.html">📅 Planning</a>
   <a href="notities.html">📝 Notities</a>
   <a href="keuringen.html">📋 Keuringen</a>
+  <a href="nummerplaten.html">🪪 Nummerplaten</a>
   <a href="ops.html">👥 Personeelsfiche</a>
   <a href="personeel.html">🧑‍🍳 Personeelsregister</a>
   <a href="horeca-planning.html">🍔 Horeca Planning</a>
@@ -1233,6 +1259,7 @@ textarea { resize: vertical; min-height: 72px; }
   <a href="checklists.html">📦 Laadlijsten</a>
   <a href="qr-codes.html">🔳 QR codes</a>
   <a href="event-sheet.html">📋 Event Sheet</a>
+  <a href="klanten-fiches.html">🗂️ Klanten Fiches</a>
   <a href="https://senorsnacks-eventpay.web.app/" target="_blank" rel="noopener" data-finance="1">💳 EventPay <span style="font-size:0.62rem;opacity:0.6;">(finance)</span></a>
   <div class="menu-sep"></div>
   <a href="audit.html">🗂️ Audit log <span style="font-size:0.62rem;opacity:0.6;">(admin)</span></a>
@@ -1435,8 +1462,15 @@ textarea { resize: vertical; min-height: 72px; }
       <div id="prod-historiek-view" class="hidden">
         <div class="prod-hist-list" id="prod-hist-list"><div class="stuk-empty"><div class="stuk-empty-icon">…</div><div>Laden…</div></div></div>
       </div>
+      <div id="prod-prullenbak-view" class="hidden">
+        <div class="prod-prul-tools">
+          <button type="button" class="prod-btn-clear" onclick="reconstructFromLog()" title="Probeer je laatst-gewiste selectie terug te halen uit de activiteiten-log">♻️ Herstel laatste gewiste selectie (uit logboek)</button>
+        </div>
+        <div class="prod-hist-list" id="prod-prul-list"><div class="stuk-empty"><div class="stuk-empty-icon">…</div><div>Laden…</div></div></div>
+      </div>
       <div class="prod-foot">
         <button type="button" class="prod-btn-clear" id="prod-hist-toggle" onclick="toggleBestelHistoriek()">📋 Historiek</button>
+        <button type="button" class="prod-btn-clear" id="prod-prul-toggle" onclick="toggleProdPrullenbak()">🗑 Prullenbak</button>
         <button type="button" class="prod-btn-pdf" id="prod-pdf-btn" onclick="generateBestelPDF()" disabled>📄 Bestellen — PDF maken</button>
       </div>
     </div>
@@ -1446,6 +1480,7 @@ textarea { resize: vertical; min-height: 72px; }
 <datalist id="known-trucks"></datalist>
 
 <div class="toast" id="toast">✓ Opgeslagen!</div>
+<div class="toast-undo" id="toast-undo"><span id="toast-undo-text">Selectie gewist</span><button type="button" onclick="undoLastClear()">↩ Ongedaan maken</button></div>
 
 <script>
 const BADGE = {
@@ -1939,17 +1974,25 @@ if (bestelHistoriekRef) {
   });
 }
 
+// Prullenbak: gewiste selecties (snapshot vóór "Selectie wissen"). Zo blijft een
+// per ongeluk gewiste bestelling terugvindbaar i.p.v. definitief verloren.
+var bestelPrullenbak = [];
+var bestelPrullenbakRef = (typeof fbdb !== 'undefined') ? fbdb.ref('ft_bestel_prullenbak_v1') : null;
+if (bestelPrullenbakRef) {
+  bestelPrullenbakRef.on('value', function (snap) {
+    var d = snap.val() || {};
+    bestelPrullenbak = Object.values(d).filter(Boolean).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+    var pv = document.getElementById('prod-prullenbak-view');
+    if (pv && !pv.classList.contains('hidden')) renderProdPrullenbak();
+  });
+}
+
 function prodCatalog() { return Array.isArray(window.PRODUCT_CATALOGUS) ? window.PRODUCT_CATALOGUS : []; }
 
 function openProductenModal() {
   document.getElementById('producten-modal-overlay').classList.remove('hidden');
-  // Open altijd op de bestel-weergave (niet op de historiek).
-  var bv = document.getElementById('prod-bestel-view');
-  var hv = document.getElementById('prod-historiek-view');
-  var tb = document.getElementById('prod-hist-toggle');
-  if (bv) bv.classList.remove('hidden');
-  if (hv) hv.classList.add('hidden');
-  if (tb) tb.textContent = '📋 Historiek';
+  // Open altijd op de bestel-weergave (niet op historiek/prullenbak).
+  setProdView('bestel');
   document.getElementById('prod-search').value = '';
   renderProductenList();
   updateProductenFooter();
@@ -2233,14 +2276,115 @@ function stepProdRow(row, delta) {
   });
 })();
 
+var _lastClearSnap = null;   // laatst gewiste selectie (voor "Ongedaan maken")
+
 function clearProductenSelectie() {
+  // 1) Snapshot van de huidige selectie bewaren VOOR we wissen, zodat een
+  //    per ongeluk gewiste bestelling terugvindbaar blijft in de Prullenbak.
+  var snap = snapshotSelectie();
+  _lastClearSnap = snap && snap.items.length ? snap : null;
+  if (_lastClearSnap) saveToPrullenbak(_lastClearSnap);
+
+  // 2) Pas daarna écht wissen.
   prodQty = {};
   prodCustom = {};
   saveProdQty();
   _bestelChangeBuf = {};   // hangende wijzigingen vervallen
-  logBestelEvent('Selectie gewist', '');
+  logBestelEvent('Selectie gewist',
+    _lastClearSnap ? (_lastClearSnap.aantalProducten + ' prod · ' + _lastClearSnap.totaalStuks + ' stuks (in prullenbak)') : '');
   renderProductenList();
   updateProductenFooter();
+
+  // 3) Undo aanbieden.
+  if (_lastClearSnap) showUndoBar(_lastClearSnap);
+}
+
+// Bouw een herstelbare momentopname van de huidige selectie.
+function snapshotSelectie() {
+  var sel = selectedProducten();
+  return {
+    aantalProducten: sel.length,
+    totaalStuks: sel.reduce(function (s, x) { return s + x.qty; }, 0),
+    items: sel.map(function (x) {
+      return { id: x.p.id, naam: x.p.naam, qty: x.qty, custom: !!x.custom,
+               artVZ: x.p.artVZ || '', artAC: x.p.artAC || '' };
+    })
+  };
+}
+
+function saveToPrullenbak(snap) {
+  if (!bestelPrullenbakRef) return;
+  try {
+    var now = new Date();
+    var id = 't' + now.getTime().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+    var a = window.__auth || {};
+    bestelPrullenbakRef.child(id).set({
+      id: id, ts: now.getTime(),
+      datum: now.toLocaleDateString('nl-NL'),
+      tijd: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
+      door: String(a.displayName || a.email || 'Onbekend').slice(0, 120),
+      aantalProducten: snap.aantalProducten,
+      totaalStuks: snap.totaalStuks,
+      items: snap.items
+    }).then(prunePrullenbak).catch(function (e) { console.warn('Prullenbak opslaan mislukt:', e); });
+  } catch (e) { console.warn('Prullenbak opslaan mislukt:', e); }
+}
+
+// Hou de prullenbak beperkt (laatste 20 gewiste selecties).
+function prunePrullenbak() {
+  if (!bestelPrullenbakRef) return;
+  try {
+    var lijst = bestelPrullenbak.slice().sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+    var overschot = lijst.length - 20;
+    for (var i = 0; i < overschot; i++) {
+      if (lijst[i] && lijst[i].id) bestelPrullenbakRef.child(lijst[i].id).remove();
+    }
+  } catch (e) {}
+}
+
+// Zet een snapshot terug in de selectie. Bestaande aantallen blijven; per
+// product wordt het bewaarde aantal hersteld (handig na een per ongeluk wissen).
+function applySnapshotItems(items) {
+  (items || []).forEach(function (it) {
+    var qty = it.qty || 0;
+    if (qty <= 0) return;
+    if (it.custom) {
+      var bestaand = Object.keys(prodCustom).filter(function (cid) {
+        return (prodCustom[cid].naam || '').trim().toLowerCase() === (it.naam || '').trim().toLowerCase();
+      })[0];
+      if (bestaand) prodCustom[bestaand].qty = qty;
+      else {
+        var cid = (it.id && /^c/.test(it.id)) ? it.id
+          : ('c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+        prodCustom[cid] = { naam: it.naam, qty: qty };
+      }
+    } else if (it.id) {
+      prodQty[it.id] = qty;
+    }
+  });
+  saveProdQty();
+  renderProductenList();
+  updateProductenFooter();
+}
+
+function showUndoBar(snap) {
+  var bar = document.getElementById('toast-undo');
+  var txt = document.getElementById('toast-undo-text');
+  if (!bar) return;
+  if (txt) txt.textContent = 'Selectie gewist (' + snap.aantalProducten + ' prod · ' + snap.totaalStuks + ' stuks)';
+  bar.classList.add('show');
+  if (showUndoBar._t) clearTimeout(showUndoBar._t);
+  showUndoBar._t = setTimeout(function () { bar.classList.remove('show'); }, 8000);
+}
+
+function undoLastClear() {
+  var bar = document.getElementById('toast-undo');
+  if (bar) bar.classList.remove('show');
+  if (!_lastClearSnap || !_lastClearSnap.items.length) { showToast('Niets om te herstellen'); return; }
+  applySnapshotItems(_lastClearSnap.items);
+  logBestelEvent('Selectie hersteld (undo)', _lastClearSnap.aantalProducten + ' prod · ' + _lastClearSnap.totaalStuks + ' stuks');
+  _lastClearSnap = null;
+  showToast('↩ Selectie hersteld');
 }
 
 function selectedProducten() {
@@ -2260,16 +2404,126 @@ function selectedProducten() {
   return out;
 }
 
-// ── Historiek ──
-function toggleBestelHistoriek() {
+// ── Weergaves: bestellen / historiek / prullenbak ──
+function setProdView(view) {   // 'bestel' | 'historiek' | 'prullenbak'
   var bv = document.getElementById('prod-bestel-view');
   var hv = document.getElementById('prod-historiek-view');
+  var pv = document.getElementById('prod-prullenbak-view');
   var tb = document.getElementById('prod-hist-toggle');
-  var showHist = hv.classList.contains('hidden');
-  hv.classList.toggle('hidden', !showHist);
-  bv.classList.toggle('hidden', showHist);
-  tb.textContent = showHist ? '← Terug naar bestellen' : '📋 Historiek';
-  if (showHist) renderBestelHistoriek();
+  var pb = document.getElementById('prod-prul-toggle');
+  if (bv) bv.classList.toggle('hidden', view !== 'bestel');
+  if (hv) hv.classList.toggle('hidden', view !== 'historiek');
+  if (pv) pv.classList.toggle('hidden', view !== 'prullenbak');
+  if (tb) tb.textContent = view === 'historiek' ? '← Terug naar bestellen' : '📋 Historiek';
+  if (pb) pb.textContent = view === 'prullenbak' ? '← Terug naar bestellen' : '🗑 Prullenbak';
+  if (view === 'historiek') renderBestelHistoriek();
+  if (view === 'prullenbak') renderProdPrullenbak();
+}
+function toggleBestelHistoriek() {
+  var hv = document.getElementById('prod-historiek-view');
+  setProdView(hv.classList.contains('hidden') ? 'historiek' : 'bestel');
+}
+function toggleProdPrullenbak() {
+  var pv = document.getElementById('prod-prullenbak-view');
+  setProdView(pv.classList.contains('hidden') ? 'prullenbak' : 'bestel');
+}
+
+function renderProdPrullenbak() {
+  var host = document.getElementById('prod-prul-list');
+  if (!host) return;
+  if (!bestelPrullenbak.length) {
+    host.innerHTML = '<div class="stuk-empty"><div class="stuk-empty-icon">🗑</div><div>Prullenbak is leeg.<br>Gewiste selecties komen hier terecht en blijven 20 lang bewaard.</div></div>';
+    return;
+  }
+  host.innerHTML = bestelPrullenbak.map(function (b) {
+    var items = (b.items || []).map(function (it) {
+      return '<li><span class="hist-qty">' + escapeHtml(String(it.qty)) + '×</span> ' + escapeHtml(it.naam || '') +
+        (it.custom ? '<span class="hist-extra">extra</span>' : '') + '</li>';
+    }).join('');
+    return '<div class="prod-hist-item">' +
+      '<div class="prod-hist-hdr"><span>🗑 ' + escapeHtml(b.datum || '') + ' ' + escapeHtml(b.tijd || '') +
+        (b.door ? ' · ' + escapeHtml(b.door) : '') + '</span>' +
+      '<span class="prod-hist-meta">' + (b.aantalProducten || 0) + ' prod · ' + (b.totaalStuks || 0) + ' stuks</span></div>' +
+      '<ul class="prod-hist-items">' + items + '</ul>' +
+      '<div class="prod-prul-tools" style="margin-top:8px;display:flex;gap:8px;">' +
+        '<button type="button" class="prod-btn-clear" onclick="restoreFromPrullenbak(\'' + escapeHtml(b.id) + '\')">↩ Terugzetten in selectie</button>' +
+        '<button type="button" class="prod-btn-clear" onclick="deleteFromPrullenbak(\'' + escapeHtml(b.id) + '\')" title="Definitief uit de prullenbak verwijderen">✕</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function restoreFromPrullenbak(id) {
+  var rec = bestelPrullenbak.filter(function (b) { return b.id === id; })[0];
+  if (!rec) { showToast('Niet gevonden'); return; }
+  applySnapshotItems(rec.items || []);
+  logBestelEvent('Selectie hersteld (prullenbak)', (rec.aantalProducten || 0) + ' prod · ' + (rec.totaalStuks || 0) + ' stuks');
+  setProdView('bestel');
+  showToast('↩ Selectie teruggezet');
+}
+
+function deleteFromPrullenbak(id) {
+  if (!bestelPrullenbakRef) return;
+  if (!confirm('Deze gewiste selectie definitief uit de prullenbak verwijderen?')) return;
+  bestelPrullenbakRef.child(id).remove().catch(function () {});
+}
+
+// Best-effort herstel van de LAATST gewiste selectie uit de activiteiten-log
+// (_bestelLog). Nodig voor selecties die gewist zijn vóór de prullenbak bestond.
+function reconstructFromLog() {
+  if (typeof fbdb === 'undefined') { showToast('Geen verbinding', true); return; }
+  showToast('Logboek doorzoeken…');
+  fbdb.ref('_bestelLog').once('value').then(function (snap) {
+    var d = snap.val() || {};
+    var entries = Object.values(d).filter(Boolean).sort(function (a, b) {
+      return (a.at || 0) - (b.at || 0);
+    });
+    // Index van de laatste "Selectie gewist".
+    var lastClear = -1;
+    for (var i = entries.length - 1; i >= 0; i--) {
+      if (entries[i].action === 'Selectie gewist') { lastClear = i; break; }
+    }
+    if (lastClear < 0) { showToast('Geen gewiste selectie in logboek', true); return; }
+    // Vorige reset (Selectie gewist) ervóór → daar begint deze selectie.
+    var start = 0;
+    for (var j = lastClear - 1; j >= 0; j--) {
+      if (entries[j].action === 'Selectie gewist') { start = j + 1; break; }
+    }
+    // Replay alle "Bestellijst aangepast" tussen start en de laatste clear.
+    var qtyByNaam = {};
+    for (var k = start; k < lastClear; k++) {
+      if (entries[k].action !== 'Bestellijst aangepast') continue;
+      var detail = entries[k].detail || '';
+      detail.split(', ').forEach(function (part) {
+        var m = part.match(/^(.*?)\s*→\s*(\d+)$/);
+        if (m) { qtyByNaam[m[1].trim()] = parseInt(m[2], 10); return; }
+        var z = part.match(/^(.*?)\s*\(0\)$/);
+        if (z) { qtyByNaam[z[1].trim()] = 0; }
+      });
+    }
+    // Naam → catalogus-id (anders custom product).
+    var cat = prodCatalog();
+    var idByNaam = {};
+    cat.forEach(function (p) { idByNaam[(p.naam || '').trim().toLowerCase()] = p; });
+    var items = [], aantal = 0, stuks = 0;
+    Object.keys(qtyByNaam).forEach(function (naam) {
+      var q = qtyByNaam[naam];
+      if (!q || q <= 0) return;
+      var p = idByNaam[naam.trim().toLowerCase()];
+      if (p) items.push({ id: p.id, naam: p.naam, qty: q, custom: false });
+      else items.push({ id: '', naam: naam, qty: q, custom: true });
+      aantal++; stuks += q;
+    });
+    if (!items.length) { showToast('Niets te herstellen uit logboek', true); return; }
+    if (!confirm('Gevonden: ' + aantal + ' producten · ' + stuks + ' stuks (gereconstrueerd uit de log).\n\nNu terugzetten in je selectie?')) return;
+    applySnapshotItems(items);
+    logBestelEvent('Selectie hersteld (uit logboek)', aantal + ' prod · ' + stuks + ' stuks');
+    setProdView('bestel');
+    showToast('♻️ Selectie hersteld uit logboek');
+  }).catch(function (e) {
+    console.warn('Logboek lezen mislukt:', e);
+    showToast('Logboek lezen mislukt', true);
+  });
 }
 
 function renderBestelHistoriek() {
