@@ -492,8 +492,32 @@ async function saveAndDownload(){
   }
 }
 
+// ── LOGO voor in de PDF ────────────────────────────────
+let logoDataUrl = null;
+const LOGO_RATIO = 3400/2229;   // breedte/hoogte van senorsnacks-logo.png
+function loadLogo(){
+  return new Promise(res=>{
+    if(logoDataUrl) return res();
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=>{
+      try{
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img,0,0);
+        logoDataUrl = c.toDataURL('image/png');
+      }catch(e){ console.warn('logo laden mislukt', e); }
+      res();
+    };
+    img.onerror = ()=>res();
+    img.src = 'senorsnacks-logo.png';
+  });
+}
+loadLogo();   // vast inladen bij het openen van de pagina
+
 // ── PDF — bon in tweevoud (1 PDF, 2 pagina's) ──────────
-function buildPDF(rec){
+async function buildPDF(rec){
+  await loadLogo();
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
   drawCopy(doc, rec, 'EXEMPLAAR KLANT');
@@ -510,10 +534,16 @@ function drawCopy(doc, rec, exemplaar){
 
   doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.setTextColor(230,23,59);
   doc.text('OPHAALBON', margin, 20);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,110,115);
-  doc.text('Señor Snacks', pageW - margin, 15, { align:'right' });
-  doc.setFontSize(8);
-  doc.text(exemplaar, pageW - margin, 20, { align:'right' });
+  // Señor Snacks-logo rechtsboven (valt terug op tekst als het beeld niet laadde)
+  if(logoDataUrl){
+    const lw = 17, lh = lw / LOGO_RATIO;
+    doc.addImage(logoDataUrl, 'PNG', pageW - margin - lw, 5, lw, lh);
+  } else {
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110,110,115);
+    doc.text('Señor Snacks', pageW - margin, 15, { align:'right' });
+  }
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(110,110,115);
+  doc.text(exemplaar, pageW - margin, 21, { align:'right' });
 
   doc.setDrawColor(230,23,59); doc.setLineWidth(0.6);
   doc.line(margin, 24, pageW - margin, 24);
