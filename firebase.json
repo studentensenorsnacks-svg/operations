@@ -422,6 +422,25 @@
       ]
     },
     {
+      "target": "offertes",
+      "public": "offertes-public",
+      "ignore": ["firebase.json", "**/.*"],
+      "rewrites": [
+        {
+          "source": "**",
+          "function": { "functionId": "offerteRouter", "region": "europe-west1" }
+        }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-store" }
+          ]
+        }
+      ]
+    },
+    {
       "target": "info",
       "public": "info",
       "ignore": [

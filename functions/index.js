@@ -17,6 +17,9 @@
 const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { logger } = require('firebase-functions');
 const admin = require('firebase-admin');
 
@@ -820,4 +823,284 @@ exports.deleteUser = onCall({ region: REGION }, async (request) => {
   if (uid === adminUid) throw new HttpsError('failed-precondition', 'Kan jezelf niet verwijderen.');
   await admin.auth().deleteUser(uid);
   return { uid };
+});
+
+// ── HTTP: SK Lommel offerte achter een code-gate ─────────────────
+// De volledige (gevoelige) offerte wordt server-side bewaard in
+// functions/lommel-offer.html en NOOIT statisch geserveerd: de hosting-target
+// 'lommel' herschrijft elke route naar deze functie. Zonder geldig, server-
+// ondertekend cookie krijgt de bezoeker enkel het inlogscherm te zien — de
+// offerte-HTML verlaat de server pas na de juiste code. Een puur front-end
+// gate zou de inhoud al meesturen; dit niet.
+const LOMMEL_CODE = '1932';
+// Server-side HMAC-sleutel: enkel nodig om het auth-cookie te ondertekenen
+// zodat het niet client-side te vervalsen is. Leeft alleen in deze (private)
+// functiebron, gaat nooit naar de browser.
+const LOMMEL_SIGN_KEY = 'lommel-sk-9f4c2e7a8b1d6035e2c9a4f70b8d1e63c5a27f90';
+// Firebase Hosting stuurt enkel een cookie met de naam `__session` door naar
+// de functie; alle andere cookies worden gestript. Vandaar deze naam.
+const LOMMEL_COOKIE = '__session';
+const LOMMEL_COOKIE_MAXAGE = 60 * 60 * 12; // 12 uur
+
+let _lommelHtml = null;
+function lommelHtml() {
+  if (_lommelHtml == null) {
+    _lommelHtml = fs.readFileSync(path.join(__dirname, 'lommel-offer.html'), 'utf8');
+  }
+  return _lommelHtml;
+}
+
+function lommelSign(payload) {
+  return crypto.createHmac('sha256', LOMMEL_SIGN_KEY).update(payload).digest('hex');
+}
+function lommelMakeToken() {
+  const payload = 'ok.' + Math.floor(Date.now() / 1000);
+  return payload + '.' + lommelSign(payload);
+}
+function lommelValidToken(tok) {
+  if (!tok || typeof tok !== 'string') return false;
+  const i = tok.lastIndexOf('.');
+  if (i < 0) return false;
+  const payload = tok.slice(0, i);
+  const sig = tok.slice(i + 1);
+  const expect = lommelSign(payload);
+  if (sig.length !== expect.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect));
+}
+function lommelParseCookies(req) {
+  const out = {};
+  (req.headers.cookie || '').split(';').forEach((p) => {
+    const idx = p.indexOf('=');
+    if (idx > -1) out[p.slice(0, idx).trim()] = decodeURIComponent(p.slice(idx + 1).trim());
+  });
+  return out;
+}
+function lommelLoginPage(error) {
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Señor Snacks · Offerte SK Lommel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#08231A;font-family:'Inter',system-ui,sans-serif;color:#F4F1EA;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:360px;text-align:center}
+.kick{font-size:10.5px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:#8FE3B5;margin-bottom:14px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:.95;letter-spacing:.02em;color:#F4F1EA;margin-bottom:6px}
+p.sub{font-size:13px;color:rgba(244,241,234,.6);margin-bottom:26px;line-height:1.5}
+form{display:flex;flex-direction:column;gap:12px}
+input{background:rgba(255,255,255,.06);border:1px solid rgba(143,227,181,.32);border-radius:10px;padding:14px 16px;font-size:18px;letter-spacing:.25em;text-align:center;color:#F4F1EA;font-family:'Bebas Neue',sans-serif;outline:none}
+input:focus{border-color:#8FE3B5}
+button{background:#8FE3B5;color:#08231A;border:0;border-radius:10px;padding:13px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+button:hover{background:#a5ecc4}
+.err{color:#ffb4a8;font-size:12.5px;margin-bottom:14px;min-height:16px}
+.foot{margin-top:24px;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(244,241,234,.4)}
+</style></head><body>
+<div class="card">
+  <div class="kick">Vertrouwelijk · Toegang vereist</div>
+  <h1>Offerte SK Lommel</h1>
+  <p class="sub">Deze offerte is beveiligd. Voer de toegangscode in om verder te gaan.</p>
+  ${error ? '<div class="err">Onjuiste code. Probeer opnieuw.</div>' : '<div class="err"></div>'}
+  <form method="POST" action="">
+    <input name="code" type="password" inputmode="numeric" autocomplete="off" autofocus placeholder="• • • •" aria-label="Toegangscode">
+    <button type="submit">Toegang</button>
+  </form>
+  <div class="foot">Señor Snacks · Taste — Enjoy — Smile</div>
+</div>
+</body></html>`;
+}
+
+exports.lommelOffer = onRequest({ region: REGION, memory: '512MiB' }, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Robots-Tag', 'noindex, nofollow');
+
+  const cookies = lommelParseCookies(req);
+  // Reeds geauthenticeerd → serveer de offerte.
+  if (lommelValidToken(cookies[LOMMEL_COOKIE])) {
+    res.status(200).type('html').send(lommelHtml());
+    return;
+  }
+
+  // Code-inzending.
+  if (req.method === 'POST') {
+    const rl = await rateLimit(req, 'lommelGate', { limit: 12, windowSec: 300 });
+    if (rl) {
+      res.set('Retry-After', String(rl.retryAfter));
+      res.status(429).type('html').send(lommelLoginPage(true));
+      return;
+    }
+    let code = '';
+    if (req.body && typeof req.body === 'object') code = String(req.body.code || '');
+    else if (typeof req.body === 'string') {
+      const m = /(?:^|&)code=([^&]*)/.exec(req.body);
+      code = m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    }
+    code = code.trim();
+    if (code === LOMMEL_CODE) {
+      res.set('Set-Cookie',
+        `${LOMMEL_COOKIE}=${lommelMakeToken()}; Max-Age=${LOMMEL_COOKIE_MAXAGE}; Path=/; HttpOnly; Secure; SameSite=Lax`);
+      res.status(200).type('html').send(lommelHtml());
+      return;
+    }
+    res.status(401).type('html').send(lommelLoginPage(true));
+    return;
+  }
+
+  // Geen geldig cookie → inlogscherm.
+  res.status(200).type('html').send(lommelLoginPage(false));
+});
+
+// ── HTTP: Señor Snacks klant-offertes (generieke code-gate) ──────
+// Elke klant-offerte krijgt een geheime URL onder senorsnacks-offertes.web.app
+// en zit achter een code-gate. Net als de Lommel-gate hierboven wordt de
+// (gevoelige) offerte-HTML server-side bewaard en verlaat ze de server pas na
+// de juiste code — een puur front-end gate zou de inhoud al meesturen.
+//
+// Een nieuwe offerte toevoegen = één regel in OFFERS + het HTML-bestand onder
+// functions/offers/. Het auth-cookie is per offerte gescopet (Path + id in het
+// ondertekende token), zodat toegang tot de ene offerte geen andere ontsluit.
+const OFFER_SIGN_KEY = 'ss-offertes-6d2a91f4c7b0e58a3f19d64c2b7e0a85f3c1d9b62e40a7c58';
+const OFFER_COOKIE = '__session'; // Firebase Hosting stuurt enkel deze cookie door.
+const OFFER_COOKIE_MAXAGE = 60 * 60 * 12; // 12 uur
+
+// Registry: pad (lowercase, zonder trailing slash) → offerte.
+const OFFERS = {
+  '/offerte-senorsnacks-jadaevents27020': {
+    id: 'jadaevents27020',
+    code: '014',
+    file: 'offers/jadaevents27020.html',
+    title: 'Offerte JADA Events',
+  },
+};
+
+function offerLookup(pathname) {
+  const key = (pathname || '/').toLowerCase().replace(/\/+$/, '') || '/';
+  return OFFERS[key] || null;
+}
+
+const _offerHtmlCache = {};
+function offerHtml(file) {
+  if (_offerHtmlCache[file] == null) {
+    _offerHtmlCache[file] = fs.readFileSync(path.join(__dirname, file), 'utf8');
+  }
+  return _offerHtmlCache[file];
+}
+
+function offerSign(payload) {
+  return crypto.createHmac('sha256', OFFER_SIGN_KEY).update(payload).digest('hex');
+}
+function offerMakeToken(id) {
+  const payload = id + '.' + Math.floor(Date.now() / 1000);
+  return payload + '.' + offerSign(payload);
+}
+function offerValidToken(tok, id) {
+  if (!tok || typeof tok !== 'string') return false;
+  const i = tok.lastIndexOf('.');
+  if (i < 0) return false;
+  const payload = tok.slice(0, i);
+  if (!payload.startsWith(id + '.')) return false; // token hoort bij déze offerte
+  const sig = tok.slice(i + 1);
+  const expect = offerSign(payload);
+  if (sig.length !== expect.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expect));
+}
+function offerParseCookies(req) {
+  const out = {};
+  (req.headers.cookie || '').split(';').forEach((p) => {
+    const idx = p.indexOf('=');
+    if (idx > -1) out[p.slice(0, idx).trim()] = decodeURIComponent(p.slice(idx + 1).trim());
+  });
+  return out;
+}
+function offerLoginPage(title, error) {
+  // Señor Snacks huisstijl: Deep Black basis, Snack Red als signaal,
+  // Anton (display) + Montserrat (tekst).
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Señor Snacks · ${title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#030304;font-family:'Montserrat',system-ui,sans-serif;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.bar{position:fixed;top:0;left:0;right:0;height:6px;background:#E6173B}
+.card{width:100%;max-width:370px;text-align:center}
+.wordmark{font-family:'Anton',sans-serif;font-size:20px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:22px}
+.wordmark .n{color:#E6173B}
+.kick{font-size:10px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#E6173B;margin-bottom:12px}
+h1{font-family:'Anton',sans-serif;font-weight:400;font-size:44px;line-height:.95;letter-spacing:.01em;text-transform:uppercase;margin-bottom:10px}
+p.sub{font-size:13.5px;color:#b9b9bc;margin-bottom:24px;line-height:1.5}
+form{display:flex;flex-direction:column;gap:12px}
+input{background:#111112;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:15px 16px;font-size:20px;letter-spacing:.35em;text-align:center;color:#fff;font-family:'Anton',sans-serif;outline:none}
+input:focus{border-color:#E6173B}
+button{background:#E6173B;color:#fff;border:0;border-radius:10px;padding:14px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:background .15s}
+button:hover{background:#c5122f}
+.err{color:#ff6b81;font-size:12.5px;margin-bottom:14px;min-height:16px}
+.foot{margin-top:26px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#6a6a6d}
+</style></head><body>
+<div class="bar"></div>
+<div class="card">
+  <div class="wordmark">SE<span class="n">Ñ</span>OR&nbsp;SNACKS</div>
+  <div class="kick">Vertrouwelijk · Toegang vereist</div>
+  <h1>${title}</h1>
+  <p class="sub">Deze offerte is beveiligd. Voer de toegangscode in om verder te gaan.</p>
+  ${error ? '<div class="err">Onjuiste code. Probeer opnieuw.</div>' : '<div class="err"></div>'}
+  <form method="POST" action="">
+    <input name="code" type="password" inputmode="numeric" autocomplete="off" autofocus placeholder="• • • •" aria-label="Toegangscode">
+    <button type="submit">Toegang</button>
+  </form>
+  <div class="foot">Taste · Enjoy · Smile</div>
+</div>
+</body></html>`;
+}
+
+exports.offerteRouter = onRequest({ region: REGION, memory: '512MiB' }, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Robots-Tag', 'noindex, nofollow');
+
+  const offer = offerLookup(req.path);
+  if (!offer) {
+    res.status(404).type('html').send(offerLoginPage('Offerte niet gevonden', false));
+    return;
+  }
+  const cookiePath = (req.path || '/').replace(/\/+$/, '') || '/';
+
+  const cookies = offerParseCookies(req);
+  // Reeds geauthenticeerd voor déze offerte → serveer ze.
+  if (offerValidToken(cookies[OFFER_COOKIE], offer.id)) {
+    res.status(200).type('html').send(offerHtml(offer.file));
+    return;
+  }
+
+  // Code-inzending.
+  if (req.method === 'POST') {
+    const rl = await rateLimit(req, `offerGate_${offer.id}`, { limit: 12, windowSec: 300 });
+    if (rl) {
+      res.set('Retry-After', String(rl.retryAfter));
+      res.status(429).type('html').send(offerLoginPage(offer.title, true));
+      return;
+    }
+    let code = '';
+    if (req.body && typeof req.body === 'object') code = String(req.body.code || '');
+    else if (typeof req.body === 'string') {
+      const m = /(?:^|&)code=([^&]*)/.exec(req.body);
+      code = m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    }
+    code = code.trim();
+    if (code === offer.code) {
+      res.set('Set-Cookie',
+        `${OFFER_COOKIE}=${offerMakeToken(offer.id)}; Max-Age=${OFFER_COOKIE_MAXAGE}; Path=${cookiePath}; HttpOnly; Secure; SameSite=Lax`);
+      res.status(200).type('html').send(offerHtml(offer.file));
+      return;
+    }
+    res.status(401).type('html').send(offerLoginPage(offer.title, true));
+    return;
+  }
+
+  // Geen geldig cookie → inlogscherm.
+  res.status(200).type('html').send(offerLoginPage(offer.title, false));
 });
