@@ -198,6 +198,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .at-name{}
 .at-rm{cursor:pointer;opacity:0.7;font-size:0.85rem;line-height:1;flex-shrink:0;font-weight:900;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,0.08);transition:all 0.12s;}
 .at-rm:hover{opacity:1;background:rgba(220,0,0,0.85);color:#fff;}
+.term-chip .term-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;max-width:120px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
+.term-chip .term-link:focus{outline:1px solid rgba(0,0,0,0.25);}
+.term-chip .term-sel{margin:0 2px 0 0;flex-shrink:0;cursor:pointer;}
+.term-bulk{display:flex;align-items:center;gap:4px;flex-basis:100%;margin-top:4px;}
+.term-bulk-input{flex:1;min-width:0;font-size:0.62rem;font-weight:600;border:1px solid #cbd5e1;border-radius:3px;padding:2px 4px;font-family:inherit;}
+.term-bulk-btn{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:2px 6px;background:#0891b2;color:#fff;cursor:pointer;white-space:nowrap;}
+.term-bulk-btn:hover{background:#0e7490;}
 .ll-icon{cursor:pointer;font-size:0.72rem;font-weight:800;line-height:1;flex-shrink:0;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;gap:3px;border-radius:4px;background:#1d4ed8;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.2);transition:all 0.12s;}
 .ll-icon:hover{background:#1e3a8a;transform:scale(1.08);box-shadow:0 2px 5px rgba(29,78,216,0.5);}
 .ll-icon::after{content:'PDF';letter-spacing:0.03em;}
@@ -288,6 +295,7 @@ textarea{resize:vertical;min-height:70px;}
 .evd-list{display:flex;flex-direction:column;gap:4px;}
 .evd-item{display:flex;align-items:center;gap:9px;font-size:0.88rem;font-weight:600;padding:6px 10px;background:#f7f7f7;border-radius:5px;border-left:3px solid var(--border);}
 .evd-idot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.evd-link{margin-left:auto;font-size:0.78rem;font-weight:700;color:#0891b2;}
 .evd-empty{font-size:0.82rem;color:#aaa;font-style:italic;padding:3px 2px;}
 .evd-day{margin-top:9px;}
 .evd-day-lbl{font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);margin-bottom:5px;}
@@ -367,6 +375,11 @@ textarea{resize:vertical;min-height:70px;}
 .pdf-camion-event{flex:1;min-width:0;}
 .pdf-camion-evname{font-family:var(--font-cond);font-size:1.05rem;font-weight:800;line-height:1.25;margin-bottom:3px;}
 .pdf-camion-evmeta{font-size:0.74rem;color:var(--muted);line-height:1.5;}
+/* PDF — per dag: welke voertuigen nog vrij zijn */
+.pdf-avail{padding:9px 14px;border:1px solid var(--border);border-top:none;background:#eef9f1;border-radius:0 0 5px 5px;display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.pdf-avail-lbl{font-size:0.78rem;font-weight:800;color:#176a3a;margin-right:2px;}
+.pdf-avail-chip{display:inline-block;padding:3px 9px;border:1.5px solid #b7dcc3;border-radius:4px;font-size:0.75rem;font-weight:700;background:#fff;}
+.pdf-avail-none{font-size:0.76rem;font-style:italic;color:#c0392b;font-weight:700;}
 .pdf-extra-input{width:100%;border:none;border-bottom:1px dotted #bbb;background:transparent;font-family:inherit;font-size:0.8rem;color:#333;padding:2px 0;margin-top:4px;outline:none;}
 .pdf-extra-input::placeholder{color:#c8c8c8;font-style:italic;}
 .pdf-extra-input:focus{border-bottom-color:var(--red);}
@@ -661,7 +674,7 @@ const GROUPS_CAMIONS=[
 ];
 // ── TERMINAL DATA — BETAAL TERMINALS ───────────────────
 const GROUPS_TERMINALS=[
-  {label:'💳 EP terminals',color:'#0891b2',bg:'#cffafe',trucks:Array.from({length:10},(_,i)=>'EP'+(i+1))},
+  {label:'💳 EP terminals',color:'#0891b2',bg:'#cffafe',trucks:Array.from({length:20},(_,i)=>'EP'+(i+1))},
   {label:'💳 Betaal terminals',color:'#0d9488',bg:'#ccfbf1',trucks:Array.from({length:30},(_,i)=>'Terminal '+(i+1))}
 ];
 // ── LOGISTIEK DATA ─────────────────────────────────────
@@ -846,6 +859,8 @@ function sanitizeEvents(arr){
     truckDays:(e.truckDays && typeof e.truckDays === 'object' && !Array.isArray(e.truckDays))?e.truckDays:{},
     terminals:Array.isArray(e.terminals)?e.terminals:[],
     terminalDays:(e.terminalDays && typeof e.terminalDays === 'object' && !Array.isArray(e.terminalDays))?e.terminalDays:{},
+    // Per-event koppeling betaalterminal → wagen: { "EP3":"Snackbar 1", ... }
+    terminalTruck:(e.terminalTruck && typeof e.terminalTruck === 'object' && !Array.isArray(e.terminalTruck))?e.terminalTruck:{},
     logistiek:(e.logistiek && typeof e.logistiek === 'object' && !Array.isArray(e.logistiek))?e.logistiek:{},
     logistiekDays:(e.logistiekDays && typeof e.logistiekDays === 'object' && !Array.isArray(e.logistiekDays))?e.logistiekDays:{},
     notes:typeof e.notes==='string'?e.notes:'',
@@ -1263,7 +1278,60 @@ function rmTruck(evId,truck,date){
     ev[itemsF]=(ev[itemsF]||[]).filter(t=>t!==truck);
   }
   if(window.logDeletion)logDeletion('event-truck',truck+' losgekoppeld van "'+(ev.name||evId)+'"'+(date?(' ('+date+')'):''),{ref:evId,event:ev.name,truck:truck,date:date||null});
+  pruneTerminalLinks(ev);
   save();renderWeek();
+}
+
+// ── BETAALTERMINAL ↔ WAGEN (per event) ─────────────────
+// Koppel een betaalterminal aan een wagen van hetzelfde event. De koppeling
+// staat per event in ev.terminalTruck = { "<terminal>": "<wagen>" }.
+function setTerminalTruck(evId, terminal, truck){
+  const ev=events.find(e=>e.id===evId);if(!ev)return;
+  if(!ev.terminalTruck || typeof ev.terminalTruck!=='object' || Array.isArray(ev.terminalTruck)) ev.terminalTruck={};
+  if(truck) ev.terminalTruck[terminal]=truck;
+  else delete ev.terminalTruck[terminal];
+  save();renderWeek();
+}
+// Bulk: koppel alle aangevinkte terminals van één event-card aan dezelfde waarde
+// (wagen of vrije tekst). Lege waarde = koppeling van de selectie wissen.
+function bulkLinkTerminals(evId, btn){
+  const card = btn.closest('.event-card'); if(!card) return;
+  const val = (card.querySelector('.term-bulk-input')?.value || '').trim();
+  const checks = card.querySelectorAll('.term-sel:checked');
+  if(!checks.length){ showToast('Vink eerst één of meer terminals aan'); return; }
+  const ev=events.find(e=>e.id===evId); if(!ev) return;
+  if(!ev.terminalTruck || typeof ev.terminalTruck!=='object' || Array.isArray(ev.terminalTruck)) ev.terminalTruck={};
+  checks.forEach(c=>{
+    const term=c.getAttribute('data-term');
+    if(val) ev.terminalTruck[term]=val;
+    else delete ev.terminalTruck[term];
+  });
+  save();renderWeek();
+}
+// Verwijder koppelingen die niet meer kloppen (terminal of wagen weg uit event).
+function pruneTerminalLinks(ev){
+  if(!ev || !ev.terminalTruck || typeof ev.terminalTruck!=='object') return;
+  const terms=new Set(Array.isArray(ev.terminals)?ev.terminals:[]);
+  if(ev.terminalDays && typeof ev.terminalDays==='object') Object.values(ev.terminalDays).forEach(a=>(a||[]).forEach(t=>terms.add(t)));
+  const trucks=new Set(Array.isArray(ev.trucks)?ev.trucks:[]);
+  Object.keys(ev.terminalTruck).forEach(term=>{
+    if(!terms.has(term) || !trucks.has(ev.terminalTruck[term])) delete ev.terminalTruck[term];
+  });
+}
+// Invulveld in een terminal-chip: koppel aan een wagen van dit event, of typ
+// vrij iets in (bv. "dranktent"). De wagens komen als suggesties in een datalist.
+function terminalLinkSelect(ev, terminal){
+  // Enkel echte wagens, geen camionetten/camions (zitten in hetzelfde trucks-veld).
+  const trucks = (Array.isArray(ev.trucks)?ev.trucks:[]).filter(t=>{ const i=TRUCK_INFO[t]; return !(i && i.kind==='camions'); });
+  const cur = (ev.terminalTruck && ev.terminalTruck[terminal]) || '';
+  const tj = s=>s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const ea = s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const dlId = `dl-${ev.id}-${terminal.replace(/[^a-zA-Z0-9]/g,'')}`;
+  const opts = trucks.map(t=>`<option value="${ea(t)}"></option>`).join('');
+  return `<input class="term-link" list="${dlId}" value="${ea(cur)}" placeholder="wagen / vrij…" `
+    + `onclick="event.stopPropagation()" `
+    + `onchange="event.stopPropagation();setTerminalTruck(${ev.id},'${tj(terminal)}',this.value.trim())">`
+    + `<datalist id="${dlId}">${opts}</datalist>`;
 }
 function showToast(msg){const t=document.getElementById('c-toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),6000);}
 
@@ -1414,14 +1482,29 @@ function renderWeek(){
         areaHtml = `<div class="ev-logi-area">${logiCardBody(ev, ds)}</div>`;
       } else {
         const trucksForDay = getTrucksForDay(ev, ds);
+        const isTerm = currentMode === 'terminals';
         const tHtml=trucksForDay.map(t=>{
           const c=TC[t]||{color:'#555',bg:'#eee'};
           const rmCall = isPerDay && isMultiDay ? `rmTruck(${ev.id},'${te(t)}','${ds}')` : `rmTruck(${ev.id},'${te(t)}')`;
+          if(isTerm){
+            // Betaalterminal: selectievakje (voor bulk-koppelen) + koppel aan wagen/vrij.
+            return `<span class="assigned-truck term-chip" style="background:${c.bg};color:${c.color}"><input type="checkbox" class="term-sel" data-term="${t}" title="Selecteer om samen te koppelen" onclick="event.stopPropagation()">${t}${terminalLinkSelect(ev,t)}<span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
+          }
           const llk = findLLs(String(ev.id), t).length;
           return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?llk+' laadlijst(en) — klik om te bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
         }).join('');
         const pickerCall = isPerDay && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
-        areaHtml = `<div class="ev-trucks-area">${tHtml}<button type="button" class="btn-add-trucks" onclick="event.stopPropagation();${pickerCall}">+ Trucks</button></div>`;
+        let bulkBar = '';
+        if(isTerm && trucksForDay.length){
+          const evWagens=(ev.trucks||[]).filter(t=>{const i=TRUCK_INFO[t];return !(i&&i.kind==='camions');});
+          const wopts=evWagens.map(t=>`<option value="${t}"></option>`).join('');
+          bulkBar = `<div class="term-bulk" onclick="event.stopPropagation()">
+            <input class="term-bulk-input" list="dlb-${cardId}" placeholder="koppel selectie aan… (wagen / vrij)">
+            <datalist id="dlb-${cardId}">${wopts}</datalist>
+            <button type="button" class="term-bulk-btn" onclick="event.stopPropagation();bulkLinkTerminals(${ev.id},this)">→ toepassen</button>
+          </div>`;
+        }
+        areaHtml = `<div class="ev-trucks-area">${tHtml}<button type="button" class="btn-add-trucks" onclick="event.stopPropagation();${pickerCall}">+ Trucks</button>${bulkBar}</div>`;
       }
       return `<div class="event-card${isMultiDay?' is-multiday':''}" id="${cardId}" style="border-left-color:${ev.color}" onclick="openEvDetail(${ev.id})" ondragover="onDOv(event,${ev.id}${dragArgs})" ondragleave="onDLv(${ev.id}${dragArgs})" ondrop="onDrp(event,${ev.id}${dragArgs})">
         <div class="event-head">
@@ -1517,7 +1600,8 @@ function evCatHTML(ev, scopeDate){
 
   const itemRow = n => {
     const info = TRUCK_INFO[n] || {color:'#999'};
-    return `<div class="evd-item" style="border-left-color:${info.color}"><span class="evd-idot" style="background:${info.color}"></span>${n}</div>`;
+    const link = (ev.terminalTruck && ev.terminalTruck[n]) ? `<span class="evd-link">→ ${ev.terminalTruck[n]}</span>` : '';
+    return `<div class="evd-item" style="border-left-color:${info.color}"><span class="evd-idot" style="background:${info.color}"></span>${n}${link}</div>`;
   };
   const itemList = arr => `<div class="evd-list">${arr.map(itemRow).join('')}</div>`;
 
@@ -2091,7 +2175,9 @@ function openVehiclePDF(mode){
       const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
       const chips=ev.trucksOnEv.map(t=>{
         const c=TC[t]||{color:'#555',bg:'#eee'};
-        return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}</div>`;
+        // In de terminals-PDF: toon de gekoppelde wagen achter de terminal.
+        const link = (mode==='terminals' && ev.terminalTruck && ev.terminalTruck[t]) ? ` → ${ev.terminalTruck[t]}` : '';
+        return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}${link}</div>`;
       }).join('');
       return `<div class="pdf-camion-row">
         <div class="pdf-camion-chips">${chips}
@@ -2108,9 +2194,27 @@ function openVehiclePDF(mode){
     }).join('');
 
     if (!dayEvs.length) return '';
+
+    // Welke voertuigen zijn deze dag NOG vrij? (alle relevante min de ingeplande)
+    // Enkel tonen bij camionetten — niet bij terminals/wagens.
+    let availBlock = '';
+    if (mode === 'camions') {
+      const usedToday = new Set();
+      dayEvs.forEach(ev => ev.trucksOnEv.forEach(t => usedToday.add(t)));
+      const availToday = [...relevantTrucks].filter(t => !usedToday.has(t));
+      const availChips = availToday.length
+        ? availToday.map(t=>{
+            const c=TC[t]||{color:'#176a3a'};
+            return `<span class="pdf-avail-chip" style="border-color:${c.color};color:${c.color}">${t}</span>`;
+          }).join('')
+        : `<span class="pdf-avail-none">⚠ Alles in gebruik — niets meer vrij</span>`;
+      availBlock = `<div class="pdf-avail"><span class="pdf-avail-lbl">✅ Nog beschikbaar (${availToday.length}/${relevantTrucks.size}):</span>${availChips}</div>`;
+    }
+
     return `<div class="pdf-day-block">
       <div class="pdf-day-hdr${isT?' today-day':''}">${DAYS_FULL[di]} ${day.getDate()} ${day.toLocaleDateString('nl-NL',{month:'long'})}${isT?' · Vandaag':''}</div>
       ${rows}
+      ${availBlock}
     </div>`;
   }).join('');
 
