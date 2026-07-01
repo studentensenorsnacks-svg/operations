@@ -22,6 +22,11 @@
       ],
       "redirects": [
         {
+          "source": "/trucks/:rest*",
+          "destination": "https://senorkeuringqr.web.app/trucks/:rest*",
+          "type": 301
+        },
+        {
           "source": "/event-sheet.html",
           "destination": "https://eventsheet-app.web.app/app",
           "type": 301
@@ -120,6 +125,11 @@
         "firestore.rules"
       ],
       "redirects": [
+        {
+          "source": "/trucks/:rest*",
+          "destination": "https://senorkeuringqr.web.app/trucks/:rest*",
+          "type": 301
+        },
         {
           "source": "/event-sheet.html",
           "destination": "https://eventsheet-app.web.app/app",
@@ -223,6 +233,190 @@
           "source": "**/*.html",
           "headers": [
             { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-digital-v2",
+      "public": "vsm-digital-v2",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-hypermode",
+      "public": "vsm-hypermode",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-cobalt",
+      "public": "vsm-cobalt",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-terminal",
+      "public": "vsm-terminal",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-conductor",
+      "public": "vsm-conductor",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-analog",
+      "public": "vsm-analog",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-multiverse",
+      "public": "vsm-multiverse",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-acid",
+      "public": "vsm-acid",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "vsm-os",
+      "public": "vsm-os",
+      "ignore": [],
+      "headers": [
+        { "source": "**/*.html", "headers": [ { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" } ] }
+      ]
+    },
+    {
+      "target": "vsm-magazine",
+      "public": "vsm-magazine",
+      "ignore": [],
+      "headers": [
+        { "source": "**/*.html", "headers": [ { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" } ] }
+      ]
+    },
+    {
+      "target": "vsm-galaxy",
+      "public": "vsm-galaxy",
+      "ignore": [],
+      "headers": [
+        { "source": "**/*.html", "headers": [ { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" } ] }
+      ]
+    },
+    {
+      "target": "vsm-gesprek",
+      "public": "vsm-chat",
+      "ignore": [],
+      "headers": [
+        { "source": "**/*.html", "headers": [ { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" } ] }
+      ]
+    },
+    {
+      "target": "vsm-cli",
+      "public": "vsm-cli",
+      "ignore": [],
+      "headers": [
+        { "source": "**/*.html", "headers": [ { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" } ] }
+      ]
+    },
+    {
+      "target": "vsm-archief",
+      "public": "vsm-archief",
+      "ignore": [],
+      "headers": [
+        { "source": "**/*.html", "headers": [ { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" } ] }
+      ]
+    },
+    {
+      "target": "senorsnacks-card",
+      "public": "senorsnacks-card",
+      "ignore": [],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, max-age=0, must-revalidate" }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "lommel",
+      "public": "lommel-sk-offerte",
+      "ignore": ["firebase.json", "**/.*"],
+      "rewrites": [
+        {
+          "source": "**",
+          "function": { "functionId": "lommelOffer", "region": "europe-west1" }
+        }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-store" }
           ]
         }
       ]

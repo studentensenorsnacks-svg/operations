@@ -133,6 +133,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cv-stroomkast-32{background:rgba(234,179,8,0.22);border-color:#a16207;color:#713f12;}
 .cv-stroomkast-63{background:rgba(249,115,22,0.28);border-color:#c2410c;color:#7c2d12;}
 .cv-stroomkast-125{background:rgba(232,0,29,0.22);border-color:var(--red);color:#7f1d1d;}
+.cv-aggregaat{background:rgba(120,120,130,0.18);border-color:#52525b;color:#3f3f46;}
+/* verkoopkant-markering langs één lange zijde (roteert mee met item) */
+.cv-verkoop{position:absolute;pointer-events:none;z-index:2;background:repeating-linear-gradient(45deg,#15803d,#15803d 4px,#22c55e 4px,#22c55e 8px);}
+.cv-verkoop.vk-top{top:0;left:0;right:0;height:5px;}
+.cv-verkoop.vk-bottom{bottom:0;left:0;right:0;height:5px;}
+.cv-verkoop.vk-left{top:0;bottom:0;left:0;width:5px;}
+.cv-verkoop.vk-right{top:0;bottom:0;right:0;width:5px;}
 
 /* Inspector */
 .pg-inspector{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);}
@@ -538,17 +545,24 @@ const CATALOG = {
     { id:'tent5',     name:'Tent 5×5',      kind:'tent',       w:5,    h:5,    icon:'⛺' },
   ],
   containers: [
-    { id:'cont20',    name:'Container 20ft', kind:'container', w:6.06, h:2.44, icon:'📦' },
-    { id:'cont10',    name:'Container 10ft', kind:'container', w:2.99, h:2.44, icon:'📦' },
+    { id:'cont20',    name:'Container 20ft', kind:'container', w:6.06, h:2.44, icon:'📦', verkoop:true },
+    { id:'cont10',    name:'Container 10ft', kind:'container', w:2.99, h:2.44, icon:'📦', verkoop:true },
   ],
   foodtrucks: [
-    { id:'truck8',    name:'Foodtruck 8m',  kind:'foodtruck',  w:8,    h:2.5,  icon:'🚚' },
-    { id:'truck5',    name:'Foodtruck 5m',  kind:'foodtruck',  w:5,    h:2.5,  icon:'🚚' },
+    { id:'truck8',    name:'Foodtruck 8m',  kind:'foodtruck',  w:8,    h:2.5,  icon:'🚚', verkoop:true },
+    { id:'truck5',    name:'Foodtruck 5m',  kind:'foodtruck',  w:5,    h:2.5,  icon:'🚚', verkoop:true },
+    { id:'camion8',   name:'Camion 8m',     kind:'foodtruck',  w:8,    h:2.5,  icon:'🚛' },
   ],
   stroomkasten: [
     { id:'sk32',  name:'Stroomkast 32A',  kind:'stroomkast', amp:32,  w:1, h:1, icon:'⚡' },
     { id:'sk63',  name:'Stroomkast 63A',  kind:'stroomkast', amp:63,  w:1.2, h:1.2, icon:'⚡' },
     { id:'sk125', name:'Stroomkast 125A', kind:'stroomkast', amp:125, w:1.4, h:1.4, icon:'⚡' },
+    { id:'aggregaat', name:'Stroomgroep', kind:'aggregaat', w:2.5, h:1.5, icon:'🔌' },
+  ],
+  // Footprints voor automatische plaatsing van event-trucks (niet in het palet getoond)
+  _auto: [
+    { id:'auto_w8',  name:'Wagen 8m',   kind:'foodtruck', w:8,   h:2.5, icon:'🚚', verkoop:true },
+    { id:'auto_w55', name:'Wagen 5,5m', kind:'foodtruck', w:5.5, h:2.5, icon:'🚚', verkoop:true },
   ],
 };
 
@@ -607,7 +621,7 @@ function loadAll(){
       // veld moet minstens groot genoeg zijn voor alle items
       let maxX = p.fieldW || 40, maxY = p.fieldH || 25;
       for(const it of Object.values(p.items)){
-        const cat = (CATALOG.tenten.concat(CATALOG.containers, CATALOG.foodtrucks, CATALOG.stroomkasten)).find(x=>x.id===it.catId) || (v.customCatalog||{})[it.catId];
+        const cat = catalogById(it.catId);
         if(!cat) continue;
         const rotated = (it.rot||0) % 180 !== 0;
         const w = rotated ? cat.h : cat.w;
@@ -1052,26 +1066,55 @@ function startBlank(){
   scheduleSave();
 }
 
-// Kies een palet-footprint per truck op basis van zijn type
-function unitCatId(rec){
-  const type = (rec.type||'').toLowerCase();
-  if(type.startsWith('container'))    return 'cont20';   // 6,06 × 2,44 m
-  if(type.startsWith('aanhangwagen')) return 'cont10';   // 2,99 × 2,44 m
-  return 'truck5';                                        // wagens/voertuigen 5 × 2,5 m
+// Korte code/nummer uit de truck-naam (label op het plan): C110, S101, 801…
+function shortCode(name){
+  const s = String(name||'');
+  const c = s.match(/\b([CS]\s?\d{2,4})\b/i);          // container-/stockagecode
+  if(c) return c[1].toUpperCase().replace(/\s+/g,'');
+  const t = s.match(/(\d{1,4})\s*$/);                  // nummer achteraan
+  if(t) return t[1];
+  const a = s.match(/\d+/);                            // eerste getal
+  return a ? a[0] : s;
 }
 
-// Plaats de gekoppelde trucks netjes in rijen op het veld
+// Footprint + label per truck:
+//  • containers: C1xx/S1xx = 10ft (2,99 m), anders 20ft (6,06 m)
+//  • wagens/voertuigen: nummer > 600 = 8 m, anders 5,5 m
+function unitFootprint(rec){
+  const type = (rec.type||'').toLowerCase();
+  const code = shortCode(rec.name);
+  const num  = parseInt((String(rec.name).match(/(\d{1,4})\s*$/)||[])[1]
+              || (String(rec.name).match(/\d+/)||[])[0] || '0', 10);
+  if(type.startsWith('container')){
+    const catId = Math.floor(num/100) === 1 ? 'cont10' : 'cont20';
+    return { catId, label: code };
+  }
+  return { catId: num > 600 ? 'auto_w8' : 'auto_w55', label: code };
+}
+
+// Plaats de gekoppelde trucks netjes in rijen op het veld.
+// Containers staan gegroepeerd en tegen elkaar (geen tussenruimte),
+// wagens/voertuigen krijgen onderling wat marge.
 function autoPlaceUnits(p, units){
-  const margin = 1, gap = 1.5, maxRowW = 34;   // meter
-  let x = margin, y = margin, rowH = 0, idx = 0;
-  for(const rec of units){
-    const catId = unitCatId(rec);
-    const cat = catalogById(catId); if(!cat) continue;
-    if(x > margin && x + cat.w > maxRowW){ x = margin; y += rowH + gap; rowH = 0; }
+  const margin = 1, gapWagen = 1.5, maxRowW = 34;   // meter
+  // containers eerst (gegroepeerd), daarna de rest
+  const order = units.slice().sort((a,b)=>{
+    const ca = (a.type||'').toLowerCase().startsWith('container') ? 0 : 1;
+    const cb = (b.type||'').toLowerCase().startsWith('container') ? 0 : 1;
+    return ca - cb;
+  });
+  let x = margin, y = margin, rowH = 0, idx = 0, prevWasCont = false;
+  for(const rec of order){
+    const fp = unitFootprint(rec);
+    const cat = catalogById(fp.catId); if(!cat) continue;
+    const isCont = fp.catId.indexOf('cont') === 0;
+    if(idx > 0) x += (isCont && prevWasCont) ? 0 : gapWagen;   // containers tegen elkaar
+    if(x > margin && x + cat.w > maxRowW){ x = margin; y += rowH + gapWagen; rowH = 0; }
     const iid = 'i_'+Date.now()+'_'+(idx++)+'_'+Math.floor(Math.random()*999);
-    p.items[iid] = { catId, x:+x.toFixed(2), y:+y.toFixed(2), rot:0, naam: rec.name };
-    x += cat.w + gap;
+    p.items[iid] = { catId: fp.catId, x:+x.toFixed(2), y:+y.toFixed(2), rot:0, naam: fp.label };
+    x += cat.w;
     rowH = Math.max(rowH, cat.h);
+    prevWasCont = isCont;
   }
   // veld groot genoeg maken voor alle items
   let maxX = 0, maxY = 0;
@@ -1216,13 +1259,22 @@ function buildItemEl(id, item, pxScale){
   let label = cat.name;
   if(cat.kind === 'stroomkast'){
     label = `#${item.nummer || '?'}<br><span style="font-size:10px;font-weight:600;">${cat.amp}A</span>`;
+  } else if(item.naam){
+    // benoemd item (bv. event-truck) → enkel de code/tekst tonen
+    label = escapeHTML(item.naam);
   } else {
     const ico = cat.icon || (cat.kind==='custom' ? '📐' : '');
-    const naam = item.naam ? escapeHTML(item.naam) : escapeHTML(cat.name);
-    const sub = item.naam ? `<span style="font-size:9px;font-weight:500;opacity:.75;">${escapeHTML(cat.name)}</span>` : '';
-    label = `<span style="font-size:14px;">${ico}</span><br>${naam}${sub?'<br>'+sub:''}`;
+    label = `<span style="font-size:14px;">${ico}</span><br>${escapeHTML(cat.name)}`;
   }
   el.innerHTML = `<div class="cv-item-label">${label}</div>`;
+  // verkoopkant langs één lange zijde — roteert mee (0→onder, 90→links, 180→boven, 270→rechts)
+  if(cat.verkoop){
+    const edge = {0:'bottom',90:'left',180:'top',270:'right'}[(item.rot||0)%360] || 'bottom';
+    const vk = document.createElement('div');
+    vk.className = 'cv-verkoop vk-'+edge;
+    vk.title = 'Verkoopkant';
+    el.appendChild(vk);
+  }
   attachItemDrag(el, id);
   return el;
 }
@@ -1325,10 +1377,14 @@ function setItemNaam(val){
   const el = document.querySelector(`.cv-item[data-id="${selectedItemId}"]`);
   if(el){
     const cat = catalogById(item.catId);
-    const ico = cat.icon || (cat.kind==='custom' ? '📐' : '');
-    const naam = item.naam ? escapeHTML(item.naam) : escapeHTML(cat.name);
-    const sub = item.naam ? `<span style="font-size:9px;font-weight:500;opacity:.75;">${escapeHTML(cat.name)}</span>` : '';
-    el.querySelector('.cv-item-label').innerHTML = `<span style="font-size:14px;">${ico}</span><br>${naam}${sub?'<br>'+sub:''}`;
+    let label;
+    if(item.naam){
+      label = escapeHTML(item.naam);
+    } else {
+      const ico = cat.icon || (cat.kind==='custom' ? '📐' : '');
+      label = `<span style="font-size:14px;">${ico}</span><br>${escapeHTML(cat.name)}`;
+    }
+    el.querySelector('.cv-item-label').innerHTML = label;
   }
   scheduleSave();
 }

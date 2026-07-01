@@ -21,6 +21,54 @@
         ],
         "vsm-digital": [
           "vsm-digital"
+        ],
+        "vsm-digital-v2": [
+          "vsm-digital-v2"
+        ],
+        "vsm-hypermode": [
+          "vsm-hypermode"
+        ],
+        "vsm-cobalt": [
+          "vsm-cobalt"
+        ],
+        "vsm-terminal": [
+          "vsm-terminal"
+        ],
+        "vsm-conductor": [
+          "vsm-conductor"
+        ],
+        "vsm-analog": [
+          "vsm-analog"
+        ],
+        "vsm-multiverse": [
+          "vsm-multiverse"
+        ],
+        "vsm-acid": [
+          "vsm-acid"
+        ],
+        "vsm-os": [
+          "vsm-os"
+        ],
+        "vsm-magazine": [
+          "vsm-magazine"
+        ],
+        "vsm-galaxy": [
+          "vsm-galaxy"
+        ],
+        "vsm-gesprek": [
+          "vsm-gesprek"
+        ],
+        "vsm-cli": [
+          "vsm-cli"
+        ],
+        "vsm-archief": [
+          "vsm-archief"
+        ],
+        "senorsnacks-card": [
+          "senorsnacks-card"
+        ],
+        "lommel": [
+          "senorsnacks-lommel-sk-offerte"
         ]
       }
     },
