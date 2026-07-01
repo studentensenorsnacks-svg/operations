@@ -973,6 +973,15 @@ const OFFERS = {
     file: 'offers/jadaevents27020.html',
     title: 'Offerte JADA Events',
   },
+  // Detail-offerte als sub-pad. Deelt id + code met de landing hierboven, zodat
+  // één keer de code invoeren op de landing ook deze pagina ontsluit: de cookie
+  // wordt op Path=/offerte-senorsnacks-jadaevents27020 gezet en dekt dit sub-pad.
+  '/offerte-senorsnacks-jadaevents27020/familiedag': {
+    id: 'jadaevents27020',
+    code: '014',
+    file: 'offers/jadaevents27020-familiedag.html',
+    title: 'Offerte JADA Events · Familiedag 27 020',
+  },
 };
 
 function offerLookup(pathname) {
