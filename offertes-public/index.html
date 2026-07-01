@@ -115,8 +115,8 @@
   table.price td{font-size:12px;padding:8px;border-bottom:1px solid var(--border);vertical-align:top;}
   table.price td .lbl{font-weight:700;}
   table.price td .sub{font-size:10px;color:var(--muted);margin-top:1px;}
-  .edit{border-bottom:2px solid var(--red);padding:0 2px;outline:none;font-weight:700;min-width:14px;display:inline-block;}
-  .edit:focus{background:rgba(230,23,59,.09);}
+  .edit{padding:0;font-weight:700;display:inline;}
+  
   tr.sum td{border-bottom:none;border-top:2px solid var(--black);font-weight:800;font-size:14px;padding-top:11px;}
   tr.opt td{color:var(--muted);}
   .totalbox{margin-top:13px;background:var(--black);color:var(--white);border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;}
@@ -140,23 +140,20 @@
   /* ---------- closing ---------- */
   .closing{background:var(--black);color:var(--white);border-radius:12px;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;}
   /* ---------- helper ---------- */
-  .helper{position:fixed;top:14px;right:14px;background:var(--black);color:var(--white);font-size:11px;border-radius:10px;padding:11px 14px;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:230px;z-index:50;font-weight:500;}
+  .dlbtn{position:fixed;bottom:16px;right:16px;background:var(--red);color:#fff;font-size:12px;font-weight:700;border-radius:8px;padding:10px 16px;text-decoration:none;box-shadow:0 6px 18px rgba(230,23,59,.35);z-index:50;font-family:'Montserrat',sans-serif;letter-spacing:.02em;}
   .helper b{color:var(--red);}
   .helper button{margin-top:8px;width:100%;background:var(--red);color:#fff;border:none;border-radius:7px;padding:8px;font-weight:700;font-size:11px;cursor:pointer;font-family:'Montserrat',sans-serif;}
   @media print{
     body{background:#fff;padding:0;}
     .page{box-shadow:none;margin:0;page-break-after:always;}
-    .helper{display:none;}
+    .helper,.dlbtn{display:none;}
     @page{size:A4;margin:0;}
   }
 </style>
 </head>
 <body>
 
-<div class="helper">
-  <b>Bewerkbare offerte.</b> Klik op een onderstreept cijfer (prijs of aantal) om aan te passen — het totaal rekent live mee.
-  <button onclick="window.print()">Afdrukken / PDF</button>
-</div>
+<a class="dlbtn" href="#" onclick="window.print();return false;">Download als PDF</a>
 
 <!-- ============ P1 — COVER ============ -->
 <section class="page cover">
@@ -358,16 +355,16 @@
 
   <div class="eyebrow">Prijsvoorstel · all-in per persoon</div>
   <h2 class="display" style="margin-bottom:2px;">Prijsberekening</h2>
-  <p class="small" style="margin-bottom:12px;">Alles verloopt via bonnen — <b>1 bon = € <span class="edit" id="p-bon" contenteditable>2,30</span> excl. btw</b>. Elke gast krijgt een vast pakket bonnen; elk gerecht of drankje kost een aantal bonnen (zie menukaart).</p>
+  <p class="small" style="margin-bottom:12px;">Alles verloopt via bonnen — <b>1 bon = € <span class="edit" id="p-bon">2,30</span> excl. btw</b>. Elke gast krijgt een vast pakket bonnen; elk gerecht of drankje kost een aantal bonnen (zie menukaart).</p>
 
   <table class="price">
     <thead><tr><th>Onderdeel</th><th class="r">Aantal</th><th class="r">Bonnen p.p.</th><th class="r">Subtotaal</th></tr></thead>
     <tbody>
-      <tr><td><span class="lbl">Volwassene — bonnenpakket</span><div class="sub">± 7 eten + 5 drank · vrij te besteden over alle trucks</div></td><td class="r"><span class="edit" id="n-volw" contenteditable>750</span></td><td class="r"><span class="edit" id="b-volw" contenteditable>12</span> bon</td><td class="r" id="s-volw">—</td></tr>
-      <tr><td><span class="lbl">Kind — bonnenpakket</span><div class="sub">kindvriendelijke porties + dessert + drank</div></td><td class="r"><span class="edit" id="n-kind" contenteditable>350</span></td><td class="r"><span class="edit" id="b-kind" contenteditable>7</span> bon</td><td class="r" id="s-kind">—</td></tr>
-      <tr><td><span class="lbl">Transport, opbouw &amp; afbouw</span><div class="sub">levering &amp; opbouw daags vóór het event · plaatsing 5 trucks + drankbar · afbouw na afloop</div></td><td class="r"><span class="small">forfait</span></td><td class="r"></td><td class="r">€ <span class="edit" id="f-transport" contenteditable>1450</span></td></tr>
-      <tr><td><span class="lbl">Operationele coördinatie &amp; on-site management</span><div class="sub">vaste accountmanager · floormanager · nazorgrapport</div></td><td class="r"><span class="small">forfait</span></td><td class="r"></td><td class="r">€ <span class="edit" id="f-coord" contenteditable>1200</span></td></tr>
-      <tr><td><span class="lbl">Bonnensysteem</span><div class="sub">druk van de genummerde bonnen</div></td><td class="r"><span class="small">forfait</span></td><td class="r"></td><td class="r">€ <span class="edit" id="f-bonnen" contenteditable>750</span></td></tr>
+      <tr><td><span class="lbl">Volwassene — bonnenpakket</span><div class="sub">± 7 eten + 5 drank · vrij te besteden over alle trucks</div></td><td class="r"><span class="edit" id="n-volw">750</span></td><td class="r"><span class="edit" id="b-volw">12</span> bon</td><td class="r" id="s-volw">—</td></tr>
+      <tr><td><span class="lbl">Kind — bonnenpakket</span><div class="sub">kindvriendelijke porties + dessert + drank</div></td><td class="r"><span class="edit" id="n-kind">350</span></td><td class="r"><span class="edit" id="b-kind">7</span> bon</td><td class="r" id="s-kind">—</td></tr>
+      <tr><td><span class="lbl">Transport, opbouw &amp; afbouw</span><div class="sub">levering &amp; opbouw daags vóór het event · plaatsing 5 trucks + drankbar · afbouw na afloop</div></td><td class="r"><span class="small">forfait</span></td><td class="r"></td><td class="r">€ <span class="edit" id="f-transport">1450</span></td></tr>
+      <tr><td><span class="lbl">Operationele coördinatie &amp; on-site management</span><div class="sub">vaste accountmanager · floormanager · nazorgrapport</div></td><td class="r"><span class="small">forfait</span></td><td class="r"></td><td class="r">€ <span class="edit" id="f-coord">1200</span></td></tr>
+      <tr><td><span class="lbl">Bonnensysteem</span><div class="sub">druk van de genummerde bonnen</div></td><td class="r"><span class="small">forfait</span></td><td class="r"></td><td class="r">€ <span class="edit" id="f-bonnen">750</span></td></tr>
       <tr class="sum"><td colspan="3">Subtotaal (excl. btw)</td><td class="r" id="subtotal">—</td></tr>
     </tbody>
   </table>
