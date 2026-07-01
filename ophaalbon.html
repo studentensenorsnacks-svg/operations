@@ -280,9 +280,9 @@ let freeSeq = 0;
 // ── KLANT ──────────────────────────────────────────────
 function fillPresetSelect(){
   const sel = document.getElementById('k-preset');
-  let html = '';
+  // Standaard leeg — geen klant opgedrongen. Melis (en andere presets) blijven kiesbaar.
+  let html = '<option value="__new">— Kies klant / nieuwe klant —</option>';
   Object.keys(KLANTEN).forEach(k=>{ html += '<option value="'+k+'">'+esc(KLANTEN[k].label)+'</option>'; });
-  html += '<option value="__new">— Andere / nieuwe klant —</option>';
   sel.innerHTML = html;
 }
 function onPreset(){
@@ -690,8 +690,7 @@ function renderRecent(){
 }
 
 // ── INIT ───────────────────────────────────────────────
-fillPresetSelect();
-onPreset();                       // Melis Events standaard ingevuld
+fillPresetSelect();               // klant-velden blijven leeg tot je zelf een klant kiest
 document.getElementById('b-ophaal').value = todayStr();
 renderTrucks();
 renderProdTable();
