@@ -463,8 +463,7 @@ async function saveAndDownload(){
   const producten = Object.values(selectedProds);
   const horeca = Object.values(selectedHoreca).map(h=>({naam:h.naam, qty:h.qty}));
   const vrij = val('b-vrij');
-  if(!klant.bedrijf){ toast('Vul minstens een klant/bedrijf in.','var(--red)'); document.getElementById('k-bedrijf').focus(); return; }
-  if(!trucks.length && !producten.length && !horeca.length){ toast('Selecteer minstens één foodtruck, product of horeca-materiaal.','var(--red)'); return; }
+  // Geen verplichte velden: een lege bon mag ook, om ter plaatse met de hand in te vullen.
 
   const btn = document.getElementById('btn-save');
   btn.disabled = true; btn.textContent = '⏳ Bezig…';
