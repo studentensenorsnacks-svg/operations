@@ -122,6 +122,10 @@
       ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))"
     },
+    "ft_prijslijsten_v1": {
+      ".read":  "auth != null",
+      ".write": "auth != null"
+    },
     "ft_keuringen_beheer_v1": {
       ".read":  "auth != null && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|keuringen|')))"
