@@ -175,6 +175,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   font-size:0.92rem;color:var(--red);margin:10px 0 -2px;padding-top:10px;border-top:1px solid var(--border);}
 .form-sec.first{border-top:none;padding-top:0;margin-top:0;}
 
+/* Lege velden = nog in te vullen → rood markeren in de EDITOR (niet op de PDF) */
+.field input:placeholder-shown:not(.readonly),
+.field textarea:placeholder-shown{border-color:var(--red)!important;background:#fff5f6;}
+.field input:placeholder-shown:not(.readonly)::placeholder,
+.field textarea:placeholder-shown::placeholder{color:#e88;}
+.field input:placeholder-shown:not(.readonly):focus,
+.field textarea:placeholder-shown:focus{background:#fff;box-shadow:0 0 0 2px rgba(232,0,29,.15);}
+.field label{transition:color .12s;}
+
 /* ---- Print / PDF-layout (alleen zichtbaar bij afdrukken) — SJOCK-huisstijl ---- */
 #fiche-print{display:none;}
 @media print{
