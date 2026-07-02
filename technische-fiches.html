@@ -189,7 +189,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   --tdisp:'Anton',Impact,sans-serif;--tlabel:'Bebas Neue',sans-serif;--tbody:'Montserrat',system-ui,sans-serif;--tbrush:'Permanent Marker',cursive;
   font-family:var(--tbody);color:var(--tink);background:#fff;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact;
 }
-.tf{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;display:flex;flex-direction:column;overflow:hidden;}
+.tf{background:#fff;}
+.tf-page{width:210mm;height:297mm;margin:0 auto;background:#fff;position:relative;display:flex;flex-direction:column;overflow:hidden;}
+.tf-page.p2{break-before:page;page-break-before:always;}
+.tf-mast2{background:var(--tblack);color:#fff;padding:14px 30px;display:flex;align-items:center;justify-content:space-between;position:relative;}
+.tf-mast2::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:4px;background:var(--tred);}
+.tf-mast2 .logo{height:26px;width:auto;display:block;}
+.tf-mast2 .r{font-family:var(--tlabel);letter-spacing:.14em;font-size:14px;color:#cfcfcf;}
+.tf-mast2 .r b{color:var(--tred);}
 .tf-mast{background:var(--tblack);color:#fff;padding:26px 30px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;position:relative;}
 .tf-mast::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:5px;background:var(--tred);}
 .tf-mast .logo{height:38px;width:auto;display:block;}
@@ -678,93 +685,92 @@ function exportFichePDF() {
     { t: v('f-pill3'), red: false }
   ].filter(function (p) { return p.t; });
 
-  let html = '<div class="tf">';
-
-  // masthead
-  html += '<div class="tf-mast">'
+  // ---------- alle onderdelen opbouwen ----------
+  const mast = '<div class="tf-mast">'
     + '<div><img class="logo" src="senorsnacks-logo-white.png" alt="Señor Snacks"><div class="tag">Enjoy the good life</div></div>'
     + '<div class="doc"><div class="kind">TECHNISCHE FICHE</div><div class="fiche">FICHE ' + escapeHtml(code) + ' · VERHUUR</div></div>'
     + '</div>';
 
-  // title block
-  html += '<div class="tf-title"><div>'
+  const titleblock = '<div class="tf-title"><div>'
     + '<span class="cat">' + escapeHtml(catLabel || t.type) + '</span>'
     + '<h1>' + escapeHtml(t.name) + '</h1></div>'
     + '<div class="tf-chip"><div class="l">CODE</div><div class="n">' + escapeHtml(code) + '</div></div>'
     + '</div>';
 
-  // hero + pills
+  let hero = '';
   if (fotoBuiten) {
-    html += '<div class="tf-hero"><img src="' + fotoBuiten + '" alt="">';
-    if (pills.length) {
-      html += '<div class="strip">' + pills.map(function (p) {
-        return '<span class="pill' + (p.red ? ' red' : '') + '">' + escapeHtml(p.t) + '</span>';
-      }).join('') + '</div>';
-    }
-    html += '</div>';
+    hero = '<div class="tf-hero"><img src="' + fotoBuiten + '" alt="">';
+    if (pills.length) hero += '<div class="strip">' + pills.map(function (p) {
+      return '<span class="pill' + (p.red ? ' red' : '') + '">' + escapeHtml(p.t) + '</span>';
+    }).join('') + '</div>';
+    hero += '</div>';
   }
 
-  html += '<div class="tf-body">';
-
   const lead = v('f-beschrijving');
-  if (lead) html += '<div class="tf-lead">' + escapeHtml(lead) + '</div>';
+  const leadHtml = lead ? '<div class="tf-lead">' + escapeHtml(lead) + '</div>' : '';
 
-  // 1 Algemeen
-  html += section(1, 'Algemeen',
+  const sec1 = section(1, 'Algemeen',
     row('Naam', t.name) + row('Code / nummer', code) + row('Type', t.type)
     + row('Categorie', catLabel) + row('Laatste update', dateStr)
     + '<div class="tf-row"><span class="k">Status</span>'
     + (filled ? '<span class="v"><span class="tf-ok">Ingevuld</span></span>' : '<span class="v na">Nog leeg</span>')
     + '</div>');
 
-  // 2 Afmetingen & transport
-  html += section(2, 'Afmetingen & transport',
+  const sec2 = section(2, 'Afmetingen & transport',
     row('Lengte', v('f-lengte')) + row('Dissel', v('f-dissel'))
     + row('Breedte gesloten', v('f-breedte')) + row('Breedte open', v('f-breedteopen'))
     + row('Hoogte', v('f-hoogte')) + row('Gewicht / MTM', v('f-gewicht')));
 
-  // 3 Installaties & uitrusting
   let inst = row('Bak- / kooklijn', v('f-kooklijn')) + row('Koeling', v('f-koeling'))
     + row('Afzuiging', v('f-afzuiging')) + row('Elektrische aansluiting', v('f-stroom'))
     + row('Gas / energie', v('f-gas')) + row('Brandblusser', v('f-brandblusser'))
     + row('Water / afvoer', v('f-water'));
   if (v('f-vermogen')) inst += row('Totaal vermogen', v('f-vermogen'));
-  html += section(3, 'Installaties & uitrusting', inst);
+  const sec3 = section(3, 'Installaties & uitrusting', inst);
 
-  // 4 Indeling & gebruik
   let ind = row('Verkoopluik', v('f-verkoopluik')) + row('Openingszijde', v('f-openingszijde'))
     + row('Deuren', v('f-deuren')) + row('Bevoorrading', v('f-bevoorrading'))
     + row('Op- / afbouwtijd', v('f-opbouwtijd'));
   if (v('f-opstelnote')) ind += '<div class="tf-note"><b>Opstelruimte op event:</b> ' + escapeHtml(v('f-opstelnote')) + '</div>';
-  html += section(4, 'Indeling & gebruik', ind);
+  const sec4 = section(4, 'Indeling & gebruik', ind);
 
-  // 5 Keuringen & documenten
-  html += section(5, 'Keuringen & documenten',
+  const sec5 = section(5, 'Keuringen & documenten',
     okRow('Elektrische keuring', t.keuringElek, 'Voorzien', 'Niet van toepassing')
     + okRow('Gaskeuring', t.keuringGas, 'Voorzien', 'Niet van toepassing')
     + row('Extra attesten', v('f-extra')) + row('Video / link', v('f-video')));
 
-  // 6 Toebehoren (optioneel)
   const toeb = v('f-toebehoren');
-  if (toeb) html += section(6, 'Toebehoren / inhoud',
-    '<div class="tf-row" style="grid-column:1/-1;"><span class="v">' + escapeHtml(toeb) + '</span></div>', true);
+  const sec6 = toeb ? section(6, 'Toebehoren / inhoud',
+    '<div class="tf-row" style="grid-column:1/-1;"><span class="v">' + escapeHtml(toeb) + '</span></div>', true) : '';
 
-  // 7 Foto's
-  html += section(7, "Foto's",
+  const sec7 = section(7, "Foto's",
     '<div class="tf-photos" style="grid-column:1/-1;">'
     + '<figure>' + (fotoBuiten ? '<img src="' + fotoBuiten + '" alt="">' : '<div class="ph">Geen foto</div>') + '<figcaption>Buitenkant</figcaption></figure>'
     + '<figure>' + (fotoBinnen ? '<img src="' + fotoBinnen + '" alt="">' : '<div class="ph">Geen foto</div>') + '<figcaption>Binnenkant</figcaption></figure>'
     + '</div>', true);
 
-  // 8 Opmerkingen
-  html += section(8, 'Opmerkingen',
+  const sec8 = section(8, 'Opmerkingen',
     row('Bijzonderheden', v('f-opmerkingen')) + row('Eventbeperkingen', v('f-eventbeperkingen')));
 
-  html += '</div>'; // tf-body
-  html += '<div class="tf-foot"><span class="brand">SEÑOR SNACKS</span>'
+  const mast2 = '<div class="tf-mast2">'
+    + '<img class="logo" src="senorsnacks-logo-white.png" alt="Señor Snacks">'
+    + '<div class="r">TECHNISCHE FICHE · <b>' + escapeHtml(code) + '</b> · 2 / 2</div></div>';
+
+  const foot = '<div class="tf-foot"><span class="brand">SEÑOR SNACKS</span>'
     + '<span><span class="red">www.senorsnacks.be</span> · Winkelom 87C, 2440 Geel</span>'
     + '<span>Fiche ' + escapeHtml(code) + ' · ' + dateStr + '</span></div>';
-  html += '</div>'; // tf
+
+  // ---------- exact 2 A4-pagina's ----------
+  const html =
+    '<div class="tf">'
+    + '<section class="tf-page p1">' + mast + titleblock + hero
+    +   '<div class="tf-body">' + leadHtml + sec1 + sec2 + sec3 + '</div>'
+    + '</section>'
+    + '<section class="tf-page p2">' + mast2
+    +   '<div class="tf-body">' + sec4 + sec5 + sec6 + sec7 + sec8 + '</div>'
+    +   foot
+    + '</section>'
+    + '</div>';
 
   const wrap = document.getElementById('fiche-print');
   wrap.innerHTML = html;
