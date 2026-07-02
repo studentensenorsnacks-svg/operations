@@ -7,6 +7,7 @@
 <title>Señor Snacks — Technische fiche's</title>
 <link rel="icon" type="image/png" href="senorsnacks-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Montserrat:wght@400;600;700;900&family=Permanent+Marker&display=swap" rel="stylesheet">
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -169,49 +170,71 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .btn-pdf{background:#111;color:#fff;}
 .btn-pdf:hover{background:#000;}
 
-/* ---- Print / PDF-layout (alleen zichtbaar bij afdrukken) ---- */
+/* ---- Editor: sectiekopjes in het formulier ---- */
+.form-sec{grid-column:1/-1;font-family:var(--font-cond);font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  font-size:0.92rem;color:var(--red);margin:10px 0 -2px;padding-top:10px;border-top:1px solid var(--border);}
+.form-sec.first{border-top:none;padding-top:0;margin-top:0;}
+
+/* ---- Print / PDF-layout (alleen zichtbaar bij afdrukken) — SJOCK-huisstijl ---- */
 #fiche-print{display:none;}
 @media print{
   body{background:#fff;}
   body > *{display:none !important;}
   #fiche-print{display:block !important;}
   @page{size:A4;margin:0;}
+  *,*::before,*::after{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 }
-#fiche-print{font-family:var(--font);color:#1a1a1a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.pp{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;display:flex;flex-direction:column;}
-.pp-head{background:#0d0d0d;color:#fff;padding:16px 22px 14px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:4px solid var(--red);}
-.pp-head .pp-logo{height:34px;width:auto;display:block;}
-.pp-head .pp-htxt{text-align:right;}
-.pp-head .pp-htxt .l1{color:var(--red);font-family:var(--font-cond);font-weight:800;letter-spacing:0.12em;font-size:0.72rem;}
-.pp-head .pp-htxt .l2{color:#cfcfcf;font-family:var(--font-cond);font-weight:700;letter-spacing:0.1em;font-size:0.92rem;margin-top:2px;}
-.pp-body{padding:20px 22px;flex:1;}
-.pp-titlerow{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px;}
-.pp-kicker{display:flex;align-items:center;gap:8px;font-family:var(--font-cond);font-weight:700;letter-spacing:0.1em;
-  text-transform:uppercase;color:var(--text2);font-size:0.78rem;margin-bottom:6px;}
-.pp-kicker::before{content:"";width:26px;height:3px;background:var(--red);border-radius:2px;display:inline-block;}
-.pp-title{font-family:var(--font-cond);font-weight:900;font-size:2rem;line-height:1.02;letter-spacing:-0.01em;text-transform:uppercase;}
-.pp-code{background:var(--red);color:#fff;border-radius:10px;padding:10px 16px;text-align:center;min-width:88px;flex:none;}
-.pp-code .c1{font-family:var(--font-cond);font-weight:700;letter-spacing:0.14em;font-size:0.6rem;opacity:0.85;}
-.pp-code .c2{font-family:var(--font-cond);font-weight:900;font-size:1.7rem;line-height:1;}
-.pp-hero{width:100%;height:230px;object-fit:cover;border-radius:10px;display:block;margin:6px 0 14px;background:#eee;}
-.pp-intro{font-size:0.9rem;line-height:1.5;color:#333;margin-bottom:18px;white-space:pre-wrap;}
-.pp-sec{margin-bottom:16px;break-inside:avoid;}
-.pp-sec-h{display:flex;align-items:center;gap:10px;font-family:var(--font-cond);font-weight:800;font-size:1.05rem;
-  text-transform:uppercase;letter-spacing:0.02em;border-bottom:2.5px solid #111;padding-bottom:5px;margin-bottom:2px;}
-.pp-sec-h .n{background:#111;color:#fff;width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;
-  justify-content:center;font-size:0.72rem;font-weight:800;flex:none;}
-.pp-trow{display:flex;justify-content:space-between;gap:18px;padding:8px 2px;border-bottom:1px solid #ececec;font-size:0.86rem;}
-.pp-trow .k{color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:0.03em;font-size:0.72rem;flex:none;width:42%;}
-.pp-trow .v{font-weight:600;text-align:left;flex:1;white-space:pre-wrap;}
-.pp-trow .v.muted{color:#9a9aa0;font-weight:500;font-style:italic;}
-.pp-fotos{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px;}
-.pp-fotos figure{margin:0;}
-.pp-fotos img{width:100%;height:200px;object-fit:cover;border-radius:8px;display:block;background:#eee;}
-.pp-fotos figcaption{font-size:0.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;margin-top:5px;}
-.pp-foot{background:#0d0d0d;color:#cfcfcf;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;
-  font-size:0.74rem;margin-top:auto;}
-.pp-foot b{color:#fff;font-family:var(--font-cond);letter-spacing:0.08em;}
-.pp-foot .url{color:var(--red);font-weight:700;}
+#fiche-print{
+  --tred:#E6173B;--tblack:#030304;--tink:#1b1b1d;--tsoft:#6a6a6f;--tmut:#a0a0a6;--tlg:#F2F2F2;--tmg:#D9D9D9;
+  --tdisp:'Anton',Impact,sans-serif;--tlabel:'Bebas Neue',sans-serif;--tbody:'Montserrat',system-ui,sans-serif;--tbrush:'Permanent Marker',cursive;
+  font-family:var(--tbody);color:var(--tink);background:#fff;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+.tf{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;display:flex;flex-direction:column;overflow:hidden;}
+.tf-mast{background:var(--tblack);color:#fff;padding:26px 30px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;position:relative;}
+.tf-mast::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:5px;background:var(--tred);}
+.tf-mast .logo{height:38px;width:auto;display:block;}
+.tf-mast .tag{font-family:var(--tbrush);font-size:15px;color:#fff;transform:rotate(-2deg);margin-top:8px;opacity:.92;}
+.tf-mast .doc{text-align:right;}
+.tf-mast .doc .kind{font-family:var(--tlabel);letter-spacing:.16em;font-size:13px;color:var(--tred);white-space:nowrap;}
+.tf-mast .doc .fiche{font-family:var(--tdisp);font-size:15px;letter-spacing:.06em;color:#7d7d83;margin-top:3px;}
+.tf-title{padding:26px 30px 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;border-bottom:1px solid var(--tlg);}
+.tf-title .cat{font-family:var(--tlabel);letter-spacing:.2em;font-size:14px;color:var(--tsoft);display:inline-flex;align-items:center;gap:9px;text-transform:uppercase;}
+.tf-title .cat::before{content:"";width:22px;height:2px;background:var(--tred);}
+.tf-title h1{font-family:var(--tdisp);text-transform:uppercase;font-size:44px;line-height:.92;margin:10px 0 0;color:var(--tblack);}
+.tf-chip{flex-shrink:0;text-align:center;background:var(--tred);color:#fff;border-radius:10px;padding:12px 18px;min-width:104px;}
+.tf-chip .l{font-family:var(--tlabel);letter-spacing:.2em;font-size:12px;opacity:.9;}
+.tf-chip .n{font-family:var(--tdisp);font-size:36px;line-height:1;margin-top:2px;}
+.tf-hero{margin:22px 30px 0;border-radius:12px;overflow:hidden;position:relative;background:var(--tlg);}
+.tf-hero img{width:100%;height:300px;object-fit:cover;object-position:center 42%;display:block;}
+.tf-hero .strip{position:absolute;left:0;bottom:0;width:100%;padding:30px 24px 16px;background:linear-gradient(180deg,rgba(3,3,4,0),rgba(3,3,4,.82));display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.tf-hero .pill{font-family:var(--tlabel);letter-spacing:.14em;font-size:13px;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);padding:6px 14px;border-radius:50px;}
+.tf-hero .pill.red{background:var(--tred);border-color:var(--tred);}
+.tf-body{padding:26px 30px 8px;flex:1;}
+.tf-lead{font-size:14.5px;color:var(--tsoft);max-width:64ch;margin:0 0 24px;white-space:pre-wrap;}
+.tf-spec{margin-bottom:22px;break-inside:avoid;}
+.tf-spec-h{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.tf-spec-h .ix{font-family:var(--tdisp);font-size:13px;color:#fff;background:var(--tblack);width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tf-spec-h h2{font-family:var(--tlabel);letter-spacing:.12em;font-size:21px;color:var(--tblack);text-transform:uppercase;margin:0;line-height:1;white-space:nowrap;}
+.tf-spec-h .rule{flex:1;height:1px;background:var(--tmg);}
+.tf-rows{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;border-top:2px solid var(--tblack);}
+.tf-rows.single{grid-template-columns:1fr;}
+.tf-row{display:grid;grid-template-columns:minmax(140px,42%) 1fr;gap:14px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--tlg);}
+.tf-row .k{font-family:var(--tlabel);letter-spacing:.06em;font-size:14.5px;color:var(--tsoft);text-transform:uppercase;}
+.tf-row .v{font-size:14px;font-weight:600;color:var(--tink);white-space:pre-wrap;}
+.tf-row .v.na{color:var(--tmut);font-weight:500;font-style:italic;}
+.tf-row .v .hi{color:var(--tred);}
+.tf-note{grid-column:1/-1;background:var(--tlg);border-left:3px solid var(--tred);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13.5px;color:var(--tink);margin-top:6px;white-space:pre-wrap;}
+.tf-note b{color:var(--tblack);}
+.tf-ok{display:inline-flex;align-items:center;gap:6px;color:#0a7d3f;font-weight:700;}
+.tf-ok::before{content:"";width:8px;height:8px;border-radius:50%;background:#15a05a;}
+.tf-photos{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.tf-photos figure{margin:0;display:flex;flex-direction:column;}
+.tf-photos img{width:100%;height:210px;object-fit:cover;border:1px solid var(--tmg);border-radius:10px;display:block;background:var(--tlg);}
+.tf-photos .ph{width:100%;height:210px;border:1px dashed var(--tmg);border-radius:10px;background:var(--tlg);display:flex;align-items:center;justify-content:center;color:var(--tmut);font-family:var(--tlabel);letter-spacing:.1em;font-size:14px;}
+.tf-photos figcaption{font-family:var(--tlabel);letter-spacing:.12em;font-size:15px;text-transform:uppercase;color:var(--tsoft);margin-top:9px;}
+.tf-foot{margin-top:auto;background:var(--tblack);color:#c9c9cd;padding:18px 30px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:12px;}
+.tf-foot .brand{font-family:var(--tlabel);letter-spacing:.2em;color:#fff;font-size:14px;}
+.tf-foot .red{color:var(--tred);font-weight:700;}
 </style>
 </head>
 <body>
@@ -259,30 +282,61 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div class="modal-body">
       <div class="fiche-grid">
+        <div class="form-sec first">Lead-tekst (bovenaan de fiche)</div>
         <div class="field full">
-          <label>Beschrijving / uitleg</label>
-          <textarea id="f-beschrijving" placeholder="Waarvoor dient deze wagen/container, opbouw, bijzonderheden..."></textarea>
+          <label>Beschrijving / lead</label>
+          <textarea id="f-beschrijving" placeholder="Korte omschrijving bovenaan de fiche..."></textarea>
         </div>
-        <div class="field"><label>Lengte</label><input id="f-lengte" placeholder="bv. 6,00 m"></div>
-        <div class="field"><label>Breedte</label><input id="f-breedte" placeholder="bv. 2,30 m"></div>
-        <div class="field"><label>Hoogte</label><input id="f-hoogte" placeholder="bv. 2,60 m"></div>
-        <div class="field"><label>Gewicht</label><input id="f-gewicht" placeholder="bv. 1.800 kg"></div>
-        <div class="field"><label>Stroom-aansluiting</label><input id="f-stroom" placeholder="bv. 1× 32A / 2× 16A"></div>
+
+        <div class="form-sec">Hero-pills (labels op de foto)</div>
+        <div class="field"><label>Pill 1 (rood)</label><input id="f-pill1" placeholder="bv. Kiremko Allegro · 9 mandjes"></div>
+        <div class="field"><label>Pill 2</label><input id="f-pill2" placeholder="bv. Koelcel inbegrepen"></div>
+        <div class="field"><label>Pill 3</label><input id="f-pill3" placeholder="bv. 6 m + 1,5 m dissel"></div>
+
+        <div class="form-sec">Afmetingen &amp; transport</div>
+        <div class="field"><label>Lengte</label><input id="f-lengte" placeholder="bv. 6 m"></div>
+        <div class="field"><label>Dissel</label><input id="f-dissel" placeholder="bv. 1,5 m"></div>
+        <div class="field"><label>Breedte gesloten</label><input id="f-breedte" placeholder="bv. 2,50 m"></div>
+        <div class="field"><label>Breedte open</label><input id="f-breedteopen" placeholder="bv. 4,00 m"></div>
+        <div class="field"><label>Hoogte</label><input id="f-hoogte" placeholder="bv. 2,90 m"></div>
+        <div class="field"><label>Gewicht / MTM</label><input id="f-gewicht" placeholder="bv. 1.800 kg"></div>
+
+        <div class="form-sec">Installaties &amp; uitrusting</div>
+        <div class="field"><label>Bak- / kooklijn</label><input id="f-kooklijn" placeholder="bv. Kiremko Allegro — 9 mandjes"></div>
+        <div class="field"><label>Koeling</label><input id="f-koeling" placeholder="bv. Koelcel inbegrepen"></div>
+        <div class="field"><label>Afzuiging</label><input id="f-afzuiging" placeholder="bv. 1 voorzien"></div>
+        <div class="field"><label>Elektrische aansluiting</label><input id="f-stroom" placeholder="bv. 1× 16A / 220V"></div>
         <div class="field"><label>Totaal vermogen</label><input id="f-vermogen" placeholder="bv. 22 kW"></div>
-        <div class="field"><label>Gas</label><input id="f-gas" placeholder="bv. 2× propaan 35 kg"></div>
-        <div class="field"><label>Water</label><input id="f-water" placeholder="bv. boiler 50 L + vuilwater"></div>
-        <div class="field full">
-          <label>Toebehoren / inhoud</label>
-          <textarea id="f-toebehoren" placeholder="Vaste toestellen, inventaris, wat hoort er standaard bij..."></textarea>
-        </div>
-        <div class="field full">
-          <label>Opmerkingen</label>
-          <textarea id="f-opmerkingen" placeholder="Aandachtspunten, gebreken, historiek..."></textarea>
-        </div>
+        <div class="field"><label>Gas / energie</label><input id="f-gas" placeholder="bv. Gas — 3 bussen · gaskeuring"></div>
+        <div class="field"><label>Brandblusser</label><input id="f-brandblusser" placeholder="bv. Voorzien"></div>
+        <div class="field"><label>Water / afvoer</label><input id="f-water" placeholder="bv. boiler 50 L + vuilwater"></div>
+
+        <div class="form-sec">Indeling &amp; gebruik</div>
+        <div class="field"><label>Verkoopluik</label><input id="f-verkoopluik" placeholder="bv. 1 luik rechterzijde"></div>
+        <div class="field"><label>Openingszijde</label><input id="f-openingszijde" placeholder="bv. Rechterzijde"></div>
+        <div class="field"><label>Deuren</label><input id="f-deuren" placeholder="bv. Achterdeur + koeldeur"></div>
+        <div class="field"><label>Bevoorrading</label><input id="f-bevoorrading" placeholder="bv. Via achterzijde"></div>
+        <div class="field"><label>Op- / afbouwtijd</label><input id="f-opbouwtijd" placeholder="bv. 30 min"></div>
+        <div class="field full"><label>Opstelruimte / notitie (grijs kader)</label>
+          <textarea id="f-opstelnote" placeholder="bv. Minstens lengte wagen + dissel. Extra werkruimte rechterzijde aanbevolen."></textarea></div>
+
+        <div class="form-sec">Keuringen &amp; documenten</div>
         <div class="field"><label>Keuring elektriciteit</label><input class="readonly" id="f-keuring-elek" readonly></div>
         <div class="field"><label>Keuring gas</label><input class="readonly" id="f-keuring-gas" readonly></div>
+        <div class="field"><label>Extra attesten</label><input id="f-extra" placeholder="bv. Geen bijkomende"></div>
+        <div class="field"><label>Video / link</label><input id="f-video" placeholder="bv. https://..."></div>
 
-        <div class="field full"><label>Foto's</label>
+        <div class="form-sec">Toebehoren &amp; opmerkingen</div>
+        <div class="field full"><label>Toebehoren / inhoud</label>
+          <textarea id="f-toebehoren" placeholder="Vaste toestellen, inventaris, wat hoort er standaard bij..."></textarea></div>
+        <div class="field full"><label>Bijzonderheden</label>
+          <textarea id="f-opmerkingen" placeholder="bv. 5-pot frituurwagen met koelcel."></textarea></div>
+        <div class="field full"><label>Eventbeperkingen</label>
+          <textarea id="f-eventbeperkingen" placeholder="bv. Geen specifieke beperkingen"></textarea></div>
+
+        <div class="form-sec">Foto's</div>
+
+        <div class="field full"><label>Buitenkant = hero-foto bovenaan · binnenkant = onderaan</label>
           <div class="foto-row">
             <div class="foto-slot">
               <div class="foto-drop" id="drop-buiten" onclick="if(!fotos.buiten.url)document.getElementById('file-buiten').click()">
@@ -334,7 +388,10 @@ let activeId = null;      // id van de truck waarvan de fiche openstaat
 // Foto-state van de open fiche: per slot een download-URL + opslagpad in Storage.
 let fotos = { buiten: { url: '', path: '' }, binnen: { url: '', path: '' } };
 
-const FIELD_KEYS = ['beschrijving','lengte','breedte','hoogte','gewicht','stroom','vermogen','gas','water','toebehoren','opmerkingen'];
+const FIELD_KEYS = ['beschrijving','pill1','pill2','pill3','lengte','dissel','breedte','breedteOpen','hoogte','gewicht',
+  'kooklijn','koeling','afzuiging','stroom','vermogen','gas','brandblusser','water',
+  'verkoopluik','openingszijde','deuren','bevoorrading','opbouwtijd','opstelnote',
+  'extra','video','toebehoren','opmerkingen','eventbeperkingen'];
 
 // Een fiche telt als "ingevuld" zodra één tekstveld inhoud heeft of er een foto bij zit.
 function isFilled(id) {
@@ -414,17 +471,21 @@ function openFiche(id) {
   const f = fiches[id] || {};
   document.getElementById('m-title').textContent = t.name;
   document.getElementById('m-sub').textContent = t.type + (t.plate ? ' · ' + t.plate : '');
-  document.getElementById('f-beschrijving').value = f.beschrijving || '';
-  document.getElementById('f-lengte').value      = f.lengte || '';
-  document.getElementById('f-breedte').value     = f.breedte || '';
-  document.getElementById('f-hoogte').value      = f.hoogte || '';
-  document.getElementById('f-gewicht').value     = f.gewicht || '';
-  document.getElementById('f-stroom').value      = f.stroom || '';
-  document.getElementById('f-vermogen').value    = f.vermogen || '';
-  document.getElementById('f-gas').value         = f.gas || '';
-  document.getElementById('f-water').value       = f.water || '';
-  document.getElementById('f-toebehoren').value  = f.toebehoren || '';
-  document.getElementById('f-opmerkingen').value = f.opmerkingen || '';
+  const setV = function (id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setV('f-beschrijving', f.beschrijving);
+  setV('f-pill1', f.pill1); setV('f-pill2', f.pill2); setV('f-pill3', f.pill3);
+  setV('f-lengte', f.lengte); setV('f-dissel', f.dissel);
+  setV('f-breedte', f.breedte); setV('f-breedteopen', f.breedteOpen);
+  setV('f-hoogte', f.hoogte); setV('f-gewicht', f.gewicht);
+  setV('f-kooklijn', f.kooklijn); setV('f-koeling', f.koeling); setV('f-afzuiging', f.afzuiging);
+  setV('f-stroom', f.stroom); setV('f-vermogen', f.vermogen); setV('f-gas', f.gas);
+  setV('f-brandblusser', f.brandblusser); setV('f-water', f.water);
+  setV('f-verkoopluik', f.verkoopluik); setV('f-openingszijde', f.openingszijde);
+  setV('f-deuren', f.deuren); setV('f-bevoorrading', f.bevoorrading);
+  setV('f-opbouwtijd', f.opbouwtijd); setV('f-opstelnote', f.opstelnote);
+  setV('f-extra', f.extra); setV('f-video', f.video);
+  setV('f-toebehoren', f.toebehoren); setV('f-opmerkingen', f.opmerkingen);
+  setV('f-eventbeperkingen', f.eventbeperkingen);
   document.getElementById('f-keuring-elek').value = t.keuringElek ? 'Ja — keuringsplichtig' : 'Niet van toepassing';
   document.getElementById('f-keuring-gas').value  = t.keuringGas ? 'Ja — keuringsplichtig' : 'Niet van toepassing';
   document.getElementById('m-saved').textContent = f.updatedAt
@@ -446,18 +507,22 @@ async function saveFiche() {
   if (!activeId) return;
   const btn = document.getElementById('m-save-btn');
   btn.disabled = true;
+  const gv = function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const data = {
-    beschrijving: document.getElementById('f-beschrijving').value.trim(),
-    lengte:       document.getElementById('f-lengte').value.trim(),
-    breedte:      document.getElementById('f-breedte').value.trim(),
-    hoogte:       document.getElementById('f-hoogte').value.trim(),
-    gewicht:      document.getElementById('f-gewicht').value.trim(),
-    stroom:       document.getElementById('f-stroom').value.trim(),
-    vermogen:     document.getElementById('f-vermogen').value.trim(),
-    gas:          document.getElementById('f-gas').value.trim(),
-    water:        document.getElementById('f-water').value.trim(),
-    toebehoren:   document.getElementById('f-toebehoren').value.trim(),
-    opmerkingen:  document.getElementById('f-opmerkingen').value.trim(),
+    beschrijving: gv('f-beschrijving'),
+    pill1: gv('f-pill1'), pill2: gv('f-pill2'), pill3: gv('f-pill3'),
+    lengte: gv('f-lengte'), dissel: gv('f-dissel'),
+    breedte: gv('f-breedte'), breedteOpen: gv('f-breedteopen'),
+    hoogte: gv('f-hoogte'), gewicht: gv('f-gewicht'),
+    kooklijn: gv('f-kooklijn'), koeling: gv('f-koeling'), afzuiging: gv('f-afzuiging'),
+    stroom: gv('f-stroom'), vermogen: gv('f-vermogen'), gas: gv('f-gas'),
+    brandblusser: gv('f-brandblusser'), water: gv('f-water'),
+    verkoopluik: gv('f-verkoopluik'), openingszijde: gv('f-openingszijde'),
+    deuren: gv('f-deuren'), bevoorrading: gv('f-bevoorrading'),
+    opbouwtijd: gv('f-opbouwtijd'), opstelnote: gv('f-opstelnote'),
+    extra: gv('f-extra'), video: gv('f-video'),
+    toebehoren: gv('f-toebehoren'), opmerkingen: gv('f-opmerkingen'),
+    eventbeperkingen: gv('f-eventbeperkingen'),
     fotoBuitenUrl:  fotos.buiten.url  || '',
     fotoBuitenPath: fotos.buiten.path || '',
     fotoBinnenUrl:  fotos.binnen.url  || '',
@@ -583,65 +648,123 @@ function exportFichePDF() {
   if (!activeId) return;
   const t = FLEET.find(function (x) { return x.id === activeId; });
   if (!t) return;
-  const v = function (id) { return document.getElementById(id).value.trim(); };
+  const v = function (id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
   const catLabel = (CAT_ORDER.find(function (c) { return c.key === t.category; }) || {}).label || '';
   const code = ficheCode(t);
-  const today = new Date().toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const f = fiches[activeId] || {};
+  const dateStr = new Date(f.updatedAt || Date.now()).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const filled = isFilled(activeId);
 
   function row(k, val) {
     const has = (val || '').toString().trim() !== '';
-    return '<div class="pp-trow"><span class="k">' + escapeHtml(k) + '</span>'
-      + '<span class="v' + (has ? '' : ' muted') + '">' + (has ? escapeHtml(val) : '—') + '</span></div>';
+    return '<div class="tf-row"><span class="k">' + escapeHtml(k) + '</span>'
+      + '<span class="v' + (has ? '' : ' na') + '">' + (has ? escapeHtml(val) : '—') + '</span></div>';
   }
-  function block(val) { return '<div class="pp-trow"><span class="v">' + escapeHtml(val) + '</span></div>'; }
-  function section(num, title, rowsHtml) {
-    return '<div class="pp-sec"><div class="pp-sec-h"><span class="n">' + num + '</span>' + escapeHtml(title) + '</div>' + rowsHtml + '</div>';
+  function okRow(k, on, onTxt, offTxt) {
+    return '<div class="tf-row"><span class="k">' + escapeHtml(k) + '</span>'
+      + (on ? '<span class="v"><span class="tf-ok">' + escapeHtml(onTxt) + '</span></span>'
+            : '<span class="v na">' + escapeHtml(offTxt) + '</span>') + '</div>';
+  }
+  function section(num, title, inner, single) {
+    return '<div class="tf-spec"><div class="tf-spec-h"><span class="ix">' + num + '</span>'
+      + '<h2>' + escapeHtml(title) + '</h2><span class="rule"></span></div>'
+      + '<div class="tf-rows' + (single ? ' single' : '') + '">' + inner + '</div></div>';
   }
 
-  const beschrijving = v('f-beschrijving');
   const fotoBuiten = fotos.buiten.url, fotoBinnen = fotos.binnen.url;
+  const pills = [
+    { t: v('f-pill1'), red: true },
+    { t: v('f-pill2'), red: false },
+    { t: v('f-pill3'), red: false }
+  ].filter(function (p) { return p.t; });
 
-  let html = '<div class="pp">';
-  html += '<div class="pp-head">'
-    + '<img class="pp-logo" src="senorsnacks-logo-white.png" alt="Señor Snacks">'
-    + '<div class="pp-htxt"><div class="l1">TECHNISCHE FICHE</div><div class="l2">VERHUUR</div></div>'
+  let html = '<div class="tf">';
+
+  // masthead
+  html += '<div class="tf-mast">'
+    + '<div><img class="logo" src="senorsnacks-logo-white.png" alt="Señor Snacks"><div class="tag">Enjoy the good life</div></div>'
+    + '<div class="doc"><div class="kind">TECHNISCHE FICHE</div><div class="fiche">FICHE ' + escapeHtml(code) + ' · VERHUUR</div></div>'
     + '</div>';
-  html += '<div class="pp-body">';
-  html += '<div class="pp-titlerow"><div>'
-    + '<div class="pp-kicker">' + escapeHtml(t.type) + '</div>'
-    + '<div class="pp-title">' + escapeHtml(t.name) + '</div></div>'
-    + '<div class="pp-code"><div class="c1">CODE</div><div class="c2">' + escapeHtml(code) + '</div></div>'
+
+  // title block
+  html += '<div class="tf-title"><div>'
+    + '<span class="cat">' + escapeHtml(catLabel || t.type) + '</span>'
+    + '<h1>' + escapeHtml(t.name) + '</h1></div>'
+    + '<div class="tf-chip"><div class="l">CODE</div><div class="n">' + escapeHtml(code) + '</div></div>'
     + '</div>';
-  if (fotoBuiten) html += '<img class="pp-hero" src="' + fotoBuiten + '" alt="">';
-  if (beschrijving) html += '<div class="pp-intro">' + escapeHtml(beschrijving) + '</div>';
+
+  // hero + pills
+  if (fotoBuiten) {
+    html += '<div class="tf-hero"><img src="' + fotoBuiten + '" alt="">';
+    if (pills.length) {
+      html += '<div class="strip">' + pills.map(function (p) {
+        return '<span class="pill' + (p.red ? ' red' : '') + '">' + escapeHtml(p.t) + '</span>';
+      }).join('') + '</div>';
+    }
+    html += '</div>';
+  }
+
+  html += '<div class="tf-body">';
+
+  const lead = v('f-beschrijving');
+  if (lead) html += '<div class="tf-lead">' + escapeHtml(lead) + '</div>';
+
+  // 1 Algemeen
   html += section(1, 'Algemeen',
     row('Naam', t.name) + row('Code / nummer', code) + row('Type', t.type)
-    + row('Categorie', catLabel) + row('Kenteken', t.plate) + row('Datum fiche', today));
-  html += section(2, 'Afmetingen',
-    row('Lengte', v('f-lengte')) + row('Breedte', v('f-breedte'))
-    + row('Hoogte', v('f-hoogte')) + row('Gewicht', v('f-gewicht')));
-  html += section(3, 'Installaties & uitrusting',
-    row('Stroom-aansluiting', v('f-stroom')) + row('Totaal vermogen', v('f-vermogen'))
-    + row('Gas', v('f-gas')) + row('Water', v('f-water')));
-  const toeb = v('f-toebehoren');
-  if (toeb) html += section(4, 'Toebehoren / inhoud', block(toeb));
+    + row('Categorie', catLabel) + row('Laatste update', dateStr)
+    + '<div class="tf-row"><span class="k">Status</span>'
+    + (filled ? '<span class="v"><span class="tf-ok">Ingevuld</span></span>' : '<span class="v na">Nog leeg</span>')
+    + '</div>');
+
+  // 2 Afmetingen & transport
+  html += section(2, 'Afmetingen & transport',
+    row('Lengte', v('f-lengte')) + row('Dissel', v('f-dissel'))
+    + row('Breedte gesloten', v('f-breedte')) + row('Breedte open', v('f-breedteopen'))
+    + row('Hoogte', v('f-hoogte')) + row('Gewicht / MTM', v('f-gewicht')));
+
+  // 3 Installaties & uitrusting
+  let inst = row('Bak- / kooklijn', v('f-kooklijn')) + row('Koeling', v('f-koeling'))
+    + row('Afzuiging', v('f-afzuiging')) + row('Elektrische aansluiting', v('f-stroom'))
+    + row('Gas / energie', v('f-gas')) + row('Brandblusser', v('f-brandblusser'))
+    + row('Water / afvoer', v('f-water'));
+  if (v('f-vermogen')) inst += row('Totaal vermogen', v('f-vermogen'));
+  html += section(3, 'Installaties & uitrusting', inst);
+
+  // 4 Indeling & gebruik
+  let ind = row('Verkoopluik', v('f-verkoopluik')) + row('Openingszijde', v('f-openingszijde'))
+    + row('Deuren', v('f-deuren')) + row('Bevoorrading', v('f-bevoorrading'))
+    + row('Op- / afbouwtijd', v('f-opbouwtijd'));
+  if (v('f-opstelnote')) ind += '<div class="tf-note"><b>Opstelruimte op event:</b> ' + escapeHtml(v('f-opstelnote')) + '</div>';
+  html += section(4, 'Indeling & gebruik', ind);
+
+  // 5 Keuringen & documenten
   html += section(5, 'Keuringen & documenten',
-    row('Keuring elektriciteit', t.keuringElek ? 'Voorzien — keuringsplichtig' : 'Niet van toepassing')
-    + row('Keuring gas', t.keuringGas ? 'Voorzien — keuringsplichtig' : 'Niet van toepassing'));
-  const opm = v('f-opmerkingen');
-  if (opm) html += section(6, 'Opmerkingen', block(opm));
-  if (fotoBuiten || fotoBinnen) {
-    let f = '<div class="pp-fotos">';
-    if (fotoBuiten) f += '<figure><img src="' + fotoBuiten + '" alt=""><figcaption>Buitenkant</figcaption></figure>';
-    if (fotoBinnen) f += '<figure><img src="' + fotoBinnen + '" alt=""><figcaption>Binnenkant</figcaption></figure>';
-    f += '</div>';
-    html += section(7, "Foto's", f);
-  }
-  html += '</div>'; // pp-body
-  html += '<div class="pp-foot"><b>SEÑOR SNACKS</b>'
-    + '<span><span class="url">www.senorsnacks.be</span> · Winkelom 87C, 2440 Geel</span>'
-    + '<span>Fiche ' + escapeHtml(code) + ' · ' + today + '</span></div>';
-  html += '</div>'; // pp
+    okRow('Elektrische keuring', t.keuringElek, 'Voorzien', 'Niet van toepassing')
+    + okRow('Gaskeuring', t.keuringGas, 'Voorzien', 'Niet van toepassing')
+    + row('Extra attesten', v('f-extra')) + row('Video / link', v('f-video')));
+
+  // 6 Toebehoren (optioneel)
+  const toeb = v('f-toebehoren');
+  if (toeb) html += section(6, 'Toebehoren / inhoud',
+    '<div class="tf-row" style="grid-column:1/-1;"><span class="v">' + escapeHtml(toeb) + '</span></div>', true);
+
+  // 7 Foto's
+  html += section(7, "Foto's",
+    '<div class="tf-photos" style="grid-column:1/-1;">'
+    + '<figure>' + (fotoBuiten ? '<img src="' + fotoBuiten + '" alt="">' : '<div class="ph">Geen foto</div>') + '<figcaption>Buitenkant</figcaption></figure>'
+    + '<figure>' + (fotoBinnen ? '<img src="' + fotoBinnen + '" alt="">' : '<div class="ph">Geen foto</div>') + '<figcaption>Binnenkant</figcaption></figure>'
+    + '</div>', true);
+
+  // 8 Opmerkingen
+  html += section(8, 'Opmerkingen',
+    row('Bijzonderheden', v('f-opmerkingen')) + row('Eventbeperkingen', v('f-eventbeperkingen')));
+
+  html += '</div>'; // tf-body
+  html += '<div class="tf-foot"><span class="brand">SEÑOR SNACKS</span>'
+    + '<span><span class="red">www.senorsnacks.be</span> · Winkelom 87C, 2440 Geel</span>'
+    + '<span>Fiche ' + escapeHtml(code) + ' · ' + dateStr + '</span></div>';
+  html += '</div>'; // tf
 
   const wrap = document.getElementById('fiche-print');
   wrap.innerHTML = html;
