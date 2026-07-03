@@ -64,6 +64,12 @@
         "vsm-archief": [
           "vsm-archief"
         ],
+        "aardappelennijsdigital": [
+          "aardappelennijsdigital"
+        ],
+        "frietflow": [
+          "frietflow"
+        ],
         "senorsnacks-card": [
           "senorsnacks-card"
         ],
@@ -79,6 +85,9 @@
       "hosting": {
         "saas": [
           "eventsheet-app"
+        ],
+        "keuringqr": [
+          "senorkeuringqr"
         ]
       }
     },

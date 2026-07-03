@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handleiding Route Planner — Aardappelen Nijs</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0d1420;--surface:#f4f4ee;--line:#e6e6dc;--muted:#6b6b5c;--text:#1b1b12;
+    --signal:#e0891c;--green:#3d8b2e;--disp:'Space Grotesk',sans-serif;--body:'Inter',sans-serif}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--body);color:var(--text);background:var(--surface);line-height:1.65;font-size:15px}
+  .page{max-width:760px;margin:0 auto;padding:0 22px 60px}
+
+  header{background:var(--ink);color:#fff;padding:26px 22px;border-bottom:3px solid var(--signal)}
+  .head-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:16px}
+  .badge{background:#fff;border-radius:10px;padding:6px 12px;display:flex;align-items:center}
+  .badge img{height:44px;display:block}
+  header h1{font-family:var(--disp);font-size:21px;margin:0;letter-spacing:.02em}
+  header .sub{color:#9a9a86;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+  .back{margin-left:auto;color:#fff;background:var(--signal);text-decoration:none;font-weight:600;
+    font-size:13px;padding:9px 16px;border-radius:8px;white-space:nowrap}
+  .back:hover{background:#b56d10}
+
+  h2{font-family:var(--disp);font-size:17px;margin:38px 0 10px;display:flex;align-items:center;gap:10px}
+  h2 .num{background:var(--signal);color:#fff;width:28px;height:28px;border-radius:8px;display:inline-flex;
+    align-items:center;justify-content:center;font-size:14px;flex:none}
+  p{margin:9px 0}
+  .step{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:10px 0}
+  .step b.k{background:var(--ink);color:#fff;border-radius:6px;padding:1px 8px;font-size:12.5px;white-space:nowrap}
+  .step b.k.orange{background:var(--signal)}
+  .tip{background:#fff8e6;border:1px solid #f2d98a;border-radius:10px;padding:11px 16px;font-size:13.5px;margin:12px 0}
+  .tip b{color:#7a5c00}
+  .good{background:#eef7ea;border:1px solid #cbe5c0;border-radius:10px;padding:11px 16px;font-size:13.5px;margin:12px 0}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  .voorbeeld{font-style:italic;color:var(--muted)}
+  .limits{width:100%;border-collapse:collapse;margin:12px 0;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13.5px}
+  .limits th{background:var(--ink);color:#fff;text-align:left;padding:9px 14px;font-family:var(--disp);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .limits td{padding:9px 14px;border-top:1px solid var(--line)}
+  footer{margin-top:46px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  @media print{
+    body{background:#fff}
+    header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .step,.tip,.good{break-inside:avoid}
+    .back{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-in">
+    <div class="badge"><img src="logo.svg" alt="Aardappelen Nijs"></div>
+    <div>
+      <h1>Handleiding Route Planner</h1>
+      <div class="sub">Voor Simon &middot; leverroutes plannen in 5 minuten</div>
+    </div>
+    <a class="back" href="./">&larr; Naar de planner</a>
+  </div>
+</header>
+
+<div class="page">
+
+<p style="margin-top:26px">Met dit programma plan je in een paar klikken de goedkoopste leverroutes voor de bestelwagens. Je geeft in welke frituren vandaag zakken moeten krijgen, en het programma rekent zelf uit welke wagen waar langs rijdt, in welke volgorde, en wat dat kost. Daarna stuur je de route met &eacute;&eacute;n klik naar Google Maps of naar de chauffeur.</p>
+
+<h2><span class="num">1</span>Openen</h2>
+<div class="step">
+  <p>Ga in je browser (Chrome of Edge) naar <b class="k">aardappelennijsdigital.web.app</b>. Geen installatie, geen login. Internet moet wel aanstaan (voor de kaart, het adres-zoeken en de routes).</p>
+</div>
+<div class="tip"><b>Tip:</b> zet de pagina bij je favorieten, of op je gsm via &ldquo;Toevoegen aan beginscherm&rdquo; &mdash; dan staat hij als app-icoontje tussen je andere apps.</div>
+
+<h2><span class="num">2</span>Controleer het vertrekpunt</h2>
+<div class="step">
+  <p>Bovenaan links staat het depot al juist ingesteld: <b>Aardappelen Nijs, Ebdries 50A, Rillaar</b>. Daar hoef je normaal niets aan te doen. Vertrek je uitzonderlijk ergens anders? Typ dan een ander adres in dat vakje en klik de juiste suggestie aan.</p>
+</div>
+
+<h2><span class="num">3</span>Stel je vloot in</h2>
+<div class="step">
+  <p>In het blok <b>Vloot</b> staan de instellingen van de bestelwagens:</p>
+  <ul>
+    <li><b>Bestelwagens:</b> hoeveel wagens er vandaag rijden (standaard 10).</li>
+    <li><b>kg / wagen:</b> hoeveel kilo er maximaal in &eacute;&eacute;n wagen mag (standaard 1000 kg). Het programma zorgt dat geen enkele route daarover gaat.</li>
+    <li><b>&euro; / km</b> en <b>Vaste kost/rit:</b> wat een kilometer en een rit gemiddeld kosten. Die bepalen het kostenplaatje &mdash; eenmaal juist zetten en dan afblijven.</li>
+  </ul>
+</div>
+
+<h2><span class="num">4</span>Voeg de frituren toe</h2>
+<div class="step">
+  <p>Per frituur die vandaag een levering krijgt:</p>
+  <ul>
+    <li>Typ de <b>naam of het adres</b> in het vakje. <span class="voorbeeld">Bijvoorbeeld: &ldquo;Frituur Benny, Diest&rdquo; of &ldquo;Grote Markt 1, Aarschot&rdquo;.</span> Ook bekende plaatsen werken, zoals &ldquo;Atomium&rdquo; of &ldquo;restaurant De Post&rdquo;. Zet er best de gemeente bij, dan vindt hij sneller de juiste.</li>
+    <li>Kies uit de lijst die verschijnt de juiste zaak.</li>
+    <li>Vul in hoeveel <b>zakken van 10 kg</b> en <b>zakken van 5 kg</b> die frituur besteld heeft.</li>
+    <li>Klik op <b class="k orange">+ Toevoegen</b>.</li>
+  </ul>
+  <p>De frituur verschijnt in de lijst m&eacute;t het totaalgewicht (bv. &ldquo;190 kg &middot; 15&times;10 &middot; 8&times;5&rdquo;) en als bolletje op de kaart. Verkeerd ingegeven? Klik op het kruisje naast de stop en voeg opnieuw toe.</p>
+</div>
+<div class="tip"><b>Vindt hij een frituur niet op naam?</b> Typ dan gewoon het straatadres, dat werkt altijd. Er kunnen maximaal 30 stops in &eacute;&eacute;n planning.</div>
+
+<h2><span class="num">5</span>Bereken de routes</h2>
+<div class="step">
+  <p>Klik op de grote oranje knop <b class="k orange">&#9656; Bereken goedkoopste routes</b>. Het programma verdeelt de frituren over de wagens en zet elke route in een eigen kleur op de kaart &mdash; over de echte wegen, niet in vogelvlucht.</p>
+  <p>Bovenaan zie je meteen het totaal: kilometers, kost, aantal wagens, CO&#8322; en hoeveel je <b>bespaart</b> tegenover elke frituur apart bedienen.</p>
+  <p>Onder de kaart staat per route: welke wagen, de volgorde van de stops, de kilometers, de <b>rijtijd</b>, de kost en de lading in kg.</p>
+</div>
+<div class="good"><b>Extra zak vergeten?</b> Geen probleem &mdash; pas de stop aan (kruisje, opnieuw toevoegen) en klik gewoon nog eens op Bereken. Je mag zo vaak herrekenen als je wil.</div>
+
+<h2><span class="num">6</span>Route naar de chauffeur</h2>
+<div class="step">
+  <p>Bij elke route staan knoppen:</p>
+  <ul>
+    <li><b class="k">&#9656; Open in Google Maps</b> &mdash; opent de <b>volledige route</b> (alle stops in volgorde) in Google Maps, klaar om te navigeren. Dit is de knop die je meestal nodig hebt.</li>
+    <li><b>Waze per stop</b> (blauwe nummerknopjes) &mdash; Waze kan maar &eacute;&eacute;n bestemming tegelijk. De chauffeur klikt op <b>1</b>, rijdt ernaartoe, en klikt bij aankomst op <b>2</b>, enzovoort.</li>
+    <li><b>GPX &darr;</b> &mdash; downloadt de route als bestand voor navigatietoestellen (Garmin, TomTom). <b>Let op: dit kan maar 1 keer per dag.</b></li>
+  </ul>
+  <p>Bovenaan het routeplan staat ook <b class="k">&#8983; Kopieer plan + links</b>: die kopieert het hele plan als tekst, met per route de stops, de zakken per frituur &eacute;n een kant-en-klare kaartlink. Plak dat gewoon in <b>WhatsApp</b> naar de chauffeurs &mdash; klaar.</p>
+</div>
+
+<h2><span class="num">7</span>Goed om te weten</h2>
+<table class="limits">
+  <tr><th>Wat</th><th>Limiet / weetje</th></tr>
+  <tr><td>Aantal stops</td><td>Maximaal 30 per planning</td></tr>
+  <tr><td>GPX-export</td><td>Maximaal 1 per dag (morgen kan het weer)</td></tr>
+  <tr><td>Adres-zoeken</td><td>Even geduld tussen zoekopdrachten &mdash; het systeem remt vanzelf af als je te snel gaat</td></tr>
+  <tr><td>Kilometers</td><td>Echte weg-kilometers en rijtijden. Lukt dat even niet (dienst onbereikbaar), dan schat het programma en zie je daar een waarschuwing bij.</td></tr>
+  <tr><td>Opslaan</td><td>Je invoer (depot, frituren, vloot) wordt <b>automatisch bewaard</b> in de browser en staat er bij het openen gewoon weer &mdash; wel per toestel: wat je op de laptop ingeeft, staat niet op je gsm.</td></tr>
+</table>
+
+<div class="tip"><b>Werkt iets niet?</b> Ververs de pagina (F5) en probeer opnieuw. Krijg je geen adres-suggesties, kijk dan of het internet werkt. Kom je er niet uit: bel Jelle.</div>
+
+<footer>Route Planner &middot; Aardappelen Nijs &middot; Ebdries 50A, 3202 Rillaar (Aarschot) &middot; handleiding v1 &middot; <a href="./" style="color:var(--signal)">aardappelennijsdigital.web.app</a></footer>
+
+</div>
+</body>
+</html>

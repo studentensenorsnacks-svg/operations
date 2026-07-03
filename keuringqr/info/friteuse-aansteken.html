@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Friteuse aansteken — Señor Snacks</title><style>*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f8f6f2;font-family:system-ui,sans-serif;min-height:100vh;padding:20px 16px 48px;}
+a.back{display:inline-block;margin:0 auto 14px;font-size:13px;font-weight:700;color:#e8000f;text-decoration:none;}
+.wrap{max-width:500px;margin:0 auto;}
+.card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1.5px solid #e8e4dc;}
+.hdr{background:#e8000f;color:#fff;padding:26px 26px 20px;}
+.brand{font-size:11px;font-weight:700;opacity:.7;margin-bottom:6px;}
+.name{font-size:22px;font-weight:800;line-height:1.2;}
+.body{padding:20px 22px 24px;}
+.warn{background:#fff3f3;border:1.5px solid #f3c2c2;border-radius:10px;padding:11px 13px;font-size:13px;color:#8f1616;margin-bottom:14px;font-weight:600;line-height:1.5;}
+.video{position:relative;padding-top:56.25%;border-radius:12px;overflow:hidden;background:#000;margin-bottom:8px;}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+.fs-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#1a1915;color:#fff;border:0;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:6px;}
+.fs-btn:active{background:#333;}
+.video-alt{font-size:12px;color:#999;text-align:center;margin-bottom:14px;}
+.video-alt a{color:#e8000f;font-weight:700;}
+h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#999;margin:18px 0 10px;}
+ol{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:10px;}
+ol li{counter-increment:s;position:relative;padding-left:40px;font-size:14px;line-height:1.55;color:#333;}
+ol li::before{content:counter(s);position:absolute;left:0;top:1px;width:27px;height:27px;border-radius:8px;background:#1a1915;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;}
+ol.rood li::before{background:#e8000f;}
+ol li b{color:#1a1915;}
+ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:2px;}
+ul li{font-size:13.5px;line-height:1.5;padding-left:22px;position:relative;color:#333;}
+ul li::before{content:"•";position:absolute;left:6px;color:#e8000f;font-weight:800;}
+.footer{padding:13px 26px;border-top:1.5px solid #e8e4dc;text-align:center;font-size:11px;color:#bbb;}
+</style></head>
+<body>
+<div class="wrap">
+<a class="back" href="javascript:history.back()">&larr; Terug</a>
+<div class="card">
+  <div class="hdr"><div class="brand">🚐 SEÑOR SNACKS</div><div class="name">🔥 Friteuse aansteken (gas)</div></div>
+  <div class="body">
+    <div class="video"><iframe id="vid" src="https://drive.google.com/file/d/149ypCHdk2skcK1LLz8Q9jIRitx5VDLOP/preview" allow="autoplay; fullscreen" allowfullscreen loading="lazy" title="Filmpje: friteuse aansteken"></iframe></div>
+    <button class="fs-btn" onclick="volledigScherm()">⛶ Zet op volledig scherm</button>
+    <div class="video-alt">Speelt het filmpje niet af? <a href="https://drive.google.com/file/d/149ypCHdk2skcK1LLz8Q9jIRitx5VDLOP/view" target="_blank" rel="noopener">Open het hier</a>.</div>
+    <script>
+    function volledigScherm(){
+      var f=document.getElementById('vid');
+      var req=f.requestFullscreen||f.webkitRequestFullscreen||f.mozRequestFullScreen||f.msRequestFullscreen;
+      if(req){try{req.call(f);return;}catch(e){}}
+      // iPhone/Safari kan een iframe niet fullscreen zetten → open de Drive-speler zelf
+      window.open('https://drive.google.com/file/d/149ypCHdk2skcK1LLz8Q9jIRitx5VDLOP/view','_blank');
+    }
+    </script>
+    <div class="warn">Vóór je begint: zorg voor <b>ventilatie</b> en controleer dat de potten <b>gevuld zijn met vet/olie tot het niveau</b> (nooit droog aansteken!).</div>
+    <h2>Aansteken</h2>
+    <ol>
+      <li><b>Open de gasfles</b> — draai de hoofdkraan traag volledig open.</li>
+      <li><b>Open de gaskraan</b> van het toestel.</li>
+      <li>Zet de regelknop op <b>waakvlam</b>, druk hem in en ontsteek de waakvlam (piëzo-knop of lange aansteker). <b>Houd de knop 20–30 seconden ingedrukt</b> tot de waakvlam blijft branden.</li>
+      <li>Draai de knop naar de <b>hoofdbrander</b> en stel de temperatuur in — voor frituren <b>max. 175–180 °C</b>.</li>
+      <li>Controleer of de vlam <b>blauw en stabiel</b> brandt. Geel of onrustig? Uitzetten en melden.</li>
+    </ol>
+    <h2>Doven &amp; afsluiten (na elke dienst)</h2>
+    <ol class="rood">
+      <li>Hoofdbrander <b>uit</b> en waakvlam doven.</li>
+      <li><b>Gaskraan van het toestel dicht.</b></li>
+      <li><b>Hoofdkraan van de gasfles dicht.</b></li>
+    </ol>
+    <h2>Onthoud</h2>
+    <ul>
+      <li>Nooit een friteuse <b>droog</b> opwarmen.</li>
+      <li>Nooit <b>water</b> in of bij heet vet.</li>
+      <li>Frituur <b>nooit onbewaakt</b> laten branden.</li>
+      <li><b>Blusdeken</b> binnen handbereik; vetbrand = deksel of blusdeken, nooit water.</li>
+      <li>Lukt het aansteken niet na 2 pogingen? <b>Stop en verlucht eerst</b>, probeer daarna opnieuw.</li>
+    </ul>
+  </div>
+  <div class="footer">Señor Snacks · Taste · Enjoy · Smile</div>
+</div>
+</div>
+</body></html>

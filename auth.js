@@ -214,7 +214,7 @@
         personeel:      ['/personeel.html'],
         qrcodes:        ['/qr-codes.html'],
         poets:          ['/poets.html'],
-        keuringen:      ['/keuringen.html', '/ocb.html'],
+        keuringen:      ['/keuringen.html', '/ocb.html', '/nummerplaten.html'],
         vet:            ['/vet.html', '/vet-tonnen.html'],
         bestellingen:   ['/bestelling.html', '/bestellingen-dashboard.html', '/bestel-catalogus.html', '/ophaalbon.html'],
         stroomaanvraag: ['/stroomaanvraag.html'],

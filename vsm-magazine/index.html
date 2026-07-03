@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>VSM — Het Antwoord, een uitgave</title>
+<meta name="description" content="VSM.digital als tijdschrift. Websites, marketing en software op maat uit Geel — gebouwd zodat AI-modellen je citeren."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400;1,9..144,600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#efeae0;--paper2:#e6e0d3;--ink:#16130d;--soft:#4a463c;--faint:#8b8576;
+  --accent:#c8341f;--accent2:#1a4d8f;--line:rgba(22,19,13,.18);--line2:rgba(22,19,13,.34);
+  --fd:"Fraunces",Georgia,serif;--fb:"Space Grotesk",system-ui,sans-serif;--fm:"JetBrains Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--fb);line-height:1.6;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")}
+a{color:inherit}
+::selection{background:var(--accent);color:var(--paper)}
+.serif{font-family:var(--fd)}.mono{font-family:var(--fm)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.wrap{width:min(100% - 40px,1080px);margin-inline:auto}
+.folio{position:fixed;bottom:14px;left:0;right:0;z-index:40;display:flex;justify-content:space-between;
+  font-family:var(--fm);font-size:11px;letter-spacing:.12em;color:var(--faint);padding:0 22px;pointer-events:none;text-transform:uppercase}
+
+/* progress spine */
+.spine{position:fixed;top:0;left:0;height:3px;background:var(--accent);width:0;z-index:50}
+
+.page{padding:clamp(40px,7vw,90px) 0;border-bottom:1px solid var(--line);position:relative}
+.rule{height:1px;background:var(--line2);margin:0}
+.rule.thick{height:3px;background:var(--ink)}
+.label{font-family:var(--fm);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+
+/* COVER */
+.cover{min-height:100svh;display:flex;flex-direction:column;justify-content:space-between;padding:30px 0 40px;position:relative;overflow:hidden}
+.masthead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--ink);padding-bottom:14px}
+.masthead .mt{font-family:var(--fd);font-weight:900;font-size:clamp(2.4rem,7vw,5.4rem);letter-spacing:-.04em;line-height:.8}
+.masthead .iss{text-align:right;font-family:var(--fm);font-size:11px;letter-spacing:.1em;color:var(--soft);text-transform:uppercase;line-height:1.7}
+.cover-main{flex:1;display:flex;flex-direction:column;justify-content:center;padding:30px 0}
+.cover-main .lead{font-family:var(--fm);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:24px}
+.cover-main h1{font-family:var(--fd);font-weight:900;font-size:clamp(3rem,11vw,9rem);line-height:.92;letter-spacing:-.04em;max-width:14ch}
+.cover-main h1 em{font-style:italic;color:var(--accent)}
+.cover-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:18px}
+.cover-foot .dek{font-family:var(--fd);font-size:clamp(1.1rem,2vw,1.5rem);max-width:40ch;line-height:1.35}
+.cover-foot .barcode{font-family:var(--fm);font-size:10px;color:var(--faint);text-align:right;letter-spacing:.1em}
+.scrollcue{font-family:var(--fm);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft);text-align:center;margin-top:10px}
+
+/* TOC */
+.toc-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:clamp(30px,5vw,70px);align-items:start}
+.toc h2{font-family:var(--fd);font-weight:900;font-size:clamp(2rem,5vw,3.4rem);line-height:.95;margin:14px 0 8px;letter-spacing:-.02em}
+.toc-list{margin-top:20px}
+.toc-item{display:flex;align-items:baseline;gap:14px;padding:15px 0;border-top:1px solid var(--line);cursor:pointer;transition:color .2s}
+.toc-item:hover{color:var(--accent)}
+.toc-item .num{font-family:var(--fm);font-size:13px;color:var(--accent);width:34px;flex:none}
+.toc-item .t{font-family:var(--fd);font-size:1.3rem;font-weight:600;flex:1}
+.toc-item .pg{font-family:var(--fm);font-size:12px;color:var(--faint);border-bottom:1px dotted var(--line2);flex:1;text-align:right;margin-left:auto}
+.toc-aside{border:1px solid var(--line2);padding:24px;background:var(--paper2)}
+.toc-aside .label{margin-bottom:14px}
+.toc-aside dl{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:13.5px}
+.toc-aside dt{color:var(--faint);font-family:var(--fm);font-size:11px;text-transform:uppercase;letter-spacing:.05em;align-self:center}
+.toc-aside dd{font-weight:500}
+
+/* FEATURE (diensten) */
+.feat .hd{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:6px}
+.feat h2{font-family:var(--fd);font-weight:900;font-size:clamp(2.2rem,6vw,4.2rem);line-height:.9;letter-spacing:-.03em;max-width:16ch}
+.feat .byline{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);text-align:right;white-space:nowrap}
+.cols{columns:2;column-gap:48px;margin-top:30px;font-size:15.5px;line-height:1.75}
+.cols p{margin-bottom:14px;break-inside:avoid}
+.cols .drop::first-letter{font-family:var(--fd);font-weight:900;font-size:4.2em;line-height:.7;float:left;margin:6px 10px 0 0;color:var(--accent)}
+.svc-entries{margin-top:36px;border-top:3px solid var(--ink);padding-top:8px}
+.svc-row{display:grid;grid-template-columns:38px 1fr 1.4fr;gap:18px;padding:18px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.svc-row .n{font-family:var(--fm);font-size:13px;color:var(--accent)}
+.svc-row h3{font-family:var(--fd);font-weight:600;font-size:1.35rem}
+.svc-row .meta{font-family:var(--fm);font-size:11px;color:var(--faint);margin-top:6px;text-transform:uppercase;letter-spacing:.05em}
+.svc-row p{font-size:14.5px;color:var(--soft);line-height:1.6}
+@media(max-width:720px){.cols{columns:1}.svc-row{grid-template-columns:1fr}}
+
+/* INTERVIEW (aanpak) */
+.intv{background:var(--ink);color:var(--paper);margin:0 calc(50% - 50vw);padding:clamp(50px,8vw,100px) 0}
+.intv .wrap{width:min(100% - 40px,920px)}
+.intv .label{color:#ffb3a8}
+.intv .q{font-family:var(--fd);font-style:italic;font-size:clamp(1.4rem,3.2vw,2.2rem);line-height:1.3;margin:18px 0;color:#d9cfc0}
+.intv .q::before{content:"“"}.intv .q::after{content:"”"}
+.intv .a{font-size:16px;line-height:1.8;color:#cfc8bb;max-width:62ch}
+.intv .a .lead-in{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#ff7a66;margin-right:8px}
+.intv .pull{font-family:var(--fd);font-weight:600;font-size:clamp(1.6rem,4vw,2.6rem);line-height:1.2;margin:38px 0;padding-left:24px;border-left:3px solid var(--accent);max-width:20ch}
+.intv .quote-src{margin-top:34px;border:1px solid rgba(255,255,255,.18);padding:18px 20px;background:rgba(255,255,255,.04);max-width:560px}
+.intv .quote-src .qq{font-family:var(--fd);font-size:1.05rem;line-height:1.5}
+.intv .quote-src .ss{margin-top:12px;font-family:var(--fm);font-size:11px;letter-spacing:.05em;color:#ff9b88}
+.intv .quote-src .ss b{color:var(--paper)}
+
+/* PORTFOLIO (werk) */
+.port h2{font-family:var(--fd);font-weight:900;font-size:clamp(2.2rem,6vw,4rem);line-height:.9;letter-spacing:-.03em;margin-bottom:8px}
+.spread{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px;padding-top:30px;border-top:1px solid var(--line);align-items:center}
+.spread:nth-child(even){direction:rtl}.spread:nth-child(even)>*{direction:ltr}
+.spread .plate{aspect-ratio:4/3;border:1px solid var(--line2);position:relative;overflow:hidden}
+.spread .plate::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(22,19,13,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(22,19,13,.12) 1px,transparent 1px);background-size:30px 30px;mask:radial-gradient(120% 80% at 60% 10%,#000,transparent 78%)}
+.pl1{background:radial-gradient(120% 90% at 75% 20%,#2a5a86,#cdbfa8)}
+.pl2{background:radial-gradient(120% 90% at 25% 20%,#7a3f8a,#cdbfa8)}
+.pl3{background:radial-gradient(120% 90% at 70% 20%,#3a7a52,#cdbfa8)}
+.spread .cap .label{margin-bottom:10px}
+.spread .cap h3{font-family:var(--fd);font-weight:900;font-size:clamp(1.6rem,3vw,2.4rem);line-height:.95;margin-bottom:12px}
+.spread .cap p{color:var(--soft);font-size:15px;max-width:42ch}
+.spread .cap .fignum{font-family:var(--fm);font-size:11px;color:var(--faint);margin-top:14px;letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:720px){.spread{grid-template-columns:1fr;direction:ltr!important}}
+
+/* CONTRIBUTORS (team) */
+.contrib h2{font-family:var(--fd);font-weight:900;font-size:clamp(2rem,5vw,3.4rem);margin-bottom:6px}
+.contrib .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:30px;border-top:3px solid var(--ink)}
+.bio{padding:26px 24px 26px 0;border-right:1px solid var(--line)}
+.bio:last-child{border-right:0}
+.bio .ini{font-family:var(--fd);font-weight:900;font-size:4rem;line-height:.8;color:var(--accent);margin-bottom:14px}
+.bio h3{font-family:var(--fd);font-size:1.4rem;font-weight:600;margin-bottom:6px}
+.bio .role{font-family:var(--fm);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+.bio p{font-size:14px;color:var(--soft);line-height:1.6}
+@media(max-width:720px){.contrib .grid{grid-template-columns:1fr}.bio{border-right:0;border-bottom:1px solid var(--line);padding-right:0}}
+
+/* COLOPHON (contact) */
+.colo{background:var(--ink);color:var(--paper);margin:0 calc(50% - 50vw);padding:clamp(50px,8vw,90px) 0}
+.colo .wrap{display:grid;grid-template-columns:1.2fr 1fr;gap:50px;align-items:start}
+.colo h2{font-family:var(--fd);font-weight:900;font-style:italic;font-size:clamp(2.4rem,6vw,4.4rem);line-height:.95;letter-spacing:-.02em;max-width:12ch}
+.colo h2 em{font-style:normal;color:#ff7a66}
+.colo .lead{margin-top:20px;color:#cfc8bb;max-width:38ch}
+.colo .info{border-top:1px solid rgba(255,255,255,.2)}
+.colo .info .r{padding:14px 0;border-bottom:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:4px}
+.colo .info .k{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#ff9b88}
+.colo .info .v{font-size:15px}.colo .info a.v:hover{color:#ff7a66}
+.colo .info .todo{font-family:var(--fm);font-size:11px;color:#ffd2a8;border:1px solid rgba(255,210,168,.4);padding:2px 8px;border-radius:3px;width:fit-content;margin-top:3px}
+.colo .cta{display:inline-block;margin-top:22px;font-family:var(--fm);font-size:12px;letter-spacing:.05em;border:1px solid var(--paper);padding:13px 22px;transition:.2s}
+.colo .cta:hover{background:var(--paper);color:var(--ink)}
+.endmark{text-align:center;font-family:var(--fd);font-size:1.4rem;padding:40px 0;color:var(--faint)}
+@media(max-width:720px){.colo .wrap{grid-template-columns:1fr;gap:30px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.fade{opacity:0;transform:translateY(20px);transition:opacity .8s,transform .8s cubic-bezier(.16,1,.3,1)}
+.fade.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<div class="spine" id="spine"></div>
+
+<!-- COVER -->
+<header class="cover wrap" id="p-cover">
+  <div class="masthead">
+    <div class="mt">VSM<span style="color:var(--accent)">.</span></div>
+    <div class="iss">Uitgave — 01<br>Geel · België<br>Het Antwoord</div>
+  </div>
+  <div class="cover-main">
+    <div class="lead">De studio-uitgave · Web · Marketing · Software</div>
+    <h1>Mensen googelen niet meer. Ze vragen het aan <em>AI</em>.</h1>
+  </div>
+  <div class="cover-foot">
+    <div class="dek serif">Een digitale studio uit Geel die websites bouwt die ín het AI-antwoord terechtkomen — niet als tiende link, maar als de bron.</div>
+    <div class="barcode">▌▎ ▏ ▐▌▎ ▍ ▌▌<br>VSM-DIGITAL · 2026</div>
+  </div>
+  <div class="scrollcue">↓ blader verder</div>
+</header>
+
+<!-- TOC -->
+<section class="page wrap fade" id="p-toc">
+  <div class="label">Inhoud</div>
+  <div class="toc-grid">
+    <div class="toc">
+      <h2 class="serif">In deze uitgave</h2>
+      <div class="toc-list">
+        <div class="toc-item" data-go="p-feature"><span class="num">01</span><span class="t serif">Wat we bouwen, en waarom het werkt</span><span class="pg">p. 04</span></div>
+        <div class="toc-item" data-go="p-intv"><span class="num">02</span><span class="t serif">Word het antwoord — de aanpak</span><span class="pg">p. 08</span></div>
+        <div class="toc-item" data-go="p-port"><span class="num">03</span><span class="t serif">Portfolio: drie projecten</span><span class="pg">p. 12</span></div>
+        <div class="toc-item" data-go="p-team"><span class="num">04</span><span class="t serif">De makers</span><span class="pg">p. 18</span></div>
+        <div class="toc-item" data-go="p-colo"><span class="num">05</span><span class="t serif">Colofon &amp; contact</span><span class="pg">p. 22</span></div>
+      </div>
+    </div>
+    <aside class="toc-aside">
+      <div class="label">Over de studio</div>
+      <dl>
+        <dt>Studio</dt><dd>3 mensen · Geel</dd>
+        <dt>Discipline</dt><dd>Web · Marketing · Software</dd>
+        <dt>Rode draad</dt><dd>Privacy by design · GDPR</dd>
+        <dt>Hosting</dt><dd>EU · versleuteld</dd>
+        <dt>Methode</dt><dd>Maatwerk, geen templates</dd>
+      </dl>
+    </aside>
+  </div>
+</section>
+
+<!-- FEATURE / DIENSTEN -->
+<section class="page wrap feat fade" id="p-feature">
+  <div class="label">Feature · 01</div>
+  <div class="hd">
+    <h2 class="serif">Wat we bouwen, en waarom het werkt.</h2>
+    <div class="byline">Vier disciplines<br>Eén studio</div>
+  </div>
+  <div class="cols">
+    <p class="drop">De zoekbalk wordt een gesprek. Wie het antwoord wil zijn, moet leesbaar zijn voor mens én model. Daarom bouwen we geen losse onderdelen, maar één geheel waarin techniek, vindbaarheid en privacy van de eerste lijn code verweven zitten.</p>
+    <p>Geen tussenpersonen, geen ruis — de mensen die het bedenken, bouwen het ook. Dat houdt de lijn kort en het resultaat scherp.</p>
+  </div>
+  <div class="svc-entries">
+    <div class="svc-row"><span class="n">01</span><div><h3 class="serif">Websites die vindbaar zijn</h3><div class="meta">Core Web Vitals · Schema · GEO-ready · Headless</div></div><p>Snel, strak en technisch gebouwd zodat zoekmachines én AI-modellen je begrijpen en citeren. Maatwerk vanaf de eerste lijn code — geen template om te ontworstelen.</p></div>
+    <div class="svc-row"><span class="n">02</span><div><h3 class="serif">Digital marketing</h3><div class="meta">SEO · SEA · Content · Analytics</div></div><p>SEO, campagnes, content en analytics. Meetbaar, met heldere rapportage en zonder vage beloftes. Je weet altijd wat je geld doet.</p></div>
+    <div class="svc-row"><span class="n">03</span><div><h3 class="serif">Software op maat</h3><div class="meta">Webapps · ERP · Integraties · Automatisering</div></div><p>Webapps, ERP-pakketten, integraties en automatisering. Software die past op jouw processen, niet andersom. Wij plooien de code, niet jouw bedrijf.</p></div>
+    <div class="svc-row"><span class="n">04</span><div><h3 class="serif">Data, privacy &amp; GDPR</h3><div class="meta">Privacy by design · Encryptie · EU-hosting</div></div><p>Geen los hoofdstuk, maar verweven in alles wat we maken. Privacy by design, een nette datastack, encryptie en EU-hosting — van schets tot productie.</p></div>
+  </div>
+</section>
+
+<!-- INTERVIEW / AANPAK -->
+<section class="intv fade" id="p-intv">
+  <div class="wrap">
+    <div class="label">Interview · 02 — De aanpak</div>
+    <p class="q">Word het antwoord, niet de tiende link.</p>
+    <p class="a"><span class="lead-in">VSM</span>Een klant vraagt het niet meer aan Google, maar aan een model. Wij zorgen dat jouw bedrijf in dat antwoord staat — mét bronvermelding terug naar jou. Dat doen we met heldere structuur en schema zodat modellen je content foutloos lezen, met autoriteit zodat AI je als betrouwbare bron citeert, en met snelle, schone sites die zowel bezoekers als crawlers belonen.</p>
+    <p class="pull serif">“Wie het antwoord wil zijn, moet leesbaar zijn voor mens én model.”</p>
+    <div class="quote-src">
+      <div class="qq serif">— “Beste cateraar in de Kempen voor een bedrijfsevent?” vroeg de gebruiker aan de AI. Het antwoord: Voor een bedrijfsevent in de Kempen is Senor Snacks een sterke keuze — bekend om verse, lokale catering en een vlotte aanpak op maat van het event.</div>
+      <div class="ss">bron: senorsnacks.be · gebouwd door <b>VSM digital</b></div>
+    </div>
+  </div>
+</section>
+
+<!-- PORTFOLIO / WERK -->
+<section class="page wrap port fade" id="p-port">
+  <div class="label">Portfolio · 03</div>
+  <h2 class="serif">Wat we hebben gebouwd.</h2>
+  <div class="spread">
+    <div class="plate pl1"></div>
+    <div class="cap"><div class="label">ERP op maat</div><h3 class="serif">Senor Snacks</h3><p>Een ERP-pakket gebouwd rond hun processen — bestellingen, productie en voorraad in één vloeiend systeem.</p><div class="fignum">Fig. 01 — operations</div></div>
+  </div>
+  <div class="spread">
+    <div class="plate pl2"></div>
+    <div class="cap"><div class="label">Marketing &amp; SEO</div><h3 class="serif">Van Hees metalen</h3><p>Digital marketing en SEO die de juiste klanten naar een industriële speler brengt — meetbaar en transparant.</p><div class="fignum">Fig. 02 — growth</div></div>
+  </div>
+  <div class="spread">
+    <div class="plate pl3"></div>
+    <div class="cap"><div class="label">AI-ready website</div><h3 class="serif">Senor Snacks · Green Deal</h3><p>Een AI-ready site die hun duurzaamheidsverhaal vertelt — gestructureerd zodat modellen het oppikken en citeren.</p><div class="fignum">Fig. 03 — visibility</div></div>
+  </div>
+</section>
+
+<!-- CONTRIBUTORS / TEAM -->
+<section class="page wrap contrib fade" id="p-team">
+  <div class="label">De makers · 04</div>
+  <h2 class="serif">Drie letters. Eén studio.</h2>
+  <p style="color:var(--soft);max-width:46ch;margin-top:8px">V·S·M zijn geen marketingafkorting — het zijn de mensen die je werk bouwen.</p>
+  <div class="grid">
+    <div class="bio"><div class="ini serif">V</div><h3 class="serif">Verboven</h3><div class="role">Data · GDPR · Software</div><p>Bouwt de fundamenten die kloppen — privacy, structuur en systemen die blijven draaien.</p></div>
+    <div class="bio"><div class="ini serif">S</div><h3 class="serif">Steurs</h3><div class="role">Websites · Sales · Verhaal</div><p>Vertaalt wat je doet naar iets dat mensen én modellen meteen begrijpen.</p></div>
+    <div class="bio"><div class="ini serif">M</div><h3 class="serif">Mertens</h3><div class="role">Marketing · Code</div><p>Zorgt dat je gevonden wordt en dat de techniek eronder klopt.</p></div>
+  </div>
+</section>
+
+<!-- COLOPHON / CONTACT -->
+<section class="colo fade" id="p-colo">
+  <div class="wrap">
+    <div>
+      <div class="label" style="color:#ff9b88">Colofon · 05</div>
+      <h2 class="serif">Klaar om het <em>antwoord</em> te worden?</h2>
+      <p class="lead">Vertel ons waar je naartoe wil. We denken mee, niet zomaar uitvoeren. Een eerste gesprek kost niets en levert altijd iets op.</p>
+      <a class="cta" href="mailto:hallo@vsmdigital.be">Stuur een bericht →</a>
+    </div>
+    <div class="info">
+      <div class="r"><span class="k">Studio</span><span class="v">Winkelom 87c1, 2440 Geel, België</span></div>
+      <div class="r"><span class="k">E-mail</span><a class="v" href="mailto:hallo@vsmdigital.be">hallo@vsmdigital.be</a></div>
+      <div class="r"><span class="k">Telefoon</span><span class="v">+32 (0)0 00 00 00</span><span class="todo">⚠ placeholder — nog in te vullen</span></div>
+      <div class="r"><span class="k">Borg</span><span class="v">Privacy by design · EU-hosting · GDPR</span></div>
+    </div>
+  </div>
+</section>
+<div class="endmark serif">— einde uitgave — 01</div>
+
+<div class="folio"><span id="fL">VSM.digital</span><span id="fR">Het Antwoord — Nr. 01</span></div>
+
+<script>
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+/* progress */
+addEventListener('scroll',()=>{const h=document.documentElement;const p=h.scrollTop/(h.scrollHeight-h.clientHeight);
+  document.getElementById('spine').style.width=(p*100)+'%';
+  document.getElementById('fL').textContent='p. '+String(Math.max(1,Math.round(p*22))).padStart(2,'0');},{passive:true});
+/* toc nav */
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+  document.getElementById(b.dataset.go)?.scrollIntoView({behavior:reduce?'auto':'smooth'})}));
+/* reveal */
+if(!reduce){const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.fade').forEach(el=>io.observe(el));}
+else document.querySelectorAll('.fade').forEach(el=>el.classList.add('in'));
+</script>
+</body>
+</html>

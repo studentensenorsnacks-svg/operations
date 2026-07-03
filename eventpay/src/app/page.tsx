@@ -36,9 +36,19 @@ const tiles: { href: string; title: string; desc: string }[] = [
     desc: 'Aangesloten kassa’s/terminals: instellingen aanpassen, berichten sturen.',
   },
   {
+    href: '/terminals',
+    title: 'Terminals',
+    desc: 'Betaalterminals met hun interne nummering (1 t/m 14).',
+  },
+  {
     href: '/voorraad',
     title: 'Voorraad',
     desc: 'Actuele stock per sector met historiek en stockbreuk.',
+  },
+  {
+    href: '/sectoren-nieuw',
+    title: 'Locatie toevoegen',
+    desc: 'Nieuwe locatie aanmaken en optioneel de prijslijst van een bestaande locatie kopiëren.',
   },
   {
     href: '/producten',

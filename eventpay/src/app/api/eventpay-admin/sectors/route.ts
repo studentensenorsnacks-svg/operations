@@ -1,6 +1,8 @@
 // POST /api/eventpay-admin/sectors
-// Body: { name: string }
-// Maakt via de admin-wizard een nieuwe sector aan.
+// Body: { name: string, copyFromSectorId?: number }
+// Maakt via de admin-wizard een nieuwe sector aan. Met copyFromSectorId wordt
+// de volledige prijslijst (categorieën + producten) van die bron-sector
+// gekopieerd via de ingebouwde kopieer-stap van de wizard.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createSector } from '@/lib/eventpay-admin';
@@ -18,7 +20,9 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    await createSector(name);
+    const copyFromSectorId =
+      typeof body?.copyFromSectorId === 'number' ? body.copyFromSectorId : null;
+    await createSector(name, { copyFromSectorId });
     return NextResponse.json({ ok: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -380,6 +380,8 @@ const CATS = {
   notitie:          { label: 'Notitie',         color: '#a855f7' },
   'stuk-resolved':  { label: 'Stuk opgelost',   color: '#15803d' },
   'bestel-open':    { label: 'Bestelling',      color: '#0891b2' },
+  'bestel-wijzig':  { label: '🛒 Bestellijst aangepast', color: '#0e7490' },
+  'bestel-plaats':  { label: '🛒 Bestelling geplaatst',  color: '#0369a1' },
   eindstock:        { label: 'Eindstock',       color: '#0d9488' },
   laadlijst:        { label: 'Laadlijst',       color: '#ca8a04' },
   'verhuur-sign':   { label: 'Verhuur aflevering', color: '#b45309' },
@@ -410,7 +412,7 @@ const CAT_KEYS = Object.keys(CATS);
 let activeCats = new Set(CAT_KEYS);
 
 // Ruwe bron-data
-let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{}, ai:{}, deletions:{} };
+let src = { ops:{}, notities:{}, eindstock:{}, poetsHist:{}, prio:{}, planning:{}, activity:{}, laadlijsten:{}, ai:{}, deletions:{}, bestelLog:{} };
 let events = [];      // genormaliseerde audit-events
 const loaded = {};    // welke bronnen al binnen zijn
 
@@ -656,6 +658,17 @@ function rebuild(){
     });
   });
 
+  // 7c) Bestel-logboek (_bestelLog): wie de bestellijst aanpaste of plaatste
+  Object.values(src.bestelLog || {}).forEach(b => {
+    if (!b) return;
+    const isPlace = /geplaatst|PDF|besteld/i.test(b.action || '');
+    ev.push({
+      ts: tsFrom(b.at), cat: isPlace ? 'bestel-plaats' : 'bestel-wijzig',
+      person: b.name || b.email || 'Onbekend',
+      action: b.action || 'Bestellijst aangepast', target: '', detail: b.detail || ''
+    });
+  });
+
   // 8) Laadlijsten (ft_laadlijsten_v1): aanmaak + laatste wijziging/status
   const LL_LABEL = { nieuw:'Nieuw', laden:'Laden', retour:'Retour', te_factureren:'Te factureren', gefactureerd:'Gefactureerd', archief:'Archief' };
   Object.values(src.laadlijsten || {}).forEach(l => {
@@ -867,6 +880,7 @@ function startListeners(){
   fbdb.ref('_userActivity').on('value',    s => { src.activity  = s.val() || {}; markLoaded('activity'); }, () => {});
   fbdb.ref('_aiLogs').on('value',          s => { src.ai        = s.val() || {}; markLoaded('ai'); }, () => {});
   fbdb.ref('_deletions').on('value',       s => { src.deletions = s.val() || {}; markLoaded('deletions'); }, () => {});
+  fbdb.ref('_bestelLog').on('value',       s => { src.bestelLog = s.val() || {}; markLoaded('bestelLog'); }, () => {});
   setInterval(render, 60000); // klok/relatieve weergave fris houden
 }
 

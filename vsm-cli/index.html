@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>VSM://terminal</title>
+<meta name="description" content="VSM.digital als terminal. Type een commando — diensten, werk, team, contact. Studio uit Geel die websites bouwt die AI citeert."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a07;--ink:#9dffb0;--dim:#3f8a52;--faint:#236138;--amber:#ffcf5c;--cyan:#46e6ff;--red:#ff6b6b;--white:#eafff0;
+  --acc:#22ff77;--acc-rgb:34,255,119;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#02050399;background-color:#020503;color:var(--ink);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14.5px;line-height:1.65;overflow:hidden}
+/* CRT screen */
+#crt{position:fixed;inset:0;padding:clamp(14px,3vw,40px);overflow-y:auto;
+  background:radial-gradient(120% 100% at 50% 40%,rgba(10,40,20,.5),#020503 90%)}
+#crt::-webkit-scrollbar{width:8px}#crt::-webkit-scrollbar-thumb{background:var(--faint);border-radius:5px}
+.scan{position:fixed;inset:0;pointer-events:none;z-index:30;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.18) 3px,rgba(0,0,0,0) 4px)}
+.glow{position:fixed;inset:0;pointer-events:none;z-index:31;box-shadow:inset 0 0 160px rgba(0,30,12,.9);background:radial-gradient(120% 100% at 50% 50%,transparent 60%,rgba(0,0,0,.5))}
+.flick{position:fixed;inset:0;pointer-events:none;z-index:32;background:rgba(20,80,40,.03);animation:fl .12s steps(2) infinite}
+@keyframes fl{50%{opacity:.4}}
+::selection{background:var(--acc);color:#020503}
+a{color:var(--cyan);text-decoration:none}a:hover{text-shadow:0 0 8px var(--cyan)}
+:focus-visible{outline:1px solid var(--acc)}
+
+.con{max-width:920px;margin:0 auto;white-space:pre-wrap;word-break:break-word}
+.line{white-space:pre-wrap}
+.dim{color:var(--dim)}.amber{color:var(--amber)}.cyan{color:var(--cyan)}.white{color:var(--white)}.red{color:var(--red)}.acc{color:var(--acc)}
+.bar{color:var(--faint)}
+b{color:var(--white);font-weight:700}
+.box{border:1px solid var(--faint);padding:2px 0;margin:8px 0}
+.hr{color:var(--faint)}
+
+/* prompt input line */
+.inputline{display:flex;align-items:baseline;gap:0;max-width:920px;margin:6px auto 60px}
+.ps1{color:var(--acc);white-space:nowrap}
+.ps1 b{color:var(--cyan)}
+#cmd{flex:1;background:none;border:0;color:var(--white);font-family:inherit;font-size:inherit;outline:none;caret-color:transparent;margin-left:8px}
+.ic{display:inline-block;width:9px;height:1.05em;background:var(--acc);vertical-align:-2px;margin-left:-2px;animation:bl 1s steps(2) infinite;position:relative}
+@keyframes bl{50%{opacity:0}}
+
+/* quick command chips */
+.chips{position:fixed;bottom:0;left:0;right:0;z-index:25;display:flex;gap:7px;flex-wrap:wrap;justify-content:center;
+  padding:11px;background:linear-gradient(0deg,#020503,#020503cc 70%,transparent);backdrop-filter:blur(2px)}
+.chip{font-size:12px;border:1px solid var(--faint);color:var(--ink);padding:6px 12px;border-radius:3px;cursor:pointer;transition:.15s;background:rgba(10,40,20,.4)}
+.chip:hover{border-color:var(--acc);color:var(--white);box-shadow:0 0 12px rgba(var(--acc-rgb),.3)}
+.chip b{color:var(--acc)}
+
+.hl{color:var(--white);background:rgba(var(--acc-rgb),.12);padding:0 3px}
+table{border-collapse:collapse;margin:6px 0}
+td{padding:2px 18px 2px 0;vertical-align:top}
+td.k{color:var(--dim)}
+.todo{color:var(--amber);border:1px solid rgba(255,207,92,.4);padding:0 6px}
+@media(prefers-reduced-motion:reduce){.flick{display:none}.ic{animation:none}}
+@media(max-width:640px){body{font-size:13px}}
+</style>
+</head>
+<body>
+<div id="crt"><div class="con" id="con"></div>
+  <div class="inputline" id="iline" style="display:none">
+    <span class="ps1">visitor@<b>vsm</b>:~$</span><input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false"/><span class="ic" id="ic"></span>
+  </div>
+</div>
+<div class="scan"></div><div class="glow"></div><div class="flick"></div>
+
+<div class="chips" id="chips" style="display:none">
+  <span class="chip" data-cmd="help"><b>help</b></span>
+  <span class="chip" data-cmd="about">about</span>
+  <span class="chip" data-cmd="diensten">diensten</span>
+  <span class="chip" data-cmd="aanpak">aanpak</span>
+  <span class="chip" data-cmd="werk">werk</span>
+  <span class="chip" data-cmd="team">team</span>
+  <span class="chip" data-cmd="contact">contact</span>
+  <span class="chip" data-cmd="clear">clear</span>
+</div>
+
+<script>
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const con=document.getElementById('con'),crt=document.getElementById('crt'),iline=document.getElementById('iline'),
+      cmd=document.getElementById('cmd'),chips=document.getElementById('chips');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function scrollEnd(){crt.scrollTop=crt.scrollHeight}
+
+function append(html){const d=document.createElement('div');d.className='line';d.innerHTML=html;con.appendChild(d);scrollEnd();return d}
+async function typeLine(html,sp=8,cls=''){const d=document.createElement('div');d.className='line '+cls;con.appendChild(d);
+  // strip tags for typing then set — simpler: type plain, allow basic via instant if contains <
+  if(html.includes('<')||html.includes('&')){d.innerHTML=html;scrollEnd();return d}
+  for(let i=0;i<html.length;i++){d.textContent=html.slice(0,i+1);if(i%2===0)scrollEnd();await wait(reduce?0:sp)}scrollEnd();return d}
+
+/* ---------- BOOT SEQUENCE ---------- */
+const boot=[
+ ['dim','VSM BIOS v2.026 — Geel, België'],
+ ['dim','Copyright (c) VSM.digital. All rights reserved.'],
+ ['','&nbsp;'],
+ ['dim','CPU ........ studio-core x3 (Verboven · Steurs · Mertens)  [<span class="acc">OK</span>]'],
+ ['dim','MEM ........ maatwerk, geen templates ................... [<span class="acc">OK</span>]'],
+ ['dim','NET ........ EU-hosting · versleuteld ................... [<span class="acc">OK</span>]'],
+ ['dim','SEC ........ privacy by design · GDPR .................. [<span class="acc">OK</span>]'],
+ ['dim','GEO ........ generative engine optimization ........... [<span class="acc">OK</span>]'],
+ ['','&nbsp;'],
+ ['white','Booting VSM://os ...'],
+];
+
+async function runBoot(){
+  for(const [cls,txt] of boot){const d=append('<span class="'+cls+'">'+txt+'</span>');await wait(reduce?0:120)}
+  await wait(reduce?0:350);
+  append('&nbsp;');
+  append('<span class="bar">════════════════════════════════════════════════</span>');
+  append('<span class="bar">║ </span><b>VSM.digital</b><span class="dim"> — mensen googelen niet meer.</span><span class="bar">    ║</span>');
+  append('<span class="bar">║ </span><span class="dim">Ze vragen het aan </span><span class="acc">AI</span><span class="dim">. Wij bouwen dat antwoord.</span><span class="bar">  ║</span>');
+  append('<span class="bar">════════════════════════════════════════════════</span>');
+  append('&nbsp;');
+  await typeLine('Welkom. Dit is een studio die je kan bevragen als een terminal.',6);
+  append('<span class="dim">Type <span class="acc">help</span> voor commando\'s, of klik een knop onderaan.</span>');
+  append('&nbsp;');
+  iline.style.display='flex';chips.style.display='flex';cmd.focus();
+}
+
+/* ---------- COMMANDS ---------- */
+const CMDS={
+  help(){return [
+   '<b>BESCHIKBARE COMMANDO\'S</b>',
+   '<span class="bar">───────────────────────────────────────────</span>',
+   '<span class="acc">about</span>      <span class="dim">— wie is VSM en wat is de missie</span>',
+   '<span class="acc">diensten</span>   <span class="dim">— de 4 kerndiensten</span>',
+   '<span class="acc">aanpak</span>     <span class="dim">— word het antwoord, niet de tiende link</span>',
+   '<span class="acc">ask</span>        <span class="dim">— stel een AI een vraag (demo)</span>',
+   '<span class="acc">werk</span>       <span class="dim">— geselecteerde projecten</span>',
+   '<span class="acc">team</span>       <span class="dim">— de 3 makers</span>',
+   '<span class="acc">contact</span>    <span class="dim">— adres, e-mail, telefoon</span>',
+   '<span class="acc">clear</span>      <span class="dim">— scherm wissen</span>'];
+  },
+  about(){return [
+   '<b>$ whoami</b>',
+   '<span class="dim">VSM.digital — digitale studio · Winkelom, Geel (BE)</span>','&nbsp;',
+   '<span class="white">Mensen googelen niet meer. Ze vragen het aan <span class="acc">AI</span>.</span>',
+   'Wij bouwen websites die in dát antwoord terechtkomen. Snel,',
+   'strak, en gebouwd zodat ChatGPT, Copilot en Gemini je',
+   'begrijpen — en citeren. Maatwerk, geen templates.','&nbsp;',
+   '<table><tr><td class="k">studio</td><td>3 mensen · Geel</td></tr>'+
+   '<tr><td class="k">discipline</td><td>Web · Marketing · Software</td></tr>'+
+   '<tr><td class="k">rode draad</td><td>Privacy by design · GDPR</td></tr>'+
+   '<tr><td class="k">hosting</td><td>EU · versleuteld</td></tr></table>'];
+  },
+  diensten(){return [
+   '<b>$ ls ./diensten</b>','&nbsp;',
+   '<span class="acc">[01]</span> <b>Websites die vindbaar zijn</b>',
+   '     <span class="dim">Snel & technisch zodat zoekmachines én AI je citeren.</span>',
+   '     <span class="cyan">core-web-vitals · schema · geo-ready · headless</span>','&nbsp;',
+   '<span class="acc">[02]</span> <b>Digital marketing</b>',
+   '     <span class="dim">SEO, campagnes, content, analytics. Meetbaar.</span>',
+   '     <span class="cyan">seo · sea · content · rapportage</span>','&nbsp;',
+   '<span class="acc">[03]</span> <b>Software op maat</b>',
+   '     <span class="dim">Webapps, ERP, integraties, automatisering.</span>',
+   '     <span class="cyan">webapps · erp · integraties · automatisering</span>','&nbsp;',
+   '<span class="acc">[04]</span> <b>Data, privacy & GDPR</b>',
+   '     <span class="dim">Verweven in alles. Privacy by design, EU-hosting.</span>',
+   '     <span class="cyan">privacy-by-design · encryptie · eu-hosting</span>'];
+  },
+  aanpak(){return [
+   '<b>$ ./aanpak.sh --waarom</b>','&nbsp;',
+   '<span class="white">Word het antwoord, niet de tiende link.</span>',
+   'Een klant vraagt het niet meer aan Google, maar aan een model.',
+   'Wij zorgen dat jouw bedrijf in dat antwoord staat — mét bron.','&nbsp;',
+   '<span class="acc">[✓]</span> Heldere structuur & schema zodat modellen je content lezen.',
+   '<span class="acc">[✓]</span> Autoriteit opbouwen zodat AI je als bron citeert.',
+   '<span class="acc">[✓]</span> Snelle, schone sites die bezoekers én crawlers belonen.','&nbsp;',
+   '<span class="dim">tip: probeer </span><span class="acc">ask beste cateraar in de Kempen?</span>'];
+  },
+  ask(arg){const q=arg||'beste cateraar in de Kempen voor een bedrijfsevent?';return [
+   '<span class="dim">? </span><span class="white">'+escapeHtml(q)+'</span>','&nbsp;',
+   '<span class="cyan">AI ›</span> Voor een bedrijfsevent in de Kempen is <b>Senor Snacks</b>',
+   '    een sterke keuze — bekend om verse, lokale catering en een',
+   '    vlotte aanpak op maat van het event.','&nbsp;',
+   '<span class="amber">    ↳ bron: senorsnacks.be   ↳ gebouwd door: VSM digital</span>'];
+  },
+  werk(){return [
+   '<b>$ ls ./werk</b>','&nbsp;',
+   '<span class="acc">▸</span> <b>Senor Snacks</b> <span class="dim">— ERP op maat</span>',
+   '  <span class="dim">Bestellingen, productie & voorraad in één vloeiend systeem.</span>','&nbsp;',
+   '<span class="acc">▸</span> <b>Van Hees metalen</b> <span class="dim">— marketing & SEO</span>',
+   '  <span class="dim">De juiste klanten naar een industriële speler — meetbaar.</span>','&nbsp;',
+   '<span class="acc">▸</span> <b>Senor Snacks · Green Deal</b> <span class="dim">— AI-ready website</span>',
+   '  <span class="dim">Duurzaamheidsverhaal, gestructureerd zodat modellen het citeren.</span>'];
+  },
+  team(){return [
+   '<b>$ cat ./team</b>','&nbsp;',
+   '<span class="acc">V</span>  <b>Verboven</b> <span class="dim">— Data, GDPR & operationele software.</span>',
+   '   <span class="dim">Bouwt de fundamenten die kloppen.</span>','&nbsp;',
+   '<span class="acc">S</span>  <b>Steurs</b> <span class="dim">— Websites, sales & het verhaal.</span>',
+   '   <span class="dim">Vertaalt wat je doet naar iets dat mens én model snapt.</span>','&nbsp;',
+   '<span class="acc">M</span>  <b>Mertens</b> <span class="dim">— Digital marketing & code.</span>',
+   '   <span class="dim">Zorgt dat je gevonden wordt en de techniek klopt.</span>'];
+  },
+  contact(){return [
+   '<b>$ ./contact --open</b>','&nbsp;',
+   '<span class="white">Klaar om het antwoord te worden?</span>',
+   '<span class="dim">Vertel ons waar je naartoe wil. Een eerste gesprek kost niets.</span>','&nbsp;',
+   '<table><tr><td class="k">studio</td><td>Winkelom 87c1, 2440 Geel, België</td></tr>'+
+   '<tr><td class="k">e-mail</td><td><a href="mailto:hallo@vsmdigital.be">hallo@vsmdigital.be</a></td></tr>'+
+   '<tr><td class="k">telefoon</td><td>+32 (0)0 00 00 00 <span class="todo">placeholder</span></td></tr></table>'];
+  },
+};
+function escapeHtml(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+
+const history=[];let hi=-1;let busy=false;
+async function exec(raw){
+  const input=raw.trim();
+  append('<span class="ps1" style="opacity:.9">visitor@<b style="color:var(--cyan)">vsm</b>:~$</span> <span class="white">'+escapeHtml(input)+'</span>');
+  if(!input)return;
+  history.push(input);hi=history.length;
+  const [c,...rest]=input.split(' ');const arg=rest.join(' ');
+  const key=c.toLowerCase();
+  if(key==='clear'){con.innerHTML='';return;}
+  const fn=CMDS[key];
+  append('&nbsp;');
+  if(!fn){append('<span class="red">commando niet gevonden: '+escapeHtml(c)+'</span><span class="dim"> — type </span><span class="acc">help</span>');append('&nbsp;');return;}
+  busy=true;
+  const lines=fn(arg);
+  for(const ln of lines){await typeLine(ln, ln.length>60?3:6); await wait(reduce?0:30);}
+  append('&nbsp;');busy=false;
+}
+
+cmd.addEventListener('keydown',async e=>{
+  if(e.key==='Enter'){const v=cmd.value;cmd.value='';if(busy)return;await exec(v);cmd.focus();}
+  else if(e.key==='ArrowUp'){if(hi>0){hi--;cmd.value=history[hi]||''}e.preventDefault();}
+  else if(e.key==='ArrowDown'){if(hi<history.length-1){hi++;cmd.value=history[hi]||''}else{hi=history.length;cmd.value=''}e.preventDefault();}
+  else if(e.key==='Tab'){e.preventDefault();const v=cmd.value.toLowerCase();
+    const m=Object.keys(CMDS).concat(['help','clear']).find(k=>k.startsWith(v));if(m)cmd.value=m;}
+});
+chips.addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c||busy)return;exec(c.dataset.cmd);cmd.focus();});
+document.getElementById('crt').addEventListener('click',e=>{if(!e.target.closest('a'))cmd.focus()});
+
+window.addEventListener('load',runBoot);
+</script>
+</body>
+</html>

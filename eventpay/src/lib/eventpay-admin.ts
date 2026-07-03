@@ -320,11 +320,41 @@ async function loadSectorsPage(): Promise<{
   return { csrf, wizardSnapshot: snap, eventId: (await ensureSession()).eventId };
 }
 
-export async function createSector(name: string): Promise<void> {
-  const cleanName = name.trim();
-  if (!cleanName) throw new Error('Sectornaam mag niet leeg zijn.');
-  if (cleanName.length > 100)
-    throw new Error('Sectornaam te lang (max 100 tekens).');
+// ── Wizard-HTML parsen ─────────────────────────────────────────────
+// De Livewire-respons bevat bij elke call de gerenderde HTML van de volgende
+// wizard-stap (components[].effects.html). Daaruit lezen we de beschikbare
+// knoppen (wire:click="methode") en formuliervelden (wire:model="veld") zodat
+// we de kopieer-tak niet hoeven te raden maar live ontdekken.
+function parseWizardMethods(html: string): string[] {
+  const out = new Set<string>();
+  const re = /wire:click(?:\.[a-zA-Z]+)*\s*=\s*"([a-zA-Z0-9_]+)\s*(?:\([^"]*\))?"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) out.add(m[1]);
+  return Array.from(out);
+}
+
+function parseWizardModels(html: string): string[] {
+  const out = new Set<string>();
+  const re = /wire:model(?:\.[a-zA-Z]+)*\s*=\s*"([a-zA-Z0-9_.]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) out.add(m[1]);
+  return Array.from(out);
+}
+
+interface LivewireStep {
+  snapshot: string;
+  html: string;
+}
+
+// Bouwt een caller voor de sector-wizard op basis van een geladen sessie.
+async function sectorWizardCaller(): Promise<{
+  wizardSnapshot: string;
+  call: (
+    snapshot: string,
+    method: string,
+    updates?: Record<string, unknown>,
+  ) => Promise<LivewireStep>;
+}> {
   const { baseUrl } = config();
   const session = await ensureSession();
   const { csrf, wizardSnapshot, eventId } = await loadSectorsPage();
@@ -336,21 +366,14 @@ export async function createSector(name: string): Promise<void> {
     'X-Livewire': '1',
     Referer: `${baseUrl}/dashboard/${eventId}/sectors`,
   };
-
-  const callLivewire = async (
+  const call = async (
     snapshot: string,
     method: string,
     updates: Record<string, unknown> = {},
-  ): Promise<string> => {
+  ): Promise<LivewireStep> => {
     const body = JSON.stringify({
       _token: csrf,
-      components: [
-        {
-          snapshot,
-          updates,
-          calls: [{ path: '', method, params: [] }],
-        },
-      ],
+      components: [{ snapshot, updates, calls: [{ path: '', method, params: [] }] }],
     });
     const r = await fetchWithJar(
       livewireUrl,
@@ -363,17 +386,132 @@ export async function createSector(name: string): Promise<void> {
         `Sector-wizard ${method}() mislukt (${r.status}): ${t.slice(0, 300)}`,
       );
     }
-    const json = (await r.json()) as { components: Array<{ snapshot: string }> };
-    const next = json.components[0]?.snapshot;
-    if (!next) throw new Error(`Geen snapshot na ${method}()`);
-    return next;
+    const json = (await r.json()) as {
+      components: Array<{ snapshot: string; effects?: { html?: string } }>;
+    };
+    const comp = json.components[0];
+    if (!comp?.snapshot) throw new Error(`Geen snapshot na ${method}()`);
+    return { snapshot: comp.snapshot, html: comp.effects?.html ?? '' };
   };
+  return { wizardSnapshot, call };
+}
 
-  // Wizard: start → noCopy → name (met sector_name) → create
-  const s1 = await callLivewire(wizardSnapshot, 'start');
-  const s2 = await callLivewire(s1, 'noCopy');
-  const s3 = await callLivewire(s2, 'name', { sector_name: cleanName });
-  await callLivewire(s3, 'create');
+export interface CreateSectorOptions {
+  // Bron-sector-ID waarvan de volledige prijslijst (categorieën + producten)
+  // gekopieerd wordt. Niet opgegeven → lege sector (zoals voorheen).
+  copyFromSectorId?: number | null;
+}
+
+export async function createSector(
+  name: string,
+  options: CreateSectorOptions = {},
+): Promise<void> {
+  const cleanName = name.trim();
+  if (!cleanName) throw new Error('Sectornaam mag niet leeg zijn.');
+  if (cleanName.length > 100)
+    throw new Error('Sectornaam te lang (max 100 tekens).');
+
+  const copyFromSectorId = options.copyFromSectorId ?? null;
+  const { wizardSnapshot, call } = await sectorWizardCaller();
+
+  // Stap 1: wizard openen. De respons-HTML toont de keuze "kopiëren of niet".
+  const start = await call(wizardSnapshot, 'start');
+  let snap = start.snapshot;
+  let nameAlreadySet = false;
+
+  if (copyFromSectorId != null) {
+    // De kopieer-knop is de sibling van noCopy. Ontdek de methode live i.p.v.
+    // te raden, zodat we nooit een verkeerde productie-call afvuren.
+    const methods = parseWizardMethods(start.html);
+    const copyMethod = methods.find(
+      (m) => /copy/i.test(m) && m.toLowerCase() !== 'nocopy',
+    );
+    if (!copyMethod) {
+      throw new Error(
+        `Kon de kopieer-stap niet vinden in de sector-wizard. ` +
+          `Beschikbare knoppen: ${methods.join(', ') || '(geen)'}. ` +
+          `Gebruik "Wizard-structuur tonen" om dit te diagnosticeren.`,
+      );
+    }
+    const afterCopy = await call(snap, copyMethod);
+    snap = afterCopy.snapshot;
+
+    // Stap 2: bron-sector kiezen. Zoek het select-veld en de doorgaan-knop.
+    const models = parseWizardModels(afterCopy.html);
+    const selectModel = models.find((m) =>
+      /(sector|copy|from|source|bron|kopie)/i.test(m),
+    );
+    if (!selectModel) {
+      throw new Error(
+        `Kon het bron-sector-veld niet vinden in de kopieer-stap. ` +
+          `Beschikbare velden: ${models.join(', ') || '(geen)'}. ` +
+          `Gebruik "Wizard-structuur tonen" om dit te diagnosticeren.`,
+      );
+    }
+    const step2Methods = parseWizardMethods(afterCopy.html).filter(
+      (m) => !/^(back|previous|terug|cancel|annul)/i.test(m),
+    );
+    const advance =
+      step2Methods.find((m) =>
+        /(name|next|continue|volgende|select|choose|kies|confirm)/i.test(m),
+      ) ?? 'name';
+
+    if (advance.toLowerCase() === 'name') {
+      // Doorgaan-knop is meteen de naam-stap: zet bron + naam in één call.
+      const r = await call(snap, 'name', {
+        [selectModel]: copyFromSectorId,
+        sector_name: cleanName,
+      });
+      snap = r.snapshot;
+      nameAlreadySet = true;
+    } else {
+      const r = await call(snap, advance, { [selectModel]: copyFromSectorId });
+      snap = r.snapshot;
+    }
+  } else {
+    const r = await call(snap, 'noCopy');
+    snap = r.snapshot;
+  }
+
+  if (!nameAlreadySet) {
+    const r = await call(snap, 'name', { sector_name: cleanName });
+    snap = r.snapshot;
+  }
+  await call(snap, 'create');
+}
+
+// Read-only diagnose: doorloopt de wizard zonder create en rapporteert welke
+// knoppen/velden elke stap aanbiedt. Handig om de exacte kopieer-methode en
+// het bron-sectorveld te bepalen zonder iets aan te maken in productie.
+export interface WizardInspection {
+  step1: { methods: string[]; models: string[] };
+  copyStep: { method: string | null; methods: string[]; models: string[] } | null;
+}
+
+export async function inspectSectorWizard(): Promise<WizardInspection> {
+  const { wizardSnapshot, call } = await sectorWizardCaller();
+  const start = await call(wizardSnapshot, 'start');
+  const step1 = {
+    methods: parseWizardMethods(start.html),
+    models: parseWizardModels(start.html),
+  };
+  let copyStep: WizardInspection['copyStep'] = null;
+  const copyMethod =
+    step1.methods.find((m) => /copy/i.test(m) && m.toLowerCase() !== 'nocopy') ??
+    null;
+  if (copyMethod) {
+    try {
+      const afterCopy = await call(start.snapshot, copyMethod);
+      copyStep = {
+        method: copyMethod,
+        methods: parseWizardMethods(afterCopy.html),
+        models: parseWizardModels(afterCopy.html),
+      };
+    } catch {
+      copyStep = { method: copyMethod, methods: [], models: [] };
+    }
+  }
+  return { step1, copyStep };
 }
 
 export async function setDeviceSector(

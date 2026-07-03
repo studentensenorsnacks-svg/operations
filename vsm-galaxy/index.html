@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>VSM — Het Antwoord-stelsel</title>
+<meta name="description" content="VSM.digital als ruimtereis. Websites, marketing en software op maat uit Geel — gebouwd zodat AI-modellen je citeren."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#eaf2ff;--muted:#93a0c2;--faint:#566087;--cyan:#37e0ff;--violet:#9d7bff;--gold:#ffcf5c;
+  --line:rgba(180,200,255,.14);--line2:rgba(180,200,255,.28);--cyan-rgb:55,224,255;
+  --fb:"Space Grotesk",system-ui,sans-serif;--fm:"JetBrains Mono",ui-monospace,monospace;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#03040a;color:var(--ink);font-family:var(--fb);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--cyan);color:#03040a}
+.mono{font-family:var(--fm)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+
+#scene{position:fixed;inset:0;z-index:0}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(130% 100% at 50% 50%,transparent 50%,rgba(3,4,10,.85) 100%)}
+
+/* HUD */
+.hud{position:fixed;z-index:20;font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.hud.tl{top:22px;left:24px}.hud.tl b{color:var(--ink);font-size:13px}.hud.tl b i{color:var(--cyan);font-style:normal}
+.hud.tr{top:22px;right:24px;text-align:right;color:var(--cyan)}
+.hud.bl{bottom:22px;left:24px}
+.depth{position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:20;display:flex;flex-direction:column;gap:14px;align-items:flex-end}
+.depth a{font-family:var(--fm);font-size:11px;color:var(--faint);display:flex;align-items:center;gap:10px;cursor:pointer;transition:color .3s}
+.depth a .d{width:8px;height:8px;border-radius:50%;border:1px solid var(--faint);transition:.3s}
+.depth a.on{color:var(--cyan)}.depth a.on .d{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+
+/* scroll spacer drives camera */
+#track{position:relative;z-index:10}
+.station{height:100vh;display:flex;align-items:center;justify-content:center;padding:0 24px;position:relative}
+.panel{max-width:620px;opacity:0;transform:translateY(40px) scale(.97);transition:opacity .7s,transform .7s cubic-bezier(.16,1,.3,1);
+  background:rgba(8,11,24,.5);backdrop-filter:blur(14px);border:1px solid var(--line2);border-radius:18px;padding:clamp(26px,4vw,44px);
+  box-shadow:0 40px 120px -40px rgba(0,0,0,.8)}
+.station.act .panel{opacity:1;transform:none}
+.panel.wide{max-width:760px}
+.kick{font-family:var(--fm);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.kick::before{content:"";width:22px;height:1px;background:var(--cyan)}
+h1{font-size:clamp(2.2rem,6vw,4.4rem);line-height:.98;letter-spacing:-.03em;font-weight:700}
+h1 em{font-style:normal;color:var(--cyan);text-shadow:0 0 40px rgba(var(--cyan-rgb),.6)}
+h2{font-size:clamp(1.8rem,4vw,2.8rem);line-height:1;letter-spacing:-.02em;margin-bottom:16px}
+.lead{color:var(--muted);font-size:clamp(1rem,1.5vw,1.18rem);margin-top:20px;line-height:1.6;max-width:46ch}
+.lead b{color:var(--ink);font-weight:500}
+.meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px;border-top:1px solid var(--line);padding-top:18px}
+.meta div{font-size:13px}.meta .k{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.cta{display:inline-flex;gap:9px;align-items:center;margin-top:26px;font-family:var(--fm);font-size:12.5px;letter-spacing:.05em;
+  background:var(--cyan);color:#03040a;padding:13px 22px;border-radius:100px;transition:.25s;font-weight:600}
+.cta:hover{box-shadow:0 0 30px rgba(var(--cyan-rgb),.5);transform:translateY(-2px)}
+.cta.g{background:transparent;color:var(--ink);border:1px solid var(--line2)}
+
+/* services orbit list */
+.orbit{display:grid;gap:10px;margin-top:8px}
+.orb{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.02);transition:.3s}
+.orb:hover{border-color:var(--cyan);background:rgba(var(--cyan-rgb),.06);transform:translateX(4px)}
+.orb .n{font-family:var(--fm);font-size:12px;color:var(--cyan)}
+.orb .nm{font-weight:600}.orb .ds{font-size:12.5px;color:var(--muted);margin-top:3px;max-width:48ch}
+.orb .tg{font-family:var(--fm);font-size:10.5px;color:var(--faint);text-align:right;white-space:nowrap}
+@media(max-width:620px){.orb{grid-template-columns:auto 1fr}.orb .tg{display:none}}
+
+/* aanpak transmission */
+.trans{font-family:var(--fm);font-size:13.5px;line-height:1.8;background:rgba(0,0,0,.4);border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:16px}
+.trans .q{color:var(--gold)}.trans .a{color:var(--ink)}.trans .s{color:var(--cyan)}.trans .lab{color:var(--faint)}
+.checks{display:grid;gap:10px;margin-top:18px}
+.checks li{list-style:none;display:flex;gap:11px;font-size:14px;color:var(--muted)}
+.checks svg{width:18px;height:18px;color:var(--cyan);flex:none;margin-top:2px}
+
+/* werk constellation */
+.cases{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.cz{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.02);transition:.3s;cursor:pointer}
+.cz:hover{border-color:var(--violet);transform:translateY(-3px)}
+.cz .vis{height:88px;position:relative}
+.cz .vis::after{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.5) 1px,transparent 1px);background-size:14px 14px;opacity:.25;mask:radial-gradient(120% 80% at 60% 20%,#000,transparent 75%)}
+.z1{background:radial-gradient(120% 100% at 70% 20%,#16527a,#070a16)}
+.z2{background:radial-gradient(120% 100% at 30% 20%,#4a2178,#070a16)}
+.z3{background:radial-gradient(120% 100% at 70% 20%,#1d6a44,#070a16)}
+.cz .mt{padding:13px 15px}.cz .k{font-family:var(--fm);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan)}
+.cz h3{font-size:1.1rem;margin:5px 0 6px}.cz p{font-size:12px;color:var(--muted);line-height:1.5}
+@media(max-width:620px){.cases{grid-template-columns:1fr}}
+
+/* team trio */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.star{border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center;transition:.3s}
+.star:hover{border-color:var(--cyan);background:rgba(var(--cyan-rgb),.05)}
+.star .ini{font-size:2.6rem;font-weight:700;color:var(--cyan);line-height:1}
+.star h3{font-size:1.1rem;margin:8px 0 4px}.star .ro{font-size:11.5px;color:var(--muted);line-height:1.5}
+@media(max-width:620px){.trio{grid-template-columns:1fr}.star{text-align:left;display:flex;gap:14px;align-items:center}.star .ini{font-size:2rem}}
+
+/* contact */
+.cinfo{margin-top:18px}
+.cinfo .r{display:flex;flex-direction:column;gap:4px;padding:13px 0;border-bottom:1px solid var(--line)}
+.cinfo .k{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.cinfo .v{font-size:15px}.cinfo a.v:hover{color:var(--cyan)}
+.cinfo .todo{font-family:var(--fm);font-size:11px;color:var(--gold);border:1px solid rgba(255,207,92,.4);padding:2px 8px;border-radius:4px;width:fit-content;margin-top:3px}
+
+.loader{position:fixed;inset:0;z-index:50;background:#03040a;display:grid;place-items:center;transition:opacity .6s}
+.loader.gone{opacity:0;pointer-events:none}
+.loader .l{font-family:var(--fm);font-size:12px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase}
+@media(prefers-reduced-motion:reduce){.panel{opacity:1!important;transform:none!important}}
+</style>
+</head>
+<body>
+<div class="loader" id="loader"><div class="l">stelsel laden…</div></div>
+<canvas id="scene"></canvas>
+<div class="vig"></div>
+
+<div class="hud tl"><b>VSM<i>.</i>digital</b><br>Het Antwoord-stelsel</div>
+<div class="hud tr" id="coord">SECTOR 00 · GEEL</div>
+<div class="hud bl">↓ scroll om te vliegen</div>
+
+<nav class="depth" id="depth">
+  <a data-go="0" class="on"><span>Start</span><span class="d"></span></a>
+  <a data-go="1"><span>Diensten</span><span class="d"></span></a>
+  <a data-go="2"><span>Aanpak</span><span class="d"></span></a>
+  <a data-go="3"><span>Werk</span><span class="d"></span></a>
+  <a data-go="4"><span>Team</span><span class="d"></span></a>
+  <a data-go="5"><span>Contact</span><span class="d"></span></a>
+</nav>
+
+<div id="track">
+  <!-- 0 HERO -->
+  <section class="station" data-i="0">
+    <div class="panel">
+      <div class="kick">Digitale studio · Winkelom, Geel</div>
+      <h1>Mensen googelen niet meer. Ze vragen het aan <em>AI</em>.</h1>
+      <p class="lead">Wij bouwen websites die in dát antwoord terechtkomen. <b>Snel, strak, en gebouwd zodat ChatGPT, Copilot en Gemini je begrijpen — en citeren.</b> Maatwerk, geen templates.</p>
+      <div class="meta">
+        <div><div class="k">Studio</div>3 mensen · Geel</div>
+        <div><div class="k">Discipline</div>Web · Marketing · Software</div>
+        <div><div class="k">Rode draad</div>Privacy by design · GDPR</div>
+      </div>
+      <a class="cta" data-go="5">Start een project →</a>
+    </div>
+  </section>
+  <!-- 1 DIENSTEN -->
+  <section class="station" data-i="1">
+    <div class="panel wide">
+      <div class="kick">Sector 01 · Diensten</div>
+      <h2>Wat we bouwen, en waarom het werkt.</h2>
+      <div class="orbit">
+        <div class="orb"><span class="n">01</span><div><div class="nm">Websites die vindbaar zijn</div><div class="ds">Snel en technisch gebouwd zodat zoekmachines én AI-modellen je begrijpen en citeren.</div></div><span class="tg">Core Web Vitals · Schema · GEO</span></div>
+        <div class="orb"><span class="n">02</span><div><div class="nm">Digital marketing</div><div class="ds">SEO, campagnes, content en analytics. Meetbaar, met heldere rapportage.</div></div><span class="tg">SEO · SEA · Analytics</span></div>
+        <div class="orb"><span class="n">03</span><div><div class="nm">Software op maat</div><div class="ds">Webapps, ERP, integraties en automatisering. Past op jouw processen, niet andersom.</div></div><span class="tg">Webapps · ERP · Automatisering</span></div>
+        <div class="orb"><span class="n">04</span><div><div class="nm">Data, privacy &amp; GDPR</div><div class="ds">Verweven in alles: privacy by design, encryptie en EU-hosting.</div></div><span class="tg">Privacy · EU-hosting</span></div>
+      </div>
+    </div>
+  </section>
+  <!-- 2 AANPAK -->
+  <section class="station" data-i="2">
+    <div class="panel">
+      <div class="kick">Sector 02 · De aanpak</div>
+      <h2>Word het antwoord, niet de tiende link.</h2>
+      <p class="lead">Een klant vraagt het niet meer aan Google, maar aan een model. Wij zorgen dat jouw bedrijf in dat antwoord staat — mét bron terug naar jou.</p>
+      <ul class="checks">
+        <li><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Heldere structuur &amp; schema zodat modellen je content foutloos lezen.</li>
+        <li><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Autoriteit opbouwen zodat AI je als betrouwbare bron citeert.</li>
+        <li><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Snelle, schone sites die zowel bezoekers als crawlers belonen.</li>
+      </ul>
+      <div class="trans">
+        <span class="lab">// transmissie</span><br>
+        <span class="q">vraag › beste cateraar in de Kempen voor een bedrijfsevent?</span><br><br>
+        <span class="a">AI › Voor een bedrijfsevent in de Kempen is Senor Snacks een sterke keuze — bekend om verse, lokale catering en een vlotte aanpak op maat van het event.</span><br><br>
+        <span class="s">↳ bron: senorsnacks.be · gebouwd door VSM digital</span>
+      </div>
+    </div>
+  </section>
+  <!-- 3 WERK -->
+  <section class="station" data-i="3">
+    <div class="panel wide">
+      <div class="kick">Sector 03 · Werk</div>
+      <h2>Wat we hebben gebouwd.</h2>
+      <div class="cases">
+        <div class="cz"><div class="vis z1"></div><div class="mt"><div class="k">ERP op maat</div><h3>Senor Snacks</h3><p>Bestellingen, productie en voorraad in één vloeiend systeem.</p></div></div>
+        <div class="cz"><div class="vis z2"></div><div class="mt"><div class="k">Marketing &amp; SEO</div><h3>Van Hees metalen</h3><p>De juiste klanten naar een industriële speler — meetbaar.</p></div></div>
+        <div class="cz"><div class="vis z3"></div><div class="mt"><div class="k">AI-ready website</div><h3>Senor Snacks · Green Deal</h3><p>Duurzaamheidsverhaal, gestructureerd zodat modellen het citeren.</p></div></div>
+        <div class="cz" style="border-style:dashed;display:grid;place-items:center"><div style="color:var(--faint);font-family:var(--fm);font-size:12px;text-align:center;padding:20px">+ jouw<br>project</div></div>
+      </div>
+    </div>
+  </section>
+  <!-- 4 TEAM -->
+  <section class="station" data-i="4">
+    <div class="panel">
+      <div class="kick">Sector 04 · Team</div>
+      <h2>Drie letters. Eén studio.</h2>
+      <p class="lead" style="margin-top:8px">V·S·M zijn geen marketingafkorting — het zijn de mensen die je werk bouwen.</p>
+      <div class="trio">
+        <div class="star"><div class="ini">V</div><div><h3>Verboven</h3><div class="ro">Data, GDPR &amp; operationele software.</div></div></div>
+        <div class="star"><div class="ini">S</div><div><h3>Steurs</h3><div class="ro">Websites, sales &amp; het verhaal.</div></div></div>
+        <div class="star"><div class="ini">M</div><div><h3>Mertens</h3><div class="ro">Digital marketing &amp; code.</div></div></div>
+      </div>
+    </div>
+  </section>
+  <!-- 5 CONTACT -->
+  <section class="station" data-i="5">
+    <div class="panel">
+      <div class="kick">Sector 05 · Contact</div>
+      <h2>Klaar om het <em style="color:var(--cyan)">antwoord</em> te worden?</h2>
+      <p class="lead">Vertel ons waar je naartoe wil. We denken mee, niet zomaar uitvoeren. Een eerste gesprek kost niets en levert altijd iets op.</p>
+      <div class="cinfo">
+        <div class="r"><span class="k">Studio</span><span class="v">Winkelom 87c1, 2440 Geel, België</span></div>
+        <div class="r"><span class="k">E-mail</span><a class="v" href="mailto:hallo@vsmdigital.be">hallo@vsmdigital.be</a></div>
+        <div class="r"><span class="k">Telefoon</span><span class="v">+32 (0)0 00 00 00</span><span class="todo">⚠ placeholder — nog in te vullen</span></div>
+      </div>
+      <a class="cta" href="mailto:hallo@vsmdigital.be" style="margin-top:22px">Stuur een bericht →</a>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const NSEC=6, GAP=60; // world units between stations
+let renderer,scene,camera,stars,objs=[],lights=[],raf;
+
+function initThree(){
+  if(!window.THREE){document.getElementById('loader').classList.add('gone');return false;}
+  const cv=document.getElementById('scene');
+  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+  renderer.setSize(innerWidth,innerHeight);
+  scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x03040a,0.0095);
+  camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,0.1,400);
+  camera.position.set(0,0,10);
+
+  // starfield
+  const N=2600,g=new THREE.BufferGeometry(),pos=new Float32Array(N*3),col=new Float32Array(N*3);
+  const pal=[[0.21,0.88,1],[0.62,0.48,1],[1,0.81,0.36],[1,1,1]];
+  for(let i=0;i<N;i++){pos[i*3]=(Math.random()-.5)*120;pos[i*3+1]=(Math.random()-.5)*120;pos[i*3+2]=-Math.random()*(GAP*NSEC+80)+20;
+    const c=pal[Math.random()<.5?3:(Math.random()*3|0)];col[i*3]=c[0];col[i*3+1]=c[1];col[i*3+2]=c[2];}
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  stars=new THREE.Points(g,new THREE.PointsMaterial({size:0.85,vertexColors:true,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending}));
+  scene.add(stars);
+
+  // floating wireframe objects at each station depth
+  const geos=[new THREE.IcosahedronGeometry(3,0),new THREE.TorusGeometry(2.6,0.5,12,30),new THREE.OctahedronGeometry(3,0),
+              new THREE.DodecahedronGeometry(3,0),new THREE.IcosahedronGeometry(2.8,1),new THREE.TorusKnotGeometry(1.8,0.5,80,10)];
+  const cols=[0x37e0ff,0x9d7bff,0xffcf5c,0x37e0ff,0x9d7bff,0x37e0ff];
+  for(let i=0;i<NSEC;i++){
+    const m=new THREE.Mesh(geos[i],new THREE.MeshBasicMaterial({color:cols[i],wireframe:true,transparent:true,opacity:.5}));
+    const side=i%2?1:-1;m.position.set(side*9+(Math.random()*2-1),(i%3-1)*4,-(i*GAP)-14);
+    m.rotation.set(Math.random()*3,Math.random()*3,0);scene.add(m);objs.push(m);
+    const pl=new THREE.PointLight(cols[i],2,40);pl.position.copy(m.position);scene.add(pl);lights.push(pl);
+  }
+  addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
+  document.getElementById('loader').classList.add('gone');
+  return true;
+}
+
+let camZ=10,targetZ=10,mx=0,my=0;
+function scrollUpdate(){
+  const h=document.documentElement,max=h.scrollHeight-h.clientHeight;
+  const p=max>0?h.scrollTop/max:0;
+  targetZ=10-p*(GAP*(NSEC-1)+10);
+  // active station
+  const idx=Math.min(NSEC-1,Math.round(p*(NSEC-1)));
+  document.querySelectorAll('.depth a').forEach((a,i)=>a.classList.toggle('on',i===idx));
+  const names=['00 · GEEL','01 · DIENSTEN','02 · AANPAK','03 · WERK','04 · TEAM','05 · CONTACT'];
+  document.getElementById('coord').textContent='SECTOR '+names[idx];
+}
+addEventListener('scroll',scrollUpdate,{passive:true});
+addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth-.5);my=(e.clientY/innerHeight-.5)});
+
+function animate(){raf=requestAnimationFrame(animate);
+  camZ+=(targetZ-camZ)*0.06;
+  camera.position.z=camZ;
+  camera.position.x+=((mx*4)-camera.position.x)*0.04;
+  camera.position.y+=((-my*3)-camera.position.y)*0.04;
+  camera.lookAt(0,0,camZ-30);
+  stars.rotation.z+=0.0004;
+  objs.forEach((o,i)=>{o.rotation.x+=0.002+i*0.0004;o.rotation.y+=0.003});
+  renderer.render(scene,camera);
+}
+
+/* station reveal via IO */
+function setupReveal(){
+  const io=new IntersectionObserver(es=>es.forEach(e=>{e.target.classList.toggle('act',e.isIntersecting&&e.intersectionRatio>0.5)}),{threshold:[0,0.5,1]});
+  document.querySelectorAll('.station').forEach(s=>io.observe(s));
+}
+/* depth nav */
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+  const i=+b.dataset.go;const st=document.querySelector('.station[data-i="'+i+'"]');
+  st&&st.scrollIntoView({behavior:reduce?'auto':'smooth'})}));
+
+window.addEventListener('load',()=>{
+  setupReveal();scrollUpdate();
+  if(!reduce && initThree()){animate();}
+  else{document.getElementById('loader').classList.add('gone');document.querySelectorAll('.panel').forEach(p=>p.style.opacity=1);
+    document.querySelectorAll('.station').forEach(s=>s.classList.add('act'));}
+});
+</script>
+</body>
+</html>

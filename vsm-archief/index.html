@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>VSM — ARCHIEF / INDEX</title>
+<meta name="description" content="VSM.digital als doorzoekbaar archief. Websites, marketing en software op maat uit Geel — gebouwd zodat AI-modellen je citeren."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f2efe6;--ink:#0c0c0c;--acc:#1733ff;--red:#e6173b;--mut:#6b6862;--line:#0c0c0c;
+  --fm:"JetBrains Mono",ui-monospace,monospace;--acc-rgb:23,51,255;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--fm);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+::selection{background:var(--acc);color:var(--paper)}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.up{text-transform:uppercase;letter-spacing:.04em}
+
+.wrap{width:min(100% - 28px,1180px);margin-inline:auto}
+
+/* top status bar */
+.status{border-bottom:2px solid var(--line);position:sticky;top:0;background:var(--paper);z-index:30}
+.status .wrap{display:flex;align-items:center;gap:14px;height:46px;font-size:12px}
+.status .bd{font-weight:800;letter-spacing:-.02em;font-size:15px}
+.status .bd s{color:var(--acc);text-decoration:none}
+.status .sep{color:var(--mut)}
+.status .meta{color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.status .live{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.status .live .d{width:7px;height:7px;background:var(--acc);border-radius:0}
+.status .clock{font-variant-numeric:tabular-nums}
+@media(max-width:680px){.status .meta,.status .clock{display:none}}
+
+/* masthead record 000 */
+.head{border-bottom:2px solid var(--line);padding:clamp(30px,6vw,72px) 0}
+.head .rec{font-size:11px;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px}
+.head h1{font-size:clamp(2rem,6.4vw,5.2rem);line-height:.96;font-weight:800;letter-spacing:-.04em;max-width:18ch}
+.head h1 mark{background:var(--acc);color:var(--paper);padding:0 .12em}
+.head .sub{margin-top:24px;max-width:64ch;font-size:clamp(14px,1.6vw,16px);line-height:1.6;color:var(--ink)}
+.head .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:32px;border:2px solid var(--line)}
+.head .cell{padding:14px;border-right:2px solid var(--line)}
+.head .cell:last-child{border-right:0}
+.head .cell .k{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.head .cell .v{font-weight:700;margin-top:5px;font-size:13px}
+@media(max-width:680px){.head .grid{grid-template-columns:1fr 1fr}.head .cell{border-bottom:2px solid var(--line)}.head .cell:nth-child(2){border-right:0}}
+
+/* search / filter */
+.filter{border-bottom:2px solid var(--line);position:sticky;top:46px;background:var(--paper);z-index:20}
+.filter .wrap{display:flex;align-items:stretch;height:54px}
+.filter .lab{display:flex;align-items:center;padding-right:14px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-size:11px;border-right:2px solid var(--line)}
+.filter input{flex:1;border:0;background:none;font-family:var(--fm);font-size:16px;color:var(--ink);padding:0 16px;outline:none}
+.filter input::placeholder{color:var(--mut)}
+.filter .count{display:flex;align-items:center;padding-left:14px;border-left:2px solid var(--line);color:var(--acc);font-weight:700;font-size:12px;white-space:nowrap}
+
+/* index table */
+.idx{border-bottom:2px solid var(--line)}
+.idx .hrow{display:grid;grid-template-columns:64px 168px 1fr 40px;gap:14px;padding:9px 0;border-bottom:2px solid var(--line);
+  font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut)}
+.row{border-bottom:1px solid rgba(12,12,12,.18);cursor:pointer;transition:background .12s}
+.row:last-child{border-bottom:0}
+.row:hover{background:rgba(var(--acc-rgb),.07)}
+.row.open{background:rgba(var(--acc-rgb),.05)}
+.row .main{display:grid;grid-template-columns:64px 168px 1fr 40px;gap:14px;padding:15px 0;align-items:baseline}
+.row .nr{color:var(--acc);font-weight:700}
+.row .cat{color:var(--mut);text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+.row .ti{font-weight:700;font-size:15.5px;letter-spacing:-.01em}
+.row .ti .tag{font-weight:400;color:var(--mut);font-size:12px;margin-left:10px}
+.row .ex{text-align:right;color:var(--mut);transition:transform .2s}
+.row.open .ex{transform:rotate(90deg);color:var(--acc)}
+.row .detail{grid-column:1/-1;max-height:0;overflow:hidden;transition:max-height .35s ease}
+.row.open .detail{max-height:640px}
+.row .detail .in{padding:2px 0 26px;grid-column:1/-1}
+.row .detail .body{display:grid;grid-template-columns:64px 168px 1fr 40px;gap:14px}
+.row .detail .body>.sp{grid-column:1/3}
+.row .detail .c{grid-column:3/4;max-width:70ch}
+.row .detail .c p{margin-bottom:10px;line-height:1.65}
+.row .detail .c b{color:var(--ink)}
+.row .detail .c .specs{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.row .detail .c .specs span{border:1px solid var(--line);padding:4px 9px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.row .detail .c .ai{border:2px solid var(--line);padding:14px;margin-top:6px;background:var(--paper)}
+.row .detail .c .ai .q{color:var(--mut)}.row .detail .c .ai .a{color:var(--ink);font-weight:500;display:block;margin:8px 0}
+.row .detail .c .ai .s{color:var(--acc);font-size:12px}
+.row .detail .c ul{list-style:none;margin:4px 0}
+.row .detail .c ul li{padding-left:20px;position:relative;margin-bottom:7px;line-height:1.55}
+.row .detail .c ul li::before{content:"→";position:absolute;left:0;color:var(--acc)}
+@media(max-width:680px){
+  .idx .hrow{grid-template-columns:42px 1fr 30px}.idx .hrow .h3{display:none}
+  .row .main{grid-template-columns:42px 1fr 30px}.row .cat{display:none}
+  .row .detail .body{grid-template-columns:1fr}.row .detail .c{grid-column:1}.row .detail .body>.sp{display:none}
+}
+
+/* contact footer record */
+.foot{padding:clamp(30px,5vw,60px) 0}
+.foot h2{font-size:clamp(1.6rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;line-height:1;max-width:16ch}
+.foot h2 mark{background:var(--acc);color:var(--paper);padding:0 .1em}
+.foot .sub{color:var(--mut);max-width:54ch;margin-top:16px;line-height:1.6}
+.foot .info{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:30px;border:2px solid var(--line)}
+.foot .info .cell{padding:16px;border-right:2px solid var(--line)}
+.foot .info .cell:last-child{border-right:0}
+.foot .info .k{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.foot .info .v{font-weight:700;margin-top:6px;font-size:13.5px;word-break:break-word}
+.foot .info .todo{display:inline-block;margin-top:6px;border:1px solid var(--red);color:var(--red);font-size:10px;padding:2px 7px;text-transform:uppercase;letter-spacing:.04em}
+.foot .badges{display:flex;flex-wrap:wrap;gap:0;margin-top:22px;border:2px solid var(--line);border-right:0}
+.foot .badges span{padding:11px 16px;border-right:2px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.foot .cta{display:inline-block;margin-top:26px;border:2px solid var(--line);background:var(--ink);color:var(--paper);padding:15px 26px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:13px;transition:.15s}
+.foot .cta:hover{background:var(--acc);border-color:var(--acc);text-decoration:none}
+.foot .end{margin-top:40px;padding-top:18px;border-top:2px solid var(--line);display:flex;justify-content:space-between;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.06em;flex-wrap:wrap;gap:8px}
+@media(max-width:680px){.foot .info{grid-template-columns:1fr}.foot .info .cell{border-right:0;border-bottom:2px solid var(--line)}.foot .info .cell:last-child{border-bottom:0}}
+.nores{padding:40px 0;text-align:center;color:var(--mut);display:none}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}.row .detail{transition:none}}
+</style>
+</head>
+<body>
+<div class="status">
+  <div class="wrap">
+    <span class="bd">VSM<s>.</s>DIGITAL</span>
+    <span class="sep">/</span><span class="meta">Archief — Index</span>
+    <span class="live"><span class="d"></span><span class="clock" id="clock">--:--:--</span> · Geel BE</span>
+  </div>
+</div>
+
+<header class="head">
+  <div class="wrap">
+    <div class="rec">Record 000 — Hoofdrecord · Digitale studio · Winkelom, Geel</div>
+    <h1>Mensen googelen niet meer. Ze vragen het aan <mark>AI</mark>.</h1>
+    <p class="sub">Wij bouwen websites die in dát antwoord terechtkomen. Snel, strak, en gebouwd zodat ChatGPT, Copilot en Gemini je begrijpen — en citeren. Maatwerk, geen templates.</p>
+    <div class="grid">
+      <div class="cell"><div class="k">Studio</div><div class="v">3 mensen · Geel</div></div>
+      <div class="cell"><div class="k">Discipline</div><div class="v">Web · Marketing · Software</div></div>
+      <div class="cell"><div class="k">Rode draad</div><div class="v">Privacy by design · GDPR</div></div>
+      <div class="cell"><div class="k">Hosting</div><div class="v">EU · versleuteld</div></div>
+    </div>
+  </div>
+</header>
+
+<div class="filter">
+  <div class="wrap">
+    <span class="lab">Zoek index</span>
+    <input id="q" placeholder="filter records — bv. seo, erp, team, gdpr…   (druk /)" autocomplete="off"/>
+    <span class="count" id="count">13 / 13</span>
+  </div>
+</div>
+
+<main class="idx wrap" id="idx">
+  <div class="hrow"><span>NR.</span><span class="h2">Categorie</span><span class="h3">Titel</span><span></span></div>
+
+  <!-- DIENSTEN 01-04 -->
+  <div class="row" data-k="websites vindbaar seo geo schema core web vitals headless diensten"><div class="main"><span class="nr">001</span><span class="cat">Dienst</span><span class="ti">Websites die vindbaar zijn</span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Snel, strak en technisch gebouwd zodat zoekmachines én AI-modellen je begrijpen en citeren. Maatwerk vanaf de eerste lijn code — geen template om te ontworstelen.</p>
+      <div class="specs"><span>Core Web Vitals</span><span>Schema</span><span>GEO-ready</span><span>Headless</span></div>
+    </div></div></div></div></div>
+  <div class="row" data-k="digital marketing seo sea content analytics rapportage campagnes diensten"><div class="main"><span class="nr">002</span><span class="cat">Dienst</span><span class="ti">Digital marketing</span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>SEO, campagnes, content en analytics. Meetbaar, met heldere rapportage en zonder vage beloftes. Je weet altijd wat je geld doet.</p>
+      <div class="specs"><span>SEO</span><span>SEA</span><span>Content</span><span>Analytics</span></div>
+    </div></div></div></div></div>
+  <div class="row" data-k="software maat webapps erp integraties automatisering diensten"><div class="main"><span class="nr">003</span><span class="cat">Dienst</span><span class="ti">Software op maat</span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Webapps, ERP-pakketten, integraties en automatisering. Software die past op jouw processen, niet andersom. Wij plooien de code, niet jouw bedrijf.</p>
+      <div class="specs"><span>Webapps</span><span>ERP</span><span>Integraties</span><span>Automatisering</span></div>
+    </div></div></div></div></div>
+  <div class="row" data-k="data privacy gdpr encryptie eu hosting datastack diensten by design"><div class="main"><span class="nr">004</span><span class="cat">Dienst</span><span class="ti">Data, privacy &amp; GDPR</span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Geen los hoofdstuk, maar verweven in alles wat we maken. Privacy by design, een nette datastack, encryptie en EU-hosting — van schets tot productie.</p>
+      <div class="specs"><span>Privacy by design</span><span>Encryptie</span><span>EU-hosting</span><span>Datastack</span></div>
+    </div></div></div></div></div>
+
+  <!-- AANPAK 005 -->
+  <div class="row" data-k="aanpak methode antwoord geo ai citeren autoriteit structuur crawlers"><div class="main"><span class="nr">005</span><span class="cat">Methode</span><span class="ti">Word het antwoord, niet de tiende link<span class="tag">— de aanpak</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Een klant vraagt het niet meer aan Google, maar aan een model. Wij zorgen dat jouw bedrijf in dat antwoord staat — <b>mét bron terug naar jou.</b></p>
+      <ul><li>Heldere structuur &amp; schema zodat modellen je content foutloos lezen.</li><li>Autoriteit opbouwen zodat AI je als betrouwbare bron citeert.</li><li>Snelle, schone sites die zowel bezoekers als crawlers belonen.</li></ul>
+      <div class="ai"><span class="q">? beste cateraar in de Kempen voor een bedrijfsevent?</span><span class="a">AI › Voor een bedrijfsevent in de Kempen is Senor Snacks een sterke keuze — bekend om verse, lokale catering en een vlotte aanpak op maat van het event.</span><span class="s">↳ bron: senorsnacks.be · gebouwd door VSM digital</span></div>
+    </div></div></div></div></div>
+
+  <!-- WERK 006-008 -->
+  <div class="row" data-k="werk case senor snacks erp operations bestellingen voorraad productie"><div class="main"><span class="nr">006</span><span class="cat">Werk</span><span class="ti">Senor Snacks<span class="tag">— ERP op maat</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Een ERP-pakket gebouwd rond hun processen — bestellingen, productie en voorraad in één vloeiend systeem. Software die meebeweegt met hoe ze werken.</p>
+    </div></div></div></div></div>
+  <div class="row" data-k="werk case van hees metalen marketing seo industrieel klanten"><div class="main"><span class="nr">007</span><span class="cat">Werk</span><span class="ti">Van Hees metalen<span class="tag">— marketing &amp; SEO</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Digital marketing en SEO die de juiste klanten naar een industriële speler brengt — meetbaar en transparant, zonder ruis.</p>
+    </div></div></div></div></div>
+  <div class="row" data-k="werk case senor snacks green deal ai ready duurzaamheid website citeren"><div class="main"><span class="nr">008</span><span class="cat">Werk</span><span class="ti">Senor Snacks · Green Deal<span class="tag">— AI-ready website</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Een AI-ready site die hun duurzaamheidsverhaal vertelt — gestructureerd zodat modellen het oppikken en citeren.</p>
+    </div></div></div></div></div>
+
+  <!-- TEAM 009-011 -->
+  <div class="row" data-k="team verboven data gdpr software fundamenten makers"><div class="main"><span class="nr">009</span><span class="cat">Team</span><span class="ti">Verboven<span class="tag">— data, GDPR &amp; software</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Bouwt de fundamenten die kloppen — privacy, structuur en systemen die blijven draaien. De V van VSM.</p>
+    </div></div></div></div></div>
+  <div class="row" data-k="team steurs websites sales verhaal makers"><div class="main"><span class="nr">010</span><span class="cat">Team</span><span class="ti">Steurs<span class="tag">— websites, sales &amp; verhaal</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Vertaalt wat je doet naar iets dat mens én model meteen begrijpt. De S van VSM.</p>
+    </div></div></div></div></div>
+  <div class="row" data-k="team mertens digital marketing code makers"><div class="main"><span class="nr">011</span><span class="cat">Team</span><span class="ti">Mertens<span class="tag">— marketing &amp; code</span></span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Zorgt dat je gevonden wordt en dat de techniek eronder klopt. De M van VSM.</p>
+    </div></div></div></div></div>
+
+  <!-- META 012-013 -->
+  <div class="row" data-k="studio over geel drie letters een studio tussenpersonen"><div class="main"><span class="nr">012</span><span class="cat">Studio</span><span class="ti">Drie letters. Eén studio.</span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Vier disciplines, één studio. Geen tussenpersonen — de mensen die het bedenken, bouwen het ook. Dat houdt de lijn kort en het resultaat scherp.</p>
+    </div></div></div></div></div>
+  <div class="row" data-k="contact mail telefoon adres offerte gesprek antwoord worden"><div class="main"><span class="nr">013</span><span class="cat">Contact</span><span class="ti">Klaar om het antwoord te worden?</span><span class="ex">▸</span>
+    <div class="detail"><div class="in"><div class="body"><div class="sp"></div><div class="c">
+      <p>Vertel ons waar je naartoe wil. We denken mee, niet zomaar uitvoeren. Een eerste gesprek kost niets en levert altijd iets op.</p>
+      <p><b>E-mail:</b> <a href="mailto:hallo@vsmdigital.be">hallo@vsmdigital.be</a> · <b>Studio:</b> Winkelom 87c1, 2440 Geel</p>
+    </div></div></div></div></div>
+
+  <div class="nores" id="nores">// geen records gevonden — wis je filter</div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <h2>Klaar om het <mark>antwoord</mark> te worden?</h2>
+    <p class="sub">Vertel ons waar je naartoe wil. We denken mee, niet zomaar uitvoeren. Een eerste gesprek kost niets en levert altijd iets op.</p>
+    <div class="info">
+      <div class="cell"><div class="k">Studio</div><div class="v">Winkelom 87c1<br>2440 Geel, België</div></div>
+      <div class="cell"><div class="k">E-mail</div><div class="v"><a href="mailto:hallo@vsmdigital.be">hallo@vsmdigital.be</a></div></div>
+      <div class="cell"><div class="k">Telefoon</div><div class="v">+32 (0)0 00 00 00</div><span class="todo">⚠ placeholder — nog in te vullen</span></div>
+    </div>
+    <div class="badges"><span>Privacy by design</span><span>EU-hosting</span><span>GDPR-compliant</span><span>Versleuteld</span></div>
+    <br>
+    <a class="cta" href="mailto:hallo@vsmdigital.be">Stuur een bericht →</a>
+    <div class="end"><span>VSM.digital — Websites die in het AI-antwoord staan.</span><span>Archief · Index 000–013 · © 2026</span></div>
+  </div>
+</footer>
+
+<script>
+const q=document.getElementById('q'),rows=[...document.querySelectorAll('.row')],count=document.getElementById('count'),nores=document.getElementById('nores');
+/* clock */
+function ck(){const d=new Date();document.getElementById('clock').textContent=d.toLocaleTimeString('nl-BE',{hour12:false})}
+ck();setInterval(ck,1000);
+/* expand/collapse */
+rows.forEach(r=>r.querySelector('.main').addEventListener('click',()=>r.classList.toggle('open')));
+/* live filter */
+function filt(){const v=q.value.trim().toLowerCase();let n=0;
+  rows.forEach(r=>{const hay=(r.dataset.k+' '+r.querySelector('.ti').textContent).toLowerCase();
+    const show=!v||hay.includes(v);r.style.display=show?'':'none';if(show)n++;if(!show)r.classList.remove('open')});
+  count.textContent=n+' / '+rows.length;nores.style.display=n?'none':'block';}
+q.addEventListener('input',filt);
+/* "/" focuses search */
+addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus()}
+  if(e.key==='Escape'){q.value='';filt();q.blur()}});
+</script>
+</body>
+</html>

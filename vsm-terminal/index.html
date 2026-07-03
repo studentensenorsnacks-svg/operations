@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VSM digital — THE TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=VT323&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root {
+  --green: #00ff41;
+  --green-dim: #00cc33;
+  --green-glow: #00ff88;
+  --amber: #ffb000;
+  --red: #ff3860;
+  --bg: #000000;
+  --bg-panel: #0a0a0a;
+  --fg: #00ff41;
+  --border: rgba(0, 255, 65, 0.2);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-term: 'VT323', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); overflow-x: hidden; }
+body { font-family: var(--font-mono); font-size: 14px; cursor: none; }
+@media (max-width: 900px) { body { cursor: auto; font-size: 12px; } }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--green); color: var(--bg); }
+
+/* MATRIX RAIN */
+#matrixCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+/* CRT EFFECTS */
+.crt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background:
+    repeating-linear-gradient(0deg,
+      rgba(0, 255, 65, 0.03) 0px,
+      rgba(0, 255, 65, 0.03) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  animation: crt-flicker 0.15s infinite;
+}
+@keyframes crt-flicker {
+  0% { opacity: 0.95; }
+  50% { opacity: 1; }
+  100% { opacity: 0.98; }
+}
+.scanline {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 101;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 255, 65, 0.1) 50%,
+    transparent 100%
+  );
+  height: 100px;
+  animation: scan 8s linear infinite;
+}
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* CURSOR */
+.cursor-block {
+  position: fixed;
+  width: 10px; height: 18px;
+  background: var(--green);
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px var(--green-glow);
+  animation: blink-cursor 1s infinite;
+}
+@keyframes blink-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.cursor-coords {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--amber);
+  white-space: nowrap;
+  transform: translate(15px, 15px);
+}
+
+/* COMMAND INPUT */
+.cmd-input {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  z-index: 500;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cmd-prompt { color: var(--amber); }
+.cmd-input input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--green);
+  font-family: inherit;
+  font-size: inherit;
+  caret-color: var(--green);
+}
+.cmd-input input::placeholder { color: rgba(0, 255, 65, 0.3); }
+
+/* STATUS BAR */
+.status-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  z-index: 500;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.status-item { display: flex; align-items: center; gap: 0.5rem; }
+.status-dot {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--green);
+  animation: blink-dot 2s infinite;
+}
+.status-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+@keyframes blink-dot { 50% { opacity: 0.3; } }
+
+/* AUDIO TOGGLE */
+.audio-toggle {
+  position: fixed;
+  top: 3rem; right: 1rem;
+  z-index: 501;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: none;
+  transition: all 0.3s;
+}
+.audio-toggle:hover {
+  background: var(--green);
+  color: var(--bg);
+  box-shadow: 0 0 20px var(--green-glow);
+}
+.audio-toggle.active { color: var(--amber); border-color: var(--amber); }
+
+/* MAIN */
+main {
+  padding: 4rem 1rem 6rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* BOOT SCREEN */
+.boot {
+  min-height: 100vh;
+  padding: 5rem 1rem;
+  font-family: var(--font-term);
+  font-size: 20px;
+}
+.boot-line {
+  margin-bottom: 0.5rem;
+  opacity: 0;
+}
+.boot-line.success { color: var(--green); }
+.boot-line.warning { color: var(--amber); }
+.boot-line.error { color: var(--red); }
+
+/* PANELS */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  margin: 2rem 0;
+  position: relative;
+}
+.panel-header {
+  background: var(--bg);
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--amber);
+}
+.panel-dots { display: flex; gap: 4px; }
+.panel-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.panel-dot.r { background: var(--red); }
+.panel-dot.a { background: var(--amber); }
+.panel-dot.g { background: var(--green); }
+.panel-body { padding: 1.5rem; }
+
+/* HERO */
+.hero-ascii {
+  font-family: var(--font-term);
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 0.9;
+  color: var(--green);
+  text-shadow: 0 0 20px var(--green-glow);
+  margin-bottom: 2rem;
+  white-space: pre;
+  overflow: hidden;
+}
+.hero-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+  font-size: 12px;
+}
+.hero-meta-item {
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+.hero-meta-label {
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  margin-bottom: 0.5rem;
+}
+.hero-title-text {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  line-height: 1.1;
+  margin: 2rem 0;
+  font-weight: 300;
+}
+.hero-title-text .strike {
+  color: rgba(0, 255, 65, 0.3);
+  text-decoration: line-through;
+  text-decoration-color: var(--red);
+}
+.hero-title-text .accent { color: var(--green); text-shadow: 0 0 15px var(--green-glow); }
+
+/* SERVICES */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+.service-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  position: relative;
+  transition: all 0.4s;
+  cursor: none;
+}
+.service-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 0; height: 2px;
+  background: var(--green);
+  transition: width 0.5s;
+}
+.service-panel:hover::before { width: 100%; }
+.service-panel:hover {
+  border-color: var(--green);
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+}
+.service-num {
+  font-family: var(--font-term);
+  font-size: 4rem;
+  color: var(--green);
+  line-height: 1;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px var(--green-glow);
+}
+.service-title {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: var(--fg);
+}
+.service-desc {
+  color: rgba(0, 255, 65, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+.service-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+.service-tags span {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  color: var(--amber);
+}
+
+/* STATS */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.stat {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.stat-num {
+  font-family: var(--font-term);
+  font-size: 3rem;
+  color: var(--green);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 0 20px var(--green-glow);
+}
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* APPROACH */
+.timeline-term {
+  margin: 2rem 0;
+}
+.step-term {
+  padding: 1.5rem;
+  border-left: 2px solid var(--border);
+  margin-bottom: 1rem;
+  position: relative;
+  transition: all 0.4s;
+}
+.step-term:hover {
+  border-left-color: var(--green);
+  background: rgba(0, 255, 65, 0.03);
+  padding-left: 2rem;
+}
+.step-term::before {
+  content: '';
+  position: absolute;
+  left: -6px; top: 2rem;
+  width: 10px; height: 10px;
+  background: var(--bg-panel);
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+.step-term:hover::before {
+  background: var(--green);
+  box-shadow: 0 0 15px var(--green-glow);
+}
+.step-num {
+  color: var(--amber);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+}
+.step-title {
+  font-size: 1.3rem;
+  margin-bottom: 0.75rem;
+  color: var(--green);
+}
+.step-desc {
+  color: rgba(0, 255, 65, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* WORK */
+.work-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+.work-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.4s;
+  cursor: none;
+}
+.work-panel:hover {
+  border-color: var(--green);
+  box-shadow: 0 0 40px rgba(0, 255, 65, 0.2);
+  transform: translateY(-4px);
+}
+.work-visual {
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.work-visual canvas {
+  width: 100%;
+  height: 100%;
+}
+.work-content { padding: 1.5rem; }
+.work-tag {
+  color: var(--amber);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.75rem;
+}
+.work-title {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--green);
+}
+.work-desc {
+  color: rgba(0, 255, 65, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* TEAM */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.team-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.4s;
+}
+.team-panel:hover {
+  border-color: var(--green);
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+}
+.team-letter {
+  font-family: var(--font-term);
+  font-size: 8rem;
+  line-height: 1;
+  color: var(--green);
+  text-shadow: 0 0 40px var(--green-glow);
+  margin-bottom: 1rem;
+}
+.team-name {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+.team-role {
+  color: var(--amber);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+}
+.team-desc {
+  color: rgba(0, 255, 65, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* CONTACT */
+.contact-terminal {
+  background: var(--bg-panel);
+  border: 1px solid var(--green);
+  padding: 2rem;
+  max-width: 800px;
+  margin: 2rem auto;
+  box-shadow: 0 0 40px rgba(0, 255, 65, 0.2);
+}
+.contact-title {
+  font-family: var(--font-term);
+  font-size: clamp(2rem, 6vw, 4rem);
+  color: var(--green);
+  text-shadow: 0 0 30px var(--green-glow);
+  margin-bottom: 1.5rem;
+  line-height: 1;
+}
+.contact-title .accent { color: var(--amber); }
+.contact-desc {
+  color: rgba(0, 255, 65, 0.8);
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+.contact-btn {
+  display: inline-block;
+  padding: 1rem 2rem;
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  transition: all 0.3s;
+  cursor: none;
+}
+.contact-btn:hover {
+  background: var(--green);
+  color: var(--bg);
+  box-shadow: 0 0 30px var(--green-glow);
+}
+
+/* FOOTER */
+.footer-term {
+  padding: 2rem 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.reveal { opacity: 0; transform: translateY(20px); }
+</style>
+</head>
+<body>
+
+<canvas id="matrixCanvas"></canvas>
+<div class="crt"></div>
+<div class="scanline"></div>
+
+<!-- Status Bar -->
+<div class="status-bar">
+  <div class="status-item">
+    <span class="status-dot"></span>
+    <span>SYSTEM: ONLINE</span>
+  </div>
+  <div class="status-item">
+    <span class="status-dot amber"></span>
+    <span>SESSION: <span id="sessionId">VSM_001</span></span>
+  </div>
+  <div class="status-item">
+    <span id="clock">--:--:--</span>
+  </div>
+  <div class="status-item">
+    <span>UPTIME: <span id="uptime">00:00</span></span>
+  </div>
+</div>
+
+<button class="audio-toggle" id="audioToggle">AUDIO: OFF</button>
+
+<!-- Cursor -->
+<div class="cursor-block" id="cursorBlock"></div>
+<div class="cursor-coords" id="cursorCoords">X:0 Y:0</div>
+
+<main>
+  <!-- BOOT -->
+  <section class="boot" id="boot">
+    <div class="boot-line">VSM DIGITAL OS v2.6.0 — BOOTING...</div>
+    <div class="boot-line success">[OK] Kernel loaded</div>
+    <div class="boot-line success">[OK] Mounting filesystems</div>
+    <div class="boot-line success">[OK] Network interface eth0 UP</div>
+    <div class="boot-line warning">[WARN] AI models detected: 3 (ChatGPT, Copilot, Gemini)</div>
+    <div class="boot-line success">[OK] Loading GEO modules</div>
+    <div class="boot-line success">[OK] Schema compiler ready</div>
+    <div class="boot-line success">[OK] Privacy modules encrypted</div>
+    <div class="boot-line success">[OK] EU servers connected</div>
+    <div class="boot-line" style="color: var(--green); margin-top: 2rem;">SYSTEM READY. Type 'help' for commands.</div>
+  </section>
+
+  <!-- HERO -->
+  <section id="hero" style="padding: 4rem 0;">
+    <div class="hero-ascii" id="heroAscii"></div>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">LOCATION</div>
+        <div>51.17°N, 4.99°E</div>
+        <div style="color: var(--amber); font-size: 0.85rem;">Geel, Belgium</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">TEAM_SIZE</div>
+        <div style="font-family: var(--font-term); font-size: 2rem; color: var(--green);">3</div>
+        <div style="color: var(--amber); font-size: 0.85rem;">Full-stack humans</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">STATUS</div>
+        <div style="color: var(--green);">ACCEPTING_CLIENTS</div>
+        <div style="color: var(--amber); font-size: 0.85rem;">Since 2024</div>
+      </div>
+      <div class="hero-meta-item">
+        <div class="hero-meta-label">ENCRYPTION</div>
+        <div style="color: var(--green);">AES-256</div>
+        <div style="color: var(--amber); font-size: 0.85rem;">EU-hosted</div>
+      </div>
+    </div>
+
+    <h1 class="hero-title-text">
+      &gt; Mensen <span class="strike">googelen</span> niet meer.<br>
+      &gt; Ze <span class="accent">vragen</span> het aan AI.<br>
+      &gt; <span class="accent">Wij zorgen dat jij het antwoord bent.</span>
+    </h1>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="diensten">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dots">
+          <div class="panel-dot r"></div>
+          <div class="panel-dot a"></div>
+          <div class="panel-dot g"></div>
+        </div>
+        <span>// services.exe — 4 processes running</span>
+      </div>
+      <div class="panel-body">
+        <div class="services-grid">
+          <div class="service-panel">
+            <div class="service-num">01</div>
+            <h3 class="service-title">Websites die vindbaar zijn</h3>
+            <p class="service-desc">Snel, strak en technisch gebouwd zodat AI-modellen je begrijpen en citeren.</p>
+            <div class="service-tags">
+              <span>core_web_vitals</span><span>schema</span><span>geo_ready</span>
+            </div>
+          </div>
+
+          <div class="service-panel">
+            <div class="service-num">02</div>
+            <h3 class="service-title">Digital marketing</h3>
+            <p class="service-desc">SEO, campagnes, content en analytics. Meetbaar, zonder vage beloftes.</p>
+            <div class="service-tags">
+              <span>seo</span><span>sea</span><span>analytics</span>
+            </div>
+          </div>
+
+          <div class="service-panel">
+            <div class="service-num">03</div>
+            <h3 class="service-title">Software op maat</h3>
+            <p class="service-desc">Webapps, ERP-pakketten, integraties. Wij plooien de code, niet jouw bedrijf.</p>
+            <div class="service-tags">
+              <span>webapps</span><span>erp</span><span>integrations</span>
+            </div>
+          </div>
+
+          <div class="service-panel">
+            <div class="service-num">04</div>
+            <h3 class="service-title">Data, privacy & GDPR</h3>
+            <p class="service-desc">Privacy by design, een nette datastack, encryptie en EU-hosting.</p>
+            <div class="service-tags">
+              <span>privacy_by_design</span><span>encryption</span><span>eu_hosting</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="stat-num" data-count="3">0</div>
+        <div class="stat-label">Humans</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" data-count="100">0</div>
+        <div class="stat-label">% Custom</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" data-count="3">0</div>
+        <div class="stat-label">AI Models</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" data-count="100">0</div>
+        <div class="stat-label">% EU</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPROACH -->
+  <section id="aanpak">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dots">
+          <div class="panel-dot r"></div>
+          <div class="panel-dot a"></div>
+          <div class="panel-dot g"></div>
+        </div>
+        <span>// approach.sh — executing 3 steps</span>
+      </div>
+      <div class="panel-body">
+        <div class="timeline-term">
+          <div class="step-term">
+            <div class="step-num">[ STEP 01 ]</div>
+            <h3 class="step-title">Structuur & Schema</h3>
+            <p class="step-desc">Heldere content-structuur en structured data zodat AI-modellen je foutloos lezen.</p>
+          </div>
+          <div class="step-term">
+            <div class="step-num">[ STEP 02 ]</div>
+            <h3 class="step-title">Autoriteit opbouwen</h3>
+            <p class="step-desc">Zorgen dat AI je als betrouwbare bron citeert — met bronvermelding terug naar jou.</p>
+          </div>
+          <div class="step-term">
+            <div class="step-num">[ STEP 03 ]</div>
+            <h3 class="step-title">Snel & schoon</h3>
+            <p class="step-desc">Sites die zowel bezoekers als crawlers belonen. Core Web Vitals als baseline.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORK -->
+  <section id="werk">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dots">
+          <div class="panel-dot r"></div>
+          <div class="panel-dot a"></div>
+          <div class="panel-dot g"></div>
+        </div>
+        <span>// cases.db — 3 records found</span>
+      </div>
+      <div class="panel-body">
+        <div class="work-grid">
+          <div class="work-panel">
+            <div class="work-visual"><canvas id="workCanvas1"></canvas></div>
+            <div class="work-content">
+              <div class="work-tag">[ ERP_CUSTOM ]</div>
+              <h3 class="work-title">Senor Snacks</h3>
+              <p class="work-desc">Een ERP-pakket gebouwd rond hun processen.</p>
+            </div>
+          </div>
+
+          <div class="work-panel">
+            <div class="work-visual"><canvas id="workCanvas2"></canvas></div>
+            <div class="work-content">
+              <div class="work-tag">[ SEO_GROWTH ]</div>
+              <h3 class="work-title">Van Hees metalen</h3>
+              <p class="work-desc">Digital marketing voor een industriële speler.</p>
+            </div>
+          </div>
+
+          <div class="work-panel">
+            <div class="work-visual"><canvas id="workCanvas3"></canvas></div>
+            <div class="work-content">
+              <div class="work-tag">[ AI_READY ]</div>
+              <h3 class="work-title">Senor Snacks · Green Deal</h3>
+              <p class="work-desc">Duurzaamheidsverhaal dat AI oppikt.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM -->
+  <section id="team">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dots">
+          <div class="panel-dot r"></div>
+          <div class="panel-dot a"></div>
+          <div class="panel-dot g"></div>
+        </div>
+        <span>// users.list — 3 active</span>
+      </div>
+      <div class="panel-body">
+        <div class="team-grid">
+          <div class="team-panel">
+            <div class="team-letter">V</div>
+            <h3 class="team-name">Verboven</h3>
+            <div class="team-role">[DATA.GDPR.OPS]</div>
+            <p class="team-desc">Bouwt de fundamenten die kloppen.</p>
+          </div>
+
+          <div class="team-panel">
+            <div class="team-letter">S</div>
+            <h3 class="team-name">Steurs</h3>
+            <div class="team-role">[WEB.SALES.STORY]</div>
+            <p class="team-desc">Vertaalt wat je doet naar AI-taal.</p>
+          </div>
+
+          <div class="team-panel">
+            <div class="team-letter">M</div>
+            <h3 class="team-name">Mertens</h3>
+            <div class="team-role">[MARKETING.CODE]</div>
+            <p class="team-desc">Zorgt dat je gevonden wordt.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <div class="contact-terminal">
+      <h2 class="contact-title">&gt; Klaar om <span class="accent">het antwoord</span><br>&gt; te worden?</h2>
+      <p class="contact-desc">Vertel ons waar je naartoe wil. Een eerste gesprek kost niets en levert altijd iets op.</p>
+      <a href="mailto:hallo@vsmdigital.be" class="contact-btn">&gt; EXECUTE contact.sh</a>
+    </div>
+  </section>
+</main>
+
+<!-- Command Input -->
+<div class="cmd-input">
+  <span class="cmd-prompt">root@vsm:~$</span>
+  <input type="text" id="cmdInput" placeholder="type 'help' for commands..." autocomplete="off" />
+</div>
+
+<footer class="footer-term">
+  <div>© 2026 VSM.digital — Geel, BE | Privacy by design | EU-hosting | GDPR-compliant</div>
+</footer>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+// MATRIX RAIN
+const canvas = document.getElementById('matrixCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*+-=<>?/';
+const fontSize = 14;
+const columns = Math.floor(canvas.width / fontSize);
+const drops = Array(columns).fill(1);
+
+function drawMatrix() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00ff41';
+  ctx.font = fontSize + 'px monospace';
+  for (let i = 0; i < drops.length; i++) {
+    const text = chars[Math.floor(Math.random() * chars.length)];
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 50);
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+// CURSOR
+const cursorBlock = document.getElementById('cursorBlock');
+const cursorCoords = document.getElementById('cursorCoords');
+document.addEventListener('mousemove', (e) => {
+  cursorBlock.style.left = e.clientX + 'px';
+  cursorBlock.style.top = e.clientY + 'px';
+  cursorCoords.style.left = e.clientX + 'px';
+  cursorCoords.style.top = e.clientY + 'px';
+  cursorCoords.textContent = `X:${Math.floor(e.clientX)} Y:${Math.floor(e.clientY)}`;
+});
+
+// CLOCK
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().split(' ')[0];
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// UPTIME
+let uptimeSec = 0;
+setInterval(() => {
+  uptimeSec++;
+  const m = Math.floor(uptimeSec / 60).toString().padStart(2, '0');
+  const s = (uptimeSec % 60).toString().padStart(2, '0');
+  document.getElementById('uptime').textContent = `${m}:${s}`;
+}, 1000);
+
+// TERMINAL AUDIO
+class TerminalAudio {
+  constructor() {
+    this.ctx = null;
+    this.enabled = false;
+  }
+
+  init() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  enable() {
+    if (!this.ctx) this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.enabled = true;
+  }
+
+  type() {
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 800 + Math.random() * 400;
+    gain.gain.value = 0.03;
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.05);
+  }
+
+  beep(freq = 1000, duration = 0.1) {
+    if (!this.enabled) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.value = 0.1;
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  boot() {
+    if (!this.enabled) return;
+    [440, 554, 659, 880].forEach((f, i) => {
+      setTimeout(() => this.beep(f, 0.15), i * 100);
+    });
+  }
+
+  glitch() {
+    if (!this.enabled) return;
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => this.beep(100 + Math.random() * 2000, 0.02), i * 20);
+    }
+  }
+}
+
+const audio = new TerminalAudio();
+const audioToggle = document.getElementById('audioToggle');
+audioToggle.addEventListener('click', () => {
+  if (!audio.enabled) {
+    audio.enable();
+    audioToggle.classList.add('active');
+    audioToggle.textContent = 'AUDIO: ON';
+    audio.boot();
+  } else {
+    audio.enabled = false;
+    audioToggle.classList.remove('active');
+    audioToggle.textContent = 'AUDIO: OFF';
+  }
+});
+
+// BOOT ANIMATION
+const bootLines = document.querySelectorAll('.boot-line');
+bootLines.forEach((line, i) => {
+  setTimeout(() => {
+    gsap.to(line, { opacity: 1, duration: 0.1 });
+    if (audio.enabled) audio.type();
+  }, i * 150);
+});
+
+// ASCII ART HERO
+const asciiArt = `
+██╗   ██╗███████╗███╗   ███╗
+██║   ██║██╔════╝████╗ ████║
+██║   ██║███████╗██╔████╔██║
+╚██╗ ██╔╝╚════██║██║╚██╔╝██║
+ ╚████╔╝ ███████║██║ ╚═╝ ██║
+  ╚═══╝  ╚══════╝╚═╝     ╚═╝
+`;
+document.getElementById('heroAscii').textContent = asciiArt;
+
+// COMMAND INPUT
+const cmdInput = document.getElementById('cmdInput');
+const commands = {
+  help: 'Beschikbare commands: help, diensten, werk, team, contact, about, hack, matrix, clear',
+  diensten: '→ Web · Marketing · Software · Privacy — scroll naar section #diensten',
+  werk: '→ 3 cases: Senor Snacks, Van Hees, Green Deal — scroll naar section #werk',
+  team: '→ 3 humans: V, S, M — scroll naar section #team',
+  contact: '→ hallo@vsmdigital.be — Winkelom 87c, Geel',
+  about: '→ VSM.digital — Digitale studio uit Geel. Wij bouwen websites die AI begrijpt.',
+  hack: () => { audio.glitch(); return '>> ACCESS GRANTED. Welcome to the mainframe.'; },
+  matrix: () => { document.querySelector('#matrixCanvas').style.opacity = '0.5'; setTimeout(() => { document.querySelector('#matrixCanvas').style.opacity = '0.15'; }, 2000); return '>> Red pill taken. Reality questioned.'; },
+  clear: () => { document.querySelector('main').innerHTML = '<div class="boot"><div class="boot-line success">Terminal cleared.</div></div>'; return ''; }
+};
+
+cmdInput.addEventListener('keydown', (e) => {
+  if (audio.enabled) audio.type();
+  if (e.key === 'Enter') {
+    const cmd = cmdInput.value.trim().toLowerCase();
+    cmdInput.value = '';
+    if (commands[cmd]) {
+      const response = typeof commands[cmd] === 'function' ? commands[cmd]() : commands[cmd];
+      const output = document.createElement('div');
+      output.className = 'boot-line success';
+      output.style.opacity = '1';
+      output.style.marginTop = '1rem';
+      output.innerHTML = `<span style="color: var(--amber);">$ ${cmd}</span><br>${response}`;
+      document.querySelector('main').appendChild(output);
+      output.scrollIntoView({ behavior: 'smooth' });
+      if (['diensten', 'werk', 'team', 'contact'].includes(cmd)) {
+        const target = document.getElementById(cmd);
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      }
+      if (audio.enabled) audio.beep(880, 0.1);
+    } else if (cmd) {
+      const output = document.createElement('div');
+      output.className = 'boot-line error';
+      output.style.opacity = '1';
+      output.style.marginTop = '1rem';
+      output.innerHTML = `<span style="color: var(--amber);">$ ${cmd}</span><br>bash: ${cmd}: command not found. Type 'help'`;
+      document.querySelector('main').appendChild(output);
+      if (audio.enabled) audio.beep(200, 0.2);
+    }
+  }
+});
+
+// HOVER SOUNDS
+document.querySelectorAll('.service-panel, .work-panel, .team-panel, .contact-btn').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    if (audio.enabled) audio.beep(600 + Math.random() * 400, 0.08);
+  });
+});
+
+// SCROLL REVEAL
+document.querySelectorAll('.service-panel, .stat, .step-term, .work-panel, .team-panel, .panel').forEach(el => {
+  gsap.from(el, {
+    opacity: 0,
+    y: 30,
+    duration: 0.6,
+    ease: 'power2.out',
+    scrollTrigger: { trigger: el, start: 'top 90%' }
+  });
+});
+
+// STATS COUNTER
+document.querySelectorAll('.stat-num').forEach(el => {
+  const target = parseInt(el.dataset.count);
+  ScrollTrigger.create({
+    trigger: el,
+    start: 'top 85%',
+    once: true,
+    onEnter: () => {
+      gsap.to(el, {
+        innerText: target,
+        duration: 1.5,
+        snap: { innerText: 1 },
+        ease: 'power2.out',
+        onUpdate: function() {
+          el.textContent = Math.round(parseFloat(el.innerText));
+        }
+      });
+      if (audio.enabled) audio.beep(1200, 0.1);
+    }
+  });
+});
+
+// WORK CANVASES - animated data viz
+function initWorkCanvas(id, color, pattern) {
+  const c = document.getElementById(id);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  c.width = c.offsetWidth;
+  c.height = c.offsetHeight;
+
+  let t = 0;
+  function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < c.width; x += 4) {
+      const y = c.height / 2 + Math.sin(x * 0.02 + t) * 30 + Math.sin(x * 0.05 + t * 2) * 15;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Data points
+    for (let i = 0; i < 10; i++) {
+      const x = (i / 10) * c.width;
+      const y = c.height / 2 + Math.sin(x * 0.02 + t) * 30 + Math.sin(x * 0.05 + t * 2) * 15;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    t += 0.02;
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+setTimeout(() => {
+  initWorkCanvas('workCanvas1', '#00ff41');
+  initWorkCanvas('workCanvas2', '#ffb000');
+  initWorkCanvas('workCanvas3', '#00ff88');
+}, 500);
+
+// TEAM LETTERS GLITCH
+document.querySelectorAll('.team-letter').forEach(letter => {
+  letter.addEventListener('mouseenter', () => {
+    const original = letter.textContent;
+    const glitchChars = '!@#$%^&*<>?/';
+    let iterations = 0;
+    const interval = setInterval(() => {
+      letter.textContent = original.split('').map((c, i) => {
+        if (i < iterations) return original[i];
+        return glitchChars[Math.floor(Math.random() * glitchChars.length)];
+      }).join('');
+      iterations += 1/3;
+      if (iterations >= original.length) {
+        letter.textContent = original;
+        clearInterval(interval);
+      }
+      if (audio.enabled) audio.type();
+    }, 50);
+  });
+});
+</script>
+
+</body>
+</html>

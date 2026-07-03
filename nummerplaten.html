@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Nummerplaten</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700;800;900&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<style>
+:root{
+  --bg:#f4f4f5;--surface:#ffffff;--surface2:#eeeef0;--border:#e2e2e5;--border2:#d0d0d4;
+  --text:#1a1a1a;--text2:#5f5f66;--red:#e8001d;--red-dark:#b8001a;--green:#22c55e;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:3px solid var(--red);padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.logo-area{display:flex;align-items:center;gap:14px;cursor:pointer;text-decoration:none;color:inherit;transition:opacity 0.15s;}
+.logo-area:hover{opacity:0.75;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-section{font-size:0.92rem;font-weight:600;color:var(--text2);padding-left:14px;border-left:1px solid var(--border2);}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+
+.container{max-width:1400px;margin:0 auto;padding:32px 24px;}
+.page-header{margin-bottom:28px;}
+.page-title{font-family:var(--font-cond);font-size:2.2rem;font-weight:900;letter-spacing:-0.01em;margin-bottom:6px;}
+.page-subtitle{color:var(--text2);font-size:0.92rem;}
+
+.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap;}
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);
+  border-radius:10px;padding:10px 16px;flex:1;min-width:220px;transition:border-color 0.15s;}
+.search-bar:focus-within{border-color:var(--red);}
+.search-icon{color:var(--text2);font-size:1rem;}
+.search-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font);font-size:0.95rem;}
+.search-bar input::placeholder{color:var(--text2);}
+.search-clear{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:4px 8px;font-size:1rem;border-radius:4px;}
+.search-clear:hover{background:var(--border2);color:var(--text);}
+
+.btn{font-family:var(--font);font-weight:700;font-size:0.9rem;border:none;border-radius:8px;padding:11px 18px;cursor:pointer;transition:background 0.15s,opacity 0.15s;}
+.btn-out{background:var(--surface);border:1px solid var(--border2);color:var(--text2);}
+.btn-out:hover{background:var(--surface2);color:var(--text);}
+.btn-save{background:var(--red);color:#fff;}
+.btn-save:hover{background:var(--red-dark);}
+.btn-ghost{background:var(--surface2);color:var(--text2);}
+.btn-ghost:hover{background:var(--border2);color:var(--text);}
+
+.stats-row{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
+.stat-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;flex:1;min-width:140px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.stat-num{font-family:var(--font-cond);font-size:2rem;font-weight:900;line-height:1;}
+.stat-lbl{color:var(--text2);font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;margin-top:4px;}
+.stat-pill.green .stat-num{color:#16a34a;}
+.stat-pill.gray .stat-num{color:var(--text2);}
+
+.section{margin-bottom:32px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-family:var(--font-cond);font-size:1.4rem;font-weight:800;}
+.section-count{background:var(--surface2);color:var(--text2);font-size:0.78rem;font-family:var(--font);font-weight:700;padding:3px 10px;border-radius:20px;}
+
+.truck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;}
+.truck-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;
+  display:flex;flex-direction:column;gap:12px;transition:all 0.2s;cursor:pointer;text-align:left;width:100%;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid var(--border2);}
+.truck-card:hover{border-color:var(--border2);box-shadow:0 4px 18px rgba(0,0,0,0.10);transform:translateY(-1px);}
+.truck-card.has-plate{border-left:3px solid var(--green);}
+.truck-card .truck-name{font-weight:700;font-size:0.96rem;line-height:1.3;}
+.truck-card .truck-meta{color:var(--text2);font-size:0.78rem;margin-top:2px;}
+.plate-box{align-self:flex-start;font-family:Consolas,'Courier New',monospace;font-weight:800;font-size:1.15rem;
+  letter-spacing:0.08em;background:#fff8d6;border:1.5px solid #e6d27a;color:#5a4a00;border-radius:7px;padding:6px 12px;
+  text-transform:uppercase;}
+.plate-box.empty{background:var(--surface2);border:1.5px dashed var(--border2);color:var(--text2);
+  font-family:var(--font);font-weight:700;font-size:0.84rem;letter-spacing:normal;text-transform:none;}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text2);}
+.empty-icon{font-size:3rem;margin-bottom:10px;}
+
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;
+  align-items:center;justify-content:center;padding:24px 16px;}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--surface);border-radius:14px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;}
+.modal-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:18px 22px;}
+.modal-head h2{font-family:var(--font-cond);font-size:1.5rem;font-weight:900;line-height:1.1;}
+.modal-head .sub{color:var(--text2);font-size:0.85rem;margin-top:4px;}
+.modal-body{padding:22px;}
+.field label{font-size:0.74rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--text2);display:block;margin-bottom:6px;}
+.field input{font-family:Consolas,'Courier New',monospace;font-size:1.2rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text);background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:11px 14px;outline:none;width:100%;transition:border-color 0.15s;}
+.field input:focus{border-color:var(--red);}
+.field .hint{font-size:0.76rem;color:var(--text2);margin-top:8px;}
+.modal-foot{border-top:1px solid var(--border);padding:16px 22px;display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;
+  padding:12px 22px;border-radius:8px;font-weight:700;font-size:0.9rem;opacity:0;transition:opacity 0.3s;z-index:1000;pointer-events:none;}
+.toast.show{opacity:1;}
+
+@media(max-width:768px){
+  .topbar{padding:0 12px;height:54px;}
+  .topbar-section{display:none;}
+  .container{padding:18px 12px;}
+  .page-title{font-size:1.6rem;}
+  .stats-row{gap:8px;}
+  .stat-pill{padding:11px 13px;min-width:0;flex:1 1 calc(33% - 6px);}
+  .stat-num{font-size:1.5rem;}
+  .truck-grid{grid-template-columns:1fr;gap:10px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-area" href="dashboard.html" title="Terug naar dashboard">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <div class="topbar-section">Nummerplaten</div>
+  </a>
+  <div class="topbar-right">
+    <div id="clock" style="color:var(--text2);font-size:0.85rem;font-weight:500;font-variant-numeric:tabular-nums;"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <div class="page-title">🪪 Nummerplaten</div>
+    <div class="page-subtitle" id="page-subtitle">Laden…</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Zoek op naam, type of plaat (bv. 502, friet, QHU)…" oninput="render()">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+    </div>
+    <button class="btn btn-out" onclick="exportCSV()">📄 Exporteer CSV</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-pill"><div class="stat-num" id="st-total">0</div><div class="stat-lbl">Voertuigen</div></div>
+    <div class="stat-pill green"><div class="stat-num" id="st-filled">0</div><div class="stat-lbl">Met nummerplaat</div></div>
+    <div class="stat-pill gray"><div class="stat-num" id="st-empty">0</div><div class="stat-lbl">Zonder plaat</div></div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<!-- Bewerk-modal: enkel de nummerplaat -->
+<div class="modal-backdrop" id="mo-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="m-title">—</h2>
+      <div class="sub" id="m-sub">—</div>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Nummerplaat</label>
+        <input type="text" id="m-plate" placeholder="1-ABC-234" autocomplete="off" onkeydown="if(event.key==='Enter')savePlate();">
+        <div class="hint">Laat leeg voor voertuigen zonder plaat (containers, units…). Wordt centraal bewaard en is ook zichtbaar bij de Keuringen.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeEdit()">Annuleren</button>
+      <button class="btn btn-save" onclick="savePlate()">💾 Bewaren</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/truck-data.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// Nummerplaten — centraal overzicht van de volledige vloot + hun kenteken.
+//
+// Bron van waarheid voor de LIVE plaatdata is hetzelfde RTDB-knooppunt als de
+// Keuringen-pagina (ft_keuringen_beheer_v1). Zo blijven beide pagina's in sync:
+// een plaat die je hier aanvult, verschijnt ook bij Keuringen en omgekeerd.
+// /truck-data.js levert de canonieke lijst + de categorie-indeling/labels.
+// ─────────────────────────────────────────────────────────────────────────
+const FB_KEUR = 'ft_keuringen_beheer_v1';
+
+// Categorie-presentatie uit truck-data.js (vollere check-in-labels).
+const CATS = TruckData.CATEGORIES.map(function (c) {
+  return { key: c.key, label: c.checkinLabel };
+});
+// id → categorie volgens de centrale brondata.
+const ID_CAT = {};
+TruckData.fleet().forEach(function (t) { ID_CAT[t.id] = t.category; });
+// Default-platen uit de brondata (fallback als RTDB nog niet geladen is).
+const SEED_PLATE = {};
+TruckData.fleet().forEach(function (t) { SEED_PLATE[t.id] = t.plate || ''; });
+
+let trucks = [];   // [{id,name,type,plate}, …] uit de live RTDB
+let editId = null;
+
+function catOf(t) {
+  if (ID_CAT[t.id]) return ID_CAT[t.id];
+  var ty = (t.type || '');
+  if (/Friet|Bicky/i.test(ty)) return 'frituur';
+  if (/Hamburger/i.test(ty)) return 'hamburger';
+  if (/Pizza|Pasta/i.test(ty)) return 'pizza_pasta';
+  if (/Ijs|Sweet/i.test(ty)) return 'sweet_ijs';
+  if (/Tap|dranken/i.test(ty)) return 'tap';
+  if (/Voertuig|Jumper|Fiat/i.test(ty)) return 'rijdend';
+  return 'support';
+}
+
+// Laatste getal in de naam → natuurlijke nummer-sortering (zoals bij Keuringen).
+function num(n) { var m = (n || '').match(/\d+/g); return m ? parseInt(m[m.length - 1], 10) : 0; }
+
+function load() {
+  fbdb.ref(FB_KEUR).on('value', function (snap) {
+    var v = snap.val();
+    if (v) {
+      trucks = Object.keys(v).map(function (k) {
+        var t = v[k] || {};
+        return { id: t.id || k, name: t.name || '', type: t.type || '', plate: (t.plate || '').trim() };
+      });
+    } else {
+      // Fallback: RTDB nog niet geseed → toon tenminste de brondata.
+      trucks = TruckData.fleet().map(function (t) {
+        return { id: t.id, name: t.name, type: t.type, plate: (t.plate || '').trim() };
+      });
+    }
+    render();
+  }, function (err) { console.warn('Nummerplaten laden mislukt:', err && err.message); });
+}
+if (window.__auth) { load(); } else { window.addEventListener('auth-ready', load, { once: true }); }
+
+function clearSearch() { document.getElementById('search-input').value = ''; render(); }
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function render() {
+  var search = document.getElementById('search-input').value.trim().toLowerCase();
+  document.getElementById('search-clear').style.display = search ? 'inline-block' : 'none';
+
+  var total = trucks.length;
+  var withPlate = trucks.filter(function (t) { return t.plate; }).length;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-filled').textContent = withPlate;
+  document.getElementById('st-empty').textContent = total - withPlate;
+  document.getElementById('page-subtitle').textContent =
+    total + ' voertuigen · ' + withPlate + ' met nummerplaat · ' + (total - withPlate) + ' nog aan te vullen';
+
+  var visible = trucks;
+  if (search) {
+    visible = trucks.filter(function (t) {
+      return (t.name + ' ' + t.type + ' ' + t.plate).toLowerCase().includes(search);
+    });
+  }
+
+  var byCat = {};
+  CATS.forEach(function (c) { byCat[c.key] = []; });
+  visible.forEach(function (t) {
+    var k = catOf(t);
+    if (!byCat[k]) byCat[k] = [];
+    byCat[k].push(t);
+  });
+
+  var html = '';
+  CATS.forEach(function (c) {
+    var items = (byCat[c.key] || []).slice().sort(function (a, b) {
+      var d = num(a.name) - num(b.name);
+      return d !== 0 ? d : a.name.localeCompare(b.name, 'nl');
+    });
+    if (!items.length) return;
+    html += '<div class="section">'
+      + '<div class="section-header">' + c.label + ' <span class="section-count">' + items.length + '</span></div>'
+      + '<div class="truck-grid">' + items.map(renderCard).join('') + '</div>'
+      + '</div>';
+  });
+
+  if (!html) {
+    html = '<div class="empty"><div class="empty-icon">🔍</div><div>Geen voertuig gevonden voor "' + escapeHtml(search) + '".</div></div>';
+  }
+  document.getElementById('content').innerHTML = html;
+}
+
+function renderCard(t) {
+  var plate = t.plate
+    ? '<span class="plate-box">' + escapeHtml(t.plate) + '</span>'
+    : '<span class="plate-box empty">+ Plaat toevoegen</span>';
+  return '<button class="truck-card ' + (t.plate ? 'has-plate' : '') + '" onclick="openEdit(\'' + t.id + '\')">'
+    + '<div><div class="truck-name">' + escapeHtml(t.name) + '</div>'
+    + '<div class="truck-meta">' + escapeHtml(t.type) + '</div></div>'
+    + plate
+    + '</button>';
+}
+
+function openEdit(id) {
+  var t = trucks.find(function (x) { return x.id === id; });
+  if (!t) return;
+  editId = id;
+  document.getElementById('m-title').textContent = t.name;
+  document.getElementById('m-sub').textContent = t.type;
+  document.getElementById('m-plate').value = t.plate || '';
+  document.getElementById('mo-edit').classList.add('show');
+  setTimeout(function () { document.getElementById('m-plate').focus(); }, 50);
+}
+function closeEdit() { editId = null; document.getElementById('mo-edit').classList.remove('show'); }
+
+function savePlate() {
+  if (!editId) return;
+  var plate = document.getElementById('m-plate').value.trim().toUpperCase();
+  var t = trucks.find(function (x) { return x.id === editId; });
+  // Schrijf enkel het plate-veld; bestaat het record nog niet (alleen in
+  // brondata, niet in RTDB), dan zetten we een minimaal record zodat de
+  // Keuringen-pagina geen kapotte invoer ziet.
+  var ref = fbdb.ref(FB_KEUR + '/' + editId);
+  ref.child('plate').once('value', function (snap) {
+    if (snap.exists() || (t && t.name)) {
+      var upd = { plate: plate };
+      ref.update(upd).then(done).catch(fail);
+    } else {
+      ref.set({ id: editId, name: (t && t.name) || editId, type: (t && t.type) || '', plate: plate,
+        owner: 'Señor Snacks',
+        elek: { present: false, date: '', exp: '', org: 'OCB vzw' },
+        gas: { present: false, date: '', exp: '', org: 'OCB vzw' } }).then(done).catch(fail);
+    }
+  });
+  function done() { closeEdit(); toast(plate ? 'Nummerplaat bewaard' : 'Nummerplaat gewist'); }
+  function fail(e) { alert('Bewaren mislukt: ' + (e && e.message || e)); }
+}
+
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(function () { el.classList.remove('show'); }, 1800);
+}
+
+function exportCSV() {
+  var rows = ['Naam,Nummerplaat,Type'];
+  trucks.slice().sort(function (a, b) {
+    var d = num(a.name) - num(b.name); return d !== 0 ? d : a.name.localeCompare(b.name, 'nl');
+  }).forEach(function (t) {
+    rows.push('"' + (t.name || '').replace(/"/g, '""') + '","' + (t.plate || '') + '","' + (t.type || '').replace(/"/g, '""') + '"');
+  });
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿' + rows.join('\n'));
+  a.download = 'senorsnacks_nummerplaten.csv';
+  a.click();
+}
+
+// Klik buiten de modal sluit hem.
+document.getElementById('mo-edit').addEventListener('click', function (e) {
+  if (e.target === this) closeEdit();
+});
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeEdit(); });
+
+// Klokje rechtsboven.
+(function () {
+  function tick() {
+    var d = new Date();
+    document.getElementById('clock').textContent =
+      ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  tick(); setInterval(tick, 30000);
+})();
+</script>
+</body>
+</html>

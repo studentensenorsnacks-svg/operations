@@ -1113,3 +1113,42 @@ exports.offerteRouter = onRequest({ region: REGION, memory: '512MiB' }, async (r
   // Geen geldig cookie → inlogscherm.
   res.status(200).type('html').send(offerLoginPage(offer.title, false));
 });
+
+// ── HTTP: VIES btw-nummer lookup (voor FrietFlow) ─────────────────
+// De EU VIES REST-dienst geeft bij een geldig btw-nummer de officiële
+// bedrijfsnaam en het adres terug, maar stuurt geen CORS-headers — vandaar
+// deze kleine proxy. Response: { valid, name, address }.
+exports.viesLookup = onRequest(
+  { region: REGION, cors: ['https://frietflow.web.app', 'http://localhost:5000'] },
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const rl = await rateLimit(req, 'viesLookup', { limit: 20, windowSec: 60 });
+    if (rl) {
+      res.set('Retry-After', String(rl.retryAfter));
+      res.status(429).json({ error: 'rate_limited' });
+      return;
+    }
+    const vat = String(req.query.vat || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+    const m = /^([A-Z]{2})([0-9A-Z]{2,12})$/.exec(vat);
+    if (!m) {
+      res.status(400).json({ error: 'invalid_format' });
+      return;
+    }
+    try {
+      const r = await fetch(
+        `https://ec.europa.eu/taxation_customs/vies/rest-api/ms/${m[1]}/vat/${m[2]}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) throw new Error('vies_status_' + r.status);
+      const j = await r.json();
+      res.json({
+        valid: j.isValid === true,
+        name: j.name && j.name !== '---' ? j.name : '',
+        address: j.address && j.address !== '---' ? j.address : '',
+      });
+    } catch (e) {
+      logger.warn('viesLookup failed', { message: e.message });
+      res.status(502).json({ error: 'vies_unavailable' });
+    }
+  }
+);

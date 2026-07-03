@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VSM digital — THE CONDUCTOR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Inter:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root {
+  --gold: #d4af37;
+  --gold-bright: #f4d03f;
+  --gold-deep: #8b6914;
+  --purple-deep: #1a0529;
+  --purple: #2a0845;
+  --ivory: #f5f0e8;
+  --cream: #ebe3d1;
+  --bg: #0a0510;
+  --fg: #f5f0e8;
+  --border: rgba(212, 175, 55, 0.2);
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); overflow-x: hidden; }
+body { font-family: var(--font-body); cursor: none; }
+@media (max-width: 900px) { body { cursor: auto; } }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--gold); color: var(--bg); }
+
+/* CURSOR */
+.cursor-conductor {
+  position: fixed;
+  width: 30px; height: 30px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  mix-blend-mode: difference;
+}
+.cursor-conductor::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border: 1px solid var(--gold-bright);
+  border-radius: 50%;
+  opacity: 0.4;
+  animation: pulse-gold 2s infinite;
+}
+.cursor-dot {
+  position: fixed;
+  width: 6px; height: 6px;
+  background: var(--gold-bright);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 20px var(--gold);
+}
+@keyframes pulse-gold {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+
+/* AMBIENT */
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(212, 175, 55, 0.08), transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(42, 8, 69, 0.3), transparent 50%),
+    linear-gradient(180deg, #0a0510 0%, #1a0529 100%);
+}
+.noise {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.8) 100%);
+}
+
+/* MUSIC CONTROLS */
+.music-toggle {
+  position: fixed;
+  top: 2rem; right: 2rem;
+  z-index: 1000;
+  width: 60px; height: 60px;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  background: rgba(10, 5, 16, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 1.5rem;
+  transition: all 0.4s;
+}
+.music-toggle:hover {
+  background: var(--gold);
+  color: var(--bg);
+  transform: scale(1.1);
+  box-shadow: 0 0 30px var(--gold);
+}
+.music-bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 20px;
+}
+.music-bar {
+  width: 3px;
+  background: currentColor;
+  border-radius: 2px;
+  height: 6px;
+  transition: height 0.3s;
+}
+.music-toggle.playing .music-bar {
+  animation: bounce 1s infinite;
+}
+.music-toggle.playing .music-bar:nth-child(2) { animation-delay: 0.2s; }
+.music-toggle.playing .music-bar:nth-child(3) { animation-delay: 0.4s; }
+.music-toggle.playing .music-bar:nth-child(4) { animation-delay: 0.6s; }
+@keyframes bounce {
+  0%, 100% { height: 6px; }
+  50% { height: 18px; }
+}
+
+/* NAV */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+}
+.nav-links {
+  display: flex;
+  gap: 3rem;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.nav-links a {
+  position: relative;
+  padding: 0.5rem 0;
+  transition: color 0.3s;
+}
+.nav-links a:hover { color: var(--gold); }
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-links a:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  padding: 10rem 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.hero-orchestra {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: clamp(15rem, 40vw, 40rem);
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(212, 175, 55, 0.1);
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -0.05em;
+  z-index: 0;
+}
+.hero-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.hero-label::before {
+  content: '';
+  width: 60px; height: 1px;
+  background: var(--gold);
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 13vw, 14rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  margin-bottom: 3rem;
+  max-width: 1400px;
+  position: relative;
+}
+.hero-title .line { display: block; overflow: hidden; padding: 0.05em 0; }
+.hero-title .line-inner {
+  display: inline-block;
+  font-style: italic;
+  font-weight: 300;
+}
+.hero-title .strike {
+  position: relative;
+  color: rgba(245, 240, 232, 0.25);
+  font-style: italic;
+}
+.hero-title .strike::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 0.08em;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.hero-title .accent {
+  color: var(--gold);
+  font-weight: 600;
+  position: relative;
+}
+.hero-title .accent::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 0.2em;
+  height: 0.08em;
+  background: var(--gold-bright);
+  transform: scaleX(0);
+  transform-origin: left;
+  box-shadow: 0 0 15px var(--gold);
+}
+.hero-sub {
+  max-width: 700px;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+  line-height: 1.5;
+  margin-bottom: 3rem;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--cream);
+}
+.hero-ctas { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.btn {
+  padding: 1.25rem 2.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--gold);
+}
+.btn-primary {
+  background: var(--gold);
+  color: var(--bg);
+}
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--purple-deep);
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 0;
+}
+.btn-primary span { position: relative; z-index: 1; }
+.btn-primary:hover::before { transform: translateY(0); }
+.btn-primary:hover { color: var(--gold); }
+.btn-ghost {
+  background: transparent;
+  color: var(--gold);
+}
+.btn-ghost:hover { background: var(--gold); color: var(--bg); }
+
+/* SECTIONS */
+section {
+  padding: 10rem 2rem;
+  position: relative;
+  z-index: 1;
+}
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 7rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  margin-bottom: 5rem;
+  max-width: 1200px;
+  font-style: italic;
+  font-weight: 300;
+}
+.section-title .accent { color: var(--gold); font-weight: 600; }
+
+/* SERVICES - MUSICAL SCORE STYLE */
+.services {
+  background: linear-gradient(180deg, transparent, rgba(42, 8, 69, 0.3), transparent);
+}
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+}
+.score-card {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.04), rgba(212, 175, 55, 0.01));
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3rem 2rem;
+  position: relative;
+  min-height: 400px;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.score-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.score-card:hover::before { transform: scaleX(1); }
+.score-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--gold);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 40px rgba(212, 175, 55, 0.1);
+}
+.score-card.large { grid-column: span 6; }
+.score-card.medium { grid-column: span 6; }
+.score-card.small { grid-column: span 4; }
+@media (max-width: 900px) {
+  .score-card.large, .score-card.medium, .score-card.small { grid-column: span 12; }
+}
+.score-num {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  line-height: 1;
+  color: var(--gold);
+  font-style: italic;
+  font-weight: 300;
+  margin-bottom: 2rem;
+  opacity: 0.6;
+}
+.score-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+  font-weight: 300;
+}
+.score-desc {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--cream);
+  margin-bottom: 2rem;
+  max-width: 400px;
+  font-weight: 300;
+}
+.score-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.score-tags span {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+  letter-spacing: 0.1em;
+}
+.score-card:hover .score-tags span { border-color: var(--gold); color: var(--gold); }
+
+/* APPROACH - TIMELINE */
+.approach { padding: 10rem 2rem; }
+.timeline {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+.timeline-item {
+  padding: 2.5rem 0 2.5rem 6rem;
+  position: relative;
+  opacity: 0.3;
+  transition: opacity 0.6s;
+}
+.timeline-item.active { opacity: 1; }
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 24px; top: 3rem;
+  width: 12px; height: 12px;
+  background: var(--bg);
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+.timeline-item.active::before {
+  background: var(--gold);
+  box-shadow: 0 0 20px var(--gold);
+}
+.timeline-num {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--gold);
+  letter-spacing: 0.3em;
+  margin-bottom: 1rem;
+}
+.timeline-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+  margin-bottom: 1rem;
+  font-style: italic;
+  font-weight: 300;
+}
+.timeline-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--cream);
+  max-width: 600px;
+  font-weight: 300;
+}
+
+/* TERMINAL */
+.terminal {
+  background: var(--bg);
+  border: 1px solid var(--gold);
+  padding: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  max-width: 700px;
+  margin: 4rem auto;
+  position: relative;
+  box-shadow: 0 0 40px rgba(212, 175, 55, 0.2);
+}
+.terminal::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  pointer-events: none;
+}
+.t-line { margin-bottom: 0.75rem; opacity: 0; }
+.t-prompt { color: var(--gold); }
+.t-response { color: var(--cream); padding-left: 1rem; display: block; }
+.t-cursor {
+  display: inline-block;
+  width: 8px; height: 14px;
+  background: var(--gold);
+  animation: blink 1s infinite;
+  vertical-align: middle;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* WORK - GALLERY */
+.work { padding: 10rem 2rem; }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+@media (max-width: 900px) { .gallery-grid { grid-template-columns: 1fr; } }
+.gallery-item {
+  aspect-ratio: 4/5;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gallery-item:hover {
+  transform: translateY(-8px);
+  border-color: var(--gold);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+}
+.gallery-bg {
+  position: absolute;
+  inset: 0;
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gallery-item:hover .gallery-bg { transform: scale(1.08); }
+.gallery-bg.bg-1 {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(212, 175, 55, 0.3), transparent 50%),
+    linear-gradient(135deg, #2a0845, #0a0510);
+}
+.gallery-bg.bg-2 {
+  background:
+    radial-gradient(circle at 70% 70%, rgba(212, 175, 55, 0.25), transparent 50%),
+    linear-gradient(135deg, #1a0529, #0a0510);
+}
+.gallery-bg.bg-3 {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.2), transparent 50%),
+    linear-gradient(135deg, #0a0510, #2a0845);
+}
+.gallery-content {
+  position: absolute;
+  inset: 0;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 2;
+}
+.gallery-tag {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.gallery-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 0.95;
+  font-style: italic;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+.gallery-desc {
+  color: var(--cream);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 300;
+}
+
+/* TEAM */
+.team {
+  padding: 10rem 2rem;
+  background: linear-gradient(180deg, transparent, rgba(42, 8, 69, 0.2), transparent);
+}
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+@media (max-width: 900px) { .team-grid { grid-template-columns: 1fr; } }
+.team-card {
+  text-align: center;
+  padding: 3rem 2rem;
+  border: 1px solid var(--border);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.team-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-8px);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 40px rgba(212, 175, 55, 0.1);
+}
+.team-letter {
+  font-family: var(--font-display);
+  font-size: clamp(8rem, 15vw, 14rem);
+  line-height: 1;
+  color: var(--gold);
+  font-style: italic;
+  font-weight: 300;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 80px rgba(212, 175, 55, 0.5);
+}
+.team-name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-style: italic;
+  font-weight: 300;
+  margin-bottom: 1rem;
+}
+.team-role {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+}
+.team-desc {
+  color: var(--cream);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+/* CONTACT */
+.contact {
+  padding: 12rem 2rem;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.contact-giant {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 14vw, 18rem);
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  margin-bottom: 3rem;
+  font-style: italic;
+  font-weight: 300;
+}
+.contact-giant .accent {
+  color: var(--gold);
+  font-weight: 600;
+  position: relative;
+  display: inline-block;
+}
+
+/* FOOTER */
+.footer {
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  position: relative;
+  z-index: 2;
+}
+
+/* REVEAL */
+.reveal { opacity: 0; transform: translateY(40px); }
+
+@media (max-width: 900px) {
+  section { padding: 6rem 1.25rem; }
+  .hero { padding: 7rem 1.25rem 3rem; }
+  .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="ambient-bg"></div>
+<div class="noise"></div>
+<div class="vignette"></div>
+
+<!-- Cursor -->
+<div class="cursor-conductor" id="cursorConductor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<!-- Music Toggle -->
+<button class="music-toggle" id="musicToggle" title="Toggle orchestra">
+  <div class="music-bars">
+    <div class="music-bar"></div>
+    <div class="music-bar"></div>
+    <div class="music-bar"></div>
+    <div class="music-bar"></div>
+  </div>
+</button>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#top" class="nav-logo">VSM.digital</a>
+  <ul class="nav-links">
+    <li><a href="#diensten">Diensten</a></li>
+    <li><a href="#aanpak">Aanpak</a></li>
+    <li><a href="#werk">Werk</a></li>
+    <li><a href="#team">Team</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-orchestra">OPUS</div>
+  <div class="hero-label">Opus No. 1 — Digitale studio · Geel, België</div>
+  <h1 class="hero-title">
+    <span class="line"><span class="line-inner">Mensen</span></span>
+    <span class="line"><span class="line-inner strike">googelen</span></span>
+    <span class="line"><span class="line-inner">niet meer.</span></span>
+    <span class="line"><span class="line-inner">Ze <span class="accent">vragen</span></span></span>
+    <span class="line"><span class="line-inner">het aan AI.</span></span>
+  </h1>
+  <p class="hero-sub">
+    Wij bouwen websites die in dát antwoord terechtkomen — als een perfect gecomponeerde symfonie, zodat ChatGPT, Copilot en Gemini je begrijpen en citeren.
+  </p>
+  <div class="hero-ctas">
+    <a href="#contact" class="btn btn-primary">
+      <span>Start het opus</span>
+      <span>→</span>
+    </a>
+    <a href="#werk" class="btn btn-ghost">
+      <span>Bekijk het repertoire</span>
+      <span>↓</span>
+    </a>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="services" id="diensten">
+  <div class="section-label reveal">Movement I — Diensten</div>
+  <h2 class="section-title reveal">
+    Vier <span class="accent">stemmen</span>,<br>
+    één symfonie.
+  </h2>
+
+  <div class="score-grid">
+    <article class="score-card large reveal">
+      <div class="score-num">01</div>
+      <h3 class="score-title">Websites die<br>vindbaar zijn</h3>
+      <p class="score-desc">Snel, strak en technisch gebouwd zodat zoekmachines én AI-modellen je begrijpen en citeren.</p>
+      <div class="score-tags">
+        <span>Core Web Vitals</span><span>Schema</span><span>GEO-ready</span><span>Headless</span>
+      </div>
+    </article>
+
+    <article class="score-card medium reveal">
+      <div class="score-num">02</div>
+      <h3 class="score-title">Digital<br>marketing</h3>
+      <p class="score-desc">SEO, campagnes, content en analytics. Meetbaar, zonder vage beloftes.</p>
+      <div class="score-tags">
+        <span>SEO & SEA</span><span>Content</span><span>Analytics</span>
+      </div>
+    </article>
+
+    <article class="score-card medium reveal">
+      <div class="score-num">03</div>
+      <h3 class="score-title">Software<br>op maat</h3>
+      <p class="score-desc">Webapps, ERP-pakketten, integraties. Software die past op jouw processen.</p>
+      <div class="score-tags">
+        <span>Webapps</span><span>ERP</span><span>Integraties</span>
+      </div>
+    </article>
+
+    <article class="score-card large reveal">
+      <div class="score-num">04</div>
+      <h3 class="score-title">Data, privacy<br>& GDPR</h3>
+      <p class="score-desc">Privacy by design, een nette datastack, encryptie en EU-hosting.</p>
+      <div class="score-tags">
+        <span>Privacy by design</span><span>Encryptie</span><span>EU-hosting</span>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- APPROACH -->
+<section class="approach" id="aanpak">
+  <div class="section-label reveal">Movement II — De aanpak</div>
+  <h2 class="section-title reveal">
+    Word het <span class="accent">antwoord</span>,<br>
+    niet de tiende link.
+  </h2>
+
+  <div class="timeline">
+    <div class="timeline-item" data-step="1">
+      <div class="timeline-num">MOVEMENT / 01</div>
+      <h3 class="timeline-title">Structuur & Schema</h3>
+      <p class="timeline-desc">Heldere content-structuur en structured data zodat AI-modellen je foutloos lezen en begrijpen.</p>
+    </div>
+    <div class="timeline-item" data-step="2">
+      <div class="timeline-num">MOVEMENT / 02</div>
+      <h3 class="timeline-title">Autoriteit opbouwen</h3>
+      <p class="timeline-desc">Zorgen dat AI je als betrouwbare bron citeert — met bronvermelding terug naar jou.</p>
+    </div>
+    <div class="timeline-item" data-step="3">
+      <div class="timeline-num">MOVEMENT / 03</div>
+      <h3 class="timeline-title">Snel & schoon</h3>
+      <p class="timeline-desc">Sites die zowel bezoekers als crawlers belonen. Core Web Vitals als baseline.</p>
+    </div>
+  </div>
+
+  <div class="terminal" id="terminal">
+    <div class="t-line" data-delay="0"><span class="t-prompt">user@ai:~$</span> "Beste digitale studio in Geel?"</div>
+    <div class="t-line" data-delay="800"><span class="t-response">→ VSM digital (Winkelom, Geel)</span></div>
+    <div class="t-line" data-delay="1400"><span class="t-response">Specialisatie: GEO, AI-ready websites.</span></div>
+    <div class="t-line" data-delay="2200"><span class="t-response">Diensten: Web · Marketing · Software · Privacy</span></div>
+    <div class="t-line" data-delay="3000"><span class="t-response" style="color: var(--gold);">[bron: vsmdigital.be — betrouwbaarheid: HOOG]</span></div>
+    <div class="t-line" data-delay="3800"><span class="t-prompt">user@ai:~$</span> <span class="t-cursor"></span></div>
+  </div>
+</section>
+
+<!-- WORK -->
+<section class="work" id="werk">
+  <div class="section-label reveal">Movement III — Geselecteerd werk</div>
+  <h2 class="section-title reveal">
+    Het <span class="accent">repertoire</span>.
+  </h2>
+
+  <div class="gallery-grid">
+    <article class="gallery-item reveal">
+      <div class="gallery-bg bg-1"></div>
+      <div class="gallery-content">
+        <div class="gallery-tag">ERP op maat</div>
+        <div>
+          <h3 class="gallery-title">Senor Snacks</h3>
+          <p class="gallery-desc">Een ERP-pakket gebouwd rond hun processen.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="gallery-item reveal">
+      <div class="gallery-bg bg-2"></div>
+      <div class="gallery-content">
+        <div class="gallery-tag">Marketing & SEO</div>
+        <div>
+          <h3 class="gallery-title">Van Hees metalen</h3>
+          <p class="gallery-desc">Digital marketing voor een industriële speler.</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="gallery-item reveal">
+      <div class="gallery-bg bg-3"></div>
+      <div class="gallery-content">
+        <div class="gallery-tag">AI-ready website</div>
+        <div>
+          <h3 class="gallery-title">Senor Snacks · Green Deal</h3>
+          <p class="gallery-desc">Duurzaamheidsverhaal dat AI oppikt.</p>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section class="team" id="team">
+  <div class="section-label reveal">Movement IV — Het ensemble</div>
+  <h2 class="section-title reveal">
+    Drie <span class="accent">stemmen</span>.<br>
+    Eén ensemble.
+  </h2>
+
+  <div class="team-grid">
+    <article class="team-card reveal">
+      <div class="team-letter">V</div>
+      <h3 class="team-name">Verboven</h3>
+      <div class="team-role">Data · GDPR · Ops</div>
+      <p class="team-desc">Bouwt de fundamenten die kloppen.</p>
+    </article>
+
+    <article class="team-card reveal">
+      <div class="team-letter">S</div>
+      <h3 class="team-name">Steurs</h3>
+      <div class="team-role">Web · Sales · Story</div>
+      <p class="team-desc">Vertaalt wat je doet naar iets dat modellen begrijpen.</p>
+    </article>
+
+    <article class="team-card reveal">
+      <div class="team-letter">M</div>
+      <h3 class="team-name">Mertens</h3>
+      <div class="team-role">Marketing · Code</div>
+      <p class="team-desc">Zorgt dat je gevonden wordt.</p>
+    </article>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact" id="contact">
+  <div class="section-label reveal" style="justify-content: center;">Coda — Contact</div>
+  <h2 class="contact-giant">
+    <div>Klaar om</div>
+    <div><span class="accent">het antwoord</span></div>
+    <div>te worden?</div>
+  </h2>
+  <a href="mailto:hallo@vsmdigital.be" class="btn btn-primary reveal" style="margin-top: 2rem;">
+    <span>hallo@vsmdigital.be</span>
+    <span>→</span>
+  </a>
+</section>
+
+<footer class="footer">
+  <div>VSM.digital</div>
+  <div>Privacy by design · EU-hosting · GDPR-compliant</div>
+  <div>© 2026 — Geel, België</div>
+</footer>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+// CURSOR
+const cursorConductor = document.getElementById('cursorConductor');
+const cursorDot = document.getElementById('cursorDot');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', (e) => {
+  mx = e.clientX; my = e.clientY;
+  cursorDot.style.left = mx + 'px';
+  cursorDot.style.top = my + 'px';
+});
+
+function animateCursor() {
+  rx += (mx - rx) * 0.15;
+  ry += (my - ry) * 0.15;
+  cursorConductor.style.left = rx + 'px';
+  cursorConductor.style.top = ry + 'px';
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+// ORCHESTRA AUDIO
+class OrchestraAudio {
+  constructor() {
+    this.ctx = null;
+    this.isPlaying = false;
+    this.masterGain = null;
+    this.padOscs = [];
+  }
+
+  init() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.15;
+    this.masterGain.connect(this.ctx.destination);
+
+    // Reverb via convolver approximation
+    this.reverb = this.ctx.createConvolver();
+    const reverbTime = 2;
+    const decayRate = 2;
+    const sampleRate = this.ctx.sampleRate;
+    const length = sampleRate * reverbTime;
+    const impulse = this.ctx.createBuffer(2, length, sampleRate);
+    for (let channel = 0; channel < 2; channel++) {
+      const buffer = impulse.getChannelData(channel);
+      for (let i = 0; i < length; i++) {
+        buffer[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decayRate);
+      }
+    }
+    this.reverb.buffer = impulse;
+    this.reverb.connect(this.masterGain);
+  }
+
+  startPad() {
+    if (!this.ctx) this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    // C minor chord: C, Eb, G, C
+    const notes = [130.81, 155.56, 196.00, 261.63];
+    notes.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = 0;
+      gain.gain.linearRampToValueAtTime(0.03, this.ctx.currentTime + 3);
+      osc.connect(gain);
+      gain.connect(this.reverb);
+      osc.start();
+      this.padOscs.push({ osc, gain });
+    });
+    this.isPlaying = true;
+  }
+
+  stopPad() {
+    this.padOscs.forEach(({ osc, gain }) => {
+      gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1);
+      setTimeout(() => osc.stop(), 1000);
+    });
+    this.padOscs = [];
+    this.isPlaying = false;
+  }
+
+  playNote(freq, duration = 0.5) {
+    if (!this.ctx) this.init();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(this.reverb);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+}
+
+const orchestra = new OrchestraAudio();
+const musicToggle = document.getElementById('musicToggle');
+
+musicToggle.addEventListener('click', () => {
+  if (orchestra.isPlaying) {
+    orchestra.stopPad();
+    musicToggle.classList.remove('playing');
+  } else {
+    orchestra.startPad();
+    musicToggle.classList.add('playing');
+  }
+});
+
+// Piano notes on hover
+const pianoNotes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88];
+let noteIndex = 0;
+document.querySelectorAll('.score-card, .gallery-item, .team-card, .btn').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    if (orchestra.isPlaying) {
+      orchestra.playNote(pianoNotes[noteIndex % pianoNotes.length], 0.6);
+      noteIndex++;
+    }
+  });
+});
+
+// SCROLL-TRIGGERED CHORDS
+ScrollTrigger.create({
+  trigger: '.services',
+  start: 'top center',
+  once: true,
+  onEnter: () => { if (orchestra.isPlaying) orchestra.playNote(196.00, 2); }
+});
+
+ScrollTrigger.create({
+  trigger: '.approach',
+  start: 'top center',
+  once: true,
+  onEnter: () => { if (orchestra.isPlaying) orchestra.playNote(261.63, 2); }
+});
+
+ScrollTrigger.create({
+  trigger: '.contact',
+  start: 'top center',
+  once: true,
+  onEnter: () => {
+    if (orchestra.isPlaying) {
+      orchestra.playNote(196.00, 2);
+      setTimeout(() => orchestra.playNote(261.63, 2), 200);
+      setTimeout(() => orchestra.playNote(329.63, 3), 400);
+    }
+  }
+});
+
+// HERO ANIMATION
+gsap.from('.hero-title .line-inner', {
+  y: 120,
+  duration: 1.4,
+  stagger: 0.1,
+  ease: 'power4.out',
+  delay: 0.3
+});
+
+gsap.to('.hero-title .strike::after', {
+  scaleX: 1,
+  duration: 0.8,
+  delay: 1.5,
+  ease: 'power2.out'
+});
+
+gsap.to('.hero-title .accent::after', {
+  scaleX: 1,
+  duration: 0.8,
+  delay: 2,
+  ease: 'power2.out'
+});
+
+gsap.from('.hero-sub', { opacity: 0, y: 20, duration: 1, delay: 1.2, ease: 'power3.out' });
+gsap.from('.hero-ctas > *', { opacity: 0, y: 20, duration: 0.8, stagger: 0.1, delay: 1.4, ease: 'power3.out' });
+
+// REVEAL
+document.querySelectorAll('.reveal').forEach(el => {
+  gsap.to(el, {
+    opacity: 1,
+    y: 0,
+    duration: 1.2,
+    ease: 'power4.out',
+    scrollTrigger: { trigger: el, start: 'top 85%' }
+  });
+});
+
+// TIMELINE ACTIVE STATE
+document.querySelectorAll('.timeline-item').forEach(item => {
+  ScrollTrigger.create({
+    trigger: item,
+    start: 'top center',
+    end: 'bottom center',
+    onEnter: () => item.classList.add('active'),
+    onLeaveBack: () => item.classList.remove('active')
+  });
+});
+
+// TERMINAL
+const terminal = document.getElementById('terminal');
+if (terminal) {
+  ScrollTrigger.create({
+    trigger: terminal,
+    start: 'top 70%',
+    once: true,
+    onEnter: () => {
+      terminal.querySelectorAll('.t-line').forEach(line => {
+        const delay = parseInt(line.dataset.delay) || 0;
+        setTimeout(() => {
+          gsap.to(line, { opacity: 1, duration: 0.4, ease: 'power2.out' });
+          if (orchestra.isPlaying) orchestra.playNote(523.25, 0.1);
+        }, delay);
+      });
+    }
+  });
+}
+
+// TEAM LETTERS PARALLAX
+gsap.utils.toArray('.team-letter').forEach(letter => {
+  gsap.to(letter, {
+    y: -30,
+    rotation: 5,
+    scrollTrigger: {
+      trigger: letter,
+      start: 'top bottom',
+      end: 'bottom top',
+      scrub: 1
+    }
+  });
+});
+</script>
+
+</body>
+</html>
