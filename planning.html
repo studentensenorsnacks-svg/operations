@@ -72,6 +72,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .truck-chip:active{cursor:grabbing;}
 .truck-chip.dragging{opacity:0.25;}
 .truck-chip.planned{opacity:0.18;cursor:not-allowed;pointer-events:none;}
+.truck-chip .chip-del{margin-left:auto;padding:0 4px;color:#bbb;font-weight:700;cursor:pointer;border-radius:3px;}
+.truck-chip .chip-del:hover{color:#dc2626;background:rgba(220,38,38,0.1);}
+.tp-add-huur{display:block;width:calc(100% - 24px);margin:4px 12px 8px;padding:6px 8px;border:1px dashed #ea580c;border-radius:5px;background:none;color:#ea580c;font-size:0.72rem;font-weight:700;cursor:pointer;}
+.tp-add-huur:hover{background:#ffedd5;}
 .chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .tp-foot-row{padding:2px 12px 5px;display:flex;align-items:center;justify-content:space-between;}
 .tp-pl-lbl{font-size:0.65rem;color:#888;}
@@ -200,6 +204,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .at-rm:hover{opacity:1;background:rgba(220,0,0,0.85);color:#fff;}
 .term-chip .term-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;max-width:120px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
 .term-chip .term-link:focus{outline:1px solid rgba(0,0,0,0.25);}
+.assigned-truck .retour-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;max-width:130px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
+.assigned-truck .retour-link:focus{outline:1px solid rgba(0,0,0,0.25);}
+.assigned-truck .retour-link::placeholder{color:inherit;opacity:0.55;}
 .term-chip .term-sel{margin:0 2px 0 0;flex-shrink:0;cursor:pointer;}
 .term-bulk{display:flex;align-items:center;gap:4px;flex-basis:100%;margin-top:4px;}
 .term-bulk-input{flex:1;min-width:0;font-size:0.62rem;font-weight:600;border:1px solid #cbd5e1;border-radius:3px;padding:2px 4px;font-family:inherit;}
@@ -668,10 +675,20 @@ const GROUPS_WAGENS=TruckData.planningGroups();
 const GROUPS_CAMIONS=[
   {label:'🚛 Camions',color:'#0e7490',bg:'#ecfeff',trucks:['Camion CA1 2-FEF-147','Camion CA2 1-GYQ-964','Camion CA3 2-JJT-503','Camion CA4 1-WAP-026','Camion CA5 1-AOC-706']},
   {label:'🚐 Camionettes KC3x',color:'#1d4ed8',bg:'#dbeafe',trucks:['Camionette KC31 2-AVK-473','Camionette KC32 1-AGO-290','Camionette KC33 2-BSR-133']},
-  {label:'🚐 Camionettes KC7x',color:'#7c3aed',bg:'#ede9fe',trucks:['Camionette KC71 731-BII','Camionette KC72 1-HEP-776','Camionette KC73 2-ATQ-172','Camionette KC74 2-FAQ-115','Camionette KC75 2-HKL-554']},
+  {label:'🚐 Camionettes KC7x',color:'#7c3aed',bg:'#ede9fe',trucks:['Camionette KC71 731-BII','Camionette KC73 2-ATQ-172','Camionette KC74 2-FAQ-115','Camionette KC75 2-HKL-554']},
   {label:'🚗 Voertuigen',color:'#374151',bg:'#f3f4f6',trucks:['Voertuig Brascheria 2-ASA-025','Voertuig Citroen XRI-303','Voertuig Fiat 2-FAC-730','Vito']},
   {label:'🔑 Kurt',color:'#15803d',bg:'#f0fdf4',trucks:['Peugeot Kurt']}
 ];
+// ── HUURWAGENS — per week toe te voegen in de camionetten-tab ──
+// Opslag: Firebase ft_huurwagens_v1/<maandag> = [namen]. Een huurwagen is
+// alleen beschikbaar in de week waarvoor hij is toegevoegd.
+const HUUR_PATH='ft_huurwagens_v1';
+const HUUR_STYLE={label:'🚙 Huurwagens',color:'#ea580c',bg:'#ffedd5'};
+let huurwagens=JSON.parse(localStorage.getItem(HUUR_PATH)||'{}');
+// Uit de vloot (defect/verkocht): niet meer inplanbaar, maar historische
+// toewijzingen op oude events blijven herkenbaar als camionet.
+const RETIRED_CAMIONS=['Camionette KC72 1-HEP-776'];
+const RETIRED_STYLE={label:'🚐 Uit de vloot',color:'#6b7280',bg:'#f3f4f6'};
 // ── TERMINAL DATA — BETAAL TERMINALS ───────────────────
 const GROUPS_TERMINALS=[
   {label:'💳 EP terminals',color:'#0891b2',bg:'#cffafe',trucks:Array.from({length:20},(_,i)=>'EP'+(i+1))},
@@ -705,6 +722,8 @@ const TC = {};
 function rebuildTC(){
   Object.keys(TC).forEach(k=>delete TC[k]);
   GROUPS.forEach(g=>g.trucks.forEach(t=>TC[t]={color:g.color,bg:g.bg}));
+  Object.values(huurwagens).forEach(l=>(l||[]).forEach(t=>TC[t]={color:HUUR_STYLE.color,bg:HUUR_STYLE.bg}));
+  RETIRED_CAMIONS.forEach(t=>TC[t]={color:RETIRED_STYLE.color,bg:RETIRED_STYLE.bg});
 }
 rebuildTC();
 
@@ -714,6 +733,16 @@ const TRUCK_INFO = {};
 [['wagens',GROUPS_WAGENS],['camions',GROUPS_CAMIONS],['terminals',GROUPS_TERMINALS]].forEach(([kind,gs])=>{
   gs.forEach(g => g.trucks.forEach(t => { TRUCK_INFO[t] = {color:g.color, bg:g.bg, label:g.label, kind}; }));
 });
+// Huurwagens gedragen zich als camionetten (kind:'camions'), zodat ze in de
+// wagens-tab uit de gedeelde trucks-lijst gefilterd worden.
+function registerHuurwagens(){
+  Object.values(huurwagens).forEach(l=>(l||[]).forEach(t=>{
+    TC[t]={color:HUUR_STYLE.color,bg:HUUR_STYLE.bg};
+    TRUCK_INFO[t]={color:HUUR_STYLE.color,bg:HUUR_STYLE.bg,label:HUUR_STYLE.label,kind:'camions'};
+  }));
+}
+registerHuurwagens();
+RETIRED_CAMIONS.forEach(t=>{ TRUCK_INFO[t]={color:RETIRED_STYLE.color,bg:RETIRED_STYLE.bg,label:RETIRED_STYLE.label,kind:'camions'}; TC[t]={color:RETIRED_STYLE.color,bg:RETIRED_STYLE.bg}; });
 
 // ── STATE ──────────────────────────────────────────────
 let events = JSON.parse(localStorage.getItem('ft_planning_v1')||'[]');
@@ -861,6 +890,8 @@ function sanitizeEvents(arr){
     terminalDays:(e.terminalDays && typeof e.terminalDays === 'object' && !Array.isArray(e.terminalDays))?e.terminalDays:{},
     // Per-event koppeling betaalterminal → wagen: { "EP3":"Snackbar 1", ... }
     terminalTruck:(e.terminalTruck && typeof e.terminalTruck === 'object' && !Array.isArray(e.terminalTruck))?e.terminalTruck:{},
+    // Per-event koppeling camionet → foodtruck die mee retour moet: { "Camionette KC31 …":"Snackbar 1", ... }
+    camionRetour:(e.camionRetour && typeof e.camionRetour === 'object' && !Array.isArray(e.camionRetour))?e.camionRetour:{},
     logistiek:(e.logistiek && typeof e.logistiek === 'object' && !Array.isArray(e.logistiek))?e.logistiek:{},
     logistiekDays:(e.logistiekDays && typeof e.logistiekDays === 'object' && !Array.isArray(e.logistiekDays))?e.logistiekDays:{},
     notes:typeof e.notes==='string'?e.notes:'',
@@ -1036,6 +1067,14 @@ function openFoldtableMail(date, total, cap, extra){
 // Start initieel met wagens listener
 events=JSON.parse(localStorage.getItem('ft_planning_v1')||'[]');
 attachFbListener('ft_planning_v1');
+
+// Huurwagens live meesyncen (per week, gedeeld over alle gebruikers)
+fbdb.ref(HUUR_PATH).on('value', snap=>{
+  huurwagens = snap.val()||{};
+  localStorage.setItem(HUUR_PATH, JSON.stringify(huurwagens));
+  registerHuurwagens();
+  renderWeek();
+});
 loadArchive();  // historische Outlook-events erbij tonen
 
 // ── MODE SWITCH ────────────────────────────────────────
@@ -1128,11 +1167,17 @@ function plannedW(){
   filterEvents(events).forEach(ev=>{if(ev.startDate<=we&&ev.endDate>=ws)ev.trucks.forEach(t=>pl.add(t));});
   return pl;
 }
+// Groepen voor panel + picker: in de camionetten-tab komt er een
+// huurwagen-groep bij met de huurwagens van de getoonde week.
+function panelGroups(){
+  if(currentMode!=='camions') return GROUPS;
+  return GROUPS.concat([{...HUUR_STYLE, trucks:huurwagens[toStr(wkStart)]||[], _huur:true}]);
+}
 function buildPanel(){
   if (isLogi()){ buildLogiPanel(); return; }
   const pl=plannedW();
   let h='';
-  GROUPS.forEach((g,gi)=>{
+  panelGroups().forEach((g,gi)=>{
     const av=g.trucks.filter(t=>!pl.has(t));
     const hid=g.trucks.length-av.length;
     const show=showPl[gi];
@@ -1148,14 +1193,43 @@ function buildPanel(){
           const te=t.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
           return `<div class="truck-chip${ip?' planned':''}" draggable="${!ip}" style="border-left-color:${g.color}"
             ${!ip?`ondragstart="onDS(event,'${te}',this)" ondragend="onDE(this)"`:''}
-          ><div class="chip-dot" style="background:${g.color}"></div>${t}</div>`;
+          ><div class="chip-dot" style="background:${g.color}"></div>${t}${g._huur?`<span class="chip-del" title="Huurwagen verwijderen" onclick="event.stopPropagation();rmHuurwagen('${te}')">×</span>`:''}</div>`;
         }).join('')}
-        ${chips.length===0?`<div class="tp-empty-grp">Alle ingepland</div>`:''}
+        ${chips.length===0?`<div class="tp-empty-grp">${g._huur?'Nog geen huurwagens deze week':'Alle ingepland'}</div>`:''}
         ${hid>0?`<div class="tp-foot-row"><span class="tp-pl-lbl">${hid} ingepland</span><button type="button" class="tp-show-btn" onclick="togShow(${gi})">${show?'verberg':'toon'}</button></div>`:''}
+        ${g._huur?`<button type="button" class="tp-add-huur" onclick="addHuurwagen()">+ Huurwagen deze week</button>`:''}
       </div>
     </div>`;
   });
   document.getElementById('tp-inner').innerHTML=h;
+}
+
+// ── HUURWAGENS beheren (camionetten-tab) ───────────────
+function addHuurwagen(){
+  const name=(prompt('Naam huurwagen (bv. Huurwagen 1-ABC-123):','Huurwagen ')||'').trim();
+  if(!name)return;
+  const vast=[GROUPS_WAGENS,GROUPS_CAMIONS,GROUPS_TERMINALS].some(gs=>gs.some(g=>g.trucks.includes(name)));
+  if(vast){showToast(`⚠️ "${name}" bestaat al als vast voertuig`);return;}
+  const key=toStr(wkStart), list=huurwagens[key]||[];
+  if(list.includes(name)){showToast(`⚠️ "${name}" staat al bij deze week`);return;}
+  huurwagens[key]=list.concat([name]);
+  registerHuurwagens();
+  saveHuurwagens(key);
+  buildPanel();
+  showToast(`✓ ${name} toegevoegd voor week ${wkNum(wkStart)}`);
+}
+function rmHuurwagen(name){
+  if(!confirm(`${name} verwijderen als huurwagen voor deze week?`))return;
+  const key=toStr(wkStart);
+  huurwagens[key]=(huurwagens[key]||[]).filter(t=>t!==name);
+  if(!huurwagens[key].length)delete huurwagens[key];
+  if(window.logDeletion)logDeletion('huurwagen',name+' verwijderd als huurwagen (week van '+key+')',{ref:key,naam:name});
+  saveHuurwagens(key);
+  buildPanel();
+}
+function saveHuurwagens(key){
+  localStorage.setItem(HUUR_PATH, JSON.stringify(huurwagens));
+  fbdb.ref(HUUR_PATH+'/'+key).set(huurwagens[key]||null).catch(err=>console.warn('Huurwagens opslaan mislukt:',err));
 }
 function tpTog(gi){const el=document.getElementById('tg-'+gi);el.classList.toggle('hidden');el.previousElementSibling.classList.toggle('collapsed');}
 function togShow(gi){showPl[gi]=!showPl[gi];buildPanel();}
@@ -1310,13 +1384,47 @@ function bulkLinkTerminals(evId, btn){
 }
 // Verwijder koppelingen die niet meer kloppen (terminal of wagen weg uit event).
 function pruneTerminalLinks(ev){
-  if(!ev || !ev.terminalTruck || typeof ev.terminalTruck!=='object') return;
-  const terms=new Set(Array.isArray(ev.terminals)?ev.terminals:[]);
-  if(ev.terminalDays && typeof ev.terminalDays==='object') Object.values(ev.terminalDays).forEach(a=>(a||[]).forEach(t=>terms.add(t)));
-  const trucks=new Set(Array.isArray(ev.trucks)?ev.trucks:[]);
-  Object.keys(ev.terminalTruck).forEach(term=>{
-    if(!terms.has(term) || !trucks.has(ev.terminalTruck[term])) delete ev.terminalTruck[term];
-  });
+  if(!ev) return;
+  if(ev.terminalTruck && typeof ev.terminalTruck==='object'){
+    const terms=new Set(Array.isArray(ev.terminals)?ev.terminals:[]);
+    if(ev.terminalDays && typeof ev.terminalDays==='object') Object.values(ev.terminalDays).forEach(a=>(a||[]).forEach(t=>terms.add(t)));
+    const trucks=new Set(Array.isArray(ev.trucks)?ev.trucks:[]);
+    Object.keys(ev.terminalTruck).forEach(term=>{
+      if(!terms.has(term) || !trucks.has(ev.terminalTruck[term])) delete ev.terminalTruck[term];
+    });
+  }
+  // Retour-koppelingen: camionet weg van het event → koppeling weg.
+  // (De retour-waarde mag vrije tekst zijn, die controleren we niet.)
+  if(ev.camionRetour && typeof ev.camionRetour==='object'){
+    const cams=new Set(Array.isArray(ev.trucks)?ev.trucks:[]);
+    if(ev.truckDays && typeof ev.truckDays==='object') Object.values(ev.truckDays).forEach(a=>(a||[]).forEach(t=>cams.add(t)));
+    Object.keys(ev.camionRetour).forEach(c=>{ if(!cams.has(c)) delete ev.camionRetour[c]; });
+  }
+}
+
+// ── CAMIONET ↔ RETOUR-FOODTRUCK (per event) ────────────
+// Koppel een camionet aan de foodtruck die hij mee retour moet nemen.
+// Staat per event in ev.camionRetour = { "<camionet>": "<foodtruck>" }.
+function setCamionRetour(evId, camion, truck){
+  const ev=events.find(e=>e.id===evId);if(!ev)return;
+  if(!ev.camionRetour || typeof ev.camionRetour!=='object' || Array.isArray(ev.camionRetour)) ev.camionRetour={};
+  if(truck) ev.camionRetour[camion]=truck;
+  else delete ev.camionRetour[camion];
+  save();renderWeek();
+}
+// Invulveld in een camionet-chip: de foodtrucks van dit event als suggesties,
+// vrije tekst mag ook (bv. een truck die ergens anders staat).
+function camionRetourSelect(ev, camion){
+  const trucks = (Array.isArray(ev.trucks)?ev.trucks:[]).filter(t=>{ const i=TRUCK_INFO[t]; return !(i && i.kind==='camions'); });
+  const cur = (ev.camionRetour && ev.camionRetour[camion]) || '';
+  const tj = s=>s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const ea = s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const dlId = `dlr-${ev.id}-${camion.replace(/[^a-zA-Z0-9]/g,'')}`;
+  const opts = trucks.map(t=>`<option value="${ea(t)}"></option>`).join('');
+  return `<input class="retour-link" list="${dlId}" value="${ea(cur)}" placeholder="↩ retour: foodtruck…" title="Foodtruck die deze camionette mee retour neemt" `
+    + `onclick="event.stopPropagation()" `
+    + `onchange="event.stopPropagation();setCamionRetour(${ev.id},'${tj(camion)}',this.value.trim())">`
+    + `<datalist id="${dlId}">${opts}</datalist>`;
 }
 // Invulveld in een terminal-chip: koppel aan een wagen van dit event, of typ
 // vrij iets in (bv. "dranktent"). De wagens komen als suggesties in een datalist.
@@ -1491,7 +1599,9 @@ function renderWeek(){
             return `<span class="assigned-truck term-chip" style="background:${c.bg};color:${c.color}"><input type="checkbox" class="term-sel" data-term="${t}" title="Selecteer om samen te koppelen" onclick="event.stopPropagation()">${t}${terminalLinkSelect(ev,t)}<span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
           }
           const llk = findLLs(String(ev.id), t).length;
-          return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?llk+' laadlijst(en) — klik om te bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
+          // Camionetten-tab: op camionet-chips een retour-veld (foodtruck mee terug)
+          const retour = (currentMode==='camions' && TRUCK_INFO[t] && TRUCK_INFO[t].kind==='camions') ? camionRetourSelect(ev,t) : '';
+          return `<span class="assigned-truck" style="background:${c.bg};color:${c.color}">${t}${retour}<span class="ll-icon${llk?' ll-linked':''}" title="${llk?llk+' laadlijst(en) — klik om te bekijken':'Laadlijst koppelen'}" onclick="event.stopPropagation();openLaadlijst(${ev.id},'${te(t)}')">📄</span><span class="at-rm" onclick="event.stopPropagation();${rmCall}">✕</span></span>`;
         }).join('');
         const pickerCall = isPerDay && isMultiDay ? `openPicker(${ev.id},'${ds}')` : `openPicker(${ev.id})`;
         let bulkBar = '';
@@ -1601,7 +1711,8 @@ function evCatHTML(ev, scopeDate){
   const itemRow = n => {
     const info = TRUCK_INFO[n] || {color:'#999'};
     const link = (ev.terminalTruck && ev.terminalTruck[n]) ? `<span class="evd-link">→ ${ev.terminalTruck[n]}</span>` : '';
-    return `<div class="evd-item" style="border-left-color:${info.color}"><span class="evd-idot" style="background:${info.color}"></span>${n}${link}</div>`;
+    const retour = (ev.camionRetour && ev.camionRetour[n]) ? `<span class="evd-link">↩ retour: ${ev.camionRetour[n]}</span>` : '';
+    return `<div class="evd-item" style="border-left-color:${info.color}"><span class="evd-idot" style="background:${info.color}"></span>${n}${link}${retour}</div>`;
   };
   const itemList = arr => `<div class="evd-list">${arr.map(itemRow).join('')}</div>`;
 
@@ -2066,7 +2177,7 @@ function renderPicker(){
   // Bij per-dag picker (camionetten/terminals op multi-dag): check per-dag toewijzingen
   const already=new Set(pkDate && ev?.[fDays()]?.[pkDate] ? ev[fDays()][pkDate] : (ev?.[fItems()]||[]));
   let h='';
-  GROUPS.forEach(g=>{
+  panelGroups().forEach(g=>{
     const rows=g.trucks.filter(t=>!q||t.toLowerCase().includes(q));
     if(!rows.length)return;
     h+=`<div class="tpk-grp"><div class="tpk-gdot" style="background:${g.color}"></div>${g.label}</div>`;
@@ -2142,6 +2253,8 @@ function openVehiclePDF(mode){
   const groups = groupsFor(mode);
   const relevantTrucks = new Set();
   groups.forEach(g => g.trucks.forEach(t => relevantTrucks.add(t)));
+  // Huurwagens van de getoonde week tellen mee op de camionetten-PDF.
+  if (mode === 'camions') (huurwagens[toStr(wkStart)]||[]).forEach(t => relevantTrucks.add(t));
 
   const days=Array.from({length:7},(_,i)=>addD(wkStart,i));
   const f=days[0],l=days[6];
@@ -2176,7 +2289,9 @@ function openVehiclePDF(mode){
       const chips=ev.trucksOnEv.map(t=>{
         const c=TC[t]||{color:'#555',bg:'#eee'};
         // In de terminals-PDF: toon de gekoppelde wagen achter de terminal.
-        const link = (mode==='terminals' && ev.terminalTruck && ev.terminalTruck[t]) ? ` → ${ev.terminalTruck[t]}` : '';
+        // In de camionetten-PDF: toon de foodtruck die mee retour moet.
+        const link = (mode==='terminals' && ev.terminalTruck && ev.terminalTruck[t]) ? ` → ${ev.terminalTruck[t]}`
+          : (mode==='camions' && ev.camionRetour && ev.camionRetour[t]) ? ` ↩ retour: ${ev.camionRetour[t]}` : '';
         return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}${link}</div>`;
       }).join('');
       return `<div class="pdf-camion-row">
@@ -2884,47 +2999,12 @@ async function sync365() {
     });
     if (verrijkt > 0 || gekoppeld > 0) save();
 
-    // ── Verwijder-detectie ───────────────────────────────────
-    // Events die uit Outlook kwamen (hebben een outlookId) én binnen het
-    // opgehaalde venster vallen, maar niet meer in de agenda staan → daar
-    // verwijderd. Handmatig aangemaakte events (geen outlookId) en events
-    // buiten het venster blijven met rust. We wissen niets automatisch: de
-    // gebruiker bevestigt, want aan een event hangen vaak trucks/notities.
-    const winStart = toStr(new Date(start));
-    const winEnd   = toStr(new Date(end));
-    const liveIds  = new Set(converted.map(c => c.outlookId).filter(Boolean));
-    const liveKeys = new Set(converted.map(c => c.name + '|' + c.startDate));
-    // Een planning-event geldt als "weg uit Outlook" wanneer het noch via de
-    // stabiele sleutel (outlookId) noch via naam+startdatum nog in de agenda
-    // voorkomt. We matchen óók op naam+datum zodat dit werkt op events die nog
-    // geen outlookId hebben (alles van vóór deze functie). Handmatig in de app
-    // aangemaakte events (source:'manual') blijven altijd staan — die horen
-    // niet bij Outlook.
-    const verwijderd = liveEvents().filter(ev =>
-      ev.source !== 'manual' &&
-      ev.startDate >= winStart && ev.startDate <= winEnd &&
-      !liveIds.has(ev.outlookId) &&
-      !liveKeys.has(ev.name + '|' + ev.startDate)
-    );
-
-    // ── TIJDELIJKE DIAGNOSE (verwijderen na debugging) ───────
-    const _liveAll = liveEvents();
-    const _inWin = _liveAll.filter(e => e.startDate >= winStart && e.startDate <= winEnd);
-    const _dbg = {
-      venster: winStart + ' t/m ' + winEnd,
-      outlookEventsOpgehaald: converted.length,
-      liveEventsTotaal: _liveAll.length,
-      liveInVenster: _inWin.length,
-      handmatigInVenster: _inWin.filter(e=>e.source==='manual').length,
-      gematchtOpNaamDatum: _inWin.filter(e=>liveKeys.has(e.name+'|'+e.startDate)).length,
-      gematchtOpOutlookId: _inWin.filter(e=>e.outlookId && liveIds.has(e.outlookId)).length,
-      kandidatenOmTeVerwijderen: verwijderd.length
-    };
-    console.log('🔍 SYNC DIAGNOSE', _dbg);
-    console.log('🔍 Kandidaten (niet gematcht):', verwijderd.map(e=>e.name+' | '+e.startDate));
-    console.log('🔍 Live-in-venster:', _inWin.map(e=>e.name+' | '+e.startDate+' | src='+(e.source||'?')+' | oid='+(e.outlookId?'ja':'nee')));
-    console.log('🔍 Outlook-keys (eerste 15):', [...liveKeys].slice(0,15));
-    alert('SYNC DIAGNOSE\n\n'+Object.entries(_dbg).map(([k,v])=>k+': '+v).join('\n')+'\n\n(Details staan in de console — F12)');
+    // Sync verwijdert nooit iets. Vroeger detecteerde deze stap events die
+    // uit Outlook weg waren en bood ze aan om te wissen — dat is er bewust
+    // uit: aan een planning-event hangen vaak trucks/notities en een event
+    // dat (tijdelijk) buiten het opgehaalde venster valt of van sleutel
+    // wijzigt werd onterecht als "verwijderd" gemarkeerd. Sync doet nu enkel
+    // nog importeren en verrijken.
 
     // Stap 4: Duplicaten eruit (zelfde naam + startdatum staat al in de planning)
     const existingKeys = new Set(events.map(e => e.name + '|' + e.startDate));
@@ -2935,7 +3015,6 @@ async function sync365() {
     status.textContent = `✓ ${converted.length} events gevonden`
       + (dupes > 0 ? ` · ${dupes} staan al in de planning` : '')
       + (verrijkt > 0 ? ` · ${verrijkt} bijgewerkt met notities` : '')
-      + (verwijderd.length > 0 ? ` · ${verwijderd.length} verwijderd (weg uit Outlook)` : '')
       + `. Selecteer wat je wil importeren.`;
 
     document.getElementById('import-modal-sub').textContent =
@@ -2943,15 +3022,13 @@ async function sync365() {
       + `Importeer ze en koppel daarna trucks via drag & drop. Alles wordt opgeslagen in Firebase.`;
     document.getElementById('btn-screenshot-fallback').style.display = '';
 
-    // Events die in Outlook verwijderd zijn → tonen in een apart blok met
-    // checkboxes. De gebruiker kiest zelf wat weg mag en bevestigt; niets
-    // wordt automatisch verwijderd.
-    showDeletedEvents(verwijderd);
+    // Sync toont geen verwijder-blok meer — er wordt tijdens het syncen niets
+    // verwijderd. Zorg dat een eventueel oud blok verborgen blijft.
+    showDeletedEvents([]);
 
     if (nieuws.length === 0) {
-      document.getElementById('import-ev-list').innerHTML = verwijderd.length === 0
-        ? '<div style="padding:24px;text-align:center;color:#888;font-size:0.9rem">✅ Alles staat al in de planning!</div>'
-        : '';
+      document.getElementById('import-ev-list').innerHTML =
+        '<div style="padding:24px;text-align:center;color:#888;font-size:0.9rem">✅ Alles staat al in de planning!</div>';
       return;
     }
     showImportedEvents(nieuws);

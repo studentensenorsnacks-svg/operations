@@ -7,6 +7,10 @@
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))"
     },
+    "ft_huurwagens_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
+      ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))"
+    },
     "ft_planning_outlook_archief": {
       ".read":  "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))",
       ".write": "auth != null && auth.token.role != 'bakker' && (auth.token.role != 'custom' || (auth.token.pages != null && auth.token.pages.contains('|planning|')))"
@@ -91,6 +95,10 @@
       ".write": "auth != null && auth.token.role != 'bakker'"
     },
     "ft_bestel_historiek_v1": {
+      ".read":  "auth != null && auth.token.role != 'bakker'",
+      ".write": "auth != null && auth.token.role != 'bakker'"
+    },
+    "ft_bestel_prullenbak_v1": {
       ".read":  "auth != null && auth.token.role != 'bakker'",
       ".write": "auth != null && auth.token.role != 'bakker'"
     },
