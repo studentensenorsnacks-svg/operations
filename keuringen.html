@@ -307,7 +307,7 @@ function exportCSV(){var rows=['Naam,Kenteken,Type,Elek.datum,Elek.verval,Gas.da
 function resetData(){if(!confirm('Alle keuringsdata terugzetten naar de originele lijst? Handmatige wijzigingen gaan verloren.'))return;fbdb.ref(FB_KEUR).set(keurMap());}
 fillTypes();
 render();
-document.getElementById('grid').addEventListener('click',function(e){var btn=e.target.closest('[data-action]');var card=e.target.closest('[data-id]');if(!card)return;var id=card.getAttribute('data-id');if(btn){e.stopPropagation();var a=btn.getAttribute('data-action');if(a==='edit')openEdit(id);else if(a==='qr')openQR(id);else if(a==='view')openAttesten(id);else if(a==='del')delTruck(id);}else if(selMode){toggleSel2(id);}});
+document.getElementById('grid').addEventListener('click',function(e){var btn=e.target.closest('[data-action]');var card=e.target.closest('[data-id]');if(!card)return;var id=card.getAttribute('data-id');if(btn){e.stopPropagation();var a=btn.getAttribute('data-action');if(a==='edit')openEdit(id);else if(a==='qr')openQR(id);else if(a==='view')window.open(BASE+'/trucks/'+id+'.html','_blank');else if(a==='del')delTruck(id);}else if(selMode){toggleSel2(id);}});
 
 // Bulk QR-stickerblad — alle voertuigen (of geselecteerde, als selectiemodus actief is) in één print-/PDF-klare A4-pagina
 function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
