@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Technische fiche — Tap Wagen 43 — Señor Snacks</title><style>*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f8f6f2;font-family:system-ui,sans-serif;min-height:100vh;padding:20px 16px 48px;}
+a.back{display:inline-block;margin:0 auto 14px;font-size:13px;font-weight:700;color:#e8000f;text-decoration:none;}
+.wrap{max-width:500px;margin:0 auto;}
+.card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.08);border:1.5px solid #e8e4dc;}
+.hdr{background:#e8000f;color:#fff;padding:26px 26px 20px;}
+.brand{font-size:11px;font-weight:700;opacity:.7;margin-bottom:6px;}
+.name{font-size:22px;font-weight:800;line-height:1.2;}
+.sub{font-size:12px;font-family:monospace;opacity:.65;margin-top:4px;}
+.body{padding:20px 22px 24px;}
+.lead{font-size:14px;line-height:1.6;color:#333;margin-bottom:14px;}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.pill{background:#1a1915;color:#fff;border-radius:99px;padding:5px 12px;font-size:11.5px;font-weight:700;}
+.pill.red{background:#e8000f;}
+.foto{width:100%;border-radius:12px;margin-bottom:10px;display:block;}
+.foto-cap{font-size:11px;color:#999;text-align:center;margin:-4px 0 14px;}
+h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#999;margin:20px 0 6px;}
+.row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed #eee;font-size:13.5px;}
+.row .k{color:#888;font-weight:600;flex-shrink:0;}
+.row .v{font-weight:700;color:#1a1915;text-align:right;white-space:pre-line;}
+.row .v.ok{color:#2e7d52;}
+.blok{font-size:13.5px;line-height:1.6;color:#333;padding:8px 0;white-space:pre-line;}
+a.vid{display:flex;align-items:center;gap:12px;background:#1a1915;color:#fff;border-radius:12px;padding:14px 16px;font-size:14px;font-weight:800;text-decoration:none;margin:14px 0 4px;}
+.leeg{border:1.5px dashed #e8e4dc;border-radius:12px;padding:24px 14px;font-size:13.5px;color:#999;text-align:center;margin:8px 0;line-height:1.5;}
+.upd{font-size:11px;color:#bbb;text-align:center;margin-top:18px;}
+.footer{padding:13px 26px;border-top:1.5px solid #e8e4dc;text-align:center;font-size:11px;color:#bbb;}</style></head>
+<body>
+<div class="wrap">
+<a class="back" href="ft067.html">&larr; Terug naar overzicht</a>
+<div class="card">
+  <div class="hdr"><div class="brand">🚐 SEÑOR SNACKS · TECHNISCHE FICHE</div><div class="name">Tap Wagen 43</div><div class="sub">-- · Wagen - Tap / dranken</div></div>
+  <div class="body" id="body"><div class="leeg">Fiche laden…</div></div>
+  <div class="footer">Señor Snacks · Taste · Enjoy · Smile</div>
+</div>
+</div>
+<script>
+var DB='https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app';
+var ELEK='1', GAS='';
+function esc(s){return (s||'').toString().replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function row(k,v){var t=(v||'').toString().trim();return t?'<div class="row"><span class="k">'+esc(k)+'</span><span class="v">'+esc(t)+'</span></div>':'';}
+function okRow(k,on){return '<div class="row"><span class="k">'+esc(k)+'</span><span class="v'+(on?' ok':'')+'">'+(on?'✓ Voorzien':'Niet van toepassing')+'</span></div>';}
+function sec(title,rows){return rows?'<h2>'+esc(title)+'</h2>'+rows:'';}
+function render(f){
+  f=f||{};
+  var h='';
+  if((f.beschrijving||'').trim()) h+='<div class="lead">'+esc(f.beschrijving)+'</div>';
+  var pills=[f.pill1,f.pill2,f.pill3].map(function(p){return (p||'').trim();}).filter(Boolean);
+  if(pills.length) h+='<div class="pills">'+pills.map(function(p,i){return '<span class="pill'+(i===0?' red':'')+'">'+esc(p)+'</span>';}).join('')+'</div>';
+  if(f.fotoBuitenUrl) h+='<img class="foto" src="'+esc(f.fotoBuitenUrl)+'" alt="Buitenkant" loading="lazy"><div class="foto-cap">Buitenkant</div>';
+  h+=sec('Afmetingen & transport',
+    row('Lengte',f.lengte)+row('Dissel',f.dissel)+row('Breedte gesloten',f.breedte)
+    +row('Breedte open',f.breedteOpen)+row('Hoogte',f.hoogte)+row('Gewicht / MTM',f.gewicht));
+  h+=sec('Installaties & uitrusting',
+    row('Bak- / kooklijn',f.kooklijn)+row('Koeling',f.koeling)+row('Afzuiging',f.afzuiging)
+    +row('Elektrische aansluiting',f.stroom)+row('Totaal vermogen',f.vermogen)+row('Gas / energie',f.gas)
+    +row('Brandblusser',f.brandblusser)+row('Water / afvoer',f.water));
+  h+=sec('Indeling & gebruik',
+    row('Verkoopluik',f.verkoopluik)+row('Openingszijde',f.openingszijde)+row('Deuren',f.deuren)
+    +row('Bevoorrading',f.bevoorrading)+row('Op- / afbouwtijd',f.opbouwtijd)+row('Opstelruimte op event',f.opstelnote));
+  h+='<h2>Keuringen & documenten</h2>'+okRow('Elektrische keuring',ELEK==='1')+okRow('Gaskeuring',GAS==='1')+row('Extra attesten',f.extra);
+  if((f.toebehoren||'').trim()) h+='<h2>Toebehoren / inhoud</h2><div class="blok">'+esc(f.toebehoren)+'</div>';
+  var opm=row('Bijzonderheden',f.opmerkingen)+row('Eventbeperkingen',f.eventbeperkingen);
+  h+=sec('Opmerkingen',opm);
+  if(f.fotoBinnenUrl) h+='<h2>Binnenkant</h2><img class="foto" src="'+esc(f.fotoBinnenUrl)+'" alt="Binnenkant" loading="lazy">';
+  var vid=(f.video||'').trim();
+  if(vid && /^https?:/i.test(vid)) h+='<a class="vid" href="'+esc(vid)+'" target="_blank" rel="noopener">🎬 Bekijk het filmpje van deze wagen</a>';
+  if(f.updatedAt) h+='<div class="upd">Laatst bijgewerkt: '+new Date(f.updatedAt).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})+'</div>';
+  var hasData=h.indexOf('class="row"')>-1||h.indexOf('class="lead"')>-1||f.fotoBuitenUrl||f.fotoBinnenUrl;
+  document.getElementById('body').innerHTML = hasData ? h
+    : '<div class="leeg">Voor deze wagen is nog geen technische fiche ingevuld.</div>';
+}
+fetch(DB+'/ft_fiches_v1/ft067.json').then(function(r){return r.json();}).then(render)
+  .catch(function(){document.getElementById('body').innerHTML='<div class="leeg">Fiche kon niet geladen worden. Controleer je internetverbinding en probeer opnieuw.</div>';});
+</script>
+</body></html>
