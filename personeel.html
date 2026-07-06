@@ -252,7 +252,7 @@ function filteredPeople(){
       const st=p.status||'nieuw';
       if(curFilter!=='alle' && st!==curFilter) return false;
       if(q){
-        const hay=[p.naamVoornaam,p.email,p.gsm,p.adres,p.nationaliteit].join(' ').toLowerCase();
+        const hay=[p.naamVoornaam,p.email,p.gsm,p.adres,p.straat,p.postcode,p.nationaliteit].join(' ').toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
@@ -291,7 +291,7 @@ function renderList(){
 
 // ── DETAIL ─────────────────────────────────────────────────────
 function blank(){
-  return {id:'new_'+Date.now(),naamVoornaam:'',email:'',adres:'',gsm:'',statuut:'',gezinssituatie:'',
+  return {id:'new_'+Date.now(),naamVoornaam:'',email:'',straat:'',huisnr:'',postcode:'',gsm:'',statuut:'',gezinssituatie:'',
     kinderenTenLaste:'',partnerTenLaste:'',rijksregister:'',identiteitskaart:'',iban:'',nationaliteit:'',
     akkoord:false,status:'nieuw',bron:'manueel',opmerkingen:'',submittedAt:Date.now()};
 }
@@ -300,6 +300,10 @@ function openDetail(id){
   const src=people[id];
   if(!src) return;
   editing=JSON.parse(JSON.stringify(src)); editing.id=id;
+  // Oud enkel-veld 'adres' → opsplitsen zodat het niet verdwijnt uit het formulier.
+  if(!editing.straat && !editing.huisnr && !editing.postcode && editing.adres){
+    Object.assign(editing, splitLegacyAdres(editing.adres));
+  }
   renderDetail();
 }
 function goBack(){
@@ -309,6 +313,25 @@ function goBack(){
   renderList();
 }
 function upd(k,v){ if(editing) editing[k]=v; }
+
+// Adres samenstellen uit de losse velden (met terugval op het oude enkel-veld).
+function adresText(p){
+  const s=[(p.straat||'').trim(),(p.huisnr||'').trim()].filter(Boolean).join(' ');
+  return [s,(p.postcode||'').trim()].filter(Boolean).join(', ') || (p.adres||'');
+}
+// Best-effort opsplitsen van een oud adres "Straatnaam 12, 2440 Geel".
+function splitLegacyAdres(a){
+  a=(a||'').trim();
+  const out={straat:'',huisnr:'',postcode:''};
+  if(!a) return out;
+  const parts=a.split(',');
+  const first=(parts[0]||'').trim();
+  const m=first.match(/^(.*?)[\s,]+(\d+\s*[a-zA-Z]?)\s*$/);
+  if(m){ out.straat=m[1].trim(); out.huisnr=m[2].replace(/\s+/g,''); } else out.straat=first;
+  const pm=parts.slice(1).join(' ').match(/\b(\d{4})\b/);
+  if(pm) out.postcode=pm[1];
+  return out;
+}
 
 function selOpts(val,opts){
   return opts.map(o=>`<option value="${esc(o)}" ${val===o?'selected':''}>${esc(o)||'—'}</option>`).join('');
@@ -341,7 +364,9 @@ function renderDetail(){
       <div class="grid">
         <div class="f"><label>Naam + voornaam</label><input value="${esc(e.naamVoornaam)}" oninput="upd('naamVoornaam',this.value)"></div>
         <div class="f"><label>E-mail</label><input type="email" value="${esc(e.email)}" oninput="upd('email',this.value)"></div>
-        <div class="f full"><label>Adres</label><input value="${esc(e.adres)}" oninput="upd('adres',this.value)"></div>
+        <div class="f full"><label>Straatnaam</label><input value="${esc(e.straat)}" oninput="upd('straat',this.value)"></div>
+        <div class="f"><label>Huisnummer</label><input value="${esc(e.huisnr)}" oninput="upd('huisnr',this.value)"></div>
+        <div class="f"><label>Postcode</label><input value="${esc(e.postcode)}" oninput="upd('postcode',this.value)" inputmode="numeric"></div>
         <div class="f"><label>GSM nummer</label><input value="${esc(e.gsm)}" oninput="upd('gsm',this.value)"></div>
         <div class="f"><label>Nationaliteit</label><input value="${esc(e.nationaliteit)}" oninput="upd('nationaliteit',this.value)"></div>
       </div>
@@ -394,7 +419,8 @@ async function savePerson(){
   if(!e.naamVoornaam.trim()){ toast('✗ Vul minstens de naam in.',false); return; }
   const isNew=String(e.id).startsWith('new_');
   const rec={
-    naamVoornaam:e.naamVoornaam.trim(),email:(e.email||'').trim(),adres:e.adres||'',gsm:e.gsm||'',
+    naamVoornaam:e.naamVoornaam.trim(),email:(e.email||'').trim(),
+    straat:(e.straat||'').trim(),huisnr:(e.huisnr||'').trim(),postcode:(e.postcode||'').trim(),adres:adresText(e),gsm:e.gsm||'',
     statuut:e.statuut||'',gezinssituatie:e.gezinssituatie||'',kinderenTenLaste:e.kinderenTenLaste||'',
     partnerTenLaste:e.partnerTenLaste||'',rijksregister:e.rijksregister||'',identiteitskaart:e.identiteitskaart||'',
     iban:e.iban||'',nationaliteit:e.nationaliteit||'',akkoord:!!e.akkoord,status:e.status||'nieuw',
@@ -457,7 +483,7 @@ function generateFichePdf(){
     sec('Persoonsgegevens'),
     row('Naam + voornaam', e.naamVoornaam),
     row('E-mail', e.email),
-    row('Adres', e.adres),
+    row('Adres', adresText(e)),
     row('GSM nummer', e.gsm),
     row('Nationaliteit', e.nationaliteit),
     sec('Statuut & gezinssituatie'),
