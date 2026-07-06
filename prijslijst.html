@@ -50,7 +50,6 @@ body{font-family:var(--body);background:#e8e8ea;color:var(--ink);display:flex;fl
 .topbar a.home:hover{opacity:1;}
 .topbar .brand{display:flex;align-items:center;gap:10px;font-family:var(--label);letter-spacing:.14em;font-size:19px;}
 .topbar .brand img{height:22px;}
-.topbar .event-logo{height:32px;max-width:260px;object-fit:contain;background:#fff;border-radius:6px;padding:0 10px;}
 .topbar .spacer{flex:1;}
 .topbar select{font-family:var(--body);font-weight:700;font-size:14px;padding:8px 12px;border-radius:9px;border:none;background:#26262b;color:#fff;min-width:180px;}
 .topbar .save-state{font-size:12px;font-weight:700;letter-spacing:.03em;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);}
@@ -64,6 +63,14 @@ body{font-family:var(--body);background:#e8e8ea;color:var(--ink);display:flex;fl
 .btn-sm{padding:5px 9px;font-size:12px;border-radius:7px;}
 .btn-icon{background:transparent;border:1px solid var(--line);color:#555;width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;padding:0;}
 .btn-icon:hover{background:#fff;border-color:#bbb;color:#000;}
+.fs-grp{display:inline-flex;align-items:center;gap:3px;}
+.fs-grp .btn-icon{font-weight:800;font-size:12px;}
+.fs-val{font-size:11px;font-weight:800;color:#e6173b;min-width:38px;text-align:center;letter-spacing:.02em;}
+.fld-row{display:flex;align-items:center;gap:6px;}
+.fld-row>input{flex:1;min-width:0;}
+.fs-grp.mini{flex-shrink:0;}
+.fs-grp.mini .btn-icon{width:23px;height:23px;font-size:11px;}
+.fs-grp.mini .fs-val{min-width:30px;font-size:10px;}
 .btn-icon.danger:hover{background:var(--red);border-color:var(--red);color:#fff;}
 
 /* ---------- layout ---------- */
@@ -118,7 +125,8 @@ body{font-family:var(--body);background:#e8e8ea;color:var(--ink);display:flex;fl
 .p-header .hl{display:flex;flex-direction:column;align-items:center;gap:8px;}
 .p-header .evt{font-family:var(--label);letter-spacing:.32em;font-size:13px;color:var(--red);}
 .p-logo{height:64px;width:auto;display:block;}
-.evt-badge{width:110px;height:110px;border:2px solid rgba(0,0,0,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(0,0,0,.04);padding:8px;flex-shrink:0;}
+.evt-badge{width:380px;height:160px;margin-right:120px;border:2px solid rgba(0,0,0,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(0,0,0,.04);padding:10px;flex-shrink:0;}
+.evt-badge.has-logo{border:none;background:transparent;padding:0;}
 .evt-badge img{max-width:100%;max-height:100%;object-fit:contain;}
 .evt-badge .evt-ph{font-family:var(--label);letter-spacing:.1em;font-size:15px;color:rgba(0,0,0,.35);text-align:center;line-height:1.15;}
 
@@ -127,27 +135,27 @@ body{font-family:var(--body);background:#e8e8ea;color:var(--ink);display:flex;fl
 .p-banner .sep{width:1px;height:28px;background:rgba(255,255,255,.3);}
 .p-banner .t{font-family:var(--brush);font-size:19px;color:rgba(255,255,255,.85);transform:rotate(-1.2deg);}
 
-.p-body{padding:36px 40px 0;flex:1;}
+.p-body{padding:36px 40px 0;flex:1;display:flex;flex-direction:column;justify-content:center;}
 .p-sec{display:flex;align-items:center;gap:16px;margin-bottom:6px;}
 .p-sec .acc{width:6px;height:52px;background:var(--red);border-radius:3px;flex-shrink:0;}
-.p-sec h2{font-family:var(--display);text-transform:uppercase;font-size:64px;line-height:.88;color:var(--black);}
+.p-sec h2{font-family:var(--display);text-transform:uppercase;font-size:calc(64px * var(--pfs,1));line-height:.88;color:var(--black);}
 .p-menu{display:flex;flex-direction:column;border-top:1px solid rgba(0,0,0,.1);margin-top:10px;}
 .p-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid rgba(0,0,0,.07);}
 .p-item.feat{padding:24px 0;}
-.p-item.feat .p-name{font-size:38px;}
+.p-item.feat .p-name{font-size:calc(38px * var(--pfs,1) * var(--nfs,1));}
 .p-left{flex:1;display:flex;flex-direction:column;gap:4px;}
-.p-name{font-family:var(--body);font-size:34px;font-weight:900;letter-spacing:.01em;text-transform:uppercase;line-height:1.1;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;}
-.p-name .note{font-family:var(--label);letter-spacing:.05em;font-size:13px;color:rgba(0,0,0,.4);text-transform:none;font-weight:400;}
+.p-name{font-family:var(--body);font-size:calc(34px * var(--pfs,1) * var(--nfs,1));font-weight:900;letter-spacing:.01em;text-transform:uppercase;line-height:1.1;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;}
+.p-name .note{font-family:var(--label);letter-spacing:.05em;font-size:calc(13px * var(--pfs,1) * var(--ntfs,1));color:rgba(0,0,0,.4);text-transform:none;font-weight:400;}
 .p-veg{display:inline-flex;align-items:center;color:var(--green);}
 .p-veg svg{width:26px;height:26px;}
-.p-sub{font-size:13px;color:rgba(0,0,0,.6);font-weight:600;letter-spacing:.02em;line-height:1.5;}
+.p-sub{font-size:calc(13px * var(--pfs,1) * var(--sfs,1));color:rgba(0,0,0,.6);font-weight:600;letter-spacing:.02em;line-height:1.5;}
 .p-price{flex-shrink:0;display:flex;align-items:center;gap:10px;}
 .p-badge{border-radius:8px;padding:8px 14px;text-align:center;min-width:78px;display:flex;flex-direction:column;justify-content:center;}
 .p-badge.tok{background:rgba(230,23,59,.08);border:1px solid rgba(230,23,59,.3);}
 .p-badge.eur{background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);}
-.p-badge .bk{font-family:var(--label);letter-spacing:.1em;font-size:16px;color:rgba(0,0,0,.55);line-height:1;}
-.p-badge.tok .bn{font-family:var(--display);font-size:30px;color:var(--red);line-height:1;margin-top:2px;}
-.p-badge.eur .bn{font-family:var(--display);font-size:30px;color:var(--black);line-height:1;margin-top:2px;}
+.p-badge .bk{font-family:var(--label);letter-spacing:.1em;font-size:calc(16px * var(--pfs,1));color:rgba(0,0,0,.55);line-height:1;}
+.p-badge.tok .bn{font-family:var(--display);font-size:calc(30px * var(--pfs,1));color:var(--red);line-height:1;margin-top:2px;}
+.p-badge.eur .bn{font-family:var(--display);font-size:calc(30px * var(--pfs,1));color:var(--black);line-height:1;margin-top:2px;}
 .euro-only .p-badge.eur{min-width:120px;}
 
 .p-foot{margin-top:auto;}
@@ -185,7 +193,6 @@ textarea.imp{min-height:200px;font-family:ui-monospace,monospace;font-size:12px;
 <div class="topbar">
   <a href="dashboard.html" class="home" title="Terug naar dashboard">🏠</a>
   <div class="brand"><img id="topLogoDark" alt="Señor Snacks" style="background:#000;border-radius:5px;padding:3px 6px;height:26px;"> PRIJSLIJSTEN</div>
-  <img id="topEventLogo" class="event-logo" alt="Bedrijfslogo" style="display:none">
   <select id="listSelect" onchange="switchList(this.value)"></select>
   <button class="btn btn-ghost btn-sm" onclick="newList()">+ Nieuwe lijst</button>
   <button class="btn btn-ghost btn-sm" onclick="duplicateList()">⧉ Dupliceer</button>
@@ -346,8 +353,8 @@ function normalize(l){
   l.id=l.id||uid(); l.name=l.name||'Naamloos'; l.mode=l.mode||'token';
   l.rate=(l.rate==null?3:l.rate); l.orientation=l.orientation||'portrait'; l.eventLogo=l.eventLogo||''; l.showBanner=!!l.showBanner;
   l.categories=(l.categories||[]).map(c=>({
-    id:c.id||uid(), title:c.title||'', featured:!!c.featured,
-    items:(c.items||[]).map(it=>({id:it.id||uid(),name:it.name||'',note:it.note||'',sub:it.sub||'',tokens:(it.tokens==null?2:it.tokens),euro:(it.euro==null?null:it.euro),veg:!!it.veg}))
+    id:c.id||uid(), title:c.title||'', featured:!!c.featured, fontScale:(c.fontScale||1),
+    items:(c.items||[]).map(it=>({id:it.id||uid(),name:it.name||'',note:it.note||'',sub:it.sub||'',tokens:(it.tokens==null?2:it.tokens),euro:(it.euro==null?null:it.euro),veg:!!it.veg,nameScale:(it.nameScale||it.fontScale||1),noteScale:(it.noteScale||1),subScale:(it.subScale||1)}))
   }));
   return l;
 }
@@ -410,6 +417,11 @@ function renderEditor(){
       <div class="cat-head">
         <button class="fav ${c.featured?'on':''}" title="Eerste item groter tonen" onclick="toggleFav(${ci})">★</button>
         <input class="ct" value="${escAttr(c.title)}" placeholder="CATEGORIE" oninput="setCat(${ci},this.value)">
+        <span class="fs-grp" title="Lettergrootte van deze hele pagina">
+          <button class="btn-icon" onclick="catFont(${ci},-1)">A−</button>
+          <span class="fs-val">${Math.round((c.fontScale||1)*100)}%</span>
+          <button class="btn-icon" onclick="catFont(${ci},1)">A+</button>
+        </span>
         <button class="btn-icon" title="Omhoog" onclick="moveCat(${ci},-1)">▲</button>
         <button class="btn-icon" title="Omlaag" onclick="moveCat(${ci},1)">▼</button>
         <button class="btn-icon danger" title="Categorie verwijderen" onclick="delCat(${ci})">🗑</button>
@@ -421,9 +433,30 @@ function renderEditor(){
         : `<input type="number" min="0" step="0.5" value="${it.euro==null?'':it.euro}" oninput="setItem(${ci},${ii},'euro',this.value)"><div class="price-unit">EURO</div>`;
       h+=`<div class="it">
         <div class="col-main">
-          <input class="nm" value="${escAttr(it.name)}" placeholder="Itemnaam" oninput="setItem(${ci},${ii},'name',this.value)">
-          <input class="nt" value="${escAttr(it.note)}" placeholder="Nota, bv. (onion + sauce)" oninput="setItem(${ci},${ii},'note',this.value)">
-          <input class="sb" value="${escAttr((it.sub||'').replace(/\n/g,' / '))}" placeholder="Sub-regel(s), scheiden met  /" oninput="setItem(${ci},${ii},'sub',this.value)">
+          <div class="fld-row">
+            <input class="nm" value="${escAttr(it.name)}" placeholder="Itemnaam" oninput="setItem(${ci},${ii},'name',this.value)">
+            <span class="fs-grp mini" title="Lettergrootte productnaam">
+              <button class="btn-icon" onclick="itemFont(${ci},${ii},'name',-1)">A−</button>
+              <span class="fs-val">${Math.round((it.nameScale||1)*100)}%</span>
+              <button class="btn-icon" onclick="itemFont(${ci},${ii},'name',1)">A+</button>
+            </span>
+          </div>
+          <div class="fld-row">
+            <input class="nt" value="${escAttr(it.note)}" placeholder="Nota, bv. (onion + sauce)" oninput="setItem(${ci},${ii},'note',this.value)">
+            <span class="fs-grp mini" title="Lettergrootte nota">
+              <button class="btn-icon" onclick="itemFont(${ci},${ii},'note',-1)">A−</button>
+              <span class="fs-val">${Math.round((it.noteScale||1)*100)}%</span>
+              <button class="btn-icon" onclick="itemFont(${ci},${ii},'note',1)">A+</button>
+            </span>
+          </div>
+          <div class="fld-row">
+            <input class="sb" value="${escAttr((it.sub||'').replace(/\n/g,' / '))}" placeholder="Sub-regel(s), scheiden met  /" oninput="setItem(${ci},${ii},'sub',this.value)">
+            <span class="fs-grp mini" title="Lettergrootte sub-regel">
+              <button class="btn-icon" onclick="itemFont(${ci},${ii},'sub',-1)">A−</button>
+              <span class="fs-val">${Math.round((it.subScale||1)*100)}%</span>
+              <button class="btn-icon" onclick="itemFont(${ci},${ii},'sub',1)">A+</button>
+            </span>
+          </div>
           <label class="veg-toggle"><input type="checkbox" ${it.veg?'checked':''} onchange="setItem(${ci},${ii},'veg',this.checked)"> 🌱 veggie/vegan</label>
         </div>
         <div class="col-price">${priceInput}</div>
@@ -458,7 +491,7 @@ function itemPreview(it,featured){
   }else{
     price=`<div class="p-badge eur"><div class="bk">PRIJS</div><div class="bn">${fmtEuro(parseNum(it.euro))}</div></div>`;
   }
-  return `<div class="p-item${featured?' feat':''}">
+  return `<div class="p-item${featured?' feat':''}" style="--nfs:${it.nameScale||1};--ntfs:${it.noteScale||1};--sfs:${it.subScale||1}">
     <div class="p-left"><div class="p-name">${esc(it.name)} ${note} ${veg}</div>${sub}</div>
     <div class="p-price">${price}</div></div>`;
 }
@@ -469,10 +502,10 @@ function pagePreview(cat){
   return `<div class="page${euroOnly}">
     <div class="p-header">
       <div class="hl"><div class="evt">OFFICIEEL EVENTMENU</div><img class="p-logo" src="${BRAND_LOGO}" alt="Señor Snacks"></div>
-      <div class="evt-badge">${evLogo}</div>
+      <div class="evt-badge${CUR.eventLogo?' has-logo':''}">${evLogo}</div>
     </div>
     ${CUR.showBanner?bannerHTML():''}
-    <div class="p-body">
+    <div class="p-body" style="--pfs:${cat.fontScale||1}">
       <div class="p-sec"><div class="acc"></div><h2>${esc(cat.title)}</h2></div>
       <div class="p-menu">${items}</div>
     </div>
@@ -486,8 +519,6 @@ function pagePreview(cat){
   </div>`;
 }
 function renderPreview(){
-  const tl=document.getElementById('topEventLogo');
-  if(tl){ if(CUR.eventLogo){ tl.src=CUR.eventLogo; tl.style.display=''; } else { tl.removeAttribute('src'); tl.style.display='none'; } }
   const root=document.getElementById('pages');
   if(!CUR.categories.length){ root.innerHTML='<div class="empty" style="color:#ddd">Nog geen categorie&euml;n — voeg er links een toe.</div>'; return; }
   root.innerHTML=CUR.categories.map(c=>`<div class="page-scaler" style="transform:scale(${ZOOM})">${pagePreview(c)}</div>`).join('');
@@ -524,6 +555,9 @@ function setItem(ci,ii,key,val){
 function addItem(ci){ CUR.categories[ci].items.push({id:uid(),name:'Nieuw item',note:'',sub:'',tokens:2,euro:null,veg:false}); renderEditor(); renderPreview(); scheduleSave(); }
 function delItem(ci,ii){ CUR.categories[ci].items.splice(ii,1); renderEditor(); renderPreview(); scheduleSave(); }
 function moveItem(ci,ii,d){ const a=CUR.categories[ci].items; const j=ii+d; if(j<0||j>=a.length) return; [a[ii],a[j]]=[a[j],a[ii]]; renderEditor(); renderPreview(); scheduleSave(); }
+function clampScale(v){ return Math.min(2, Math.max(0.6, +(+v).toFixed(2))); }
+function catFont(ci,d){ const c=CUR.categories[ci]; c.fontScale=clampScale((c.fontScale||1)+d*0.05); renderEditor(); renderPreview(); scheduleSave(); }
+function itemFont(ci,ii,field,d){ const it=CUR.categories[ci].items[ii]; const k=field+'Scale'; it[k]=clampScale((it[k]||1)+d*0.05); renderEditor(); renderPreview(); scheduleSave(); }
 function addCat(){ CUR.categories.push({id:uid(),title:'Nieuwe categorie',featured:false,items:[{id:uid(),name:'Nieuw item',tokens:2,euro:null,note:'',sub:'',veg:false}]}); renderEditor(); renderPreview(); scheduleSave(); }
 function delCat(ci){ if(!confirm('Categorie "'+CUR.categories[ci].title+'" verwijderen?')) return; CUR.categories.splice(ci,1); renderEditor(); renderPreview(); scheduleSave(); }
 function moveCat(ci,d){ const a=CUR.categories; const j=ci+d; if(j<0||j>=a.length) return; [a[ci],a[j]]=[a[j],a[ci]]; renderEditor(); renderPreview(); scheduleSave(); }
