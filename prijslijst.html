@@ -50,6 +50,7 @@ body{font-family:var(--body);background:#e8e8ea;color:var(--ink);display:flex;fl
 .topbar a.home:hover{opacity:1;}
 .topbar .brand{display:flex;align-items:center;gap:10px;font-family:var(--label);letter-spacing:.14em;font-size:19px;}
 .topbar .brand img{height:22px;}
+.topbar .event-logo{height:32px;max-width:260px;object-fit:contain;background:#fff;border-radius:6px;padding:0 10px;}
 .topbar .spacer{flex:1;}
 .topbar select{font-family:var(--body);font-weight:700;font-size:14px;padding:8px 12px;border-radius:9px;border:none;background:#26262b;color:#fff;min-width:180px;}
 .topbar .save-state{font-size:12px;font-weight:700;letter-spacing:.03em;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);}
@@ -184,6 +185,7 @@ textarea.imp{min-height:200px;font-family:ui-monospace,monospace;font-size:12px;
 <div class="topbar">
   <a href="dashboard.html" class="home" title="Terug naar dashboard">🏠</a>
   <div class="brand"><img id="topLogoDark" alt="Señor Snacks" style="background:#000;border-radius:5px;padding:3px 6px;height:26px;"> PRIJSLIJSTEN</div>
+  <img id="topEventLogo" class="event-logo" alt="Bedrijfslogo" style="display:none">
   <select id="listSelect" onchange="switchList(this.value)"></select>
   <button class="btn btn-ghost btn-sm" onclick="newList()">+ Nieuwe lijst</button>
   <button class="btn btn-ghost btn-sm" onclick="duplicateList()">⧉ Dupliceer</button>
@@ -484,6 +486,8 @@ function pagePreview(cat){
   </div>`;
 }
 function renderPreview(){
+  const tl=document.getElementById('topEventLogo');
+  if(tl){ if(CUR.eventLogo){ tl.src=CUR.eventLogo; tl.style.display=''; } else { tl.removeAttribute('src'); tl.style.display='none'; } }
   const root=document.getElementById('pages');
   if(!CUR.categories.length){ root.innerHTML='<div class="empty" style="color:#ddd">Nog geen categorie&euml;n — voeg er links een toe.</div>'; return; }
   root.innerHTML=CUR.categories.map(c=>`<div class="page-scaler" style="transform:scale(${ZOOM})">${pagePreview(c)}</div>`).join('');
