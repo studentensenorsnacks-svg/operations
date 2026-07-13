@@ -9,16 +9,27 @@ a.back{display:inline-block;margin-bottom:14px;font-size:13px;font-weight:700;co
 .sub{font-size:12px;font-family:monospace;opacity:.65;margin-top:4px;}
 .body{padding:20px 26px;display:flex;flex-direction:column;gap:12px;}
 .cert{border:1.5px solid #e8e4dc;border-radius:10px;overflow:hidden;}
-.cert-hd{background:#faf8f4;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e8e4dc;}
+.cert-hd{background:#faf8f4;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e8e4dc;gap:8px;}
 .cert-title{font-size:13px;font-weight:700;color:#1a1915;}
-.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;white-space:nowrap;}
 .cert-rows{padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
-.row{display:flex;justify-content:space-between;font-size:13px;}
-.rl{color:#888;}.rv{font-family:monospace;font-weight:600;color:#1a1915;}
+.row{display:flex;justify-content:space-between;font-size:13px;gap:10px;}
+.rl{color:#888;}.rv{font-family:monospace;font-weight:600;color:#1a1915;text-align:right;}
 a.pdf-btn{display:flex;align-items:center;gap:8px;background:#1a1915;color:#fff;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;text-decoration:none;margin-top:6px;}
 a.pdf-btn:hover{background:#333;}
+.none{border:1.5px dashed #e8e4dc;border-radius:12px;padding:14px;font-size:13px;color:#999;text-align:center;}
 .footer{padding:13px 26px;border-top:1.5px solid #e8e4dc;text-align:center;font-size:11px;color:#bbb;}</style></head>
 <body>
 <div style="max-width:500px;margin:0 auto 0"><a class="back" href="ft001.html">&larr; Terug naar overzicht</a></div>
-<div class="card"><div class="hdr"><div class="brand">🚐 SEÑOR SNACKS — KEURINGSATTEST</div><div class="name">Bicky Burger Wagen 201</div><div class="sub">QIT-623 · Wagen - Bicky Burger</div></div><div class="body"><div class="cert"><div class="cert-hd"><div class="cert-title">⚡ Elektriciteitskeuring</div><span class="badge" style="background:#e8f5ee;color:#2e7d52">✓ 62d resterend</span></div><div class="cert-rows"><div class="row"><span class="rl">Keuringsdatum</span><span class="rv">10/06/2025</span></div><div class="row"><span class="rl">Vervaldatum</span><span class="rv">30/06/2026</span></div><div class="row"><span class="rl">Instelling</span><span class="rv">OCB vzw</span></div><a class="pdf-btn" href="../pdfs/ft001_elek_1.pdf" target="_blank">📄 Open Elektriciteitskeuring</a></div></div><div class="cert"><div class="cert-hd"><div class="cert-title">🔥 Gaskeuring</div><span class="badge" style="background:#e8f5ee;color:#2e7d52">✓ 62d resterend</span></div><div class="cert-rows"><div class="row"><span class="rl">Keuringsdatum</span><span class="rv">11/06/2025</span></div><div class="row"><span class="rl">Vervaldatum</span><span class="rv">30/06/2026</span></div><div class="row"><span class="rl">Instelling</span><span class="rv">OCB vzw</span></div><a class="pdf-btn" href="../pdfs/ft001_gas_1.pdf" target="_blank">📄 Open Gaskeuring</a><a class="pdf-btn" href="../pdfs/ft001_gas_2.pdf" target="_blank">📄 Open Gaskeuring</a></div></div></div><div class="footer">Verantwoordelijke: Señor Snacks · 29/04/2026</div></div>
+<div class="card"><div class="hdr"><div class="brand">🚐 SEÑOR SNACKS — KEURINGSATTEST</div><div class="name">Bicky Burger Wagen 201</div><div class="sub">QIT-623 · Wagen - Bicky Burger</div></div><div class="body"><div class="cert"><div class="cert-hd"><div class="cert-title">⚡ Elektriciteitskeuring</div><span class="badge" data-exp="2027-06-30"></span></div><div class="cert-rows"><div class="row"><span class="rl">Keuringsdatum</span><span class="rv">11/06/2026</span></div><div class="row"><span class="rl">Vervaldatum</span><span class="rv">30/06/2027</span></div><div class="row"><span class="rl">Instelling</span><span class="rv">OCB vzw</span></div><a class="pdf-btn" href="../pdfs/ft001_elek.pdf" target="_blank">📄 Open Elektrische keuring</a></div></div><div class="cert"><div class="cert-hd"><div class="cert-title">🔥 Gaskeuring</div><span class="badge" data-exp="2027-06-30"></span></div><div class="cert-rows"><div class="row"><span class="rl">Keuringsdatum</span><span class="rv">11/06/2026</span></div><div class="row"><span class="rl">Vervaldatum</span><span class="rv">30/06/2027</span></div><div class="row"><span class="rl">Instelling</span><span class="rv">OCB vzw</span></div><a class="pdf-btn" href="../pdfs/ft001_gas.pdf" target="_blank">📄 Open Gaskeuring</a></div></div></div><div class="footer">Verantwoordelijke: Señor Snacks</div></div>
+<script>
+document.querySelectorAll('.badge[data-exp]').forEach(function(b){
+  var exp = b.getAttribute('data-exp');
+  if(!exp){ b.textContent='Datum ontbreekt'; b.style.background='#fdecea'; b.style.color='#b3261e'; return; }
+  var d = Math.ceil((new Date(exp+'T00:00:00') - new Date().setHours(0,0,0,0)) / 86400000);
+  if(d < 0){ b.textContent='Verlopen (' + (-d) + 'd)'; b.style.background='#fdecea'; b.style.color='#b3261e'; }
+  else if(d <= 60){ b.textContent='Nog ' + d + 'd'; b.style.background='#fff4e5'; b.style.color='#a15c00'; }
+  else { b.textContent='\u2713 ' + d + 'd resterend'; b.style.background='#e8f5ee'; b.style.color='#2e7d52'; }
+});
+</script>
 </body></html>
