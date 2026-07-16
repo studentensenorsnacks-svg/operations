@@ -26,6 +26,7 @@ firebase.initializeApp({
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -228,10 +229,10 @@ textarea.imp{min-height:200px;font-family:ui-monospace,monospace;font-size:12px;
 <div class="modal-bg" id="importModal">
   <div class="modal">
     <h3>Prijslijst importeren</h3>
-    <p class="hint">Plak ruwe tekst (Word/Notepad) of upload een <b>.docx</b>. Ik herken automatisch categorie&euml;n, items, tokens/euro en de tokenkoers (bv. <i>1 token = 3.00 €</i>). Sub-regels (sauzen) en nota's tussen haakjes worden mee overgenomen. Ruis (internet-notities, adres, SMAKELIJK) wordt genegeerd.</p>
+    <p class="hint">Plak ruwe tekst (Word/Notepad) of upload een <b>.docx</b> of <b>.pdf</b>. Ik herken automatisch categorie&euml;n, items, tokens/euro (ook kwart-tokens zoals <i>1.25 tokens</i>) en de tokenkoers (bv. <i>1 token = 3.60 €</i>). Sub-regels (sauzen) en nota's tussen haakjes worden mee overgenomen. Ruis (internet-notities, adres, SMAKELIJK) wordt genegeerd.</p>
     <div class="drop" id="dropZone" onclick="document.getElementById('docxInput').click()">
-      📄 Klik of sleep een <b>.docx</b> hierheen
-      <input type="file" id="docxInput" accept=".docx" style="display:none" onchange="handleDocx(this.files[0])">
+      📄 Klik of sleep een <b>.docx</b> of <b>.pdf</b> hierheen
+      <input type="file" id="docxInput" accept=".docx,.pdf" style="display:none" onchange="handleImportFile(this.files[0])">
     </div>
     <div class="field"><label>Of plak tekst</label>
       <textarea class="imp" id="importText" placeholder="Burgers&#10;Bicky Burger    2 tokens&#10;Bicky Veggie Burger    2 tokens&#10;1 token = 3.00 €&#10;&#10;Fries&#10;Belgian Fries (+ sauce)    2 tokens&#10;..."></textarea>
@@ -632,6 +633,11 @@ async function deleteList(){
 /* ==================== IMPORT ==================== */
 function importOpen(){ document.getElementById('importText').value=''; document.getElementById('importReplace').checked=false; document.getElementById('importModal').classList.add('on'); }
 function importClose(){ document.getElementById('importModal').classList.remove('on'); }
+function handleImportFile(file){
+  if(!file) return;
+  if(/\.pdf$/i.test(file.name)) return handlePdf(file);
+  return handleDocx(file);
+}
 async function handleDocx(file){
   if(!file) return;
   try{
@@ -642,30 +648,78 @@ async function handleDocx(file){
     toast('.docx ingelezen — controleer en klik Importeren');
   }catch(e){ console.error(e); toast('Kon .docx niet lezen'); }
 }
+// PDF → tekst via pdf.js: tekstfragmenten op (bijna) dezelfde hoogte worden
+// samengevoegd tot één regel, zodat "Friet + saus" en "2 tokens" samen blijven.
+async function handlePdf(file){
+  if(!window.pdfjsLib){ toast('PDF-lezer kon niet laden — probeer de pagina te verversen'); return; }
+  try{
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    const out=[];
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      let lastY=null,line=[];
+      tc.items.forEach(it=>{
+        if(!it.str || !it.str.trim()){ return; }
+        const y=Math.round(it.transform[5]);
+        if(lastY!==null && Math.abs(y-lastY)>3){ out.push(line.join(' ')); line=[]; }
+        line.push(it.str.trim()); lastY=y;
+      });
+      if(line.length){ out.push(line.join(' ')); line=[]; }
+    }
+    document.getElementById('importText').value=out.join('\n').trim();
+    toast('.pdf ingelezen — controleer en klik Importeren');
+  }catch(e){ console.error(e); toast('Kon .pdf niet lezen'); }
+}
 const dz=document.getElementById('dropZone');
 ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor='#E6173B';}));
 ['dragleave'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.style.borderColor='';}));
-dz.addEventListener('drop',e=>{ e.preventDefault(); dz.style.borderColor=''; const f=e.dataTransfer.files[0]; if(f) handleDocx(f); });
+dz.addEventListener('drop',e=>{ e.preventDefault(); dz.style.borderColor=''; const f=e.dataTransfer.files[0]; if(f) handleImportFile(f); });
 
 const NOISE=/internet|container|event.?pay|kastjes|nog te bekijken|we bekijken|smakelijk|winkelom|be ?0?465570997|www\.senorsnacks/i;
-const PRICE=/(\d+)\s*tokens?\b|€\s*[\d.,]+|[\d.,]+\s*€|\b(\d+)\s*T\b/i;
+// Tokens mogen decimaal zijn (1.25 / 2,5 / 3.75) — kwart- en halve tokens.
+const PRICE=/(\d+(?:[.,]\d+)?)\s*tokens?\b|€\s*[\d.,]+|[\d.,]+\s*€|\b(\d+(?:[.,]\d+)?)\s*T\b/i;
 function parseRaw(text){
   const lines=text.split(/\r?\n/).map(l=>l.replace(/\s+/g,' ').trim());
   let rate=3, mode='euro', foundRate=false;
   for(const l of lines){ const m=l.match(/1\s*tokens?\s*[=:]?\s*€?\s*([\d.,]+)\s*€?/i); if(m){ rate=parseNum(m[1]); foundRate=true; mode='token'; break; } }
-  const cats=[]; let cur=null, lastItem=null;
+  const cats=[]; let cur=null, lastItem=null, listName='';
   for(let raw of lines){
     if(!raw) continue;
     if(NOISE.test(raw) && !PRICE.test(raw)) continue;
-    if(/1\s*tokens?\s*[=:]?/i.test(raw)) continue;
+    // Koersregel overslaan — let op: '=' of ':' is verplicht, anders sneuvelen
+    // ook gewone items van 1 token ("Curryworst 1 token").
+    if(/1\s*tokens?\s*[=:]/i.test(raw)) continue;
     raw=raw.replace(/^\d{6,}/,'').trim();
     const priceM=raw.match(PRICE);
+    // Losse nota-regel tussen haakjes onder een item, bv. "(€ 4,50 – halal)":
+    // dieet-info wordt nota + vlaggen bij het vorige item, de €-prijs is al
+    // gekend via de tokens en wordt niet herhaald.
+    const noteOnly=raw.match(/^\(([^()]*)\)$/);
+    if(noteOnly){
+      if(lastItem){
+        const inner=noteOnly[1].trim();
+        if(/veg(g?ie|an|i)?\b/i.test(inner)) lastItem.veg=true;
+        if(/halal/i.test(inner)) lastItem.halal=true;
+        const extra=inner.replace(/€?\s*\d[\d.,]*\s*€?/g,'').replace(/^[\s–\-—·,]+|[\s–\-—·,]+$/g,'').trim();
+        if(extra && !lastItem.note) lastItem.note='('+extra+')';
+        if(mode==='euro' && lastItem.euro!=null && !lastItem.euro){ const em=inner.match(/€\s*([\d.,]+)|([\d.,]+)\s*€/); if(em) lastItem.euro=parseNum(em[1]||em[2]); }
+      }
+      continue;
+    }
     const isSub=/^[+•·\-]/.test(raw) || (!priceM && /[\/·]/.test(raw) && lastItem);
     if(isSub && lastItem){
       const clean=raw.replace(/^[\-•]\s*/,'');
       lastItem.sub=(lastItem.sub?lastItem.sub+'\n':'')+clean; continue;
     }
     if(!priceM){
+      // Titelregel ("PRIJSLIJST 2026 — REGGAE GEEL") → naam van de lijst.
+      if(!listName && /prijslijst/i.test(raw)){
+        listName=raw.replace(/prijslijst/i,'').replace(/^[\s\d—–\-]+/,'').trim();
+        continue;
+      }
       cur={id:uid(),title:raw.replace(/&amp;/g,'&'),featured:cats.length===0,items:[]};
       cats.push(cur); lastItem=null; continue;
     }
@@ -676,12 +730,19 @@ function parseRaw(text){
     if(noteM){ note='('+noteM[1]+')'; name=name.slice(0,noteM.index).trim(); }
     const veg=/veg(g?ie|an|i)?\b/i.test(raw);
     const item={id:uid(),name:name||raw,note,sub:'',veg};
-    const tokM=raw.match(/(\d+)\s*tokens?\b|\b(\d+)\s*T\b/i);
+    const tokM=raw.match(/(\d+(?:[.,]\d+)?)\s*tokens?\b|\b(\d+(?:[.,]\d+)?)\s*T\b/i);
     if(mode==='token' || tokM){ item.tokens=parseNum((tokM&&(tokM[1]||tokM[2]))||priceM[1]||'1'); item.euro=null; }
     else { const em=raw.match(/€\s*([\d.,]+)|([\d.,]+)\s*€/); item.euro=em?parseNum(em[1]||em[2]):0; item.tokens=2; }
     cur.items.push(item); lastItem=item;
   }
-  return {id:uid(),name:'Geïmporteerd',mode:foundRate?'token':'euro',rate,orientation:'portrait',updatedAt:nowTs(),categories:cats.filter(c=>c.items.length)};
+  // Dubbele categorieën ("Fries" 2×) samenvoegen tot één blok.
+  const byTitle={}, merged=[];
+  cats.forEach(c=>{
+    const k=c.title.trim().toLowerCase();
+    if(k && byTitle[k]){ byTitle[k].items.push(...c.items); }
+    else { if(k) byTitle[k]=c; merged.push(c); }
+  });
+  return {id:uid(),name:listName||'Geïmporteerd',mode:foundRate?'token':'euro',rate,orientation:'portrait',updatedAt:nowTs(),categories:merged.filter(c=>c.items.length)};
 }
 function importRun(){
   const txt=document.getElementById('importText').value.trim();
@@ -691,7 +752,9 @@ function importRun(){
   if(document.getElementById('importReplace').checked){
     parsed.id=CUR.id; parsed.name=CUR.name; CUR=parsed;
   }else{
-    parsed.name='Import '+new Date().toLocaleDateString('nl-BE'); CUR=parsed; LISTS[CUR.id]=CUR;
+    // Naam uit het document zelf (titelregel "PRIJSLIJST … <naam>") als die er is.
+    if(parsed.name==='Geïmporteerd') parsed.name='Import '+new Date().toLocaleDateString('nl-BE');
+    CUR=parsed; LISTS[CUR.id]=CUR;
   }
   importClose(); renderAll(); saveNow();
   toast(parsed.categories.length+' categorieën geïmporteerd');
