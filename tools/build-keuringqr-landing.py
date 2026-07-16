@@ -218,21 +218,40 @@ function render(f){
   document.getElementById('body').innerHTML = hasData ? h
     : '<div class="leeg">Voor deze wagen is nog geen technische fiche ingevuld.</div>';
 }
-fetch(DB+'/ft_fiches_v1/__ID__.json').then(function(r){return r.json();}).then(render)
-  .catch(function(){document.getElementById('body').innerHTML='<div class="leeg">Fiche kon niet geladen worden. Controleer je internetverbinding en probeer opnieuw.</div>';});
+// Ingebakken kopie van de fiche (van het bouwmoment) → rendert altijd, ook
+// als de live database geblokkeerd wordt (adblocker/privacy-modus). De live
+// fetch ververst de fiche daarna met de meest recente data.
+var CACHED=__DATA__;
+render(CACHED);
+fetch(DB+'/ft_fiches_v1/__ID__.json').then(function(r){return r.json();})
+  .then(function(f){if(f)render(f);}).catch(function(){});
 </script>
 </body></html>
 """
 
+# Fiche-data van het bouwmoment ophalen om in de pagina's te bakken.
+import urllib.request
+FICHES = {}
+try:
+    with urllib.request.urlopen(
+        "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app/ft_fiches_v1.json", timeout=20
+    ) as r:
+        FICHES = json.loads(r.read().decode("utf-8")) or {}
+    print("fiche-data opgehaald:", len(FICHES))
+except Exception as e:
+    print("WAARSCHUWING: fiche-data niet opgehaald (%s) — pagina's krijgen geen ingebakken kopie" % e)
+
 fmade = 0
 for t in trucks:
     tid = t["id"]
+    cached = json.dumps(FICHES.get(tid), ensure_ascii=False).replace("</", "<\\/")
     page = (FICHE_PAGE
             .replace("__ID__", tid)
             .replace("__NAME__", html.escape(t.get("name", tid)))
             .replace("__SUB__", html.escape((t.get("plate") or "--") + " · " + t.get("type", "")))
             .replace("__ELEK__", "1" if t.get("keuringElek") else "")
-            .replace("__GAS__", "1" if t.get("keuringGas") else ""))
+            .replace("__GAS__", "1" if t.get("keuringGas") else "")
+            .replace("__DATA__", cached))
     open(os.path.join(ROOT, "trucks", tid + "-fiche.html"), "w", encoding="utf-8").write(page)
     fmade += 1
 print("fiche-pagina's:", fmade)
