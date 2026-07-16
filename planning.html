@@ -147,7 +147,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 
 .mdev-trucks{display:flex;flex-wrap:nowrap;gap:3px;align-items:center;overflow:hidden;flex-shrink:0;height:22px;}
 .multiday-event:hover .mdev-trucks,.multiday-event.stick .mdev-trucks{flex-wrap:wrap;height:auto;}
-.mdev-truck-pill{font-size:0.65rem;font-weight:700;padding:2px 4px 2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;line-height:1.4;}
+.mdev-truck-pill{font-size:0.65rem;font-weight:700;padding:2px 4px 2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:2px 5px;white-space:normal;overflow-wrap:anywhere;line-height:1.4;max-width:100%;flex-wrap:wrap;}
 .mdev-truck-pill .at-rm{cursor:pointer;opacity:0.7;font-size:0.85rem;line-height:1;font-weight:900;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,0.08);transition:all 0.12s;}
 .mdev-truck-pill .at-rm:hover{opacity:1;background:rgba(220,0,0,0.85);color:#fff;}
 .btn-add-mini{font-size:0.62rem;font-weight:700;background:none;border:1px dashed #c0c0c0;cursor:pointer;padding:2px 7px;border-radius:3px;color:var(--muted);font-family:var(--font);}
@@ -176,6 +176,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .day-date{font-family:var(--font-cond);font-size:1.4rem;font-weight:900;line-height:1;color:var(--text);}
 .btn-day-add{width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s;color:var(--muted);line-height:1;flex-shrink:0;}
 .btn-day-add:hover{background:var(--red);border-color:var(--red);color:#fff;}
+.btn-day-pdf{width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;transition:all 0.15s;color:var(--muted);line-height:1;flex-shrink:0;margin-right:3px;}
+.btn-day-pdf:hover{background:var(--red);border-color:var(--red);color:#fff;}
+.btn-day-pdf.sel{background:var(--red);border-color:var(--red);color:#fff;}
 .day-events{padding:6px;display:flex;flex-direction:column;gap:6px;min-height:60px;}
 .day-events::-webkit-scrollbar{width:3px;}
 .day-events::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px;}
@@ -197,14 +200,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh
 .ev-trucks-area{padding:0 7px 6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
 .btn-add-trucks{font-size:0.62rem;font-weight:700;background:none;border:1px dashed #c0c0c0;cursor:pointer;padding:2px 7px;border-radius:3px;color:var(--muted);font-family:var(--font);}
 .btn-add-trucks:hover{border-color:var(--red);color:var(--red);}
-.assigned-truck{font-size:0.65rem;font-weight:700;padding:2px 4px 2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;line-height:1.4;}
+.assigned-truck{font-size:0.65rem;font-weight:700;padding:2px 4px 2px 6px;border-radius:3px;display:inline-flex;align-items:center;gap:2px 5px;white-space:normal;overflow-wrap:anywhere;line-height:1.4;max-width:100%;flex-wrap:wrap;}
 .at-dot{display:none;}
 .at-name{}
 .at-rm{cursor:pointer;opacity:0.7;font-size:0.85rem;line-height:1;flex-shrink:0;font-weight:900;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,0.08);transition:all 0.12s;}
 .at-rm:hover{opacity:1;background:rgba(220,0,0,0.85);color:#fff;}
-.term-chip .term-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;max-width:120px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
+.term-chip .term-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;flex:1 1 60px;min-width:0;max-width:120px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
 .term-chip .term-link:focus{outline:1px solid rgba(0,0,0,0.25);}
-.assigned-truck .retour-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;max-width:130px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
+.assigned-truck .retour-link{font-size:0.62rem;font-weight:700;border:none;border-radius:3px;padding:1px 3px;flex:1 1 60px;min-width:0;max-width:130px;background:rgba(255,255,255,0.65);color:inherit;cursor:pointer;font-family:inherit;}
 .assigned-truck .retour-link:focus{outline:1px solid rgba(0,0,0,0.25);}
 .assigned-truck .retour-link::placeholder{color:inherit;opacity:0.55;}
 .term-chip .term-sel{margin:0 2px 0 0;flex-shrink:0;cursor:pointer;}
@@ -300,7 +303,9 @@ textarea{resize:vertical;min-height:70px;}
 .evd-sec-title{font-family:var(--font-cond);font-size:1.02rem;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--border);}
 .evd-sec-count{font-family:var(--font);font-size:0.7rem;font-weight:700;color:var(--muted);background:#f0f0f0;padding:1px 9px;border-radius:10px;}
 .evd-list{display:flex;flex-direction:column;gap:4px;}
-.evd-item{display:flex;align-items:center;gap:9px;font-size:0.88rem;font-weight:600;padding:6px 10px;background:#f7f7f7;border-radius:5px;border-left:3px solid var(--border);}
+.evd-item{display:flex;align-items:center;gap:9px;font-size:0.88rem;font-weight:600;padding:6px 10px;background:#f7f7f7;border-radius:5px;border-left:3px solid var(--border);flex-wrap:wrap;}
+.evd-term-sel{margin-left:auto;font-size:0.75rem;font-weight:700;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;background:#fff;color:var(--text);cursor:pointer;font-family:inherit;max-width:200px;}
+.evd-term-sel:focus{outline:2px solid #0d9488;border-color:#0d9488;}
 .evd-idot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 .evd-link{margin-left:auto;font-size:0.78rem;font-weight:700;color:#0891b2;}
 .evd-empty{font-size:0.82rem;color:#aaa;font-style:italic;padding:3px 2px;}
@@ -694,6 +699,8 @@ const GROUPS_TERMINALS=[
   {label:'💳 EP terminals',color:'#0891b2',bg:'#cffafe',trucks:Array.from({length:20},(_,i)=>'EP'+(i+1))},
   {label:'💳 Betaal terminals',color:'#0d9488',bg:'#ccfbf1',trucks:Array.from({length:30},(_,i)=>'Terminal '+(i+1))}
 ];
+// Waar staat een betaalterminal voor? Vaste keuzelijst (ev.terminalTruck[terminal]).
+const TERMINAL_USES=['Friet','Hamburger','Bicky Burger','Beef Burger','Pizza','Pasta','Wok','Belegde broodjes / Panini','Kebab / Pitta','Wraps','Poke bowls','Fried chicken','Sweet','Drank'];
 // ── LOGISTIEK DATA ─────────────────────────────────────
 // Hoeveelheid-gebaseerd: per event tel je foldtables/vloer/kassa op met +/- stappen.
 // step = hoeveel je per klik toevoegt, max = totale voorraad.
@@ -818,7 +825,10 @@ function liveEvents() {
 // Filter events op basis van actieve mode
 // Persoonlijke events (tandarts, verlof, dokter) altijd verbergen op beide tabs
 // Camionetten: ook verhuur/VH events verbergen
-function filterEvents(evList) {
+function filterEvents(evList, mode) {
+  // mode optioneel: standaard de actieve tab; het dagoverzicht (Dag PDF)
+  // geeft expliciet een mode mee omdat het alle secties in één keer bouwt.
+  const m = mode || currentMode;
   return evList.filter(ev => {
     const n = (ev.name || '').toLowerCase();
     // Persoonlijk: altijd weg uit beide tabs
@@ -826,7 +836,7 @@ function filterEvents(evList) {
     if (/\bverlof\b/.test(n) && !n.includes('bouwverlof')) return false;
     if (/\bdr\b/.test(n) || /\bdr\.\s/.test(n)) return false;  // "Greet Dr 8u30" etc
     // Camionetten/terminals/logistiek tab: ook verhuur/VH weg
-    if (isDayMode() && currentMode !== 'agenda') {
+    if (m !== 'wagens' && m !== 'agenda') {
       if (n.includes('verhuur')) return false;
       if (n.startsWith('vh ')) return false;
     }
@@ -1365,6 +1375,8 @@ function setTerminalTruck(evId, terminal, truck){
   if(truck) ev.terminalTruck[terminal]=truck;
   else delete ev.terminalTruck[terminal];
   save();renderWeek();
+  // Detailpopup open? Herbouwen zodat alle keuzelijsten de nieuwe waarde tonen.
+  if(evDetailId===evId) openEvDetail(evId);
 }
 // Bulk: koppel alle aangevinkte terminals van één event-card aan dezelfde waarde
 // (wagen of vrije tekst). Lege waarde = koppeling van de selectie wissen.
@@ -1390,7 +1402,11 @@ function pruneTerminalLinks(ev){
     if(ev.terminalDays && typeof ev.terminalDays==='object') Object.values(ev.terminalDays).forEach(a=>(a||[]).forEach(t=>terms.add(t)));
     const trucks=new Set(Array.isArray(ev.trucks)?ev.trucks:[]);
     Object.keys(ev.terminalTruck).forEach(term=>{
-      if(!terms.has(term) || !trucks.has(ev.terminalTruck[term])) delete ev.terminalTruck[term];
+      if(!terms.has(term)){ delete ev.terminalTruck[term]; return; }
+      // Vaste categorieën (Friet/Hamburger/…) en vrije tekst blijven staan;
+      // enkel koppelingen naar een wagen die niet meer op het event staat gaan weg.
+      const v=ev.terminalTruck[term];
+      if(TRUCK_INFO[v] && !trucks.has(v)) delete ev.terminalTruck[term];
     });
   }
   // Retour-koppelingen: camionet weg van het event → koppeling weg.
@@ -1426,8 +1442,8 @@ function camionRetourSelect(ev, camion){
     + `onchange="event.stopPropagation();setCamionRetour(${ev.id},'${tj(camion)}',this.value.trim())">`
     + `<datalist id="${dlId}">${opts}</datalist>`;
 }
-// Invulveld in een terminal-chip: koppel aan een wagen van dit event, of typ
-// vrij iets in (bv. "dranktent"). De wagens komen als suggesties in een datalist.
+// Invulveld in een terminal-chip: koppel aan een vaste categorie (Friet,
+// Hamburger, …) of een wagen van dit event; vrij typen mag ook.
 function terminalLinkSelect(ev, terminal){
   // Enkel echte wagens, geen camionetten/camions (zitten in hetzelfde trucks-veld).
   const trucks = (Array.isArray(ev.trucks)?ev.trucks:[]).filter(t=>{ const i=TRUCK_INFO[t]; return !(i && i.kind==='camions'); });
@@ -1435,11 +1451,25 @@ function terminalLinkSelect(ev, terminal){
   const tj = s=>s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const ea = s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   const dlId = `dl-${ev.id}-${terminal.replace(/[^a-zA-Z0-9]/g,'')}`;
-  const opts = trucks.map(t=>`<option value="${ea(t)}"></option>`).join('');
-  return `<input class="term-link" list="${dlId}" value="${ea(cur)}" placeholder="wagen / vrij…" `
+  const opts = TERMINAL_USES.concat(trucks).map(t=>`<option value="${ea(t)}"></option>`).join('');
+  return `<input class="term-link" list="${dlId}" value="${ea(cur)}" placeholder="waarvoor / wagen…" `
     + `onclick="event.stopPropagation()" `
     + `onchange="event.stopPropagation();setTerminalTruck(${ev.id},'${tj(terminal)}',this.value.trim())">`
     + `<datalist id="${dlId}">${opts}</datalist>`;
+}
+// Keuzelijst in de event-detailpopup: waar staat deze betaalterminal?
+// Zelfde opslag als de terminal-chip (ev.terminalTruck[terminal]).
+function termUseSelect(ev, terminal){
+  const cur = (ev.terminalTruck && ev.terminalTruck[terminal]) || '';
+  const tj = s=>s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const ea = s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  // Bestaande vrije waarde (bv. oude wagen-koppeling) mee tonen zodat die niet verdwijnt.
+  const opts = TERMINAL_USES.includes(cur) || !cur ? TERMINAL_USES : [cur].concat(TERMINAL_USES);
+  return `<select class="evd-term-sel" onclick="event.stopPropagation()" `
+    + `onchange="setTerminalTruck(${ev.id},'${tj(terminal)}',this.value)">`
+    + `<option value="">— waarvoor? —</option>`
+    + opts.map(o=>`<option value="${ea(o)}"${o===cur?' selected':''}>${o}</option>`).join('')
+    + `</select>`;
 }
 function showToast(msg){const t=document.getElementById('c-toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),6000);}
 
@@ -1505,11 +1535,18 @@ function renderWeek(){
   const headsHtml=`<div class="week-dayheads">${days.map((day,di)=>{
     const ds=toStr(day);
     const isSelected = isPerDay && selectedDay === ds;
-    const clickClass = isPerDay ? ' clickable-day' : '';
-    const clickHandler = isPerDay ? ` onclick="selectDayForPlanning('${ds}')"` : '';
+    // Klik op datum = dagoverzicht / Dag PDF. In de per-dag tabs toont dat
+    // enkel de eigen categorie (apart overzicht); een dag selecteren om te
+    // plannen gebeurt daar via het 📍-knopje.
+    const clickHandler = isPerDay
+      ? ` onclick="openDayPDF('${ds}','${currentMode}')" title="Dagoverzicht / Dag PDF"`
+      : ` onclick="openDayPDF('${ds}')" title="Dagoverzicht / Dag PDF"`;
+    const pdfBtn = isPerDay
+      ? `<button type="button" class="btn-day-pdf${isSelected?' sel':''}" title="Dag selecteren om te plannen" onclick="event.stopPropagation();selectDayForPlanning('${ds}')">📍</button>`
+      : '';
     return `<div class="week-dayhead${isToday(ds)?' today-hd':''}${isSelected?' selected-day':''}">
-      <div class="day-info${clickClass}"${clickHandler}><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
-      <button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
+      <div class="day-info clickable-day"${clickHandler}><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
+      ${pdfBtn}<button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
     </div>`;
   }).join('')}</div>`;
 
@@ -1607,7 +1644,7 @@ function renderWeek(){
         let bulkBar = '';
         if(isTerm && trucksForDay.length){
           const evWagens=(ev.trucks||[]).filter(t=>{const i=TRUCK_INFO[t];return !(i&&i.kind==='camions');});
-          const wopts=evWagens.map(t=>`<option value="${t}"></option>`).join('');
+          const wopts=TERMINAL_USES.concat(evWagens).map(t=>`<option value="${t}"></option>`).join('');
           bulkBar = `<div class="term-bulk" onclick="event.stopPropagation()">
             <input class="term-bulk-input" list="dlb-${cardId}" placeholder="koppel selectie aan… (wagen / vrij)">
             <datalist id="dlb-${cardId}">${wopts}</datalist>
@@ -1708,13 +1745,15 @@ function evCatHTML(ev, scopeDate){
   const days = [];
   for(let d=parseD(ev.startDate); toStr(d)<=ev.endDate; d=addD(d,1)) days.push(toStr(d));
 
-  const itemRow = n => {
+  const itemRow = (n, kind) => {
     const info = TRUCK_INFO[n] || {color:'#999'};
-    const link = (ev.terminalTruck && ev.terminalTruck[n]) ? `<span class="evd-link">→ ${ev.terminalTruck[n]}</span>` : '';
+    // Terminals: keuzelijst "waar staat deze terminal?" (Friet/Hamburger/…)
+    const link = kind==='terminals' ? termUseSelect(ev, n)
+      : (ev.terminalTruck && ev.terminalTruck[n]) ? `<span class="evd-link">→ ${ev.terminalTruck[n]}</span>` : '';
     const retour = (ev.camionRetour && ev.camionRetour[n]) ? `<span class="evd-link">↩ retour: ${ev.camionRetour[n]}</span>` : '';
     return `<div class="evd-item" style="border-left-color:${info.color}"><span class="evd-idot" style="background:${info.color}"></span>${n}${link}${retour}</div>`;
   };
-  const itemList = arr => `<div class="evd-list">${arr.map(itemRow).join('')}</div>`;
+  const itemList = (arr, kind) => `<div class="evd-list">${arr.map(n=>itemRow(n, kind)).join('')}</div>`;
 
   // De gedeelde trucks-lijst opsplitsen: echte wagens vs camionetten.
   const wagens = [], camionsFlat = [];
@@ -1725,23 +1764,23 @@ function evCatHTML(ev, scopeDate){
   });
 
   // Sectie voor voertuigen die ook per-dag bewaard kunnen zijn (camionetten / terminals).
-  function vehicleSection(flat, dayField, emptyTxt){
+  function vehicleSection(flat, dayField, emptyTxt, kind){
     const dd = asObj(ev[dayField]);
     if(scopeDate){
       const dayArr = Array.isArray(dd[scopeDate]) ? dd[scopeDate] : [];
       const list = multi ? Array.from(new Set([...flat, ...dayArr])) : flat;
-      return { count: list.length, html: list.length ? itemList(list) : `<div class="evd-empty">${emptyTxt}</div>` };
+      return { count: list.length, html: list.length ? itemList(list, kind) : `<div class="evd-empty">${emptyTxt}</div>` };
     }
     if(multi){
       const blocks = days
         .filter(ds => Array.isArray(dd[ds]) && dd[ds].length)
-        .map(ds => `<div class="evd-day"><div class="evd-day-lbl">${fmtL(ds)}</div>${itemList(dd[ds])}</div>`);
+        .map(ds => `<div class="evd-day"><div class="evd-day-lbl">${fmtL(ds)}</div>${itemList(dd[ds], kind)}</div>`);
       const all = new Set(flat);
       days.forEach(ds => { if(Array.isArray(dd[ds])) dd[ds].forEach(n=>all.add(n)); });
-      const html = (flat.length?itemList(flat):'') + blocks.join('');
+      const html = (flat.length?itemList(flat, kind):'') + blocks.join('');
       return { count: all.size, html: html || `<div class="evd-empty">${emptyTxt}</div>` };
     }
-    return { count: flat.length, html: flat.length ? itemList(flat) : `<div class="evd-empty">${emptyTxt}</div>` };
+    return { count: flat.length, html: flat.length ? itemList(flat, kind) : `<div class="evd-empty">${emptyTxt}</div>` };
   }
 
   const wagenSec = {
@@ -1749,7 +1788,7 @@ function evCatHTML(ev, scopeDate){
     html: wagens.length ? itemList(wagens) : `<div class="evd-empty">— geen wagens toegewezen</div>`
   };
   const camSec  = vehicleSection(camionsFlat, 'truckDays', '— geen camionetten toegewezen');
-  const termSec = vehicleSection(Array.isArray(ev.terminals)?ev.terminals:[], 'terminalDays', '— geen betaalterminals toegewezen');
+  const termSec = vehicleSection(Array.isArray(ev.terminals)?ev.terminals:[], 'terminalDays', '— geen betaalterminals toegewezen', 'terminals');
 
   // Logistiek (hoeveelheden).
   const logiRows = o => LOGI_ITEMS
@@ -2103,7 +2142,7 @@ function renderAgenda(){
   const headsHtml = `<div class="week-dayheads">${days.map((day,di)=>{
     const ds=toStr(day);
     return `<div class="week-dayhead${isToday(ds)?' today-hd':''}">
-      <div class="day-info"><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
+      <div class="day-info clickable-day" onclick="openDayPDF('${ds}')" title="Dagoverzicht / Dag PDF"><div class="day-name">${DAYS[di]}</div><div class="day-date">${day.getDate()}</div></div>
       <button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
     </div>`;
   }).join('')}</div>`;
@@ -2337,6 +2376,128 @@ function openVehiclePDF(mode){
     `<div class="pdf-week-title">${icon} ${titleLabel} ${wLbl}</div>
      <div class="pdf-week-sub">Señor Snacks · ${new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
      ${dayBlocks || `<div class="pdf-no-events" style="padding:40px;text-align:center;font-size:1rem;border-radius:5px;">Geen ${titleLabel.toLowerCase()} ingepland deze week</div>`}`;
+  document.getElementById('pdf-overlay').classList.remove('hidden');
+}
+
+// ── DAG PDF — dagoverzicht ─────────────────────────────
+// Klik op een datum in de dagkop: overzicht van die dag, afdrukbaar via
+// dezelfde print-overlay als de Week PDF. Vanuit Agenda/Wagens toont het
+// alles (wagens + camionetten + terminals + logistiek); vanuit de per-dag
+// tabs geeft `only` de eigen categorie mee voor een apart overzicht.
+function openDayPDF(ds, only){
+  const day = parseD(ds);
+  const isT = isToday(ds);
+  const dayLbl = day.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const sections = [];
+  const ONLY_LBL = {wagens:'Wagens', camions:'Camionetten', terminals:'Betaal terminals', logistiek:'Logistiek'};
+  const want = m => !only || only === m;
+
+  // Kleur per voertuig/terminal over alle tabs heen (TC volgt de actieve tab).
+  const colorOf = t => TRUCK_INFO[t] || TC[t] || {color:'#555',bg:'#eee'};
+
+  // ── Secties wagens / camionetten / terminals ──
+  [
+    {mode:'wagens',    icon:'🚛', label:'Wagens'},
+    {mode:'camions',   icon:'🚐', label:'Camionetten'},
+    {mode:'terminals', icon:'💳', label:'Betaal terminals'}
+  ].forEach(({mode,icon,label})=>{
+    if(!want(mode)) return;
+    const relevant = new Set();
+    groupsFor(mode).forEach(g=>g.trucks.forEach(t=>relevant.add(t)));
+    // Huurwagens horen bij de week waarin deze dag valt.
+    if (mode==='camions') (huurwagens[toStr(monday(day))]||[]).forEach(t=>relevant.add(t));
+
+    const dayEvs = filterEvents(events, mode)
+      .filter(ev=>ev.startDate<=ds && ev.endDate>=ds)
+      .map(ev=>{
+        // Zelfde logica als de week-PDF: multi-dag events gebruiken in de
+        // per-dag modes de toewijzingen van deze specifieke dag.
+        const onDay = (mode!=='wagens' && ev.endDate>ev.startDate)
+          ? ((ev[FIELD_DAYS[mode]] && ev[FIELD_DAYS[mode]][ds]) || [])
+          : (ev[FIELD[mode]] || []);
+        return {...ev, trucksOnEv: onDay.filter(t=>relevant.has(t))};
+      })
+      .filter(ev=>ev.trucksOnEv.length>0);
+    if(!dayEvs.length) return;
+
+    const rows = dayEvs.map(ev=>{
+      const nD=Math.round((parseD(ev.endDate)-parseD(ev.startDate))/86400000)+1;
+      const chips=ev.trucksOnEv.map(t=>{
+        const c=colorOf(t);
+        const link = (mode==='terminals' && ev.terminalTruck && ev.terminalTruck[t]) ? ` → ${ev.terminalTruck[t]}`
+          : (mode==='camions' && ev.camionRetour && ev.camionRetour[t]) ? ` ↩ retour: ${ev.camionRetour[t]}` : '';
+        return `<div class="pdf-camion-chip" style="background:${c.bg};color:${c.color};border-left:3px solid ${c.color}">${t}${link}</div>`;
+      }).join('');
+      return `<div class="pdf-camion-row">
+        <div class="pdf-camion-chips">${chips}
+          <input class="pdf-extra-input truck" type="text" placeholder="+ extra info wagen">
+        </div>
+        <div class="pdf-camion-arrow">→</div>
+        <div class="pdf-camion-event">
+          <div class="pdf-camion-evname">${ev.name}</div>
+          ${ev.location?`<div class="pdf-camion-evmeta">📍 ${ev.location}</div>`:''}
+          ${nD>1?`<div class="pdf-camion-evmeta">⏱ ${nD} dagen (t/m ${fmtS(ev.endDate)})</div>`:''}
+          <input class="pdf-extra-input" type="text" placeholder="+ extra info event">
+        </div>
+      </div>`;
+    }).join('');
+
+    // Nog beschikbaar — enkel bij camionetten, zoals in de week-PDF.
+    let availBlock = '';
+    if (mode==='camions') {
+      const usedToday = new Set();
+      dayEvs.forEach(ev=>ev.trucksOnEv.forEach(t=>usedToday.add(t)));
+      const availToday = [...relevant].filter(t=>!usedToday.has(t));
+      const availChips = availToday.length
+        ? availToday.map(t=>{
+            const c=colorOf(t);
+            return `<span class="pdf-avail-chip" style="border-color:${c.color};color:${c.color}">${t}</span>`;
+          }).join('')
+        : `<span class="pdf-avail-none">⚠ Alles in gebruik — niets meer vrij</span>`;
+      availBlock = `<div class="pdf-avail"><span class="pdf-avail-lbl">✅ Nog beschikbaar (${availToday.length}/${relevant.size}):</span>${availChips}</div>`;
+    }
+
+    sections.push(`<div class="pdf-day-block">
+      <div class="pdf-day-hdr${isT?' today-day':''}">${icon} ${label}</div>
+      ${rows}
+      ${availBlock}
+    </div>`);
+  });
+
+  // ── Sectie logistiek (hoeveelheden) ──
+  const logiEvs = !want('logistiek') ? [] : filterEvents(events,'logistiek')
+    .filter(ev=>ev.startDate<=ds&&ev.endDate>=ds)
+    .map(ev=>({ev,q:Object.fromEntries(LOGI_ITEMS.map(it=>[it.key,logiGet(ev,ds,it.key)]))}))
+    .filter(x=>LOGI_ITEMS.some(it=>x.q[it.key]>0));
+  if(logiEvs.length){
+    const tot={}; LOGI_ITEMS.forEach(it=>tot[it.key]=logiEvs.reduce((s,x)=>s+x.q[it.key],0));
+    const rows=logiEvs.map(({ev,q})=>{
+      const chips=LOGI_ITEMS.filter(it=>q[it.key]>0).map(it=>
+        `<div class="pdf-camion-chip" style="background:#fff;color:${it.color};border-left:3px solid ${it.color}">${it.icon} ${it.label}: ${q[it.key]} ${it.unit}</div>`).join('');
+      return `<div class="pdf-camion-row">
+        <div class="pdf-camion-chips">${chips}</div>
+        <div class="pdf-camion-arrow">→</div>
+        <div class="pdf-camion-event">
+          <div class="pdf-camion-evname">${ev.name}</div>
+          ${ev.location?`<div class="pdf-camion-evmeta">📍 ${ev.location}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    const totStr=LOGI_ITEMS.map(it=>{const over=tot[it.key]>it.max;return `${it.icon} ${tot[it.key]}/${it.max} ${it.unit}${over?' ⚠️':''}`;}).join('   ·   ');
+    sections.push(`<div class="pdf-day-block">
+      <div class="pdf-day-hdr${isT?' today-day':''}">📦 Logistiek</div>
+      <div class="pdf-logi-tot">Dagtotaal: ${totStr}</div>
+      ${rows}
+    </div>`);
+  }
+
+  const emptyMsg = only
+    ? `Geen ${(ONLY_LBL[only]||'').toLowerCase()} ingepland op deze dag`
+    : 'Niets ingepland op deze dag';
+  document.getElementById('pdf-body').innerHTML =
+    `<div class="pdf-week-title">📅 Dagoverzicht${only?` ${ONLY_LBL[only]||''}`:''} — ${dayLbl}${isT?' · Vandaag':''}</div>
+     <div class="pdf-week-sub">Señor Snacks · ${new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+     ${sections.join('') || `<div class="pdf-no-events" style="padding:40px;text-align:center;font-size:1rem;border-radius:5px;">${emptyMsg}</div>`}`;
   document.getElementById('pdf-overlay').classList.remove('hidden');
 }
 
