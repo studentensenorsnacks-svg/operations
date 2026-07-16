@@ -24,7 +24,9 @@ interface TokenPayload {
   exp: number;
 }
 
-export const SESSION_COOKIE = 'ep_session';
+// LET OP: moet exact '__session' heten — Firebase Hosting stript álle andere
+// cookies vóór het verzoek de backend (Cloud Run) bereikt.
+export const SESSION_COOKIE = '__session';
 export const SESSION_TTL_SECONDS = 12 * 60 * 60; // 12 uur
 
 const enc = new TextEncoder();

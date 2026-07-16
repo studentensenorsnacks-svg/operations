@@ -14,6 +14,7 @@ const links: { href: string; label: string }[] = [
   { href: '/apparaten', label: 'Apparaten' },
   { href: '/terminals', label: 'Terminals' },
   { href: '/koppeling', label: 'Event-koppeling' },
+  { href: '/event-setup', label: 'Event-setup' },
   { href: '/sectoren-nieuw', label: 'Locatie toevoegen' },
   { href: '/voorraad', label: 'Voorraad' },
   { href: '/producten', label: 'Producten & sectoren' },
