@@ -304,8 +304,15 @@ textarea{resize:vertical;min-height:70px;}
 .evd-sec-count{font-family:var(--font);font-size:0.7rem;font-weight:700;color:var(--muted);background:#f0f0f0;padding:1px 9px;border-radius:10px;}
 .evd-list{display:flex;flex-direction:column;gap:4px;}
 .evd-item{display:flex;align-items:center;gap:9px;font-size:0.88rem;font-weight:600;padding:6px 10px;background:#f7f7f7;border-radius:5px;border-left:3px solid var(--border);flex-wrap:wrap;}
-.evd-term-sel{margin-left:auto;font-size:0.75rem;font-weight:700;border:1px solid #cbd5e1;border-radius:4px;padding:3px 6px;background:#fff;color:var(--text);cursor:pointer;font-family:inherit;max-width:200px;}
-.evd-term-sel:focus{outline:2px solid #0d9488;border-color:#0d9488;}
+.evd-ts-wrap{margin-left:auto;position:relative;}
+.evd-ts-btn{font-size:0.75rem;font-weight:700;border:1px solid #cbd5e1;border-radius:4px;padding:3px 8px;background:#fff;color:var(--text);cursor:pointer;font-family:inherit;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.evd-ts-btn.empty{color:var(--muted);font-weight:600;}
+.evd-ts-btn:hover{border-color:#0d9488;}
+.evd-ts-panel{position:absolute;right:0;top:calc(100% + 4px);z-index:60;background:#fff;border:1px solid #d0d0d0;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.18);padding:5px;display:none;max-height:250px;overflow-y:auto;min-width:200px;}
+.evd-ts-wrap.open .evd-ts-panel{display:block;}
+.evd-ts-opt{display:flex;align-items:center;gap:7px;font-size:0.78rem;font-weight:600;padding:4px 7px;border-radius:4px;cursor:pointer;white-space:nowrap;}
+.evd-ts-opt:hover{background:#f0fdfa;}
+.evd-ts-opt input{cursor:pointer;accent-color:#0d9488;}
 .evd-idot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 .evd-link{margin-left:auto;font-size:0.78rem;font-weight:700;color:#0891b2;}
 .evd-empty{font-size:0.82rem;color:#aaa;font-style:italic;padding:3px 2px;}
@@ -1458,19 +1465,44 @@ function terminalLinkSelect(ev, terminal){
     + `<datalist id="${dlId}">${opts}</datalist>`;
 }
 // Keuzelijst in de event-detailpopup: waar staat deze betaalterminal?
-// Zelfde opslag als de terminal-chip (ev.terminalTruck[terminal]).
+// Meerdere keuzes mogelijk (vinkjes) — opgeslagen als "Friet + Hamburger"
+// in ev.terminalTruck[terminal], zelfde opslag als de terminal-chip.
 function termUseSelect(ev, terminal){
   const cur = (ev.terminalTruck && ev.terminalTruck[terminal]) || '';
+  const parts = cur ? cur.split(/\s+\+\s+/).map(s=>s.trim()).filter(Boolean) : [];
   const tj = s=>s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  const ea = s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-  // Bestaande vrije waarde (bv. oude wagen-koppeling) mee tonen zodat die niet verdwijnt.
-  const opts = TERMINAL_USES.includes(cur) || !cur ? TERMINAL_USES : [cur].concat(TERMINAL_USES);
-  return `<select class="evd-term-sel" onclick="event.stopPropagation()" `
-    + `onchange="setTerminalTruck(${ev.id},'${tj(terminal)}',this.value)">`
-    + `<option value="">— waarvoor? —</option>`
-    + opts.map(o=>`<option value="${ea(o)}"${o===cur?' selected':''}>${o}</option>`).join('')
-    + `</select>`;
+  const ea = s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  // Bestaande vrije waarden (bv. oude wagen-koppeling) mee tonen zodat die niet verdwijnen.
+  const opts = TERMINAL_USES.slice();
+  parts.forEach(p=>{ if(!opts.includes(p)) opts.unshift(p); });
+  const boxes = opts.map(o=>`<label class="evd-ts-opt"><input type="checkbox" value="${ea(o)}"${parts.includes(o)?' checked':''} `
+    + `onclick="event.stopPropagation()" onchange="termUseApply(${ev.id},'${tj(terminal)}',this.closest('.evd-ts-panel'))">${ea(o)}</label>`).join('');
+  return `<span class="evd-ts-wrap" onclick="event.stopPropagation()">`
+    + `<button type="button" class="evd-ts-btn${cur?'':' empty'}" onclick="termUseToggleOpen(this)">${cur?ea(cur):'— waarvoor? —'} ▾</button>`
+    + `<div class="evd-ts-panel">${boxes}</div>`
+    + `</span>`;
 }
+function termUseToggleOpen(btn){
+  const wrap=btn.parentElement;
+  const was=wrap.classList.contains('open');
+  document.querySelectorAll('.evd-ts-wrap.open').forEach(w=>w.classList.remove('open'));
+  if(!was) wrap.classList.add('open');
+}
+function termUseApply(evId, terminal, panel){
+  if(!panel) return;
+  const ev=events.find(e=>e.id===evId); if(!ev) return;
+  if(!ev.terminalTruck || typeof ev.terminalTruck!=='object' || Array.isArray(ev.terminalTruck)) ev.terminalTruck={};
+  const val=[...panel.querySelectorAll('input:checked')].map(c=>c.value).join(' + ');
+  if(val) ev.terminalTruck[terminal]=val; else delete ev.terminalTruck[terminal];
+  save(); renderWeek();
+  // Popup niet herbouwen (dan klapt het lijstje dicht) — enkel de knoptekst bijwerken.
+  const btn=panel.parentElement.querySelector('.evd-ts-btn');
+  if(btn){ btn.textContent=(val||'— waarvoor? —')+' ▾'; btn.classList.toggle('empty', !val); }
+}
+// Klik buiten het keuzelijstje → dichtklappen.
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.evd-ts-wrap')) document.querySelectorAll('.evd-ts-wrap.open').forEach(w=>w.classList.remove('open'));
+});
 function showToast(msg){const t=document.getElementById('c-toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),6000);}
 
 // ── WEEK RENDER ────────────────────────────────────────

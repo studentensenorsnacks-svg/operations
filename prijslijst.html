@@ -145,8 +145,8 @@ body{font-family:var(--body);background:#e8e8ea;color:var(--ink);display:flex;fl
 .p-sec .acc{width:6px;height:52px;background:var(--red);border-radius:3px;flex-shrink:0;}
 .p-sec h2{font-family:var(--display);text-transform:uppercase;font-size:calc(64px * var(--pfs,1));line-height:.88;color:var(--black);}
 .p-menu{display:flex;flex-direction:column;border-top:1px solid rgba(0,0,0,.1);margin-top:10px;}
-.p-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid rgba(0,0,0,.07);}
-.p-item.feat{padding:24px 0;}
+.p-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:calc(24px * var(--rfs,1)) 0;border-bottom:1px solid rgba(0,0,0,.07);}
+.p-item.feat{padding:calc(24px * var(--rfs,1)) 0;}
 .p-item.feat .p-name{font-size:calc(38px * var(--pfs,1) * var(--nfs,1));}
 .p-left{flex:1;display:flex;flex-direction:column;gap:4px;}
 .p-name{font-family:var(--body);font-size:calc(34px * var(--pfs,1) * var(--nfs,1));font-weight:900;letter-spacing:.01em;text-transform:uppercase;line-height:1.1;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;}
@@ -359,9 +359,9 @@ async function init(){
 function normalize(l){
   l=JSON.parse(JSON.stringify(l||{}));
   l.id=l.id||uid(); l.name=l.name||'Naamloos'; l.mode=l.mode||'token';
-  l.rate=(l.rate==null?3:l.rate); l.orientation=l.orientation||'portrait'; l.eventLogo=l.eventLogo||''; l.showBanner=!!l.showBanner;
+  l.rate=(l.rate==null?3:l.rate); l.orientation=l.orientation||'portrait'; l.eventLogo=l.eventLogo||''; l.showBanner=!!l.showBanner; l.logoHide=!!l.logoHide;
   l.categories=(l.categories||[]).map(c=>({
-    id:c.id||uid(), title:c.title||'', featured:!!c.featured, fontScale:(c.fontScale||1), smakScale:(c.smakScale||1),
+    id:c.id||uid(), title:c.title||'', featured:!!c.featured, fontScale:(c.fontScale||1), smakScale:(c.smakScale||1), smakHide:!!c.smakHide, rowScale:(c.rowScale||1),
     items:(c.items||[]).map(it=>({id:it.id||uid(),name:it.name||'',note:it.note||'',sub:it.sub||'',tokens:(it.tokens==null?2:it.tokens),euro:(it.euro==null?null:it.euro),veg:!!it.veg,halal:!!it.halal,nameScale:(it.nameScale||it.fontScale||1),noteScale:(it.noteScale||1),subScale:(it.subScale||1)}))
   }));
   return l;
@@ -414,6 +414,7 @@ function renderEditor(){
         </div>
         <input type="file" id="evLogoInput" accept="image/*" style="display:none" onchange="uploadEventLogo(this.files[0])">
         <button class="btn btn-light btn-sm" onclick="document.getElementById('evLogoInput').click()">Upload event-logo</button>
+        <button class="btn btn-light btn-sm" title="${CUR.logoHide?'Het logo-vak weer tonen rechtsboven op de pagina':'Het logo-vak volledig van de pagina halen'}" onclick="toggleEventLogo()">${CUR.logoHide?'👁 Logo aanzetten':'🚫 Logo uitzetten'}</button>
         ${CUR.eventLogo?'<button class="btn-icon danger" title="Verwijder logo" onclick="removeEventLogo()">✕</button>':''}
       </div>
     </div>
@@ -441,6 +442,13 @@ function renderEditor(){
           <button class="btn-icon" onclick="smakFont(${ci},-1)">A−</button>
           <span class="fs-val">${Math.round((c.smakScale||1)*100)}%</span>
           <button class="btn-icon" onclick="smakFont(${ci},1)">A+</button>
+        </span>
+        <button class="btn-icon${c.smakHide?' danger':''}" title="${c.smakHide?"'SMAKELIJK' weer tonen op deze pagina":"'SMAKELIJK' weglaten van deze pagina"}" onclick="toggleSmak(${ci})">${c.smakHide?'🚫':'👁'}</button>
+        <span class="ct-lbl">Regelafstand</span>
+        <span class="fs-grp" title="Witruimte tussen de productlijnen — kleiner = plaats voor grotere tekst">
+          <button class="btn-icon" onclick="rowSpace(${ci},-1)">−</button>
+          <span class="fs-val">${Math.round((c.rowScale||1)*100)}%</span>
+          <button class="btn-icon" onclick="rowSpace(${ci},1)">+</button>
         </span>
       </div>
       <div class="items">`;
@@ -523,15 +531,15 @@ function pagePreview(cat){
   return `<div class="page${euroOnly}">
     <div class="p-header">
       <div class="hl"><div class="evt">OFFICIEEL EVENTMENU</div><img class="p-logo" src="${BRAND_LOGO}" alt="Señor Snacks"></div>
-      <div class="evt-badge${CUR.eventLogo?' has-logo':''}">${evLogo}</div>
+      ${CUR.logoHide?'':`<div class="evt-badge${CUR.eventLogo?' has-logo':''}">${evLogo}</div>`}
     </div>
     ${CUR.showBanner?bannerHTML():''}
-    <div class="p-body" style="--pfs:${cat.fontScale||1}">
+    <div class="p-body" style="--pfs:${cat.fontScale||1};--rfs:${cat.rowScale||1}">
       <div class="p-sec"><div class="acc"></div><h2>${esc(cat.title)}</h2></div>
       <div class="p-menu">${items}</div>
     </div>
     <div class="p-foot">
-      <div class="p-smak" style="--smak:${cat.smakScale||1}"><div class="word">SMAKELIJK</div><div class="sub">Taste <span class="dot">•</span> Enjoy <span class="dot">•</span> Smile</div></div>
+      ${cat.smakHide?'':`<div class="p-smak" style="--smak:${cat.smakScale||1}"><div class="word">SMAKELIJK</div><div class="sub">Taste <span class="dot">•</span> Enjoy <span class="dot">•</span> Smile</div></div>`}
       <div class="p-footbar">
         <div class="brand"><img src="${BRAND_LOGO}" alt=""><span class="bl">SEÑOR SNACKS</span></div>
         <div class="info">Winkelom 87c · 2440 Geel · <span class="red">www.senorsnacks.be</span><br>BE 0465570997</div>
@@ -558,6 +566,8 @@ function zoomStep(d){ ZOOM=Math.min(0.6,Math.max(0.12,+(ZOOM+d*0.04).toFixed(2))
 function setName(v){ CUR.name=v; renderPreview(); renderListSelect(); scheduleSave(); }
 function uploadEventLogo(file){ if(!file) return; fileToScaledDataURL(file,420,url=>{ CUR.eventLogo=url; renderEditor(); renderPreview(); scheduleSave(); toast('Event-logo ingesteld'); }); }
 function removeEventLogo(){ CUR.eventLogo=''; renderEditor(); renderPreview(); scheduleSave(); }
+// Logo-vak (rechtsboven op de pagina) volledig aan/uit — geldt voor de hele lijst.
+function toggleEventLogo(){ CUR.logoHide=!CUR.logoHide; renderEditor(); renderPreview(); scheduleSave(); toast(CUR.logoHide?'Logo-vak verborgen':'Logo-vak weer zichtbaar'); }
 function fileToScaledDataURL(file,max,cb){ const rd=new FileReader(); rd.onload=e=>{ const img=new Image(); img.onload=()=>{ let w=img.width,h=img.height; const s=Math.min(1,max/Math.max(w,h)); const c=document.createElement('canvas'); c.width=Math.round(w*s); c.height=Math.round(h*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height); cb(c.toDataURL('image/png')); }; img.src=e.target.result; }; rd.readAsDataURL(file); }
 function setRate(v){ CUR.rate=parseNum(v); renderPreview(); renderEditor(); scheduleSave(); }
 function setShowBanner(v){ CUR.showBanner=!!v; renderPreview(); scheduleSave(); }
@@ -602,6 +612,23 @@ function itemFont(ci,ii,field,d){
   if(nv===old){ if(d>0) toast(A3_MSG); return; }
   it[k]=nv; renderEditor(); renderPreview();
   if(d>0 && pageOverflows(ci)){ it[k]=old; renderEditor(); renderPreview(); toast(A3_MSG); return; }
+  scheduleSave();
+}
+// Regelafstand: witruimte tussen de productlijnen (24px × schaal). Kleiner
+// zetten mag altijd; groter zetten wordt door de A3-bewaking tegengehouden.
+function rowSpace(ci,d){
+  const c=CUR.categories[ci]; const old=c.rowScale||1;
+  const nv=Math.min(2, Math.max(0.1, +(old+d*0.1).toFixed(2)));
+  if(nv===old){ if(d>0) toast(A3_MSG); return; }
+  c.rowScale=nv; renderEditor(); renderPreview();
+  if(d>0 && pageOverflows(ci)){ c.rowScale=old; renderEditor(); renderPreview(); toast(A3_MSG); return; }
+  scheduleSave();
+}
+function toggleSmak(ci){
+  const c=CUR.categories[ci]; c.smakHide=!c.smakHide;
+  renderEditor(); renderPreview();
+  // Weer tonen kan de pagina laten overlopen → dan verborgen laten.
+  if(!c.smakHide && pageOverflows(ci)){ c.smakHide=true; renderEditor(); renderPreview(); toast(A3_MSG); return; }
   scheduleSave();
 }
 function smakFont(ci,d){
