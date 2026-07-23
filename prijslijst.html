@@ -188,6 +188,24 @@ textarea.imp{min-height:200px;font-family:ui-monospace,monospace;font-size:12px;
 .drop{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;color:#888;font-size:13px;margin-bottom:14px;cursor:pointer;}
 .drop:hover{border-color:var(--red);color:var(--red);}
 
+/* ---------- lijst-kiezer ---------- */
+.list-btn{font-family:var(--body);font-weight:700;font-size:14px;padding:8px 12px;border-radius:9px;border:none;background:#26262b;color:#fff;min-width:180px;max-width:260px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:space-between;}
+.list-btn:hover{background:#333338;}
+.list-btn span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.list-btn .chev{font-size:11px;color:#999;flex-shrink:0;}
+.lp-search{position:relative;margin-bottom:12px;}
+.lp-search input{font-family:var(--body);font-size:14px;padding:11px 12px 11px 38px;border:1px solid var(--line);border-radius:10px;background:#fafafa;width:100%;}
+.lp-search input:focus{outline:none;border-color:var(--red);background:#fff;}
+.lp-search .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#aaa;pointer-events:none;}
+.lp-rows{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:8px;}
+.lp-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:#fff;transition:border-color .1s,background .1s;text-align:left;}
+.lp-row:hover{border-color:var(--red);background:#fff7f7;}
+.lp-row.cur{border-color:var(--red);background:#fff2f2;}
+.lp-row .nm{font-weight:800;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lp-row .meta{font-size:12px;color:#999;white-space:nowrap;flex-shrink:0;text-align:right;line-height:1.5;}
+.lp-row .badge{font-size:10px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--red);border-radius:6px;padding:3px 7px;flex-shrink:0;}
+.lp-none{padding:30px 10px;text-align:center;color:#999;font-size:14px;}
+
 .empty{padding:60px 20px;text-align:center;color:#999;}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:12px 20px;border-radius:11px;font-weight:700;font-size:14px;z-index:80;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(-4px);}
@@ -200,7 +218,7 @@ textarea.imp{min-height:200px;font-family:ui-monospace,monospace;font-size:12px;
 <div class="topbar">
   <a href="dashboard.html" class="home" title="Terug naar dashboard">🏠</a>
   <div class="brand"><img id="topLogoDark" alt="Señor Snacks" style="background:#000;border-radius:5px;padding:3px 6px;height:26px;"> PRIJSLIJSTEN</div>
-  <select id="listSelect" onchange="switchList(this.value)"></select>
+  <button class="list-btn" id="listBtn" onclick="listPickerOpen()" title="Kies een prijslijst"><span id="listBtnName">…</span><span class="chev">▾</span></button>
   <button class="btn btn-ghost btn-sm" onclick="newList()">+ Nieuwe lijst</button>
   <button class="btn btn-ghost btn-sm" onclick="duplicateList()">⧉ Dupliceer</button>
   <button class="btn btn-ghost btn-sm" onclick="importOpen()">⤒ Importeer</button>
@@ -241,6 +259,22 @@ textarea.imp{min-height:200px;font-family:ui-monospace,monospace;font-size:12px;
     <div class="modal-actions">
       <button class="btn btn-light" onclick="importClose()">Annuleren</button>
       <button class="btn btn-red" onclick="importRun()">Importeren</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIJST-KIEZER MODAL -->
+<div class="modal-bg" id="listModal" onclick="if(event.target===this)listPickerClose()">
+  <div class="modal">
+    <h3>Prijslijsten</h3>
+    <div class="lp-search">
+      <span class="ic">🔍</span>
+      <input type="text" id="lpSearch" placeholder="Zoek een prijslijst…" oninput="listPickerRender()" autocomplete="off">
+    </div>
+    <div class="lp-rows" id="lpRows"></div>
+    <div class="modal-actions">
+      <button class="btn btn-light" onclick="listPickerClose()">Sluiten</button>
+      <button class="btn btn-red" onclick="listPickerClose();newList()">+ Nieuwe lijst</button>
     </div>
   </div>
 </div>
@@ -384,11 +418,37 @@ async function saveNow(){
 /* ==================== RENDER ALL ==================== */
 function renderAll(){ renderListSelect(); renderEditor(); renderPreview(); }
 function renderListSelect(){
-  const sel=document.getElementById('listSelect'); if(!sel) return;
-  const ids=Object.keys(LISTS).sort((a,b)=>(LISTS[b].updatedAt||0)-(LISTS[a].updatedAt||0));
-  sel.innerHTML=ids.map(id=>`<option value="${id}" ${CUR&&id===CUR.id?'selected':''}>${escAttr(LISTS[id].name||'Naamloos')}</option>`).join('');
-  if(CUR && !ids.includes(CUR.id)) sel.insertAdjacentHTML('afterbegin',`<option value="${CUR.id}" selected>${escAttr(CUR.name)}</option>`);
+  const btn=document.getElementById('listBtnName'); if(!btn) return;
+  btn.textContent=(CUR&&CUR.name)||'Kies lijst…';
+  if(document.getElementById('listModal').classList.contains('on')) listPickerRender();
 }
+function listPickerOpen(){
+  const inp=document.getElementById('lpSearch'); inp.value='';
+  document.getElementById('listModal').classList.add('on');
+  listPickerRender();
+  setTimeout(()=>inp.focus(),50);
+}
+function listPickerClose(){ document.getElementById('listModal').classList.remove('on'); }
+function listPickerRender(){
+  const q=(document.getElementById('lpSearch').value||'').trim().toLowerCase();
+  const ids=Object.keys(LISTS).sort((a,b)=>(LISTS[b].updatedAt||0)-(LISTS[a].updatedAt||0));
+  const rows=ids
+    .filter(id=>!q || (LISTS[id].name||'Naamloos').toLowerCase().includes(q))
+    .map(id=>{
+      const l=LISTS[id];
+      const cats=(l.categories||[]).length;
+      const items=(l.categories||[]).reduce((n,c)=>n+((c.items||[]).length),0);
+      const d=l.updatedAt?new Date(l.updatedAt).toLocaleDateString('nl-BE',{day:'numeric',month:'short',year:'numeric'}):'';
+      const cur=CUR&&id===CUR.id;
+      return `<div class="lp-row${cur?' cur':''}" onclick="listPickerPick('${id}')">
+        <div class="nm">${esc(l.name||'Naamloos')}</div>
+        ${cur?'<span class="badge">ACTIEF</span>':''}
+        <div class="meta">${cats} pagina${cats===1?'':'’s'} · ${items} items${d?'<br>'+d:''}</div>
+      </div>`;
+    }).join('');
+  document.getElementById('lpRows').innerHTML=rows||`<div class="lp-none">Geen prijslijsten gevonden${q?' voor “'+esc(q)+'”':''}.</div>`;
+}
+function listPickerPick(id){ listPickerClose(); if(!CUR||id!==CUR.id) switchList(id); }
 
 /* ==================== EDITOR ==================== */
 function renderEditor(){
@@ -560,7 +620,7 @@ function applyScalerHeights(){
     s.style.width=(pg.offsetWidth*ZOOM)+'px';
   });
 }
-function zoomStep(d){ ZOOM=Math.min(0.6,Math.max(0.12,+(ZOOM+d*0.04).toFixed(2))); document.getElementById('zoomLbl').textContent=Math.round(ZOOM*100)+'%'; renderPreview(); }
+function zoomStep(d){ ZOOM=Math.min(1,Math.max(0.12,+(ZOOM+d*0.04).toFixed(2))); document.getElementById('zoomLbl').textContent=Math.round(ZOOM*100)+'%'; renderPreview(); }
 
 /* ==================== EDIT ACTIONS ==================== */
 function setName(v){ CUR.name=v; renderPreview(); renderListSelect(); scheduleSave(); }

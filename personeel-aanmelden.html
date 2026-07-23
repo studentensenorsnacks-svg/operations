@@ -80,6 +80,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 /* VELDEN */
 .field{margin-bottom:18px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+@media (max-width:560px){.field-row{grid-template-columns:1fr;}}
 .field:last-child{margin-bottom:0;}
 .field label.q{display:block;font-size:.95rem;font-weight:600;margin-bottom:8px;}
 .req{color:var(--red);font-weight:700;margin-left:2px;}
@@ -89,6 +91,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .field input:focus,.field textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(232,0,29,.12);}
 .field .hint{font-size:.78rem;color:var(--text3);margin-top:6px;}
 .field input.invalid{border-color:var(--red);background:#fdecec;}
+.opts.invalid{outline:2px solid var(--red);outline-offset:4px;border-radius:10px;}
 
 /* RADIO / CHECK OPTIES */
 .opts{display:flex;flex-direction:column;gap:8px;}
@@ -166,12 +169,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
           <label class="q" for="f-email">E-mail <span class="req">*</span></label>
           <input type="email" id="f-email" name="email" autocomplete="email" placeholder="naam@voorbeeld.be" inputmode="email">
         </div>
-        <div class="field">
-          <label class="q" for="f-adres">Adres</label>
-          <input type="text" id="f-adres" name="adres" autocomplete="street-address" placeholder="Straat nr, postcode gemeente">
+        <div class="field-row">
+          <div class="field">
+            <label class="q" for="f-straat">Straatnaam <span class="req">*</span></label>
+            <input type="text" id="f-straat" name="straat" autocomplete="address-line1" placeholder="bv. Kerkstraat">
+          </div>
+          <div class="field">
+            <label class="q" for="f-huisnr">Huisnummer <span class="req">*</span></label>
+            <input type="text" id="f-huisnr" name="huisnr" placeholder="bv. 12A">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="q" for="f-postcode">Postcode <span class="req">*</span></label>
+            <input type="text" id="f-postcode" name="postcode" autocomplete="postal-code" placeholder="bv. 2440" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label class="q" for="f-gemeente">Gemeente <span class="req">*</span></label>
+            <input type="text" id="f-gemeente" name="gemeente" autocomplete="address-level2" placeholder="bv. Geel">
+          </div>
         </div>
         <div class="field">
-          <label class="q" for="f-gsm">GSM nummer</label>
+          <label class="q" for="f-gsm">GSM nummer <span class="req">*</span></label>
           <input type="tel" id="f-gsm" name="gsm" autocomplete="tel" placeholder="bv. 0470 12 34 56" inputmode="tel">
         </div>
       </div>
@@ -182,7 +201,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="section-sub">Nodig voor de juiste loonberekening.</div>
 
         <div class="field">
-          <label class="q">Statuut</label>
+          <label class="q">Statuut <span class="req">*</span></label>
           <div class="opts row" data-radio="statuut">
             <label class="opt"><input type="radio" name="statuut" value="Flexi"><span>Flexi</span></label>
             <label class="opt"><input type="radio" name="statuut" value="Student"><span>Student</span></label>
@@ -191,7 +210,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </div>
 
         <div class="field">
-          <label class="q">Gezinssituatie</label>
+          <label class="q">Gezinssituatie <span class="req">*</span></label>
           <div class="opts" data-radio="gezinssituatie">
             <label class="opt"><input type="radio" name="gezinssituatie" value="Ongehuwd"><span>Ongehuwd</span></label>
             <label class="opt"><input type="radio" name="gezinssituatie" value="Gehuwd"><span>Gehuwd</span></label>
@@ -203,12 +222,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         </div>
 
         <div class="field">
-          <label class="q" for="f-kinderen">Aantal kinderen ten laste</label>
+          <label class="q" for="f-kinderen">Aantal kinderen ten laste <span class="req">*</span></label>
           <input type="number" id="f-kinderen" name="kinderenTenLaste" min="0" step="1" placeholder="bv. 0" inputmode="numeric">
         </div>
 
         <div class="field">
-          <label class="q">Partner ten laste</label>
+          <label class="q">Partner ten laste <span class="req">*</span></label>
           <div class="opts row" data-radio="partnerTenLaste">
             <label class="opt"><input type="radio" name="partnerTenLaste" value="Ja"><span>Ja</span></label>
             <label class="opt"><input type="radio" name="partnerTenLaste" value="Nee"><span>Nee</span></label>
@@ -222,20 +241,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div class="section-sub">Voor je officiële inschrijving en de uitbetaling van je loon.</div>
 
         <div class="field">
-          <label class="q" for="f-rijksregister">Rijksregisternummer</label>
+          <label class="q" for="f-rijksregister">Rijksregisternummer <span class="req">*</span></label>
           <input type="text" id="f-rijksregister" name="rijksregister" placeholder="bv. 90.01.01-123.45" inputmode="numeric">
           <div class="hint">Staat op de achterkant van je identiteitskaart (11 cijfers).</div>
         </div>
         <div class="field">
-          <label class="q" for="f-id">Identiteitskaartnummer</label>
+          <label class="q" for="f-id">Identiteitskaartnummer <span class="req">*</span></label>
           <input type="text" id="f-id" name="identiteitskaart" placeholder="bv. 591-1234567-89">
         </div>
         <div class="field">
-          <label class="q" for="f-iban">IBAN (bankrekening)</label>
+          <label class="q" for="f-iban">IBAN (bankrekening) <span class="req">*</span></label>
           <input type="text" id="f-iban" name="iban" placeholder="BE00 0000 0000 0000" autocomplete="off" spellcheck="false">
         </div>
         <div class="field">
-          <label class="q" for="f-nationaliteit">Nationaliteit</label>
+          <label class="q" for="f-nationaliteit">Nationaliteit <span class="req">*</span></label>
           <input type="text" id="f-nationaliteit" name="nationaliteit" autocomplete="country-name" placeholder="bv. Belg">
         </div>
       </div>
@@ -281,6 +300,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 // ── Visuele feedback op de keuze-opties ────────────────────────
 document.querySelectorAll('.opts').forEach(group=>{
   group.addEventListener('change',()=>{
+    group.classList.remove('invalid');
     group.querySelectorAll('.opt').forEach(o=>{
       const inp=o.querySelector('input');
       o.classList.toggle('checked', inp.checked);
@@ -312,17 +332,54 @@ form.addEventListener('submit', async (ev)=>{
   const btn=document.getElementById('submit-btn');
   errEl.textContent='';
 
-  // Validatie van de verplichte velden (zoals het Google-formulier)
+  // Validatie: alle velden zijn verplicht
   const naam=val('naamVoornaam');
   const email=val('email');
   const akkoord=radioVal('akkoord');
-  const naamEl=document.getElementById('f-naam');
-  const emailEl=document.getElementById('f-email');
-  [naamEl,emailEl].forEach(e=>e.classList.remove('invalid'));
+  document.querySelectorAll('.field input.invalid').forEach(e=>e.classList.remove('invalid'));
+  document.querySelectorAll('.opts.invalid').forEach(e=>e.classList.remove('invalid'));
 
-  if(!naam){ naamEl.classList.add('invalid'); errEl.textContent='Vul je naam en voornaam in.'; naamEl.focus(); return; }
-  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-    emailEl.classList.add('invalid'); errEl.textContent='Vul een geldig e-mailadres in.'; emailEl.focus(); return;
+  const showErr=(el,msg)=>{
+    el.classList.add('invalid');
+    errEl.textContent=msg;
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    if(el.focus) el.focus({preventScroll:true});
+  };
+
+  const TEXT_REQ=[
+    ['f-naam','Vul je naam en voornaam in.'],
+    ['f-email','Vul je e-mailadres in.'],
+    ['f-straat','Vul je straatnaam in.'],
+    ['f-huisnr','Vul je huisnummer in.'],
+    ['f-postcode','Vul je postcode in.'],
+    ['f-gemeente','Vul je gemeente in.'],
+    ['f-gsm','Vul je GSM nummer in.'],
+    ['f-kinderen','Vul het aantal kinderen ten laste in (0 als je er geen hebt).'],
+    ['f-rijksregister','Vul je rijksregisternummer in.'],
+    ['f-id','Vul je identiteitskaartnummer in.'],
+    ['f-iban','Vul je IBAN (bankrekening) in.'],
+    ['f-nationaliteit','Vul je nationaliteit in.']
+  ];
+  for(const [id,msg] of TEXT_REQ){
+    const el=document.getElementById(id);
+    if(!el.value.trim()){ showErr(el,msg); return; }
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    showErr(document.getElementById('f-email'),'Vul een geldig e-mailadres in.'); return;
+  }
+  const RADIO_REQ=[
+    ['statuut','Kies je statuut.'],
+    ['gezinssituatie','Kies je gezinssituatie.'],
+    ['partnerTenLaste','Geef aan of je partner ten laste is.']
+  ];
+  for(const [name,msg] of RADIO_REQ){
+    if(!radioVal(name)){
+      const grp=document.querySelector('[data-radio="'+name+'"]');
+      grp.classList.add('invalid');
+      errEl.textContent=msg;
+      grp.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
   }
   if(akkoord!=='Akkoord'){
     errEl.textContent='Je moet akkoord gaan met de verklaring om je aan te melden.';
@@ -333,7 +390,11 @@ form.addEventListener('submit', async (ev)=>{
   const record={
     naamVoornaam:     naam,
     email:            email,
-    adres:            val('adres'),
+    straat:           val('straat'),
+    huisnr:           val('huisnr'),
+    postcode:         val('postcode'),
+    gemeente:         val('gemeente'),
+    adres:            [val('straat')+' '+val('huisnr'), val('postcode')+' '+val('gemeente')].map(s=>s.trim()).filter(Boolean).join(', '),
     gsm:              val('gsm'),
     statuut:          radioVal('statuut'),
     gezinssituatie:   radioVal('gezinssituatie'),

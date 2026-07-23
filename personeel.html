@@ -118,6 +118,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .f input,.f select,.f textarea{width:100%;border:1px solid var(--border2);border-radius:8px;padding:9px 11px;
   font-size:.95rem;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color .12s;}
 .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--red);}
+.f input.invalid,.f select.invalid{border-color:var(--red);background:#fff5f5;}
 .f textarea{min-height:72px;resize:vertical;}
 .f.full{grid-column:1/-1;}
 .divider{height:1px;background:var(--border);margin:22px 0;}
@@ -252,7 +253,7 @@ function filteredPeople(){
       const st=p.status||'nieuw';
       if(curFilter!=='alle' && st!==curFilter) return false;
       if(q){
-        const hay=[p.naamVoornaam,p.email,p.gsm,p.adres,p.straat,p.postcode,p.nationaliteit].join(' ').toLowerCase();
+        const hay=[p.naamVoornaam,p.email,p.gsm,p.adres,p.straat,p.postcode,p.gemeente,p.nationaliteit].join(' ').toLowerCase();
         if(!hay.includes(q)) return false;
       }
       return true;
@@ -291,7 +292,7 @@ function renderList(){
 
 // ── DETAIL ─────────────────────────────────────────────────────
 function blank(){
-  return {id:'new_'+Date.now(),naamVoornaam:'',email:'',straat:'',huisnr:'',postcode:'',gsm:'',statuut:'',gezinssituatie:'',
+  return {id:'new_'+Date.now(),naamVoornaam:'',email:'',straat:'',huisnr:'',postcode:'',gemeente:'',gsm:'',statuut:'',gezinssituatie:'',
     kinderenTenLaste:'',partnerTenLaste:'',rijksregister:'',identiteitskaart:'',iban:'',nationaliteit:'',
     akkoord:false,status:'nieuw',bron:'manueel',opmerkingen:'',submittedAt:Date.now()};
 }
@@ -301,7 +302,7 @@ function openDetail(id){
   if(!src) return;
   editing=JSON.parse(JSON.stringify(src)); editing.id=id;
   // Oud enkel-veld 'adres' → opsplitsen zodat het niet verdwijnt uit het formulier.
-  if(!editing.straat && !editing.huisnr && !editing.postcode && editing.adres){
+  if(!editing.straat && !editing.huisnr && !editing.postcode && !editing.gemeente && editing.adres){
     Object.assign(editing, splitLegacyAdres(editing.adres));
   }
   renderDetail();
@@ -317,19 +318,22 @@ function upd(k,v){ if(editing) editing[k]=v; }
 // Adres samenstellen uit de losse velden (met terugval op het oude enkel-veld).
 function adresText(p){
   const s=[(p.straat||'').trim(),(p.huisnr||'').trim()].filter(Boolean).join(' ');
-  return [s,(p.postcode||'').trim()].filter(Boolean).join(', ') || (p.adres||'');
+  const pg=[(p.postcode||'').trim(),(p.gemeente||'').trim()].filter(Boolean).join(' ');
+  return [s,pg].filter(Boolean).join(', ') || (p.adres||'');
 }
 // Best-effort opsplitsen van een oud adres "Straatnaam 12, 2440 Geel".
 function splitLegacyAdres(a){
   a=(a||'').trim();
-  const out={straat:'',huisnr:'',postcode:''};
+  const out={straat:'',huisnr:'',postcode:'',gemeente:''};
   if(!a) return out;
   const parts=a.split(',');
   const first=(parts[0]||'').trim();
   const m=first.match(/^(.*?)[\s,]+(\d+\s*[a-zA-Z]?)\s*$/);
   if(m){ out.straat=m[1].trim(); out.huisnr=m[2].replace(/\s+/g,''); } else out.straat=first;
-  const pm=parts.slice(1).join(' ').match(/\b(\d{4})\b/);
-  if(pm) out.postcode=pm[1];
+  const rest=parts.slice(1).join(' ');
+  const pm=rest.match(/\b(\d{4})\b\s*(.*)$/);
+  if(pm){ out.postcode=pm[1]; out.gemeente=(pm[2]||'').trim(); }
+  else out.gemeente=rest.trim();
   return out;
 }
 
@@ -362,30 +366,31 @@ function renderDetail(){
 
       <div class="sec-h">Persoonsgegevens</div>
       <div class="grid">
-        <div class="f"><label>Naam + voornaam</label><input value="${esc(e.naamVoornaam)}" oninput="upd('naamVoornaam',this.value)"></div>
-        <div class="f"><label>E-mail</label><input type="email" value="${esc(e.email)}" oninput="upd('email',this.value)"></div>
-        <div class="f full"><label>Straatnaam</label><input value="${esc(e.straat)}" oninput="upd('straat',this.value)"></div>
-        <div class="f"><label>Huisnummer</label><input value="${esc(e.huisnr)}" oninput="upd('huisnr',this.value)"></div>
-        <div class="f"><label>Postcode</label><input value="${esc(e.postcode)}" oninput="upd('postcode',this.value)" inputmode="numeric"></div>
-        <div class="f"><label>GSM nummer</label><input value="${esc(e.gsm)}" oninput="upd('gsm',this.value)"></div>
-        <div class="f"><label>Nationaliteit</label><input value="${esc(e.nationaliteit)}" oninput="upd('nationaliteit',this.value)"></div>
+        <div class="f"><label>Naam + voornaam</label><input data-req="naamVoornaam" value="${esc(e.naamVoornaam)}" oninput="upd('naamVoornaam',this.value)"></div>
+        <div class="f"><label>E-mail</label><input type="email" data-req="email" value="${esc(e.email)}" oninput="upd('email',this.value)"></div>
+        <div class="f full"><label>Straatnaam</label><input data-req="straat" value="${esc(e.straat)}" oninput="upd('straat',this.value)"></div>
+        <div class="f"><label>Huisnummer</label><input data-req="huisnr" value="${esc(e.huisnr)}" oninput="upd('huisnr',this.value)"></div>
+        <div class="f"><label>Postcode</label><input data-req="postcode" value="${esc(e.postcode)}" oninput="upd('postcode',this.value)" inputmode="numeric"></div>
+        <div class="f"><label>Gemeente</label><input data-req="gemeente" value="${esc(e.gemeente)}" oninput="upd('gemeente',this.value)"></div>
+        <div class="f"><label>GSM nummer</label><input data-req="gsm" value="${esc(e.gsm)}" oninput="upd('gsm',this.value)"></div>
+        <div class="f"><label>Nationaliteit</label><input data-req="nationaliteit" value="${esc(e.nationaliteit)}" oninput="upd('nationaliteit',this.value)"></div>
       </div>
 
       <div class="divider"></div>
       <div class="sec-h">Statuut &amp; gezinssituatie</div>
       <div class="grid">
-        <div class="f"><label>Statuut</label><select onchange="upd('statuut',this.value)">${selOpts(e.statuut,['','Flexi','Student','Geen flexi'])}</select></div>
-        <div class="f"><label>Gezinssituatie</label><select onchange="upd('gezinssituatie',this.value)">${selOpts(e.gezinssituatie,['','Ongehuwd','Gehuwd','Wettelijk samenwonend','Feitelijk gescheiden','Wettelijk gescheiden','Weduwe(naar)'])}</select></div>
-        <div class="f"><label>Aantal kinderen ten laste</label><input value="${esc(e.kinderenTenLaste)}" oninput="upd('kinderenTenLaste',this.value)"></div>
-        <div class="f"><label>Partner ten laste</label><select onchange="upd('partnerTenLaste',this.value)">${selOpts(e.partnerTenLaste,['','Ja','Nee'])}</select></div>
+        <div class="f"><label>Statuut</label><select data-req="statuut" onchange="upd('statuut',this.value)">${selOpts(e.statuut,['','Flexi','Student','Geen flexi'])}</select></div>
+        <div class="f"><label>Gezinssituatie</label><select data-req="gezinssituatie" onchange="upd('gezinssituatie',this.value)">${selOpts(e.gezinssituatie,['','Ongehuwd','Gehuwd','Wettelijk samenwonend','Feitelijk gescheiden','Wettelijk gescheiden','Weduwe(naar)'])}</select></div>
+        <div class="f"><label>Aantal kinderen ten laste</label><input data-req="kinderenTenLaste" value="${esc(e.kinderenTenLaste)}" oninput="upd('kinderenTenLaste',this.value)" inputmode="numeric"></div>
+        <div class="f"><label>Partner ten laste</label><select data-req="partnerTenLaste" onchange="upd('partnerTenLaste',this.value)">${selOpts(e.partnerTenLaste,['','Ja','Nee'])}</select></div>
       </div>
 
       <div class="divider"></div>
       <div class="sec-h">Identiteit &amp; bankgegevens</div>
       <div class="grid">
-        <div class="f"><label>Rijksregisternummer</label><input value="${esc(e.rijksregister)}" oninput="upd('rijksregister',this.value)"></div>
-        <div class="f"><label>Identiteitskaartnummer</label><input value="${esc(e.identiteitskaart)}" oninput="upd('identiteitskaart',this.value)"></div>
-        <div class="f"><label>IBAN (bankrekening)</label><input value="${esc(e.iban)}" oninput="upd('iban',this.value)"></div>
+        <div class="f"><label>Rijksregisternummer</label><input data-req="rijksregister" value="${esc(e.rijksregister)}" oninput="upd('rijksregister',this.value)"></div>
+        <div class="f"><label>Identiteitskaartnummer</label><input data-req="identiteitskaart" value="${esc(e.identiteitskaart)}" oninput="upd('identiteitskaart',this.value)"></div>
+        <div class="f"><label>IBAN (bankrekening)</label><input data-req="iban" value="${esc(e.iban)}" oninput="upd('iban',this.value)"></div>
         <div class="f"><label>Akkoordverklaring</label><input value="${e.akkoord?'✅ Akkoord gegaan':'—'}" disabled style="color:var(--text2)"></div>
       </div>
 
@@ -413,14 +418,41 @@ function renderDetail(){
   </div>`;
 }
 
+// Alle velden van de fiche zijn verplicht bij het opslaan.
+const REQUIRED_FIELDS=[
+  ['naamVoornaam','Naam + voornaam'],['email','E-mail'],['straat','Straatnaam'],['huisnr','Huisnummer'],
+  ['postcode','Postcode'],['gemeente','Gemeente'],['gsm','GSM nummer'],['nationaliteit','Nationaliteit'],
+  ['statuut','Statuut'],['gezinssituatie','Gezinssituatie'],['kinderenTenLaste','Aantal kinderen ten laste'],
+  ['partnerTenLaste','Partner ten laste'],['rijksregister','Rijksregisternummer'],
+  ['identiteitskaart','Identiteitskaartnummer'],['iban','IBAN']
+];
+function validateRequired(e){
+  document.querySelectorAll('[data-req]').forEach(el=>el.classList.remove('invalid'));
+  const missing=REQUIRED_FIELDS.filter(([k])=>!String(e[k]==null?'':e[k]).trim());
+  missing.forEach(([k])=>{ const el=document.querySelector('[data-req="'+k+'"]'); if(el) el.classList.add('invalid'); });
+  if(missing.length){
+    const first=document.querySelector('[data-req="'+missing[0][0]+'"]');
+    if(first){ first.scrollIntoView({behavior:'smooth',block:'center'}); first.focus({preventScroll:true}); }
+    toast('✗ Vul alle velden in: '+missing.map(([,l])=>l).join(', '),false);
+    return false;
+  }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.email.trim())){
+    const el=document.querySelector('[data-req="email"]');
+    if(el){ el.classList.add('invalid'); el.scrollIntoView({behavior:'smooth',block:'center'}); }
+    toast('✗ Vul een geldig e-mailadres in.',false);
+    return false;
+  }
+  return true;
+}
+
 async function savePerson(){
   if(!editing) return;
   const e=editing;
-  if(!e.naamVoornaam.trim()){ toast('✗ Vul minstens de naam in.',false); return; }
+  if(!validateRequired(e)) return;
   const isNew=String(e.id).startsWith('new_');
   const rec={
     naamVoornaam:e.naamVoornaam.trim(),email:(e.email||'').trim(),
-    straat:(e.straat||'').trim(),huisnr:(e.huisnr||'').trim(),postcode:(e.postcode||'').trim(),adres:adresText(e),gsm:e.gsm||'',
+    straat:(e.straat||'').trim(),huisnr:(e.huisnr||'').trim(),postcode:(e.postcode||'').trim(),gemeente:(e.gemeente||'').trim(),adres:adresText(e),gsm:e.gsm||'',
     statuut:e.statuut||'',gezinssituatie:e.gezinssituatie||'',kinderenTenLaste:e.kinderenTenLaste||'',
     partnerTenLaste:e.partnerTenLaste||'',rijksregister:e.rijksregister||'',identiteitskaart:e.identiteitskaart||'',
     iban:e.iban||'',nationaliteit:e.nationaliteit||'',akkoord:!!e.akkoord,status:e.status||'nieuw',
