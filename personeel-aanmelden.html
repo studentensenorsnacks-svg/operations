@@ -223,7 +223,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
         <div class="field">
           <label class="q" for="f-kinderen">Aantal kinderen ten laste <span class="req">*</span></label>
-          <input type="number" id="f-kinderen" name="kinderenTenLaste" min="0" step="1" placeholder="bv. 0" inputmode="numeric">
+          <input type="text" id="f-kinderen" name="kinderenTenLaste" placeholder="bv. 0" inputmode="numeric">
         </div>
 
         <div class="field">
@@ -363,9 +363,6 @@ form.addEventListener('submit', async (ev)=>{
   for(const [id,msg] of TEXT_REQ){
     const el=document.getElementById(id);
     if(!el.value.trim()){ showErr(el,msg); return; }
-  }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-    showErr(document.getElementById('f-email'),'Vul een geldig e-mailadres in.'); return;
   }
   const RADIO_REQ=[
     ['statuut','Kies je statuut.'],

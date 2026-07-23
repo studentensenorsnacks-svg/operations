@@ -436,12 +436,6 @@ function validateRequired(e){
     toast('✗ Vul alle velden in: '+missing.map(([,l])=>l).join(', '),false);
     return false;
   }
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.email.trim())){
-    const el=document.querySelector('[data-req="email"]');
-    if(el){ el.classList.add('invalid'); el.scrollIntoView({behavior:'smooth',block:'center'}); }
-    toast('✗ Vul een geldig e-mailadres in.',false);
-    return false;
-  }
   return true;
 }
 
