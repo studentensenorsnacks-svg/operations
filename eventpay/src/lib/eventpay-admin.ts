@@ -553,9 +553,8 @@ async function livewireCaller(
 }
 
 // Maakt een categorie in een sector. Met copyFromCategorieId komt de volledige
-// productinhoud van die bron-categorie mee — dat is de enige manier om
-// producten aan een sector te hangen zonder de admin-UI in een browser te
-// bedienen.
+// productinhoud van die bron-categorie mee; zonder blijft de categorie leeg en
+// vul je ze gericht met addProductToCategory().
 export async function createCategoryInSector(
   sectorId: number,
   name: string,
@@ -572,17 +571,79 @@ export async function createCategoryInSector(
   await call(open.snapshot, 'updateCategorie', [], updates);
 }
 
-// Zet de prijs van een product voor één specifieke sector. Dit is EventPay's
-// "dynamic prices": het laat product_price ongemoeid, en dat is cruciaal —
-// product_price geldt globaal en zou de prijs op elke andere kassa wijzigen.
-export async function setSectorPrice(
-  productId: number,
-  sectorId: number,
-  price: number,
-): Promise<void> {
+// Livewire verpakt arrays als [waarde, {s:'arr'}]. Dit haalt ze weer uit.
+function unwrap(v: unknown): unknown {
+  if (Array.isArray(v)) {
+    if (v.length === 2 && v[1] && typeof v[1] === 'object' && (v[1] as { s?: string }).s === 'arr') {
+      return unwrap(v[0]);
+    }
+    return v.map(unwrap);
+  }
+  return v;
+}
+
+export interface CategorieKeuze {
+  id: number;
+  name: string;
+  disabled?: boolean;
+}
+
+// Koppelt producten aan categorieën. De pagina wordt één keer geladen en de
+// snapshot hergebruikt, want die productenpagina is zwaar.
+//
+// Let op het formaat: form.categories verwacht objecten {id, name, disabled},
+// niet losse ids. Met alleen ids slaagt de call wél maar bewaart de koppeling
+// niet — een stille mislukking die lang onopgemerkt bleef.
+export async function productCategoryLinker(): Promise<{
+  huidige: (productId: number) => Promise<CategorieKeuze[]>;
+  koppel: (productId: number, categorie: CategorieKeuze) => Promise<void>;
+}> {
+  const { snapshot, call } = await livewireCaller('products', 'products.overview');
+  let snap = snapshot;
+
+  const lees = (s: string): CategorieKeuze[] => {
+    const data = JSON.parse(s).data as { form?: unknown };
+    const form = Array.isArray(data.form) ? data.form[0] : data.form;
+    const cats = unwrap((form as { categories?: unknown })?.categories);
+    return Array.isArray(cats) ? (cats as CategorieKeuze[]) : [];
+  };
+
+  const open = async (productId: number) => {
+    const r = await call(snap, 'edit', [productId]);
+    snap = r.snapshot;
+    return lees(r.snapshot);
+  };
+
+  return {
+    huidige: open,
+    koppel: async (productId, categorie) => {
+      const huidig = await open(productId);
+      if (huidig.some((c) => Number(c.id) === categorie.id)) return;
+      const nieuw = [
+        ...huidig.map((c) => ({ id: Number(c.id), name: c.name, disabled: false })),
+        { id: categorie.id, name: categorie.name, disabled: false },
+      ];
+      const r = await call(snap, 'save', [], { 'form.categories': nieuw });
+      snap = r.snapshot;
+    },
+  };
+}
+
+// Zet prijzen per sector via EventPay's "dynamic prices". Laat product_price
+// ongemoeid — dat veld geldt globaal en zou de prijs op elke andere kassa
+// wijzigen.
+export async function sectorPricer(): Promise<{
+  zet: (productId: number, sectorId: number, price: number) => Promise<void>;
+}> {
   const { snapshot, call } = await livewireCaller('products', 'dynamic-pricing');
-  const open = await call(snapshot, 'editDynamicPrices', [productId]);
-  await call(open.snapshot, 'changeDefaultSector', [sectorId, price]);
+  let snap = snapshot;
+  return {
+    zet: async (productId, sectorId, price) => {
+      const open = await call(snap, 'editDynamicPrices', [productId]);
+      const r = await call(open.snapshot, 'changeDefaultSector', [sectorId, price]);
+      snap = r.snapshot;
+    },
+  };
 }
 
 // Read-only diagnose: doorloopt de wizard zonder create en rapporteert welke

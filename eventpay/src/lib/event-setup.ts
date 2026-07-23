@@ -1,10 +1,12 @@
 // Event-setup: verbindt de operations-planning en de prijslijsten (RTDB)
 // met EventPay. Per event stellen we één sector per kassa-assortiment voor
 // (op basis van de "waarvoor?"-koppeling van de betaalterminals in de
-// planning), met prijzen uit de gekozen prijslijst. Uitvoeren = sector
-// aanmaken als kopie van de CATALOGUS-sector, prijzen/zichtbaarheid zetten
-// via de publieke API en de kastjes (herkend aan comment 1..n = EP1..EPn)
-// aan de sector koppelen.
+// planning), met prijzen uit de gekozen prijslijst. Uitvoeren = een lege
+// sector aanmaken, daarin de nodige categorieën aanmaken, precies de
+// producten uit de prijslijst eraan koppelen, de prijs per sector zetten via
+// dynamic pricing, en de kastjes (herkend aan comment 1..n = EP1..EPn)
+// koppelen. product_price en product_visible worden nooit aangeraakt: die
+// gelden globaal en zouden elke andere kassa mee wijzigen.
 
 import { getRtdb } from './firebase-admin';
 import { call } from './eventpay';
@@ -12,7 +14,8 @@ import {
   getAdminOverview,
   createSector,
   createCategoryInSector,
-  setSectorPrice,
+  productCategoryLinker,
+  sectorPricer,
   setDeviceSector,
 } from './eventpay-admin';
 import type { Paginated, SectorWithCategories } from './types';
@@ -67,9 +70,8 @@ export interface CatalogProduct {
   id: number;
   name: string;
   categorie: string;
-  // Id van de CATALOGUS-categorie waarin dit product zit. De uitvoer kopieert
-  // per event-sector precies die categorieën, want dat is de enige manier om
-  // producten aan een sector te koppelen zonder de admin-UI te bedienen.
+  // Id van de CATALOGUS-categorie waarin dit product zit; bepaalt onder welke
+  // categorienaam het product in de event-sector terechtkomt.
   categorieId: number;
   price: number | null;
 }
@@ -593,56 +595,88 @@ export async function executeSetup(
       }
       report.steps.push(`Sector "${naam}" aangemaakt (leeg, id ${nieuwe.id})`);
 
-      // 4. Enkel de nodige categorieën erin kopiëren; hun producten komen mee.
-      for (const [catId, catNaam] of nodig) {
-        await createCategoryInSector(nieuwe.id, catNaam, catId);
+      // 4. De nodige categorieën LEEG aanmaken. Kopiëren zou de hele
+      //    catalogus-categorie meebrengen, inclusief producten die dit event
+      //    niet verkoopt.
+      for (const catNaam of new Set(nodig.values())) {
+        await createCategoryInSector(nieuwe.id, catNaam);
       }
-      report.steps.push(
-        `${nodig.size} categorie(ën) gekopieerd: ${[...nodig.values()].join(', ')}`,
-      );
 
-      // 5. Terugleggen wat er écht in de sector staat. Zo rapporteren we niet
-      //    "klaar" terwijl er in werkelijkheid niets gekopieerd werd.
+      // 5. Ids van de zonet aangemaakte categorieën ophalen.
       const naTrees = await fetchAllSectorTrees();
       const boom = naTrees.find((s) => s.sector_id === nieuwe.id);
-      const aanwezig: Array<{ id: number; name: string }> = [];
-      const walk = (cats: SectorWithCategories['categories']) => {
-        (cats ?? []).forEach((c) => {
-          (c.products ?? []).forEach((p) => {
-            const n = str(p.product_name_internal || p.product_name_external);
-            if (n) aanwezig.push({ id: p.product_id, name: n });
-          });
-          if (c.children?.length) walk(c.children);
-        });
-      };
-      walk(boom?.categories);
-      if (!aanwezig.length) {
-        throw new Error('De sector bleef leeg na het kopiëren — prijzen niet gezet.');
+      const nieuweCats = new Map<string, number>();
+      (boom?.categories ?? []).forEach((c) => {
+        const n = str(c.categorie_name);
+        if (n && !nieuweCats.has(n)) nieuweCats.set(n, c.categorie_id);
+      });
+      const ontbrekend = [...new Set(nodig.values())].filter((n) => !nieuweCats.has(n));
+      if (ontbrekend.length) {
+        throw new Error(
+          `Categorie(ën) ${ontbrekend.join(', ')} niet teruggevonden na aanmaken — producten en prijzen niet gezet.`,
+        );
       }
+      report.steps.push(
+        `${nieuweCats.size} categorie(ën) aangemaakt: ${[...nieuweCats.keys()].join(', ')}`,
+      );
 
-      // 6. Prijzen per sector zetten. Raakt product_price niet aan.
+      // 6. Precies de producten uit de prijslijst koppelen, op id.
+      const linker = await productCategoryLinker();
+      const pricer = await sectorPricer();
+      let gekoppeld = 0;
       let geprijsd = 0;
-      const zonderPrijs: string[] = [];
-      for (const p of aanwezig) {
-        const prijs = prijsPerProduct.get(p.id);
-        if (prijs === undefined) {
-          zonderPrijs.push(p.name);
+      for (const [productId, prijs] of prijsPerProduct) {
+        const cp = catalog.products.find((p) => p.id === productId);
+        const catNaam = cp ? cp.categorie : null;
+        const doelCat = catNaam ? nieuweCats.get(catNaam) : undefined;
+        if (!doelCat) {
+          report.errors.push(`Product #${productId} had geen doelcategorie — overgeslagen.`);
           continue;
         }
         try {
-          await setSectorPrice(p.id, nieuwe.id, prijs);
+          await linker.koppel(productId, { id: doelCat, name: catNaam as string });
+          gekoppeld++;
+        } catch (err) {
+          report.errors.push(
+            `Product #${productId} koppelen mislukt: ${err instanceof Error ? err.message : String(err)}`,
+          );
+          continue;
+        }
+        try {
+          await pricer.zet(productId, nieuwe.id, prijs);
           geprijsd++;
         } catch (err) {
           report.errors.push(
-            `Prijs van "${p.name}" zetten mislukt: ${err instanceof Error ? err.message : String(err)}`,
+            `Prijs van #${productId} zetten mislukt: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
       }
-      report.steps.push(`${geprijsd} product(en) geprijsd voor deze sector`);
-      if (zonderPrijs.length) {
-        report.errors.push(
-          `${zonderPrijs.length} product(en) uit de gekopieerde categorieën staan niet in de prijslijst en houden hun standaardprijs: ${zonderPrijs.slice(0, 8).join(', ')}${zonderPrijs.length > 8 ? ' …' : ''}`,
-        );
+      report.steps.push(`${gekoppeld} product(en) gekoppeld, ${geprijsd} geprijsd`);
+
+      // 7. Controle op id: staat er precies in wat we bedoelden?
+      const controleBoom = (await fetchAllSectorTrees()).find((s) => s.sector_id === nieuwe.id);
+      const aanwezig = new Set<number>();
+      const walk = (cats: SectorWithCategories['categories']) => {
+        (cats ?? []).forEach((c) => {
+          (c.products ?? []).forEach((p) => aanwezig.add(p.product_id));
+          if (c.children?.length) walk(c.children);
+        });
+      };
+      walk(controleBoom?.categories);
+      const bedoeld = new Set(prijsPerProduct.keys());
+      const teveel = [...aanwezig].filter((id) => !bedoeld.has(id));
+      const tekort = [...bedoeld].filter((id) => !aanwezig.has(id));
+      if (!aanwezig.size) {
+        throw new Error('De sector bleef leeg — er is niets gekoppeld.');
+      }
+      if (teveel.length) {
+        report.errors.push(`Te veel in de sector: product-id ${teveel.join(', ')}`);
+      }
+      if (tekort.length) {
+        report.errors.push(`Ontbreekt in de sector: product-id ${tekort.join(', ')}`);
+      }
+      if (!teveel.length && !tekort.length) {
+        report.steps.push(`Controle op id: exact ${aanwezig.size} product(en), zoals bedoeld`);
       }
 
       // 7. Kastjes koppelen.
