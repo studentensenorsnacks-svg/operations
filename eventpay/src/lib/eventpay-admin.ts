@@ -471,6 +471,120 @@ export async function createSector(
   await call(snap, maakMethod, { [naamVeld]: cleanName });
 }
 
+// ── Algemene Livewire-caller ───────────────────────────────────────
+// Laadt een dashboard-pagina, pikt de snapshot van het gevraagde component en
+// geeft een functie terug om er methodes op aan te roepen. createSector heeft
+// zijn eigen variant omdat die de wizard-stappen aan elkaar rijgt.
+async function livewireCaller(
+  pad: string,
+  component: string,
+): Promise<{
+  snapshot: string;
+  call: (
+    snapshot: string,
+    method: string,
+    params?: unknown[],
+    updates?: Record<string, unknown>,
+  ) => Promise<LivewireStep>;
+}> {
+  const { baseUrl } = config();
+  let session = await ensureSession();
+  const url = `${baseUrl}/dashboard/${session.eventId}/${pad}`;
+  let res = await fetchWithJar(url, { method: 'GET' }, session.cookies);
+  if (res.status === 302) {
+    clearSession();
+    session = await ensureSession();
+    res = await fetchWithJar(url, { method: 'GET' }, session.cookies);
+  }
+  if (!res.ok) throw new Error(`Pagina ${pad} laden mislukt: status ${res.status}`);
+  const html = await res.text();
+  const csrf = extractCsrf(html);
+
+  let snapshot: string | null = null;
+  const re = /wire:snapshot="([^"]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const decoded = htmlDecode(m[1]);
+    if (decoded.includes(component)) {
+      snapshot = decoded;
+      break;
+    }
+  }
+  if (!snapshot) throw new Error(`Component ${component} niet gevonden op /${pad}`);
+
+  const livewireUrl = `${baseUrl}/livewire/${session.eventId}/update`;
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'X-CSRF-TOKEN': csrf,
+    'X-Livewire': '1',
+    Referer: url,
+  };
+  const call = async (
+    snap: string,
+    method: string,
+    params: unknown[] = [],
+    updates: Record<string, unknown> = {},
+  ): Promise<LivewireStep> => {
+    const r = await fetchWithJar(
+      livewireUrl,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          _token: csrf,
+          components: [{ snapshot: snap, updates, calls: [{ path: '', method, params }] }],
+        }),
+        headers,
+      },
+      session.cookies,
+    );
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`${component}.${method}() mislukt (${r.status}): ${t.slice(0, 200)}`);
+    }
+    const json = (await r.json()) as {
+      components: Array<{ snapshot: string; effects?: { html?: string } }>;
+    };
+    const comp = json.components[0];
+    if (!comp?.snapshot) throw new Error(`Geen snapshot na ${component}.${method}()`);
+    return { snapshot: comp.snapshot, html: comp.effects?.html ?? '' };
+  };
+  return { snapshot, call };
+}
+
+// Maakt een categorie in een sector. Met copyFromCategorieId komt de volledige
+// productinhoud van die bron-categorie mee — dat is de enige manier om
+// producten aan een sector te hangen zonder de admin-UI in een browser te
+// bedienen.
+export async function createCategoryInSector(
+  sectorId: number,
+  name: string,
+  copyFromCategorieId?: number | null,
+): Promise<void> {
+  const cleanName = name.trim();
+  if (!cleanName) throw new Error('Categorienaam mag niet leeg zijn.');
+  const { snapshot, call } = await livewireCaller('sectors', 'sectors.overview');
+  const open = await call(snapshot, 'editCategorie', [sectorId]);
+  const updates: Record<string, unknown> = { 'categorieForm.name': cleanName };
+  if (copyFromCategorieId != null) {
+    updates['categorieForm.categorie_copy'] = copyFromCategorieId;
+  }
+  await call(open.snapshot, 'updateCategorie', [], updates);
+}
+
+// Zet de prijs van een product voor één specifieke sector. Dit is EventPay's
+// "dynamic prices": het laat product_price ongemoeid, en dat is cruciaal —
+// product_price geldt globaal en zou de prijs op elke andere kassa wijzigen.
+export async function setSectorPrice(
+  productId: number,
+  sectorId: number,
+  price: number,
+): Promise<void> {
+  const { snapshot, call } = await livewireCaller('products', 'dynamic-pricing');
+  const open = await call(snapshot, 'editDynamicPrices', [productId]);
+  await call(open.snapshot, 'changeDefaultSector', [sectorId, price]);
+}
+
 // Read-only diagnose: doorloopt de wizard zonder create en rapporteert welke
 // knoppen/velden elke stap aanbiedt. Handig om de exacte kopieer-methode en
 // het bron-sectorveld te bepalen zonder iets aan te maken in productie.

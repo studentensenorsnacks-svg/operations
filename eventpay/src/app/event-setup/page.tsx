@@ -262,10 +262,11 @@ export default function EventSetupPage() {
           <h2>Event-setup</h2>
           <p>
             Kies een event uit de planning en een prijslijst. De wizard stelt per
-            kassa-assortiment een sector voor (kopie van de{' '}
-            <strong>CATALOGUS</strong>-sector), zet de prijzen uit de prijslijst
-            en koppelt de EP-kastjes. Niets wordt uitgevoerd vóór jouw
-            bevestiging.
+            kassa-assortiment een sector voor, kopieert daarin enkel de nodige
+            categorieën uit de <strong>CATALOGUS</strong>, zet de prijzen{' '}
+            <em>voor die sector alleen</em> en koppelt de EP-kastjes. Prijzen van
+            andere kassa&apos;s blijven ongemoeid. Niets wordt uitgevoerd vóór
+            jouw bevestiging.
           </p>
         </div>
       </div>

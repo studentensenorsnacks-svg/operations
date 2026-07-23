@@ -11,6 +11,8 @@ import { call } from './eventpay';
 import {
   getAdminOverview,
   createSector,
+  createCategoryInSector,
+  setSectorPrice,
   setDeviceSector,
 } from './eventpay-admin';
 import type { Paginated, SectorWithCategories } from './types';
@@ -65,6 +67,10 @@ export interface CatalogProduct {
   id: number;
   name: string;
   categorie: string;
+  // Id van de CATALOGUS-categorie waarin dit product zit. De uitvoer kopieert
+  // per event-sector precies die categorieën, want dat is de enige manier om
+  // producten aan een sector te koppelen zonder de admin-UI te bedienen.
+  categorieId: number;
   price: number | null;
 }
 
@@ -284,9 +290,14 @@ export function catalogFromTrees(
   );
   if (!target) return null;
   const products: CatalogProduct[] = [];
-  const walk = (cats: SectorWithCategories['categories'], parent: string) => {
+  const walk = (
+    cats: SectorWithCategories['categories'],
+    parent: string,
+    parentId: number,
+  ) => {
     (cats ?? []).forEach((c) => {
       const catName = str(c.categorie_name) || parent;
+      const catId = c.categorie_id ?? parentId;
       (c.products ?? []).forEach((p) => {
         const name = str(p.product_name_internal || p.product_name_external);
         if (!name) return;
@@ -294,13 +305,14 @@ export function catalogFromTrees(
           id: p.product_id,
           name,
           categorie: catName,
+          categorieId: catId,
           price: typeof p.product_price === 'number' ? p.product_price : null,
         });
       });
-      if (c.children?.length) walk(c.children, catName);
+      if (c.children?.length) walk(c.children, catName, catId);
     });
   };
-  walk(target.categories, '');
+  walk(target.categories, '', 0);
   return {
     sectorId: target.sector_id,
     sectorName: stripIdSuffix(str(target.sector_name)),
@@ -496,9 +508,12 @@ export async function buildSetupPlan(
 // ── Uitvoeren ──────────────────────────────────────────────────────
 export interface ExecuteSectorRequest {
   name: string;
-  copyFromSectorId: number;
-  // Producten die zichtbaar moeten blijven, met hun nieuwe prijs.
-  // Match gebeurt op (genormaliseerde) productnaam in de nieuwe sector.
+  // Wordt niet meer gebruikt: de sector wordt leeg aangemaakt en krijgt daarna
+  // enkel de nodige CATALOGUS-categorieën. Blijft staan zodat een oudere
+  // pagina-versie geen fout geeft.
+  copyFromSectorId?: number;
+  // Producten die op dit kastje verkocht worden, met hun prijs voor dit event.
+  // Match gebeurt op (genormaliseerde) productnaam in de CATALOGUS.
   visible: Array<{ productName: string; price: number }>;
   devices: Array<{ uid: string; app: string; terminal: string }>;
 }
@@ -509,85 +524,132 @@ export interface ExecuteStepReport {
   errors: string[];
 }
 
+// Bouwt één event-sector op. Bewust NIET als kopie van de hele CATALOGUS:
+// die aanpak vroeg om per product product_price en product_visible te zetten,
+// en die twee velden gelden globaal. Eén run wijzigde daardoor de prijzen en
+// verborg producten op álle andere kassa's. Nu krijgt de sector enkel de
+// categorieën die op dit kastje horen, en gaan de prijzen via dynamic pricing
+// dat wél per sector werkt.
 export async function executeSetup(
   sectors: ExecuteSectorRequest[],
 ): Promise<ExecuteStepReport[]> {
   const reports: ExecuteStepReport[] = [];
 
+  // De catalogus geeft per product zijn CATALOGUS-categorie; die hebben we
+  // nodig om te weten welke categorieën gekopieerd moeten worden.
+  const catalog = catalogFromTrees(await fetchAllSectorTrees());
+  if (!catalog) {
+    return sectors.map((s) => ({
+      sector: s.name,
+      steps: [],
+      errors: [`Sector "${CATALOG_SECTOR_NAME}" niet gevonden — niets uitgevoerd.`],
+    }));
+  }
+  const perNaam = new Map<string, CatalogProduct>();
+  catalog.products.forEach((p) => {
+    const k = normName(p.name);
+    if (k && !perNaam.has(k)) perNaam.set(k, p);
+  });
+
   for (const req of sectors) {
     const report: ExecuteStepReport = { sector: req.name, steps: [], errors: [] };
     reports.push(report);
     try {
-      // 1. Sector aanmaken als kopie van de catalogus
-      await createSector(req.name, { copyFromSectorId: req.copyFromSectorId });
-      report.steps.push(`Sector "${req.name}" aangemaakt (kopie van CATALOGUS)`);
+      const naam = req.name.trim();
 
-      // 2. Nieuwe sector terugvinden (id) via de admin-lijst
-      const overview = await getAdminOverview();
-      const created = overview.sectors.find(
-        (s) =>
-          stripIdSuffix(s.name).toLowerCase() === req.name.trim().toLowerCase(),
-      );
-      if (!created) {
-        throw new Error(
-          `Sector "${req.name}" niet teruggevonden na aanmaken — prijzen en kastjes niet gezet.`,
+      // 1. Waarschuwen bij een bestaande sector met dezelfde naam. We maken er
+      //    tóch een nieuwe bij — bijwerken zou stilzwijgend prijzen overschrijven.
+      const vooraf = await getAdminOverview();
+      if (vooraf.sectors.some((s) => stripIdSuffix(s.name).toLowerCase() === naam.toLowerCase())) {
+        report.errors.push(
+          `Let op: er bestond al een actieve sector "${naam}". Er is een tweede bijgemaakt — deactiveer de oude in de EventPay admin.`,
         );
       }
 
-      // 3. Producten van de nieuwe sector ophalen
-      const trees = await fetchAllSectorTrees();
-      const tree = trees.find((s) => s.sector_id === created.id);
-      const products: Array<{ id: number; name: string }> = [];
+      // 2. Welke CATALOGUS-categorieën heeft dit kastje nodig?
+      const nodig = new Map<number, string>();
+      const prijsPerProduct = new Map<number, number>();
+      for (const v of req.visible) {
+        const cp = perNaam.get(normName(v.productName));
+        if (!cp) {
+          report.errors.push(`"${v.productName}" niet in de CATALOGUS gevonden — overgeslagen.`);
+          continue;
+        }
+        nodig.set(cp.categorieId, cp.categorie);
+        prijsPerProduct.set(cp.id, v.price);
+      }
+      if (!nodig.size) {
+        throw new Error('Geen enkel product uit de prijslijst staat in de CATALOGUS — niets aangemaakt.');
+      }
+
+      // 3. Lege sector aanmaken en terugvinden.
+      await createSector(naam);
+      const overview = await getAdminOverview();
+      const nieuwe = overview.sectors
+        .filter((s) => stripIdSuffix(s.name).toLowerCase() === naam.toLowerCase())
+        .sort((a, b) => b.id - a.id)[0];
+      if (!nieuwe) {
+        throw new Error(`Sector "${naam}" niet teruggevonden na aanmaken — prijzen en kastjes niet gezet.`);
+      }
+      report.steps.push(`Sector "${naam}" aangemaakt (leeg, id ${nieuwe.id})`);
+
+      // 4. Enkel de nodige categorieën erin kopiëren; hun producten komen mee.
+      for (const [catId, catNaam] of nodig) {
+        await createCategoryInSector(nieuwe.id, catNaam, catId);
+      }
+      report.steps.push(
+        `${nodig.size} categorie(ën) gekopieerd: ${[...nodig.values()].join(', ')}`,
+      );
+
+      // 5. Terugleggen wat er écht in de sector staat. Zo rapporteren we niet
+      //    "klaar" terwijl er in werkelijkheid niets gekopieerd werd.
+      const naTrees = await fetchAllSectorTrees();
+      const boom = naTrees.find((s) => s.sector_id === nieuwe.id);
+      const aanwezig: Array<{ id: number; name: string }> = [];
       const walk = (cats: SectorWithCategories['categories']) => {
         (cats ?? []).forEach((c) => {
           (c.products ?? []).forEach((p) => {
-            const name = str(p.product_name_internal || p.product_name_external);
-            if (name) products.push({ id: p.product_id, name });
+            const n = str(p.product_name_internal || p.product_name_external);
+            if (n) aanwezig.push({ id: p.product_id, name: n });
           });
           if (c.children?.length) walk(c.children);
         });
       };
-      walk(tree?.categories);
-      if (!products.length) {
+      walk(boom?.categories);
+      if (!aanwezig.length) {
+        throw new Error('De sector bleef leeg na het kopiëren — prijzen niet gezet.');
+      }
+
+      // 6. Prijzen per sector zetten. Raakt product_price niet aan.
+      let geprijsd = 0;
+      const zonderPrijs: string[] = [];
+      for (const p of aanwezig) {
+        const prijs = prijsPerProduct.get(p.id);
+        if (prijs === undefined) {
+          zonderPrijs.push(p.name);
+          continue;
+        }
+        try {
+          await setSectorPrice(p.id, nieuwe.id, prijs);
+          geprijsd++;
+        } catch (err) {
+          report.errors.push(
+            `Prijs van "${p.name}" zetten mislukt: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+      report.steps.push(`${geprijsd} product(en) geprijsd voor deze sector`);
+      if (zonderPrijs.length) {
         report.errors.push(
-          'Geen producten gevonden in de nieuwe sector — is de CATALOGUS gevuld?',
+          `${zonderPrijs.length} product(en) uit de gekopieerde categorieën staan niet in de prijslijst en houden hun standaardprijs: ${zonderPrijs.slice(0, 8).join(', ')}${zonderPrijs.length > 8 ? ' …' : ''}`,
         );
       }
 
-      // 4. Prijzen + zichtbaarheid zetten
-      const wanted = new Map<string, number>();
-      req.visible.forEach((v) => wanted.set(normName(v.productName), v.price));
-      let priced = 0;
-      let hidden = 0;
-      for (const p of products) {
-        const key = normName(p.name);
-        const price = wanted.get(key);
-        const body =
-          price !== undefined
-            ? { product_price: price, product_visible: true }
-            : { product_visible: false };
-        const res = await call({
-          method: 'PUT',
-          path: `/products/${p.id}`,
-          body,
-        });
-        if (!res.ok) {
-          report.errors.push(
-            `Product "${p.name}" bijwerken mislukt (${res.status})`,
-          );
-        } else if (price !== undefined) {
-          priced++;
-        } else {
-          hidden++;
-        }
-      }
-      report.steps.push(`${priced} product(en) geprijsd, ${hidden} verborgen`);
-
-      // 5. Kastjes koppelen
+      // 7. Kastjes koppelen.
       for (const d of req.devices) {
         try {
-          await setDeviceSector(d.uid, d.app, created.id, req.name);
-          report.steps.push(`${d.terminal} gekoppeld aan "${req.name}"`);
+          await setDeviceSector(d.uid, d.app, nieuwe.id, naam);
+          report.steps.push(`${d.terminal} gekoppeld aan "${naam}"`);
         } catch (err) {
           report.errors.push(
             `${d.terminal} koppelen mislukt: ${err instanceof Error ? err.message : String(err)}`,
