@@ -412,6 +412,8 @@ textarea{resize:vertical;min-height:70px;}
 .day-col.today-col .dch-name,.day-col.today-col .dch-date{color:var(--red);}
 .day-col-head.selected-day .dch-info{background:var(--red);}
 .day-col-head.selected-day .dch-name,.day-col-head.selected-day .dch-date{color:#fff;}
+.btn-day-select{display:inline-flex;align-items:center;gap:5px;padding:9px 14px;border:1.5px solid var(--red);border-radius:18px;background:#fff;font-family:var(--font);font-size:0.78rem;font-weight:700;color:var(--red);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.btn-day-select.sel{background:var(--red);border-color:var(--red);color:#fff;}
 
 /* ── TOUCH DEVICES: always show action buttons + grotere tap-doelen ── */
 @media (hover:none),(pointer:coarse){
@@ -1741,7 +1743,7 @@ function renderWeek(){
     const selCol = isPerDay && selectedDay === ds;
     const dchClick = isPerDay ? `openDayPDF('${ds}','${currentMode}')` : `openDayPDF('${ds}')`;
     const dchPdfBtn = isPerDay
-      ? `<button type="button" class="btn-day-pdf${selCol?' sel':''}" title="Dag selecteren om te plannen" onclick="event.stopPropagation();selectDayForPlanning('${ds}')">📍</button>`
+      ? `<button type="button" class="btn-day-select${selCol?' sel':''}" title="Dag selecteren om te plannen" onclick="event.stopPropagation();selectDayForPlanning('${ds}')">${selCol?'✓ Dag gekozen':'📍 Kies dag'}</button>`
       : '';
     return `<div class="day-col${isToday(ds)?' today-col':''}">
       <div class="day-col-head${selCol?' selected-day':''}">
