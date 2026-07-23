@@ -414,14 +414,13 @@ export async function createSector(
   const copyFromSectorId = options.copyFromSectorId ?? null;
   const { wizardSnapshot, call } = await sectorWizardCaller();
 
-  // Stap 1: wizard openen. De respons-HTML toont de keuze "kopiëren of niet".
+  // Stap 1: wizard openen. Deze stap bevat zowel de keuze "kopiëren of niet"
+  // (doCopy / noCopy) als het veld waarin je de bron-sector aanduidt (copy).
   const start = await call(wizardSnapshot, 'start');
   let snap = start.snapshot;
-  let nameAlreadySet = false;
+  let laatsteHtml = start.html;
 
   if (copyFromSectorId != null) {
-    // De kopieer-knop is de sibling van noCopy. Ontdek de methode live i.p.v.
-    // te raden, zodat we nooit een verkeerde productie-call afvuren.
     const methods = parseWizardMethods(start.html);
     const copyMethod = methods.find(
       (m) => /copy/i.test(m) && m.toLowerCase() !== 'nocopy',
@@ -433,51 +432,43 @@ export async function createSector(
           `Gebruik "Wizard-structuur tonen" om dit te diagnosticeren.`,
       );
     }
-    const afterCopy = await call(snap, copyMethod);
-    snap = afterCopy.snapshot;
-
-    // Stap 2: bron-sector kiezen. Zoek het select-veld en de doorgaan-knop.
-    const models = parseWizardModels(afterCopy.html);
-    const selectModel = models.find((m) =>
-      /(sector|copy|from|source|bron|kopie)/i.test(m),
+    // Het bronveld staat op DEZE stap, niet op de volgende. Zoek het hier en
+    // sluit sector_name uit: dat is de naam van de nieuwe sector, niet de bron.
+    // Werd dat veld toch gekozen, dan bleef de bron leeg en kwam er een lege
+    // sector uit de wizard.
+    const models = parseWizardModels(start.html).filter(
+      (m) => !/name/i.test(m),
     );
-    if (!selectModel) {
+    const bronVeld = models.find((m) =>
+      /(copy|from|source|bron|kopie|sector)/i.test(m),
+    );
+    if (!bronVeld) {
       throw new Error(
         `Kon het bron-sector-veld niet vinden in de kopieer-stap. ` +
           `Beschikbare velden: ${models.join(', ') || '(geen)'}. ` +
           `Gebruik "Wizard-structuur tonen" om dit te diagnosticeren.`,
       );
     }
-    const step2Methods = parseWizardMethods(afterCopy.html).filter(
-      (m) => !/^(back|previous|terug|cancel|annul)/i.test(m),
-    );
-    const advance =
-      step2Methods.find((m) =>
-        /(name|next|continue|volgende|select|choose|kies|confirm)/i.test(m),
-      ) ?? 'name';
-
-    if (advance.toLowerCase() === 'name') {
-      // Doorgaan-knop is meteen de naam-stap: zet bron + naam in één call.
-      const r = await call(snap, 'name', {
-        [selectModel]: copyFromSectorId,
-        sector_name: cleanName,
-      });
-      snap = r.snapshot;
-      nameAlreadySet = true;
-    } else {
-      const r = await call(snap, advance, { [selectModel]: copyFromSectorId });
-      snap = r.snapshot;
-    }
+    const r = await call(snap, copyMethod, { [bronVeld]: copyFromSectorId });
+    snap = r.snapshot;
+    laatsteHtml = r.html;
   } else {
     const r = await call(snap, 'noCopy');
     snap = r.snapshot;
+    laatsteHtml = r.html;
   }
 
-  if (!nameAlreadySet) {
-    const r = await call(snap, 'name', { sector_name: cleanName });
-    snap = r.snapshot;
-  }
-  await call(snap, 'create');
+  // Slotstap: naam invullen en aanmaken. Ontdek beide live, zodat een
+  // gewijzigde wizard een duidelijke fout geeft in plaats van een lege sector.
+  const slotModels = parseWizardModels(laatsteHtml);
+  const naamVeld = slotModels.find((m) => /name/i.test(m)) ?? 'sector_name';
+  const slotMethods = parseWizardMethods(laatsteHtml).filter(
+    (m) => !/^(back|previous|terug|cancel|annul)/i.test(m),
+  );
+  const maakMethod =
+    slotMethods.find((m) => /^(create|save|store|aanmaken|opslaan)$/i.test(m)) ??
+    'create';
+  await call(snap, maakMethod, { [naamVeld]: cleanName });
 }
 
 // Read-only diagnose: doorloopt de wizard zonder create en rapporteert welke
