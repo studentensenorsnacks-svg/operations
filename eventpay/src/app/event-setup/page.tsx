@@ -466,7 +466,10 @@ export default function EventSetupPage() {
                           <span className="muted">({m.categorie})</span>
                         </td>
                         <td className="cell-num">{fmtEuro(m.euro)}</td>
-                        <td>{m.productName}</td>
+                        <td>
+                          {m.productName}{' '}
+                          <span className="muted">#{m.productId}</span>
+                        </td>
                       </tr>
                     ))}
                     {missing.map((m, i) => (
