@@ -403,12 +403,37 @@ textarea{resize:vertical;min-height:70px;}
 .pdf-extra-input::placeholder{color:#c8c8c8;font-style:italic;}
 .pdf-extra-input:focus{border-bottom-color:var(--red);}
 .pdf-extra-input.truck{font-size:0.78rem;}
-/* ── TOUCH DEVICES: always show action buttons ─────────────── */
+/* ── MOBIELE DAG-KOP: per dag-blok als de week gestapeld is ── */
+.day-col-head{display:none;align-items:center;gap:8px;padding:7px 10px;background:#fafafa;border-bottom:1px solid var(--border);}
+.dch-info{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0;cursor:pointer;padding:4px 8px;border-radius:4px;}
+.dch-name{font-family:var(--font-cond);font-size:0.78rem;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);}
+.dch-date{font-family:var(--font-cond);font-size:1.15rem;font-weight:900;line-height:1;color:var(--text);}
+.day-col.today-col .day-col-head{background:#fff5f5;}
+.day-col.today-col .dch-name,.day-col.today-col .dch-date{color:var(--red);}
+.day-col-head.selected-day .dch-info{background:var(--red);}
+.day-col-head.selected-day .dch-name,.day-col-head.selected-day .dch-date{color:#fff;}
+
+/* ── TOUCH DEVICES: always show action buttons + grotere tap-doelen ── */
 @media (hover:none),(pointer:coarse){
   .ev-btns{opacity:1!important;}
   .mdev-btns{opacity:1!important;}
-  .ev-btn{background:#f0f0f0;}
-  .at-rm{opacity:1!important;}
+  .ev-btn{background:#f0f0f0;width:32px;height:32px;font-size:0.9rem;}
+  .mdev-btn{padding:8px 10px;font-size:0.85rem;}
+  .at-rm,.mdev-truck-pill .at-rm{opacity:1!important;width:28px;height:28px;font-size:1.05rem;}
+  .assigned-truck,.mdev-truck-pill{font-size:0.78rem;padding:5px 6px 5px 9px;gap:4px 7px;border-radius:5px;}
+  /* Multi-dag balken: geen hover op touch → altijd opengeklapt tonen */
+  .multiday-grid{grid-auto-rows:auto;}
+  .multiday-event{height:auto;min-height:58px;overflow:visible;position:relative;}
+  .mdev-trucks{flex-wrap:wrap;height:auto;}
+  .ll-icon{height:28px;padding:0 9px;font-size:0.8rem;}
+  .btn-add-trucks,.btn-add-mini{padding:8px 12px;font-size:0.78rem;}
+  .btn-day-add{width:32px;height:32px;font-size:1.15rem;}
+  .btn-day-pdf{width:32px;height:32px;font-size:0.85rem;}
+  .assigned-truck .retour-link,.term-chip .term-link{font-size:0.8rem;padding:5px 7px;flex-basis:90px;max-width:170px;}
+  .term-chip .term-sel{width:19px;height:19px;}
+  .term-bulk-input{font-size:0.8rem;padding:7px 8px;}
+  .term-bulk-btn{font-size:0.78rem;padding:7px 10px;}
+  .logi-btn{width:32px;height:32px;font-size:1.1rem;}
 }
 
 /* ── SIDEBAR TOGGLE (kleine schermen) ─────────────────────── */
@@ -433,10 +458,21 @@ textarea{resize:vertical;min-height:70px;}
   .week-label{font-size:1rem;flex:1;text-align:center;}
   .plan-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .plan-tab{padding:9px 14px;font-size:0.85rem;white-space:nowrap;flex-shrink:0;}
-  /* Week-grid stapelt verticaal: één dag per rij i.p.v. 7 kolommen */
-  .week-grid{grid-template-columns:1fr;overflow-y:auto;}
+  /* Week stapelt verticaal: één dag per rij i.p.v. 7 kolommen.
+     De 7-koloms dag-koppen gaan dicht; elke dag krijgt zijn eigen kop
+     (.day-col-head) in het dag-blok zelf. */
+  .week-dayheads{display:none;}
+  .week-body{grid-template-columns:1fr;min-width:0;}
+  .multiday-strip{min-width:0;}
+  .day-col-head{display:flex;}
+  .multiday-grid{grid-template-columns:1fr;grid-auto-rows:auto;min-width:0;}
+  .multiday-event{grid-column:1 / -1!important;}
+  .ag-mgrid{grid-template-columns:1fr;min-width:0;}
+  .ag-mbar{grid-column:1 / -1!important;}
   .day-col{border-right:none;border-bottom:1px solid var(--border);min-height:auto;}
   .day-col:last-child{border-bottom:none;}
+  .day-events{min-height:34px;}
+  .empty-day{padding:6px 4px;}
 }
 @media (max-width:600px){
   .topbar{padding:0 10px;gap:4px;}
@@ -1700,7 +1736,18 @@ function renderWeek(){
         ${areaHtml}
       </div>`;
     }).join('');
+    // Mobiele dag-kop (alleen zichtbaar als de week gestapeld is): zelfde
+    // acties als de desktop dag-koppen — dagoverzicht, 📍 dag kiezen, + event.
+    const selCol = isPerDay && selectedDay === ds;
+    const dchClick = isPerDay ? `openDayPDF('${ds}','${currentMode}')` : `openDayPDF('${ds}')`;
+    const dchPdfBtn = isPerDay
+      ? `<button type="button" class="btn-day-pdf${selCol?' sel':''}" title="Dag selecteren om te plannen" onclick="event.stopPropagation();selectDayForPlanning('${ds}')">📍</button>`
+      : '';
     return `<div class="day-col${isToday(ds)?' today-col':''}">
+      <div class="day-col-head${selCol?' selected-day':''}">
+        <div class="dch-info" onclick="${dchClick}" title="Dagoverzicht / Dag PDF"><span class="dch-name">${DAYS[di]}</span><span class="dch-date">${day.getDate()}</span></div>
+        ${dchPdfBtn}<button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
+      </div>
       <div class="day-events">${evHtml||'<div class="empty-day">—</div>'}</div>
     </div>`;
   }).join('')}</div>`;
@@ -2213,7 +2260,7 @@ function renderAgenda(){
   }
 
   // Dag-kolommen — events op hun dag (hele dag, bovenaan gestapeld)
-  const bodyHtml = `<div class="week-body">${days.map(day=>{
+  const bodyHtml = `<div class="week-body">${days.map((day,di)=>{
     const ds=toStr(day);
     const dayEvs = singleDay.filter(ev=>ev.startDate===ds)
                             .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
@@ -2222,6 +2269,10 @@ function renderAgenda(){
         ${ev.location?`<div class="ag-evt-loc">📍 ${ev.location}</div>`:''}
       </div>`).join('');
     return `<div class="day-col${isToday(ds)?' today-col':''}">
+      <div class="day-col-head">
+        <div class="dch-info" onclick="openDayPDF('${ds}')" title="Dagoverzicht / Dag PDF"><span class="dch-name">${DAYS[di]}</span><span class="dch-date">${day.getDate()}</span></div>
+        <button type="button" class="btn-day-add" onclick="event.stopPropagation();openAddEvent('${ds}')">+</button>
+      </div>
       <div class="day-events">${evHtml||'<div class="empty-day">—</div>'}</div>
     </div>`;
   }).join('')}</div>`;
