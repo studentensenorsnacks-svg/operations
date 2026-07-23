@@ -486,6 +486,7 @@ function renderEditor(){
       <div class="cat-head">
         <button class="fav ${c.featured?'on':''}" title="Eerste item groter tonen" onclick="toggleFav(${ci})">★</button>
         <input class="ct" value="${escAttr(c.title)}" placeholder="CATEGORIE" oninput="setCat(${ci},this.value)">
+        <button class="btn-icon" title="Deze categorie met alle items kopi&euml;ren — plak hem daarna onderaan in gelijk welke prijslijst" onclick="copyCat(${ci})">⧉</button>
         <button class="btn-icon" title="Omhoog" onclick="moveCat(${ci},-1)">▲</button>
         <button class="btn-icon" title="Omlaag" onclick="moveCat(${ci},1)">▼</button>
         <button class="btn-icon danger" title="Categorie verwijderen" onclick="delCat(${ci})">🗑</button>
@@ -558,6 +559,10 @@ function renderEditor(){
     h+=`<button class="btn btn-light btn-sm add-row" onclick="addItem(${ci})">+ item</button>
       </div></div>`;
   });
+  const clip=clipGet();
+  if(clip){
+    h+=`<button class="btn btn-light" style="width:100%;padding:12px;margin-bottom:8px" title="Voegt de gekopieerde categorie onderaan deze lijst toe" onclick="pasteCat()">⧉ Plak &quot;${escAttr(clip.title||'Categorie')}&quot; (${(clip.items||[]).length} items)</button>`;
+  }
   h+=`<button class="btn btn-red" style="width:100%;padding:12px" onclick="addCat()">+ categorie / pagina</button>`;
   document.getElementById('editor').innerHTML=h;
 }
@@ -701,6 +706,26 @@ function smakFont(ci,d){
 function addCat(){ CUR.categories.push({id:uid(),title:'Nieuwe categorie',featured:false,items:[{id:uid(),name:'Nieuw item',tokens:2,euro:null,note:'',sub:'',veg:false}]}); renderEditor(); renderPreview(); scheduleSave(); }
 function delCat(ci){ if(!confirm('Categorie "'+CUR.categories[ci].title+'" verwijderen?')) return; CUR.categories.splice(ci,1); renderEditor(); renderPreview(); scheduleSave(); }
 function moveCat(ci,d){ const a=CUR.categories; const j=ci+d; if(j<0||j>=a.length) return; [a[ci],a[j]]=[a[j],a[ci]]; renderEditor(); renderPreview(); scheduleSave(); }
+
+/* ==================== CATEGORIE KOPIEREN / PLAKKEN ==================== */
+const CLIP_KEY='ft_prijslijst_clip_cat';
+function clipGet(){ try{ const s=localStorage.getItem(CLIP_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function copyCat(ci){
+  const c=JSON.parse(JSON.stringify(CUR.categories[ci]));
+  try{ localStorage.setItem(CLIP_KEY, JSON.stringify(c)); }catch(e){ toast('Kopiëren mislukt'); return; }
+  try{ if(navigator.clipboard) navigator.clipboard.writeText(JSON.stringify(c)); }catch(e){}
+  renderEditor();
+  toast('"'+(c.title||'Categorie')+'" gekopieerd — kies een andere lijst en plak onderaan');
+}
+function pasteCat(){
+  const c=clipGet();
+  if(!c){ toast('Er is niets gekopieerd'); return; }
+  const n=normalize({categories:[c]}).categories[0];
+  n.id=uid(); n.items.forEach(it=>it.id=uid());
+  CUR.categories.push(n);
+  renderEditor(); renderPreview(); scheduleSave();
+  toast('"'+(n.title||'Categorie')+'" toegevoegd');
+}
 
 /* ==================== LIST MANAGEMENT ==================== */
 function switchList(id){ if(LISTS[id]){ CUR=normalize(LISTS[id]); renderAll(); setSave('saved','opgeslagen'); } }
