@@ -62,6 +62,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .weeknav .today-btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;}
 .weeknav .today-btn:hover{border-color:var(--red);color:var(--red);background:rgba(232,0,29,0.06);}
 .weeknav .wk-pill{font-family:var(--mono);font-size:12px;color:var(--text2);background:var(--surface2);padding:4px 10px;border-radius:99px;}
+.wie-filter{padding:7px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-family:var(--font);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;max-width:180px;}
+.wie-filter:hover{border-color:var(--blue);color:var(--blue);}
+body.editing .wie-filter{display:none;}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
 .day{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;}
@@ -88,6 +91,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .taak .extra-pill{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#b45309;background:#fef3c7;padding:2px 7px;border-radius:99px;flex-shrink:0;}
 .taak .mini{width:26px;height:26px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text3);flex-shrink:0;}
 .taak .mini:hover{background:var(--surface3);color:var(--text);}
+.taak .wie{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;white-space:nowrap;flex-shrink:0;}
+.taak.af .wie{opacity:.55;}
+body.editing .taak .wie{display:none;}
+.wie-select{max-width:120px;padding:4px 5px;border:1px solid var(--border2);border-radius:6px;font-family:var(--font);font-size:11.5px;color:var(--text2);background:#fff;flex-shrink:1;min-width:0;}
+.add-row .wie-select{flex:0 0 auto;max-width:130px;padding:8px 6px;border-radius:8px;font-size:12px;}
 .day-empty{padding:16px 8px;text-align:center;color:var(--text3);font-size:12.5px;line-height:1.4;}
 
 .day-foot{padding:8px 12px 12px;}
@@ -95,9 +103,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .add-extra-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg);}
 
 .add-row{display:flex;gap:6px;margin-top:6px;}
-.add-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;background:#fff;}
+.add-row{flex-wrap:wrap;}
+.add-row input{flex:1 1 120px;min-width:120px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;background:#fff;}
 .add-row input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
-.add-row input.tijd-in{flex:0 0 76px;font-family:var(--mono);font-size:12px;}
+.add-row input.tijd-in{flex:0 0 64px;min-width:64px;font-family:var(--mono);font-size:12px;}
 .add-row button{padding:8px 12px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;}
 .add-row button:hover{background:#1861c4;}
 
@@ -105,12 +114,45 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 body.editing .edit-hint{display:block;}
 body.editing .taak input[type=checkbox]{display:none;}
 body.editing .add-extra-btn{display:none;}
-.taak .edit-actions{display:none;gap:2px;flex-shrink:0;}
+.taak .edit-actions{display:none;gap:2px;flex-shrink:0;align-items:center;margin-left:auto;}
 body.editing .taak .edit-actions{display:flex;}
+body.editing .taak{flex-wrap:wrap;row-gap:4px;}
+body.editing .taak .naam{flex:1 1 100%;order:-1;}
 .add-row{display:none;}
 body.editing .add-row{display:flex;}
 
+.tabs{display:flex;gap:8px;margin-bottom:16px;}
+.tab{padding:8px 16px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:.12s;}
+.tab:hover{border-color:var(--blue);color:var(--blue);}
+.tab.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+.meld-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:660px;}
+.meld-title{font-family:var(--font-cond);font-size:20px;font-weight:800;}
+.meld-sub{font-size:12.5px;color:var(--text2);margin:4px 0 14px;}
+.meld-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border);flex-wrap:wrap;}
+.meld-row .lbl{flex:0 0 200px;font-size:13px;font-weight:600;color:var(--text2);}
+.meld-row select{padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;background:#fff;outline:none;}
+.meld-row select:focus{border-color:var(--blue);}
+.meld-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue);cursor:pointer;}
+.meld-emails{display:flex;flex-direction:column;gap:6px;flex:1;min-width:230px;}
+.meld-email{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:6px 10px;}
+.meld-email span{flex:1;font-family:var(--mono);font-size:12.5px;word-break:break-all;}
+.meld-email button{border:none;background:transparent;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;}
+.meld-email button:hover{color:var(--red);}
+.meld-add{display:flex;gap:6px;}
+.meld-add input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;}
+.meld-add input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.meld-add button{padding:8px 12px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer;}
+.meld-add button:hover{background:#1861c4;}
+.meld-foot{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;}
+.save-btn{padding:10px 18px;border:none;border-radius:8px;background:var(--green);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;}
+.save-btn:hover{background:#116a32;}
+.meld-status{font-size:12.5px;color:var(--text2);}
+.meld-status.ok{color:var(--green);font-weight:600;}
+.meld-note{font-size:12px;color:var(--text3);margin-top:14px;line-height:1.5;}
+
 @media (max-width:600px){
+  .meld-row .lbl{flex:1 1 100%;}
   .topbar{height:52px;padding:0 12px;}
   .logo-img{height:26px;}
   .topbar-divider,.topbar-section{display:none;}
@@ -137,15 +179,23 @@ body.editing .add-row{display:flex;}
   <div class="page-hdr">
     <div>
       <div class="page-title">Weekplanning</div>
-      <div class="page-sub">Vaste taken per weekdag. Afvinken geldt per week — elke nieuwe week start automatisch leeg.</div>
+      <div class="page-sub">Vaste taken per weekdag, toe te wijzen aan een account. Afvinken geldt per week — elke nieuwe week start automatisch leeg.</div>
     </div>
     <div class="hdr-actions">
       <button class="btn" id="btn-edit" onclick="toggleEdit()">✏️ Vaste taken bewerken</button>
     </div>
   </div>
 
+  <div class="tabs">
+    <button class="tab active" id="tab-plan" onclick="showTab('plan')">📅 Planning</button>
+    <button class="tab" id="tab-meld" onclick="showTab('meld')">🔔 Meldingen</button>
+  </div>
+
+  <div id="panel-plan">
+
   <div class="edit-hint">
     <b>Bewerkmodus:</b> voeg per dag vaste taken toe (tijd is optioneel, bv. 09:00). Deze taken keren elke week terug.
+    Wijs een taak toe aan een account via het keuzemenu naast de taak — de lijst toont iedereen die de weekplanning al eens opende.
     Met ▲▼ wijzig je de volgorde, met 🗑️ verwijder je een taak (dat geldt voor álle weken). Klik nogmaals op de knop om af te sluiten.
   </div>
 
@@ -154,10 +204,85 @@ body.editing .add-row{display:flex;}
     <div class="wk-label" id="wk-label">Week —<span class="wk-range" id="wk-range">—</span></div>
     <button class="nav-btn" onclick="navWeek(1)" title="Volgende week">→</button>
     <button class="today-btn" onclick="navToday()">Vandaag</button>
+    <select class="wie-filter" id="filter-wie" onchange="setFilter(this.value)" title="Filter op persoon">
+      <option value="">👥 Iedereen</option>
+    </select>
     <span class="wk-pill" id="wk-prog">0 / 0 klaar</span>
   </div>
 
   <div class="grid" id="grid"></div>
+
+  </div><!-- /panel-plan -->
+
+  <div id="panel-meld" style="display:none">
+    <div class="meld-card">
+      <div class="meld-title">🔔 E-mailmeldingen</div>
+      <div class="meld-sub">Ontvang automatisch een overzicht van de taken per e-mail.</div>
+
+      <div class="meld-row">
+        <span class="lbl">Meldingen</span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="m-aan"> Ingeschakeld
+        </label>
+      </div>
+
+      <div class="meld-row">
+        <span class="lbl">Frequentie</span>
+        <select id="m-freq" onchange="onFreqChange()">
+          <option value="dagelijks">Elke dag</option>
+          <option value="werkdagen">Elke werkdag (ma–vr)</option>
+          <option value="wekelijks">Wekelijks (weekoverzicht)</option>
+        </select>
+      </div>
+
+      <div class="meld-row" id="m-weekdag-row" style="display:none">
+        <span class="lbl">Dag van verzending</span>
+        <select id="m-weekdag">
+          <option value="ma">Maandag</option>
+          <option value="di">Dinsdag</option>
+          <option value="wo">Woensdag</option>
+          <option value="do">Donderdag</option>
+          <option value="vr">Vrijdag</option>
+          <option value="za">Zaterdag</option>
+          <option value="zo">Zondag</option>
+        </select>
+      </div>
+
+      <div class="meld-row">
+        <span class="lbl">Tijdstip</span>
+        <select id="m-uur"></select>
+      </div>
+
+      <div class="meld-row">
+        <span class="lbl">Alleen bij open taken</span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="m-alleen-open"> Niet versturen als alles al is afgevinkt
+        </label>
+      </div>
+
+      <div class="meld-row" style="align-items:flex-start;">
+        <span class="lbl" style="padding-top:8px;">Versturen naar</span>
+        <div class="meld-emails">
+          <div id="m-email-lijst"></div>
+          <div class="meld-add">
+            <input id="m-email-in" type="email" placeholder="naam@voorbeeld.be" onkeydown="if(event.key==='Enter')addMeldEmail()">
+            <button onclick="addMeldEmail()">＋ Toevoegen</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="meld-foot">
+        <button class="save-btn" onclick="saveMeld()">💾 Instellingen opslaan</button>
+        <span class="meld-status" id="m-status"></span>
+      </div>
+
+      <div class="meld-note">
+        De mails worden op de server verstuurd door een geplande functie die elk uur controleert of er iets te versturen valt.
+        Bij dagelijkse frequentie bevat de mail de taken van die dag; bij wekelijks een overzicht van de hele week.
+        <span id="m-lastsent"></span>
+      </div>
+    </div>
+  </div><!-- /panel-meld -->
 </div>
 
 <script>
@@ -176,8 +301,28 @@ let DATA = { taken:{}, weeks:{} };
 let weekOffset = 0;   // 0 = deze week
 let editing = false;
 let refocusDag = null; // add-input opnieuw focussen na re-render
+let filterWie = '';    // '' = iedereen, '__none__' = zonder toewijzing, anders uid
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---- leden (accounts die de weekplanning al openden) ---- */
+function myUid(){ return (window.__auth && window.__auth.uid) || ''; }
+function voornaam(n){ return String(n||'').trim().split(/\s+/)[0]; }
+function ledenLijst(){
+  return Object.entries(DATA.leden || {})
+    .map(([uid,l]) => ({ uid, naam: (l && (l.naam || l.email)) || uid }))
+    .sort((a,b) => a.naam.localeCompare(b.naam,'nl'));
+}
+function wieKleur(uid){
+  let h = 0;
+  for(let i=0;i<uid.length;i++) h = (h*31 + uid.charCodeAt(i)) % 360;
+  return 'background:hsl(' + h + ',70%,90%);color:hsl(' + h + ',60%,28%);';
+}
+function wieOptions(sel){
+  return '<option value="">— iedereen —</option>' + ledenLijst().map(l =>
+    '<option value="' + esc(l.uid) + '"' + (l.uid===sel?' selected':'') + '>'
+    + esc(l.naam) + (l.uid===myUid() ? ' (ik)':'') + '</option>').join('');
+}
 
 /* ---- datums & ISO-week ---- */
 function mondayOf(d){
@@ -225,12 +370,19 @@ function render(){
     const datum = new Date(monday); datum.setDate(datum.getDate()+i);
     const isToday = sameDay(datum, today);
 
-    const vast = Object.entries((DATA.taken || {})[dag.key] || {})
+    const alleVast = Object.entries((DATA.taken || {})[dag.key] || {})
       .map(([id,t]) => Object.assign({id}, t))
       .sort((a,b) => (a.volgorde??0)-(b.volgorde??0) || String(a.naam).localeCompare(String(b.naam),'nl'));
-    const ex = Object.entries(extras[dag.key] || {})
+    const alleEx = Object.entries(extras[dag.key] || {})
       .map(([id,t]) => Object.assign({id}, t))
       .sort((a,b) => (a.ts||0)-(b.ts||0));
+
+    // Persoonsfilter (in bewerkmodus altijd alles tonen, anders kloppen de ▲▼-indexen niet)
+    const fw = editing ? '' : filterWie;
+    const vast = fw==='__none__' ? alleVast.filter(t => !t.wieUid)
+               : fw               ? alleVast.filter(t => t.wieUid === fw)
+               : alleVast;
+    const ex = (fw && fw!=='__none__') ? [] : alleEx;
 
     const tot = vast.length + ex.length;
     const done = vast.filter(t => checks[t.id]).length + ex.filter(t => t.done).length;
@@ -242,7 +394,9 @@ function render(){
         + '<input type="checkbox"' + (af?' checked':'') + ' onchange="toggleCheck(\'' + t.id + '\', this.checked)">'
         + (t.tijd ? '<span class="tijd">' + esc(t.tijd) + '</span>' : '')
         + '<span class="naam">' + esc(t.naam) + '</span>'
+        + (t.wieNaam ? '<span class="wie" style="' + wieKleur(t.wieUid||'') + '" title="Toegewezen aan ' + esc(t.wieNaam) + '">👤 ' + esc(voornaam(t.wieNaam)) + '</span>' : '')
         + '<span class="edit-actions">'
+        +   '<select class="wie-select" title="Toegewezen aan" onchange="setWie(\'' + dag.key + '\',\'' + t.id + '\', this.value)">' + wieOptions(t.wieUid||'') + '</select>'
         +   '<button class="mini" title="Omhoog" onclick="moveTaak(\'' + dag.key + '\',' + idx + ',-1)">▲</button>'
         +   '<button class="mini" title="Omlaag" onclick="moveTaak(\'' + dag.key + '\',' + idx + ',1)">▼</button>'
         +   '<button class="mini" title="Bewerken" onclick="renameTaak(\'' + dag.key + '\',\'' + t.id + '\')">✏️</button>'
@@ -267,10 +421,13 @@ function render(){
       + '</div>'
       + '<div class="day-bar"><i style="width:' + (tot ? Math.round(done/tot*100) : 0) + '%"></i></div>'
       + '<div class="day-body">'
-      +   (rows + exRows || '<div class="day-empty">Nog geen vaste taken.<br>Voeg toe via ✏️ Vaste taken bewerken.</div>')
+      +   (rows + exRows || (alleVast.length + alleEx.length
+            ? '<div class="day-empty">Geen taken voor deze persoon.</div>'
+            : '<div class="day-empty">Nog geen vaste taken.<br>Voeg toe via ✏️ Vaste taken bewerken.</div>'))
       +   '<div class="add-row">'
       +     '<input class="tijd-in" id="tijd-' + dag.key + '" placeholder="09:00" maxlength="10">'
       +     '<input id="naam-' + dag.key + '" placeholder="Nieuwe vaste taak…" onkeydown="if(event.key===\'Enter\')addTaak(\'' + dag.key + '\')">'
+      +     '<select class="wie-select" id="wie-' + dag.key + '" title="Toewijzen aan">' + wieOptions('') + '</select>'
       +     '<button onclick="addTaak(\'' + dag.key + '\')">＋</button>'
       +   '</div>'
       + '</div>'
@@ -284,6 +441,16 @@ function render(){
   pill.textContent = doneAll + ' / ' + totAll + ' klaar';
   pill.style.color = totAll>0 && doneAll===totAll ? 'var(--green)' : '';
 
+  const fsel = document.getElementById('filter-wie');
+  if(fsel){
+    const cur = filterWie;
+    fsel.innerHTML = '<option value="">👥 Iedereen</option>'
+      + ledenLijst().map(l => '<option value="' + esc(l.uid) + '">👤 ' + esc(l.naam) + (l.uid===myUid() ? ' (ik)':'') + '</option>').join('')
+      + '<option value="__none__">◌ Zonder toewijzing</option>';
+    fsel.value = cur;
+    if(fsel.value !== cur){ filterWie = ''; fsel.value = ''; }
+  }
+
   if(refocusDag){
     const el = document.getElementById('naam-' + refocusDag);
     if(el) el.focus();
@@ -294,6 +461,7 @@ function render(){
 /* ---- navigatie ---- */
 function navWeek(d){ weekOffset += d; render(); }
 function navToday(){ weekOffset = 0; render(); }
+function setFilter(v){ filterWie = v; render(); }
 
 /* ---- afvinken (per week) ---- */
 function toggleCheck(taakId, on){
@@ -308,6 +476,7 @@ function toggleEdit(){
   document.body.classList.toggle('editing', editing);
   document.getElementById('btn-edit').classList.toggle('active', editing);
   document.getElementById('btn-edit').textContent = editing ? '✓ Klaar met bewerken' : '✏️ Vaste taken bewerken';
+  render(); // bewerkmodus negeert de persoonsfilter
 }
 function addTaak(dagKey){
   const naamEl = document.getElementById('naam-' + dagKey);
@@ -316,12 +485,17 @@ function addTaak(dagKey){
   if(!naam) return;
   const bestaande = Object.values((DATA.taken || {})[dagKey] || {});
   const volgorde = bestaande.reduce((m,t) => Math.max(m, t.volgorde??0), 0) + 1;
-  fbdb.ref(WP_PATH + '/taken/' + dagKey).push({
+  const wieEl = document.getElementById('wie-' + dagKey);
+  const wieUid = (wieEl && wieEl.value) || '';
+  const lid = (DATA.leden || {})[wieUid] || {};
+  const taak = {
     naam,
     tijd: (tijdEl.value || '').trim(),
     volgorde,
     toegevoegd: firebase.database.ServerValue.TIMESTAMP
-  });
+  };
+  if(wieUid){ taak.wieUid = wieUid; taak.wieNaam = lid.naam || lid.email || ''; }
+  fbdb.ref(WP_PATH + '/taken/' + dagKey).push(taak);
   naamEl.value = ''; tijdEl.value = '';
   refocusDag = dagKey;
 }
@@ -334,6 +508,13 @@ function renameTaak(dagKey, id){
   const tijd = prompt('Tijd (leeg = geen):', t.tijd || '');
   if(tijd === null) return;
   fbdb.ref(WP_PATH + '/taken/' + dagKey + '/' + id).update({ naam: naam.trim(), tijd: tijd.trim() });
+}
+function setWie(dagKey, id, uid){
+  const lid = (DATA.leden || {})[uid] || {};
+  fbdb.ref(WP_PATH + '/taken/' + dagKey + '/' + id).update({
+    wieUid:  uid || null,
+    wieNaam: uid ? (lid.naam || lid.email || '') : null
+  });
 }
 function delTaak(dagKey, id){
   const t = ((DATA.taken || {})[dagKey] || {})[id];
@@ -374,11 +555,134 @@ function delExtra(dagKey, id){
   fbdb.ref(WP_PATH + '/weeks/' + curWeekKey() + '/extra/' + dagKey + '/' + id).remove();
 }
 
+/* ---- tabbladen ---- */
+function showTab(t){
+  document.getElementById('panel-plan').style.display = t==='plan' ? '' : 'none';
+  document.getElementById('panel-meld').style.display = t==='meld' ? '' : 'none';
+  document.getElementById('tab-plan').classList.toggle('active', t==='plan');
+  document.getElementById('tab-meld').classList.toggle('active', t==='meld');
+  document.getElementById('btn-edit').style.display = t==='plan' ? '' : 'none';
+}
+
+/* ---- meldingen-instellingen ---- */
+let MELD_EMAILS = [];
+let meldLoaded = false;
+
+function initMeldForm(){
+  const uurSel = document.getElementById('m-uur');
+  uurSel.innerHTML = Array.from({length:17}, (_,i) => {
+    const u = i + 6; // 06:00 t/m 22:00
+    return '<option value="' + u + '">' + String(u).padStart(2,'0') + ':00</option>';
+  }).join('');
+  uurSel.value = '8';
+}
+
+function onFreqChange(){
+  const wekelijks = document.getElementById('m-freq').value === 'wekelijks';
+  document.getElementById('m-weekdag-row').style.display = wekelijks ? '' : 'none';
+}
+
+function fillMeldForm(cfg){
+  cfg = cfg || {};
+  document.getElementById('m-aan').checked = !!cfg.aan;
+  document.getElementById('m-freq').value = cfg.frequentie || 'dagelijks';
+  document.getElementById('m-weekdag').value = cfg.weekdag || 'ma';
+  document.getElementById('m-uur').value = String(cfg.uur != null ? cfg.uur : 8);
+  document.getElementById('m-alleen-open').checked = cfg.alleenOpen !== false;
+  MELD_EMAILS = Array.isArray(cfg.emails) ? cfg.emails.slice() : Object.values(cfg.emails || {});
+  onFreqChange();
+  renderMeldEmails();
+}
+
+function renderMeldEmails(){
+  document.getElementById('m-email-lijst').innerHTML = MELD_EMAILS.length
+    ? MELD_EMAILS.map((e,i) =>
+        '<div class="meld-email"><span>' + esc(e) + '</span>'
+        + '<button title="Verwijderen" onclick="delMeldEmail(' + i + ')">✕</button></div>'
+      ).join('')
+    : '<div style="font-size:12.5px;color:var(--text3);padding:4px 0;">Nog geen e-mailadressen.</div>';
+}
+
+function addMeldEmail(){
+  const el = document.getElementById('m-email-in');
+  const adres = (el.value || '').trim().toLowerCase();
+  if(!adres) return;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adres)){ alert('Dat lijkt geen geldig e-mailadres.'); return; }
+  if(MELD_EMAILS.includes(adres)){ alert('Dit adres staat er al bij.'); return; }
+  MELD_EMAILS.push(adres);
+  el.value = '';
+  el.focus();
+  renderMeldEmails();
+  setMeldStatus('Nog niet opgeslagen — klik op 💾 Instellingen opslaan.', false);
+}
+
+function delMeldEmail(i){
+  MELD_EMAILS.splice(i, 1);
+  renderMeldEmails();
+  setMeldStatus('Nog niet opgeslagen — klik op 💾 Instellingen opslaan.', false);
+}
+
+function setMeldStatus(txt, ok){
+  const el = document.getElementById('m-status');
+  el.textContent = txt;
+  el.classList.toggle('ok', !!ok);
+}
+
+function saveMeld(){
+  const cfg = {
+    aan: document.getElementById('m-aan').checked,
+    frequentie: document.getElementById('m-freq').value,
+    weekdag: document.getElementById('m-weekdag').value,
+    uur: Number(document.getElementById('m-uur').value),
+    alleenOpen: document.getElementById('m-alleen-open').checked,
+    emails: MELD_EMAILS,
+  };
+  if(cfg.aan && !MELD_EMAILS.length){
+    alert('Voeg minstens één e-mailadres toe, of zet de meldingen uit.');
+    return;
+  }
+  fbdb.ref(WP_PATH + '/meldingen').update(cfg)
+    .then(() => setMeldStatus('Opgeslagen ✓', true))
+    .catch(err => setMeldStatus('Opslaan mislukt: ' + (err.message || err.code), false));
+}
+
+function renderMeldLastSent(){
+  const cfg = DATA.meldingen || {};
+  document.getElementById('m-lastsent').textContent =
+    cfg.lastSent ? ' Laatst verstuurd: ' + cfg.lastSent + '.' : '';
+}
+
 /* ---- init ---- */
 (async function init(){
+  initMeldForm();
   if(window.fbAuthReady) await window.fbAuthReady;
+
+  // Registreer het ingelogde account in de ledenlijst zodat het in de
+  // toewijs-dropdowns verschijnt. auth.js zet window.__auth pas na de
+  // claims-check, dus kort pollen tot het er is.
+  (function registreerLid(){
+    let pogingen = 0;
+    (function poll(){
+      const a = window.__auth;
+      if(a && a.uid && (a.email || a.displayName)){
+        fbdb.ref(WP_PATH + '/leden/' + a.uid).update({
+          naam: a.displayName || String(a.email).split('@')[0],
+          email: a.email || '',
+          lastSeen: firebase.database.ServerValue.TIMESTAMP
+        }).catch(()=>{});
+        return;
+      }
+      if(++pogingen < 40) setTimeout(poll, 250);
+    })();
+  })();
+
   fbdb.ref(WP_PATH).on('value', snap => {
     DATA = snap.val() || { taken:{}, weeks:{} };
+    if(!meldLoaded){
+      fillMeldForm(DATA.meldingen);
+      meldLoaded = true;
+    }
+    renderMeldLastSent();
     render();
   }, err => {
     document.getElementById('grid').innerHTML =

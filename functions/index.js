@@ -60,6 +60,140 @@ exports.planningBackup = onSchedule(
   }
 );
 
+// ── Weekplanning: e-mailmeldingen ───────────────────────────────
+// Instellingen staan in ft_weekplanning_v1/meldingen (beheerd via het
+// tabblad "Meldingen" op weekplanning.html): aan, frequentie
+// (dagelijks|werkdagen|wekelijks), weekdag, uur, alleenOpen, emails[].
+// Draait elk uur; verstuurt alleen op het ingestelde uur/dag en maximaal
+// 1× per dag (lastSent-guard). SMTP-gegevens via secrets.
+const SMTP_HOST = defineSecret('SMTP_HOST');
+const SMTP_PORT = defineSecret('SMTP_PORT');
+const SMTP_USER = defineSecret('SMTP_USER');
+const SMTP_PASS = defineSecret('SMTP_PASS');
+
+const WP_DAG_KEYS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+const WP_DAG_NAMEN = {
+  ma: 'Maandag', di: 'Dinsdag', wo: 'Woensdag', do: 'Donderdag',
+  vr: 'Vrijdag', za: 'Zaterdag', zo: 'Zondag',
+};
+
+function wpBrusselsNow() {
+  const now = new Date();
+  const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Brussels' }).format(now); // YYYY-MM-DD
+  const hour = Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Brussels', hour: '2-digit', hourCycle: 'h23',
+  }).format(now));
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  const dagKey = WP_DAG_KEYS[(utc.getUTCDay() + 6) % 7];
+  // ISO-weeknummer (zelfde logica als op de pagina)
+  const x = new Date(utc);
+  x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7) + 3);
+  const jan4 = new Date(Date.UTC(x.getUTCFullYear(), 0, 4));
+  const week = 1 + Math.round((x - jan4) / 86400000 / 7 + ((jan4.getUTCDay() + 6) % 7) / 7);
+  const weekKey = x.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
+  return { dateStr, hour, dagKey, weekKey, week };
+}
+
+function wpTakenVoorDag(data, weekKey, dagKey) {
+  const wkData = (data.weeks || {})[weekKey] || {};
+  const checks = wkData.checks || {};
+  const vast = Object.entries((data.taken || {})[dagKey] || {})
+    .map(([id, t]) => ({
+      naam: t.naam || '', tijd: t.tijd || '',
+      volgorde: t.volgorde || 0, af: !!checks[id],
+    }))
+    .sort((a, b) => a.volgorde - b.volgorde);
+  const extra = Object.values((wkData.extra || {})[dagKey] || {})
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0))
+    .map((t) => ({ naam: (t.naam || '') + ' (extra)', tijd: '', af: !!t.done }));
+  return vast.concat(extra);
+}
+
+function wpTaakRegel(t) {
+  return '  ' + (t.af ? '[x]' : '[ ]') + ' ' + (t.tijd ? t.tijd + '  ' : '') + t.naam;
+}
+
+exports.weekplanningMelding = onSchedule(
+  {
+    schedule: '0 * * * *',
+    timeZone: 'Europe/Brussels',
+    region: REGION,
+    secrets: [SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS],
+  },
+  async () => {
+    const snap = await admin.database().ref('ft_weekplanning_v1').once('value');
+    const data = snap.val() || {};
+    const cfg = data.meldingen;
+    if (!cfg || !cfg.aan) return;
+    const emails = (Array.isArray(cfg.emails) ? cfg.emails : Object.values(cfg.emails || {}))
+      .filter((e) => typeof e === 'string' && e.includes('@'));
+    if (!emails.length) return;
+
+    const now = wpBrusselsNow();
+    if (Number(cfg.uur != null ? cfg.uur : 8) !== now.hour) return;
+    const freq = cfg.frequentie || 'dagelijks';
+    if (freq === 'werkdagen' && (now.dagKey === 'za' || now.dagKey === 'zo')) return;
+    if (freq === 'wekelijks' && now.dagKey !== (cfg.weekdag || 'ma')) return;
+    if (cfg.lastSent === now.dateStr) return;
+
+    let onderwerp;
+    const regels = [];
+    let openCount = 0;
+
+    if (freq === 'wekelijks') {
+      onderwerp = 'Weekplanning week ' + now.week + ' — weekoverzicht';
+      regels.push('Weekplanning — overzicht week ' + now.week, '');
+      for (const k of WP_DAG_KEYS) {
+        const taken = wpTakenVoorDag(data, now.weekKey, k);
+        openCount += taken.filter((t) => !t.af).length;
+        regels.push(WP_DAG_NAMEN[k] + ':');
+        regels.push(taken.length ? taken.map(wpTaakRegel).join('\n') : '  (geen taken)');
+        regels.push('');
+      }
+    } else {
+      const taken = wpTakenVoorDag(data, now.weekKey, now.dagKey);
+      const open = taken.filter((t) => !t.af);
+      openCount = open.length;
+      onderwerp = 'Weekplanning ' + WP_DAG_NAMEN[now.dagKey].toLowerCase() +
+        ' — ' + openCount + ' open ' + (openCount === 1 ? 'taak' : 'taken');
+      regels.push('Weekplanning — ' + WP_DAG_NAMEN[now.dagKey] + ' (week ' + now.week + ')', '');
+      if (open.length) {
+        regels.push('Open taken:', open.map(wpTaakRegel).join('\n'), '');
+      }
+      const af = taken.filter((t) => t.af);
+      if (af.length) {
+        regels.push('Al afgevinkt:', af.map(wpTaakRegel).join('\n'), '');
+      }
+      if (!taken.length) regels.push('Geen taken voor vandaag.', '');
+    }
+
+    if (cfg.alleenOpen !== false && openCount === 0) {
+      logger.info('weekplanningMelding: geen open taken, mail overgeslagen.');
+      return;
+    }
+
+    regels.push('Afvinken en bewerken: https://operationssenorsnacks.web.app/weekplanning.html');
+
+    const nodemailer = require('nodemailer');
+    const port = Number(SMTP_PORT.value() || 587);
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST.value(),
+      port,
+      secure: port === 465,
+      auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
+    });
+    await transporter.sendMail({
+      from: '"Señor Snacks Operations" <' + SMTP_USER.value() + '>',
+      to: emails.join(', '),
+      subject: onderwerp,
+      text: regels.join('\n'),
+    });
+    await admin.database().ref('ft_weekplanning_v1/meldingen/lastSent').set(now.dateStr);
+    logger.info('weekplanningMelding: verstuurd naar ' + emails.join(', '));
+  }
+);
+
 // ── Rate limiter ────────────────────────────────────────────────
 // Fixed-window counter per (endpoint, ip), persisted in RTDB so it
 // survives across function instances. Returns null on success, or
