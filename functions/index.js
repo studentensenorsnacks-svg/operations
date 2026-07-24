@@ -122,75 +122,80 @@ exports.weekplanningMelding = onSchedule(
     secrets: [SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS],
   },
   async () => {
-    const snap = await admin.database().ref('ft_weekplanning_v1').once('value');
+    // Meerdere meldingen in ft_weekplanning_v1/meldingen/items/<id>:
+    // { aan, onderwerp, bericht, taken: geen|dag|week, alleenOpen,
+    //   dagen: {ma..zo}, uur, emails (kommagescheiden), lastSent }
+    const rootRef = admin.database().ref('ft_weekplanning_v1');
+    const snap = await rootRef.once('value');
     const data = snap.val() || {};
-    const cfg = data.meldingen;
-    if (!cfg || !cfg.aan) return;
-    const emails = (Array.isArray(cfg.emails) ? cfg.emails : Object.values(cfg.emails || {}))
-      .filter((e) => typeof e === 'string' && e.includes('@'));
-    if (!emails.length) return;
-
+    const items = ((data.meldingen || {}).items) || {};
     const now = wpBrusselsNow();
-    if (Number(cfg.uur != null ? cfg.uur : 8) !== now.hour) return;
-    const freq = cfg.frequentie || 'dagelijks';
-    if (freq === 'werkdagen' && (now.dagKey === 'za' || now.dagKey === 'zo')) return;
-    if (freq === 'wekelijks' && now.dagKey !== (cfg.weekdag || 'ma')) return;
-    if (cfg.lastSent === now.dateStr) return;
+    let transporter = null;
 
-    let onderwerp;
-    const regels = [];
-    let openCount = 0;
+    for (const [id, m] of Object.entries(items)) {
+      if (!m || !m.aan) continue;
+      if (Number(m.uur != null ? m.uur : 8) !== now.hour) continue;
+      if (!((m.dagen || {})[now.dagKey])) continue;
+      if (m.lastSent === now.dateStr) continue;
+      const emails = String(m.emails || '').split(/[,;\s]+/).filter((e) => e.includes('@'));
+      if (!emails.length) continue;
 
-    if (freq === 'wekelijks') {
-      onderwerp = 'Weekplanning week ' + now.week + ' — weekoverzicht';
-      regels.push('Weekplanning — overzicht week ' + now.week, '');
-      for (const k of WP_DAG_KEYS) {
-        const taken = wpTakenVoorDag(data, now.weekKey, k);
-        openCount += taken.filter((t) => !t.af).length;
-        regels.push(WP_DAG_NAMEN[k] + ':');
-        regels.push(taken.length ? taken.map(wpTaakRegel).join('\n') : '  (geen taken)');
-        regels.push('');
+      const regels = [];
+      if (m.bericht) regels.push(m.bericht, '');
+      let openCount = 0;
+      const metTaken = m.taken || 'geen';
+
+      if (metTaken === 'week') {
+        regels.push('Weekplanning — overzicht week ' + now.week, '');
+        for (const k of WP_DAG_KEYS) {
+          const taken = wpTakenVoorDag(data, now.weekKey, k);
+          openCount += taken.filter((t) => !t.af).length;
+          regels.push(WP_DAG_NAMEN[k] + ':');
+          regels.push(taken.length ? taken.map(wpTaakRegel).join('\n') : '  (geen taken)');
+          regels.push('');
+        }
+      } else if (metTaken === 'dag') {
+        const taken = wpTakenVoorDag(data, now.weekKey, now.dagKey);
+        const open = taken.filter((t) => !t.af);
+        openCount = open.length;
+        regels.push('Weekplanning — ' + WP_DAG_NAMEN[now.dagKey] + ' (week ' + now.week + ')', '');
+        if (open.length) {
+          regels.push('Open taken:', open.map(wpTaakRegel).join('\n'), '');
+        }
+        const af = taken.filter((t) => t.af);
+        if (af.length) {
+          regels.push('Al afgevinkt:', af.map(wpTaakRegel).join('\n'), '');
+        }
+        if (!taken.length) regels.push('Geen taken voor vandaag.', '');
       }
-    } else {
-      const taken = wpTakenVoorDag(data, now.weekKey, now.dagKey);
-      const open = taken.filter((t) => !t.af);
-      openCount = open.length;
-      onderwerp = 'Weekplanning ' + WP_DAG_NAMEN[now.dagKey].toLowerCase() +
-        ' — ' + openCount + ' open ' + (openCount === 1 ? 'taak' : 'taken');
-      regels.push('Weekplanning — ' + WP_DAG_NAMEN[now.dagKey] + ' (week ' + now.week + ')', '');
-      if (open.length) {
-        regels.push('Open taken:', open.map(wpTaakRegel).join('\n'), '');
+
+      if (metTaken !== 'geen' && m.alleenOpen && openCount === 0) {
+        logger.info('weekplanningMelding[' + id + ']: geen open taken, overgeslagen.');
+        continue;
       }
-      const af = taken.filter((t) => t.af);
-      if (af.length) {
-        regels.push('Al afgevinkt:', af.map(wpTaakRegel).join('\n'), '');
+      if (metTaken !== 'geen') {
+        regels.push('Afvinken en bewerken: https://operationssenorsnacks.web.app/weekplanning.html');
       }
-      if (!taken.length) regels.push('Geen taken voor vandaag.', '');
+
+      if (!transporter) {
+        const nodemailer = require('nodemailer');
+        const port = Number(SMTP_PORT.value() || 587);
+        transporter = nodemailer.createTransport({
+          host: SMTP_HOST.value(),
+          port,
+          secure: port === 465,
+          auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
+        });
+      }
+      await transporter.sendMail({
+        from: '"Señor Snacks Operations" <' + SMTP_USER.value() + '>',
+        to: emails.join(', '),
+        subject: m.onderwerp || 'Melding — Señor Snacks Operations',
+        text: regels.join('\n').trim() + '\n',
+      });
+      await rootRef.child('meldingen/items/' + id + '/lastSent').set(now.dateStr);
+      logger.info('weekplanningMelding[' + id + ']: verstuurd naar ' + emails.join(', '));
     }
-
-    if (cfg.alleenOpen !== false && openCount === 0) {
-      logger.info('weekplanningMelding: geen open taken, mail overgeslagen.');
-      return;
-    }
-
-    regels.push('Afvinken en bewerken: https://operationssenorsnacks.web.app/weekplanning.html');
-
-    const nodemailer = require('nodemailer');
-    const port = Number(SMTP_PORT.value() || 587);
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST.value(),
-      port,
-      secure: port === 465,
-      auth: { user: SMTP_USER.value(), pass: SMTP_PASS.value() },
-    });
-    await transporter.sendMail({
-      from: '"Señor Snacks Operations" <' + SMTP_USER.value() + '>',
-      to: emails.join(', '),
-      subject: onderwerp,
-      text: regels.join('\n'),
-    });
-    await admin.database().ref('ft_weekplanning_v1/meldingen/lastSent').set(now.dateStr);
-    logger.info('weekplanningMelding: verstuurd naar ' + emails.join(', '));
   }
 );
 

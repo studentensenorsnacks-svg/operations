@@ -126,13 +126,27 @@ body.editing .add-row{display:flex;}
 .tab:hover{border-color:var(--blue);color:var(--blue);}
 .tab.active{background:var(--blue);border-color:var(--blue);color:#fff;}
 
+.meld-lijst{display:flex;flex-direction:column;gap:14px;}
 .meld-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:660px;}
+.meld-card.uit{opacity:.65;}
+.meld-card input[type=text],.meld-card textarea{width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;background:#fff;resize:vertical;}
+.meld-card input[type=text]:focus,.meld-card textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.meld-card .veld{flex:1;min-width:220px;}
+.meld-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;}
+.meld-hdr label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;}
+.meld-hdr input[type=checkbox]{width:17px;height:17px;accent-color:var(--green);cursor:pointer;}
+.meld-del{border:none;background:transparent;cursor:pointer;font-size:14px;color:var(--text3);padding:4px 6px;border-radius:6px;}
+.meld-del:hover{background:var(--surface2);color:var(--red);}
 .meld-title{font-family:var(--font-cond);font-size:20px;font-weight:800;}
 .meld-sub{font-size:12.5px;color:var(--text2);margin:4px 0 14px;}
 .meld-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border);flex-wrap:wrap;}
 .meld-row .lbl{flex:0 0 200px;font-size:13px;font-weight:600;color:var(--text2);}
 .meld-row select{padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;background:#fff;outline:none;}
 .meld-row select:focus{border-color:var(--blue);}
+.dag-picker{display:flex;gap:6px;flex-wrap:wrap;}
+.dag-picker label{display:flex;align-items:center;gap:5px;padding:6px 10px;border:1px solid var(--border2);border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;background:#fff;}
+.dag-picker label:hover{border-color:var(--blue);}
+.dag-picker input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;}
 .meld-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue);cursor:pointer;}
 .meld-emails{display:flex;flex-direction:column;gap:6px;flex:1;min-width:230px;}
 .meld-email{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:6px 10px;}
@@ -215,72 +229,15 @@ body.editing .add-row{display:flex;}
   </div><!-- /panel-plan -->
 
   <div id="panel-meld" style="display:none">
-    <div class="meld-card">
-      <div class="meld-title">🔔 E-mailmeldingen</div>
-      <div class="meld-sub">Ontvang automatisch een overzicht van de taken per e-mail.</div>
-
-      <div class="meld-row">
-        <span class="lbl">Meldingen</span>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" id="m-aan"> Ingeschakeld
-        </label>
-      </div>
-
-      <div class="meld-row">
-        <span class="lbl">Frequentie</span>
-        <select id="m-freq" onchange="onFreqChange()">
-          <option value="dagelijks">Elke dag</option>
-          <option value="werkdagen">Elke werkdag (ma–vr)</option>
-          <option value="wekelijks">Wekelijks (weekoverzicht)</option>
-        </select>
-      </div>
-
-      <div class="meld-row" id="m-weekdag-row" style="display:none">
-        <span class="lbl">Dag van verzending</span>
-        <select id="m-weekdag">
-          <option value="ma">Maandag</option>
-          <option value="di">Dinsdag</option>
-          <option value="wo">Woensdag</option>
-          <option value="do">Donderdag</option>
-          <option value="vr">Vrijdag</option>
-          <option value="za">Zaterdag</option>
-          <option value="zo">Zondag</option>
-        </select>
-      </div>
-
-      <div class="meld-row">
-        <span class="lbl">Tijdstip</span>
-        <select id="m-uur"></select>
-      </div>
-
-      <div class="meld-row">
-        <span class="lbl">Alleen bij open taken</span>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
-          <input type="checkbox" id="m-alleen-open"> Niet versturen als alles al is afgevinkt
-        </label>
-      </div>
-
-      <div class="meld-row" style="align-items:flex-start;">
-        <span class="lbl" style="padding-top:8px;">Versturen naar</span>
-        <div class="meld-emails">
-          <div id="m-email-lijst"></div>
-          <div class="meld-add">
-            <input id="m-email-in" type="email" placeholder="naam@voorbeeld.be" onkeydown="if(event.key==='Enter')addMeldEmail()">
-            <button onclick="addMeldEmail()">＋ Toevoegen</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="meld-foot">
-        <button class="save-btn" onclick="saveMeld()">💾 Instellingen opslaan</button>
-        <span class="meld-status" id="m-status"></span>
-      </div>
-
-      <div class="meld-note">
-        De mails worden op de server verstuurd door een geplande functie die elk uur controleert of er iets te versturen valt.
-        Bij dagelijkse frequentie bevat de mail de taken van die dag; bij wekelijks een overzicht van de hele week.
-        <span id="m-lastsent"></span>
-      </div>
+    <div class="page-sub" style="margin-bottom:14px;">
+      Automatische e-mails op de dagen en het uur dat jij kiest. Elke melding heeft een eigen onderwerp en bericht —
+      helemaal los van de weekplanning, of mét de taken van die dag of week erbij.
+    </div>
+    <div class="meld-lijst" id="meld-lijst"></div>
+    <button class="btn" onclick="addMelding()" style="margin-top:14px;">＋ Nieuwe melding</button>
+    <div class="meld-note">
+      De mails worden op de server verstuurd door een geplande functie die elk uur controleert of er iets te versturen valt.
+      Per melding wordt maximaal 1 mail per dag verstuurd.
     </div>
   </div><!-- /panel-meld -->
 </div>
@@ -564,97 +521,112 @@ function showTab(t){
   document.getElementById('btn-edit').style.display = t==='plan' ? '' : 'none';
 }
 
-/* ---- meldingen-instellingen ---- */
-let MELD_EMAILS = [];
-let meldLoaded = false;
+/* ---- meldingen: vrije e-mails per dag/uur, los van de weekplanning ---- */
+let meldDraft = false;      // er staat een nog niet opgeslagen nieuwe melding
+let meldSnapshot = '';      // alleen her-renderen als de meldingen zelf wijzigen
 
-function initMeldForm(){
-  const uurSel = document.getElementById('m-uur');
-  uurSel.innerHTML = Array.from({length:17}, (_,i) => {
+function meldItems(){
+  const it = (DATA.meldingen || {}).items || {};
+  return Object.entries(it).map(([id,m]) => Object.assign({id}, m))
+    .sort((a,b) => (a.aangemaakt||0)-(b.aangemaakt||0));
+}
+function uurOptions(sel){
+  return Array.from({length:17}, (_,i) => {
     const u = i + 6; // 06:00 t/m 22:00
-    return '<option value="' + u + '">' + String(u).padStart(2,'0') + ':00</option>';
+    return '<option value="' + u + '"' + (u===sel?' selected':'') + '>' + String(u).padStart(2,'0') + ':00</option>';
   }).join('');
-  uurSel.value = '8';
 }
-
-function onFreqChange(){
-  const wekelijks = document.getElementById('m-freq').value === 'wekelijks';
-  document.getElementById('m-weekdag-row').style.display = wekelijks ? '' : 'none';
+function dagChips(id, dagen){
+  dagen = dagen || {};
+  return DAGEN.map(d =>
+    '<label><input type="checkbox" value="' + d.key + '"' + (dagen[d.key]?' checked':'') + '> ' + d.key + '</label>'
+  ).join('');
 }
-
-function fillMeldForm(cfg){
-  cfg = cfg || {};
-  document.getElementById('m-aan').checked = !!cfg.aan;
-  document.getElementById('m-freq').value = cfg.frequentie || 'dagelijks';
-  document.getElementById('m-weekdag').value = cfg.weekdag || 'ma';
-  document.getElementById('m-uur').value = String(cfg.uur != null ? cfg.uur : 8);
-  document.getElementById('m-alleen-open').checked = cfg.alleenOpen !== false;
-  MELD_EMAILS = Array.isArray(cfg.emails) ? cfg.emails.slice() : Object.values(cfg.emails || {});
-  onFreqChange();
-  renderMeldEmails();
+function meldCard(m){
+  const id = m.id;
+  return '<div class="meld-card' + (m.aan===false?' uit':'') + '" id="mcard-' + id + '">'
+    + '<div class="meld-hdr">'
+    +   '<label><input type="checkbox" id="mf-aan-' + id + '"' + (m.aan!==false?' checked':'') + '> Actief</label>'
+    +   '<button class="meld-del" title="Melding verwijderen" onclick="delMelding(\'' + id + '\')">🗑️</button>'
+    + '</div>'
+    + '<div class="meld-row"><span class="lbl">Onderwerp</span>'
+    +   '<input type="text" class="veld" id="mf-onderwerp-' + id + '" placeholder="bv. Vuilnis buitenzetten" value="' + esc(m.onderwerp||'') + '"></div>'
+    + '<div class="meld-row" style="align-items:flex-start;"><span class="lbl" style="padding-top:8px;">Bericht (optioneel)</span>'
+    +   '<textarea class="veld" id="mf-bericht-' + id + '" rows="2" placeholder="Tekst die in de mail komt…">' + esc(m.bericht||'') + '</textarea></div>'
+    + '<div class="meld-row"><span class="lbl">Taken meesturen</span>'
+    +   '<select id="mf-taken-' + id + '">'
+    +     '<option value="geen"' + ((m.taken||'geen')==='geen'?' selected':'') + '>Nee — alleen dit bericht</option>'
+    +     '<option value="dag"'  + (m.taken==='dag' ?' selected':'') + '>Taken van die dag erbij</option>'
+    +     '<option value="week"' + (m.taken==='week'?' selected':'') + '>Weekoverzicht taken erbij</option>'
+    +   '</select></div>'
+    + '<div class="meld-row"><span class="lbl">Alleen bij open taken</span>'
+    +   '<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">'
+    +   '<input type="checkbox" id="mf-alleenopen-' + id + '"' + (m.alleenOpen?' checked':'') + '> Niet versturen als alles is afgevinkt (enkel als taken meegaan)</label></div>'
+    + '<div class="meld-row"><span class="lbl">Op welke dagen</span>'
+    +   '<div class="dag-picker" id="mf-dagen-' + id + '">' + dagChips(id, m.dagen) + '</div></div>'
+    + '<div class="meld-row"><span class="lbl">Tijdstip</span>'
+    +   '<select id="mf-uur-' + id + '">' + uurOptions(m.uur!=null?Number(m.uur):8) + '</select></div>'
+    + '<div class="meld-row"><span class="lbl">Versturen naar</span>'
+    +   '<input type="text" class="veld" id="mf-emails-' + id + '" placeholder="naam@voorbeeld.be, tweede@voorbeeld.be" value="' + esc(m.emails||'') + '"></div>'
+    + '<div class="meld-foot">'
+    +   '<button class="save-btn" onclick="saveMelding(\'' + id + '\')">💾 Opslaan</button>'
+    +   '<span class="meld-status" id="mf-status-' + id + '">' + (m.lastSent ? 'Laatst verstuurd: ' + esc(m.lastSent) : (id==='nieuw' ? 'Nog niet opgeslagen' : '')) + '</span>'
+    + '</div>'
+    + '</div>';
 }
-
-function renderMeldEmails(){
-  document.getElementById('m-email-lijst').innerHTML = MELD_EMAILS.length
-    ? MELD_EMAILS.map((e,i) =>
-        '<div class="meld-email"><span>' + esc(e) + '</span>'
-        + '<button title="Verwijderen" onclick="delMeldEmail(' + i + ')">✕</button></div>'
-      ).join('')
-    : '<div style="font-size:12.5px;color:var(--text3);padding:4px 0;">Nog geen e-mailadressen.</div>';
+function renderMeldingen(){
+  const lijst = meldItems();
+  let html = lijst.map(meldCard).join('');
+  if(meldDraft) html += meldCard({ id:'nieuw', aan:true, taken:'geen', uur:8, dagen:{} });
+  document.getElementById('meld-lijst').innerHTML =
+    html || '<div class="day-empty" style="text-align:left;padding:8px 2px;">Nog geen meldingen. Klik op ＋ Nieuwe melding om er één in te stellen.</div>';
 }
-
-function addMeldEmail(){
-  const el = document.getElementById('m-email-in');
-  const adres = (el.value || '').trim().toLowerCase();
-  if(!adres) return;
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adres)){ alert('Dat lijkt geen geldig e-mailadres.'); return; }
-  if(MELD_EMAILS.includes(adres)){ alert('Dit adres staat er al bij.'); return; }
-  MELD_EMAILS.push(adres);
-  el.value = '';
-  el.focus();
-  renderMeldEmails();
-  setMeldStatus('Nog niet opgeslagen — klik op 💾 Instellingen opslaan.', false);
+function addMelding(){
+  meldDraft = true;
+  renderMeldingen();
+  const el = document.getElementById('mcard-nieuw');
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); document.getElementById('mf-onderwerp-nieuw').focus(); }
 }
-
-function delMeldEmail(i){
-  MELD_EMAILS.splice(i, 1);
-  renderMeldEmails();
-  setMeldStatus('Nog niet opgeslagen — klik op 💾 Instellingen opslaan.', false);
-}
-
-function setMeldStatus(txt, ok){
-  const el = document.getElementById('m-status');
-  el.textContent = txt;
-  el.classList.toggle('ok', !!ok);
-}
-
-function saveMeld(){
-  const cfg = {
-    aan: document.getElementById('m-aan').checked,
-    frequentie: document.getElementById('m-freq').value,
-    weekdag: document.getElementById('m-weekdag').value,
-    uur: Number(document.getElementById('m-uur').value),
-    alleenOpen: document.getElementById('m-alleen-open').checked,
-    emails: MELD_EMAILS,
+function saveMelding(id){
+  const dagen = {};
+  document.querySelectorAll('#mf-dagen-' + id + ' input').forEach(ch => { dagen[ch.value] = ch.checked; });
+  const m = {
+    aan: document.getElementById('mf-aan-' + id).checked,
+    onderwerp: document.getElementById('mf-onderwerp-' + id).value.trim(),
+    bericht: document.getElementById('mf-bericht-' + id).value.trim(),
+    taken: document.getElementById('mf-taken-' + id).value,
+    alleenOpen: document.getElementById('mf-alleenopen-' + id).checked,
+    dagen,
+    uur: Number(document.getElementById('mf-uur-' + id).value),
+    emails: document.getElementById('mf-emails-' + id).value.trim(),
   };
-  if(cfg.aan && !MELD_EMAILS.length){
-    alert('Voeg minstens één e-mailadres toe, of zet de meldingen uit.');
+  if(!m.onderwerp){ alert('Vul een onderwerp in.'); return; }
+  if(!Object.values(dagen).some(Boolean)){ alert('Kies minstens één dag.'); return; }
+  const adressen = m.emails.split(/[,;\s]+/).filter(Boolean);
+  if(!adressen.length || adressen.some(a => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a))){
+    alert('Vul één of meer geldige e-mailadressen in, gescheiden door komma’s.');
     return;
   }
-  fbdb.ref(WP_PATH + '/meldingen').update(cfg)
-    .then(() => setMeldStatus('Opgeslagen ✓', true))
-    .catch(err => setMeldStatus('Opslaan mislukt: ' + (err.message || err.code), false));
+  let p;
+  if(id === 'nieuw'){
+    m.aangemaakt = firebase.database.ServerValue.TIMESTAMP;
+    meldDraft = false;
+    p = fbdb.ref(WP_PATH + '/meldingen/items').push(m);
+  } else {
+    p = fbdb.ref(WP_PATH + '/meldingen/items/' + id).update(m);
+  }
+  Promise.resolve(p).catch(err => alert('Opslaan mislukt: ' + (err.message || err.code)));
 }
-
-function renderMeldLastSent(){
-  const cfg = DATA.meldingen || {};
-  document.getElementById('m-lastsent').textContent =
-    cfg.lastSent ? ' Laatst verstuurd: ' + cfg.lastSent + '.' : '';
+function delMelding(id){
+  if(id === 'nieuw'){ meldDraft = false; renderMeldingen(); return; }
+  const m = (((DATA.meldingen||{}).items)||{})[id];
+  if(!confirm('Melding "' + ((m&&m.onderwerp)||'') + '" verwijderen?')) return;
+  if(window.logDeletion) window.logDeletion('weekplanning-melding', (m&&m.onderwerp)||'', { ref: WP_PATH + '/meldingen/items/' + id, data: m });
+  fbdb.ref(WP_PATH + '/meldingen/items/' + id).remove();
 }
 
 /* ---- init ---- */
 (async function init(){
-  initMeldForm();
   if(window.fbAuthReady) await window.fbAuthReady;
 
   // Registreer het ingelogde account in de ledenlijst zodat het in de
@@ -678,11 +650,10 @@ function renderMeldLastSent(){
 
   fbdb.ref(WP_PATH).on('value', snap => {
     DATA = snap.val() || { taken:{}, weeks:{} };
-    if(!meldLoaded){
-      fillMeldForm(DATA.meldingen);
-      meldLoaded = true;
-    }
-    renderMeldLastSent();
+    // Meldingen alleen her-renderen als die zelf wijzigen, anders verlies
+    // je je typwerk telkens iemand een taak afvinkt.
+    const ms = JSON.stringify(DATA.meldingen || {});
+    if(ms !== meldSnapshot){ meldSnapshot = ms; renderMeldingen(); }
     render();
   }, err => {
     document.getElementById('grid').innerHTML =
