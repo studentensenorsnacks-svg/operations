@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<script src="auth.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señor Snacks — Weekplanning</title>
+<link rel="icon" type="image/png" href="senorsnacks-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCtvi5lX9eNuxRyMuc1MTlApUqNXnmU_6o",
+  authDomain: "operationssenorsnacks.firebaseapp.com",
+  databaseURL: "https://operationssenorsnacks-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "operationssenorsnacks",
+  storageBucket: "operationssenorsnacks.firebasestorage.app",
+  messagingSenderId: "526032166243",
+  appId: "1:526032166243:web:5af01c6d17aecd56114756",
+};
+firebase.initializeApp(firebaseConfig);
+const fbdb = firebase.database();
+</script>
+<script src="firebase-anon-auth.js"></script>
+<style>
+:root{
+  --red:#e8001d;--red-dark:#b8001a;
+  --bg:#f4f4f5;--surface:#fff;--surface2:#eeeef0;--surface3:#e4e4e7;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1a1a;--text2:#5f5f66;--text3:#9a9aa2;
+  --green:#15803d;--green-bg:#eaf6ec;
+  --blue:#1f76e8;--blue-bg:#e8f0fd;
+  --font:'Barlow',sans-serif;--font-cond:'Barlow Condensed',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:100;}
+.logo-wrap{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.logo-img{height:30px;width:auto;display:block;}
+.topbar-divider{width:1px;height:22px;background:var(--border2);}
+.topbar-section{font-size:0.92rem;font-weight:700;color:var(--text2);font-family:var(--font-cond);letter-spacing:.02em;text-transform:uppercase;}
+.back-link{padding:6px 14px;border-radius:6px;border:1px solid var(--border2);color:var(--text2);font-size:0.78rem;font-weight:600;text-decoration:none;}
+.back-link:hover{border-color:var(--red);color:var(--text);background:rgba(232,0,29,0.06);}
+
+.main{max-width:1280px;margin:0 auto;padding:24px 18px 60px;}
+.page-hdr{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+.page-title{font-family:var(--font-cond);font-size:30px;font-weight:800;line-height:1;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:6px;}
+.hdr-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:.12s;}
+.btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg);}
+.btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+.weeknav{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:18px;flex-wrap:wrap;}
+.weeknav .nav-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-size:15px;color:var(--text2);cursor:pointer;transition:.12s;}
+.weeknav .nav-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg);}
+.weeknav .wk-label{font-family:var(--font-cond);font-size:20px;font-weight:800;min-width:220px;text-align:center;}
+.weeknav .wk-range{display:block;font-family:var(--font);font-size:12px;font-weight:500;color:var(--text2);}
+.weeknav .today-btn{padding:7px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;}
+.weeknav .today-btn:hover{border-color:var(--red);color:var(--red);background:rgba(232,0,29,0.06);}
+.weeknav .wk-pill{font-family:var(--mono);font-size:12px;color:var(--text2);background:var(--surface2);padding:4px 10px;border-radius:99px;}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.day{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;}
+.day.today{border-color:var(--red);box-shadow:0 0 0 3px rgba(232,0,29,0.08);}
+.day-hdr{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:8px;background:#fafafa;}
+.day.today .day-hdr{background:rgba(232,0,29,0.05);}
+.day-name{font-family:var(--font-cond);font-size:19px;font-weight:800;}
+.day-name .dt{font-family:var(--font);font-size:12px;font-weight:600;color:var(--text2);margin-left:7px;}
+.day.today .day-name .dt{color:var(--red);}
+.day-prog{font-family:var(--mono);font-size:12px;color:var(--text2);white-space:nowrap;}
+.day-prog.done{color:var(--green);font-weight:600;}
+.day-bar{height:3px;background:var(--surface2);}
+.day-bar i{display:block;height:100%;background:var(--green);width:0;transition:width .2s;}
+.day-body{padding:8px 12px 12px;flex:1;display:flex;flex-direction:column;gap:2px;}
+
+.taak{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:8px;font-size:14px;}
+.taak:hover{background:var(--surface2);}
+.taak input[type=checkbox]{width:18px;height:18px;accent-color:var(--green);cursor:pointer;flex-shrink:0;}
+.taak .naam{flex:1;min-width:0;line-height:1.3;}
+.taak.af .naam{color:var(--text3);text-decoration:line-through;}
+.taak .tijd{font-family:var(--mono);font-size:11.5px;color:var(--blue);background:var(--blue-bg);padding:2px 7px;border-radius:6px;white-space:nowrap;flex-shrink:0;}
+.taak.extra{border:1px dashed var(--border2);background:#fffdf5;}
+.taak.extra:hover{background:#fdf7e5;}
+.taak .extra-pill{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#b45309;background:#fef3c7;padding:2px 7px;border-radius:99px;flex-shrink:0;}
+.taak .mini{width:26px;height:26px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text3);flex-shrink:0;}
+.taak .mini:hover{background:var(--surface3);color:var(--text);}
+.day-empty{padding:16px 8px;text-align:center;color:var(--text3);font-size:12.5px;line-height:1.4;}
+
+.day-foot{padding:8px 12px 12px;}
+.add-extra-btn{width:100%;padding:7px 10px;border-radius:8px;border:1px dashed var(--border2);background:transparent;color:var(--text3);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:.12s;}
+.add-extra-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg);}
+
+.add-row{display:flex;gap:6px;margin-top:6px;}
+.add-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-family:var(--font);font-size:13px;outline:none;background:#fff;}
+.add-row input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,118,232,.12);}
+.add-row input.tijd-in{flex:0 0 76px;font-family:var(--mono);font-size:12px;}
+.add-row button{padding:8px 12px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;}
+.add-row button:hover{background:#1861c4;}
+
+.edit-hint{font-size:12.5px;color:var(--text2);background:var(--blue-bg);border:1px solid rgba(31,118,232,.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:none;}
+body.editing .edit-hint{display:block;}
+body.editing .taak input[type=checkbox]{display:none;}
+body.editing .add-extra-btn{display:none;}
+.taak .edit-actions{display:none;gap:2px;flex-shrink:0;}
+body.editing .taak .edit-actions{display:flex;}
+.add-row{display:none;}
+body.editing .add-row{display:flex;}
+
+@media (max-width:600px){
+  .topbar{height:52px;padding:0 12px;}
+  .logo-img{height:26px;}
+  .topbar-divider,.topbar-section{display:none;}
+  .back-link{padding:6px 10px;font-size:0.74rem;}
+  .main{padding:14px 10px 50px;}
+  .page-title{font-size:24px;}
+  .grid{grid-template-columns:1fr;gap:10px;}
+  .weeknav .wk-label{font-size:17px;min-width:0;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="logo-wrap" href="dashboard.html">
+    <img src="senorsnacks-logo.png" alt="Señor Snacks" class="logo-img">
+    <span class="topbar-divider"></span>
+    <span class="topbar-section">Weekplanning</span>
+  </a>
+  <a class="back-link" href="dashboard.html">← Dashboard</a>
+</div>
+
+<div class="main">
+  <div class="page-hdr">
+    <div>
+      <div class="page-title">Weekplanning</div>
+      <div class="page-sub">Vaste taken per weekdag. Afvinken geldt per week — elke nieuwe week start automatisch leeg.</div>
+    </div>
+    <div class="hdr-actions">
+      <button class="btn" id="btn-edit" onclick="toggleEdit()">✏️ Vaste taken bewerken</button>
+    </div>
+  </div>
+
+  <div class="edit-hint">
+    <b>Bewerkmodus:</b> voeg per dag vaste taken toe (tijd is optioneel, bv. 09:00). Deze taken keren elke week terug.
+    Met ▲▼ wijzig je de volgorde, met 🗑️ verwijder je een taak (dat geldt voor álle weken). Klik nogmaals op de knop om af te sluiten.
+  </div>
+
+  <div class="weeknav">
+    <button class="nav-btn" onclick="navWeek(-1)" title="Vorige week">←</button>
+    <div class="wk-label" id="wk-label">Week —<span class="wk-range" id="wk-range">—</span></div>
+    <button class="nav-btn" onclick="navWeek(1)" title="Volgende week">→</button>
+    <button class="today-btn" onclick="navToday()">Vandaag</button>
+    <span class="wk-pill" id="wk-prog">0 / 0 klaar</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const WP_PATH = 'ft_weekplanning_v1';
+const DAGEN = [
+  { key:'ma', label:'Maandag'   },
+  { key:'di', label:'Dinsdag'   },
+  { key:'wo', label:'Woensdag'  },
+  { key:'do', label:'Donderdag' },
+  { key:'vr', label:'Vrijdag'   },
+  { key:'za', label:'Zaterdag'  },
+  { key:'zo', label:'Zondag'    },
+];
+
+let DATA = { taken:{}, weeks:{} };
+let weekOffset = 0;   // 0 = deze week
+let editing = false;
+let refocusDag = null; // add-input opnieuw focussen na re-render
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---- datums & ISO-week ---- */
+function mondayOf(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay()+6)%7));
+  return x;
+}
+function isoWeek(d){
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  x.setUTCDate(x.getUTCDate() - ((x.getUTCDay()+6)%7) + 3); // donderdag v/d week
+  const jan4 = new Date(Date.UTC(x.getUTCFullYear(),0,4));
+  const week = 1 + Math.round((x - jan4)/86400000/7 + ((jan4.getUTCDay()+6)%7)/7);
+  return { year: x.getUTCFullYear(), week };
+}
+function curMonday(){
+  const m = mondayOf(new Date());
+  m.setDate(m.getDate() + weekOffset*7);
+  return m;
+}
+function curWeekKey(){
+  const w = isoWeek(curMonday());
+  return w.year + '-W' + String(w.week).padStart(2,'0');
+}
+function fmtDM(d){ return d.toLocaleDateString('nl-BE',{day:'numeric',month:'short'}); }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+
+/* ---- render ---- */
+function render(){
+  const wk = curWeekKey();
+  const wkData = (DATA.weeks || {})[wk] || {};
+  const checks = wkData.checks || {};
+  const extras = wkData.extra || {};
+  const monday = curMonday();
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate()+6);
+  const iw = isoWeek(monday);
+  const today = new Date();
+
+  document.getElementById('wk-label').innerHTML =
+    'Week ' + iw.week + (weekOffset===0 ? ' · deze week' : '') +
+    '<span class="wk-range" id="wk-range">' + fmtDM(monday) + ' – ' + fmtDM(sunday) + ' ' + sunday.getFullYear() + '</span>';
+
+  let totAll = 0, doneAll = 0;
+
+  document.getElementById('grid').innerHTML = DAGEN.map((dag, i) => {
+    const datum = new Date(monday); datum.setDate(datum.getDate()+i);
+    const isToday = sameDay(datum, today);
+
+    const vast = Object.entries((DATA.taken || {})[dag.key] || {})
+      .map(([id,t]) => Object.assign({id}, t))
+      .sort((a,b) => (a.volgorde??0)-(b.volgorde??0) || String(a.naam).localeCompare(String(b.naam),'nl'));
+    const ex = Object.entries(extras[dag.key] || {})
+      .map(([id,t]) => Object.assign({id}, t))
+      .sort((a,b) => (a.ts||0)-(b.ts||0));
+
+    const tot = vast.length + ex.length;
+    const done = vast.filter(t => checks[t.id]).length + ex.filter(t => t.done).length;
+    totAll += tot; doneAll += done;
+
+    const rows = vast.map((t, idx) => {
+      const af = !!checks[t.id];
+      return '<div class="taak' + (af?' af':'') + '">'
+        + '<input type="checkbox"' + (af?' checked':'') + ' onchange="toggleCheck(\'' + t.id + '\', this.checked)">'
+        + (t.tijd ? '<span class="tijd">' + esc(t.tijd) + '</span>' : '')
+        + '<span class="naam">' + esc(t.naam) + '</span>'
+        + '<span class="edit-actions">'
+        +   '<button class="mini" title="Omhoog" onclick="moveTaak(\'' + dag.key + '\',' + idx + ',-1)">▲</button>'
+        +   '<button class="mini" title="Omlaag" onclick="moveTaak(\'' + dag.key + '\',' + idx + ',1)">▼</button>'
+        +   '<button class="mini" title="Bewerken" onclick="renameTaak(\'' + dag.key + '\',\'' + t.id + '\')">✏️</button>'
+        +   '<button class="mini" title="Verwijderen" onclick="delTaak(\'' + dag.key + '\',\'' + t.id + '\')">🗑️</button>'
+        + '</span>'
+        + '</div>';
+    }).join('');
+
+    const exRows = ex.map(t =>
+      '<div class="taak extra' + (t.done?' af':'') + '">'
+      + '<input type="checkbox"' + (t.done?' checked':'') + ' onchange="toggleExtra(\'' + dag.key + '\',\'' + t.id + '\', this.checked)">'
+      + '<span class="naam">' + esc(t.naam) + '</span>'
+      + '<span class="extra-pill">extra</span>'
+      + '<button class="mini" title="Verwijderen" onclick="delExtra(\'' + dag.key + '\',\'' + t.id + '\')">✕</button>'
+      + '</div>'
+    ).join('');
+
+    return '<div class="day' + (isToday && weekOffset===0 ? ' today':'') + '">'
+      + '<div class="day-hdr">'
+      +   '<span class="day-name">' + dag.label + '<span class="dt">' + fmtDM(datum) + (isToday && weekOffset===0 ? ' · vandaag':'') + '</span></span>'
+      +   '<span class="day-prog' + (tot>0 && done===tot ? ' done':'') + '">' + done + '/' + tot + '</span>'
+      + '</div>'
+      + '<div class="day-bar"><i style="width:' + (tot ? Math.round(done/tot*100) : 0) + '%"></i></div>'
+      + '<div class="day-body">'
+      +   (rows + exRows || '<div class="day-empty">Nog geen vaste taken.<br>Voeg toe via ✏️ Vaste taken bewerken.</div>')
+      +   '<div class="add-row">'
+      +     '<input class="tijd-in" id="tijd-' + dag.key + '" placeholder="09:00" maxlength="10">'
+      +     '<input id="naam-' + dag.key + '" placeholder="Nieuwe vaste taak…" onkeydown="if(event.key===\'Enter\')addTaak(\'' + dag.key + '\')">'
+      +     '<button onclick="addTaak(\'' + dag.key + '\')">＋</button>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="day-foot">'
+      +   '<button class="add-extra-btn" onclick="addExtra(\'' + dag.key + '\')">＋ Extra taak deze week</button>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  const pill = document.getElementById('wk-prog');
+  pill.textContent = doneAll + ' / ' + totAll + ' klaar';
+  pill.style.color = totAll>0 && doneAll===totAll ? 'var(--green)' : '';
+
+  if(refocusDag){
+    const el = document.getElementById('naam-' + refocusDag);
+    if(el) el.focus();
+    refocusDag = null;
+  }
+}
+
+/* ---- navigatie ---- */
+function navWeek(d){ weekOffset += d; render(); }
+function navToday(){ weekOffset = 0; render(); }
+
+/* ---- afvinken (per week) ---- */
+function toggleCheck(taakId, on){
+  const ref = fbdb.ref(WP_PATH + '/weeks/' + curWeekKey() + '/checks/' + taakId);
+  if(on) ref.set({ ts: firebase.database.ServerValue.TIMESTAMP });
+  else ref.remove();
+}
+
+/* ---- vaste taken beheren ---- */
+function toggleEdit(){
+  editing = !editing;
+  document.body.classList.toggle('editing', editing);
+  document.getElementById('btn-edit').classList.toggle('active', editing);
+  document.getElementById('btn-edit').textContent = editing ? '✓ Klaar met bewerken' : '✏️ Vaste taken bewerken';
+}
+function addTaak(dagKey){
+  const naamEl = document.getElementById('naam-' + dagKey);
+  const tijdEl = document.getElementById('tijd-' + dagKey);
+  const naam = (naamEl.value || '').trim();
+  if(!naam) return;
+  const bestaande = Object.values((DATA.taken || {})[dagKey] || {});
+  const volgorde = bestaande.reduce((m,t) => Math.max(m, t.volgorde??0), 0) + 1;
+  fbdb.ref(WP_PATH + '/taken/' + dagKey).push({
+    naam,
+    tijd: (tijdEl.value || '').trim(),
+    volgorde,
+    toegevoegd: firebase.database.ServerValue.TIMESTAMP
+  });
+  naamEl.value = ''; tijdEl.value = '';
+  refocusDag = dagKey;
+}
+function renameTaak(dagKey, id){
+  const t = ((DATA.taken || {})[dagKey] || {})[id];
+  if(!t) return;
+  const naam = prompt('Taak aanpassen:', t.naam || '');
+  if(naam === null) return;
+  if(!naam.trim()){ alert('Naam mag niet leeg zijn.'); return; }
+  const tijd = prompt('Tijd (leeg = geen):', t.tijd || '');
+  if(tijd === null) return;
+  fbdb.ref(WP_PATH + '/taken/' + dagKey + '/' + id).update({ naam: naam.trim(), tijd: tijd.trim() });
+}
+function delTaak(dagKey, id){
+  const t = ((DATA.taken || {})[dagKey] || {})[id];
+  if(!t) return;
+  if(!confirm('Vaste taak "' + (t.naam||'') + '" verwijderen?\nDit geldt voor álle weken.')) return;
+  if(window.logDeletion) window.logDeletion('weekplanning-taak', (dagKey + ' — ' + (t.naam||'')), { ref: WP_PATH + '/taken/' + dagKey + '/' + id, data: t });
+  fbdb.ref(WP_PATH + '/taken/' + dagKey + '/' + id).remove();
+}
+function moveTaak(dagKey, idx, dir){
+  const lijst = Object.entries((DATA.taken || {})[dagKey] || {})
+    .map(([id,t]) => Object.assign({id}, t))
+    .sort((a,b) => (a.volgorde??0)-(b.volgorde??0) || String(a.naam).localeCompare(String(b.naam),'nl'));
+  const j = idx + dir;
+  if(j < 0 || j >= lijst.length) return;
+  // volgorde hernummeren en de twee omwisselen — robuust bij gelijke/ontbrekende volgordes
+  lijst.forEach((t,i) => t.volgorde = i+1);
+  const tmp = lijst[idx].volgorde; lijst[idx].volgorde = lijst[j].volgorde; lijst[j].volgorde = tmp;
+  const upd = {};
+  lijst.forEach(t => { upd[t.id + '/volgorde'] = t.volgorde; });
+  fbdb.ref(WP_PATH + '/taken/' + dagKey).update(upd);
+}
+
+/* ---- extra taken (alleen deze week) ---- */
+function addExtra(dagKey){
+  const naam = prompt('Extra taak voor deze week:');
+  if(!naam || !naam.trim()) return;
+  fbdb.ref(WP_PATH + '/weeks/' + curWeekKey() + '/extra/' + dagKey).push({
+    naam: naam.trim(), done: false, ts: firebase.database.ServerValue.TIMESTAMP
+  });
+}
+function toggleExtra(dagKey, id, on){
+  fbdb.ref(WP_PATH + '/weeks/' + curWeekKey() + '/extra/' + dagKey + '/' + id + '/done').set(!!on);
+}
+function delExtra(dagKey, id){
+  const t = (((DATA.weeks||{})[curWeekKey()]||{}).extra||{})[dagKey];
+  const naam = t && t[id] ? t[id].naam : '';
+  if(!confirm('Extra taak "' + (naam||'') + '" verwijderen?')) return;
+  fbdb.ref(WP_PATH + '/weeks/' + curWeekKey() + '/extra/' + dagKey + '/' + id).remove();
+}
+
+/* ---- init ---- */
+(async function init(){
+  if(window.fbAuthReady) await window.fbAuthReady;
+  fbdb.ref(WP_PATH).on('value', snap => {
+    DATA = snap.val() || { taken:{}, weeks:{} };
+    render();
+  }, err => {
+    document.getElementById('grid').innerHTML =
+      '<div class="day-empty" style="grid-column:1/-1;padding:40px;">Kon de weekplanning niet laden: ' + esc(err.message || err.code || 'onbekende fout') + '</div>';
+  });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -208,7 +208,7 @@
       var PAGE_FILES = {
         notities:       ['/notities.html', '/notitie.html'],
         checkin:        ['/checkin.html'],
-        planning:       ['/planning.html', '/verhuur.html', '/served_verhuur.html'],
+        planning:       ['/planning.html', '/verhuur.html', '/served_verhuur.html', '/weekplanning.html'],
         laadlijsten:    ['/lijsten.html', '/checklists.html', '/checklist-detail.html', '/laadlijst-beheer.html', '/laadlijst-koppeling.html'],
         ops:            ['/ops.html'],
         personeel:      ['/personeel.html'],
